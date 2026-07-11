@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--   This file is part of the Embedded Systems textbook.    -->
+<!--                                                          -->
+<!--      ENGS 28: Embedded Systems                           -->
+<!--      Thayer School of Engineering, Dartmouth College     -->
+<!--                                                          -->
+<!-- Copyright (C) 2026  Petra Bonfert-Taylor                 -->
+<!-- See the file COPYING for copying conditions.             -->
+
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-adc">
+    <title>Analog-to-Digital Conversion</title>
+    <introduction>
+        <p>
+            Sensors produce voltages proportional to temperature, light, position, or other
+            physical quantities.  An <term>Analog-to-Digital Converter (ADC)</term> translates
+            these continuous voltages into integers the MCU can process.  The STM32C031C6
+            contains a 12-bit successive-approximation ADC that can sample up to 19 different
+            pins.
+        </p>
+        <objectives>
+            <ul>
+                <li>Describe the role of an ADC in the sensor signal chain.</li>
+                <li>Understand 12-bit resolution and how to convert ADC counts to voltage.</li>
+                <li>Configure the STM32 ADC at the register level and take on-demand samples.</li>
+                <li>Explain successive approximation and atomic register access.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-adc-how-it-works">
+        <title>Before Class: How an ADC Works</title>
+        <introduction>
+            <p>
+                Every sensor in the physical world produces an analog signal — a voltage
+                that varies continuously over time.  A microcontroller, however, works
+                entirely with integers.  The <term>Analog-to-Digital Converter</term>
+                (ADC) is the bridge: it measures an analog voltage and produces an
+                integer the CPU can compute with.  Before class, it's worth understanding
+                what that integer actually represents and how the converter arrives at it.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-adc-quantization">
+            <title>Quantization: Turning Voltage into a Number</title>
+            <p>
+                An ADC divides its input voltage range into a finite number of equal
+                steps and reports which step the input falls into.  The number of steps
+                is determined by the ADC's <term>resolution</term>, expressed in bits.
+                A <m>B</m>-bit ADC produces <m>2^B</m> possible output values, mapping
+                the input range <m>[0,\, V_\text{ref}]</m> to integers
+                <m>0, 1, 2, \ldots, 2^B - 1</m>.
+            </p>
+
+            <figure xml:id="fig-adc-concept">
+                <caption>The ADC in one picture: a continuously varying analog signal
+                enters on the left; the converter samples it periodically (at rate
+                <m>f_s</m>) and outputs a sequence of integers on the right.  Each
+                integer represents the signal's voltage at that instant, expressed
+                as a binary number.  The reference voltage sets the top of the
+                measurable range.</caption>
+                <image source="slides/Day07-ADC/slide07_img1.png" width="85%"/>
+            </figure>
+
+            <p>
+                The STM32C031C6's ADC has <m>B = 12</m> bits, giving 4096 steps over
+                a 0–3.3 V range.  Each step — called one
+                <term>LSB</term> (least significant bit) — represents:
+                <md number="no">
+                    <mrow>1\text{ LSB} = \frac{V_\text{ref}}{2^B} = \frac{3.3\text{ V}}{4096} \approx 0.81\text{ mV}</mrow>
+                </md>
+                To recover a voltage from a raw count:
+                <md number="no">
+                    <mrow>V = \text{count} \times \frac{V_\text{ref}}{4096}</mrow>
+                </md>
+                So a count of 2048 corresponds to approximately <m>1.65\text{ V}</m> — half
+                of the reference voltage.
+            </p>
+
+            <figure xml:id="fig-adc-transfer-curve">
+                <caption>The ADC transfer curve.  The overall relationship between
+                input voltage (<m>V_{in}</m>) and digital output (<m>D_{out}</m>) is
+                a straight line from (0, 0) to (3.3 V, 4095).  Zooming in reveals
+                that the line is actually a staircase: every tiny step is one LSB
+                wide, the rounding error that results from mapping a continuous
+                voltage to a discrete integer.</caption>
+                <image source="slides/Day07-ADC/slide08_img1.png" width="72%"/>
+            </figure>
+
+            <p>
+                The finite step size means the ADC can never represent a voltage
+                perfectly — it rounds to the nearest step.  The worst-case rounding
+                error is half an LSB, about 0.4 mV for the STM32 ADC.  Choosing higher
+                resolution (more bits) makes the steps smaller and the rounding error
+                smaller, at the cost of a longer conversion time.
+            </p>
+            <p>
+                Although the STM32C031's ADC hardware supports 12-bit resolution, it
+                can also be configured to produce 10-bit, 8-bit, or 6-bit results.
+                Lower resolution means fewer successive-approximation steps and therefore
+                a faster conversion — useful when speed matters more than precision.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-adc-successive-approx">
+            <title>Successive Approximation: How the Conversion Happens</title>
+            <p>
+                The STM32 ADC uses a technique called
+                <term>successive approximation</term>.  The idea is similar to a
+                binary search: the converter narrows in on the correct answer one bit
+                at a time, starting from the most significant bit.
+            </p>
+            <p>
+                Internally, the ADC contains a <term>DAC</term> (digital-to-analog
+                converter) and a comparator.  On each step, the DAC generates a
+                test voltage and the comparator checks whether the input is above or
+                below it.  If the input is above, that bit is set to 1 and the next
+                test voltage is set higher; if below, the bit is 0 and the next test
+                voltage is set lower.  After <m>B</m> comparisons the result is
+                complete.
+            </p>
+            <figure xml:id="fig-sar-block-concept">
+                <caption>Block diagram of the SAR ADC architecture.  The
+                SAR register drives the DAC one bit at a time.  The DAC
+                converts the current register value to a test voltage using
+                <m>V_\text{ref}</m>.  The sample-and-hold circuit freezes
+                <m>V_\text{in}</m> at the moment conversion begins.  The
+                comparator checks whether the held input is above or below
+                the test voltage and feeds the result (<m>V_c</m>) back to
+                the SAR register, which sets or clears that bit and moves to
+                the next one.</caption>
+                <image source="sar_adc.svg" width="85%"/>
+            </figure>
+            <p>
+                For a 12-bit ADC this takes 12 comparison cycles plus some overhead.
+                At the STM32C031's ADC clock the full conversion completes in a few
+                microseconds — fast enough to sample most sensors thousands of times
+                per second, but not instantaneous.  Your code must wait for the
+                conversion to finish (the hardware sets a <q>done</q> flag in a status
+                register) before reading the result register.
+            </p>
+            <p>
+                A built-in <term>sample-and-hold</term> circuit captures the input
+                voltage at the moment the conversion starts and holds it steady
+                throughout the successive approximation.  This means the voltage on
+                the pin is free to change during the conversion without affecting the
+                result — the ADC is working from the snapshot it took at the beginning,
+                not the live pin voltage.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-adc-how-it-works">
+            <exercise xml:id="rq-adc-lsb">
+                <statement><p>A 12-bit ADC has <m>V_\text{ref} = 3.3\text{ V}</m>.
+                What voltage does one LSB represent, and what is the maximum
+                representable voltage?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>One LSB ≈ 0.81 mV; maximum representable
+                        voltage ≈ 3.2992 V (count 4095).</p></statement>
+                        <feedback><p>Correct.  One LSB = 3.3 V / 4096 ≈ 0.806 mV.
+                        Count 4095 gives <m>4095 \times 3.3/4096 \approx 3.299\text{ V}</m>
+                        — not quite 3.3 V, because the ADC uses 4096 steps starting
+                        from 0.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>One LSB = 3.3 V; maximum = 4095 V.</p></statement>
+                        <feedback><p>The LSB is a fraction of <m>V_\text{ref}</m>,
+                        not equal to it.  The maximum output is an integer count, not
+                        a voltage.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>One LSB ≈ 0.81 mV; maximum representable
+                        voltage = 3.3 V (count 4096).</p></statement>
+                        <feedback><p>Close — the LSB value is right, but a 12-bit
+                        ADC produces counts 0–4095, not 0–4096.  Count 4096 does not
+                        exist; the highest count is 4095.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>One LSB = 12 mV; maximum representable
+                        voltage = 3.3 V.</p></statement>
+                        <feedback><p>12 mV would be the LSB of a roughly 8-bit ADC
+                        (3.3 V / 256 ≈ 12.9 mV).  For 12 bits the LSB is much
+                        smaller: about 0.81 mV.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-adc-wait">
+                <statement><p>You start an ADC conversion by writing to the
+                control register, then immediately read the result register.  The
+                value is always 0 regardless of the input voltage.  What is the
+                most likely cause?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>You are reading the result before the
+                        conversion is complete; the result register still holds its
+                        reset value of 0.</p></statement>
+                        <feedback><p>Correct.  A successive-approximation ADC takes
+                        several microseconds to complete.  The code must poll the
+                        end-of-conversion flag in the status register and wait for it
+                        to be set before reading the result.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The GPIO pin for PA0 must be set to output
+                        mode before an ADC conversion can start.</p></statement>
+                        <feedback><p>The opposite is true: the pin must be in
+                        <em>analog</em> mode (not output mode) to allow the ADC input
+                        circuitry to connect to it.  Setting it as an output would
+                        actually interfere with the measurement.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The ADC result is a floating-point number; you
+                        need to cast it before interpreting it.</p></statement>
+                        <feedback><p>The ADC result register holds an unsigned integer
+                        (0–4095); no floating-point conversion is involved until the
+                        code optionally converts counts to voltage.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The ADC cannot measure 0 V — it only produces
+                        non-zero counts.</p></statement>
+                        <feedback><p>A 0 V input gives a count of 0, which is a valid
+                        and expected result.  The issue here is timing, not the input
+                        voltage.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-adc-sar-steps">
+                <statement><p>A 3-bit successive-approximation ADC is measuring an
+                input voltage.  How many comparisons does it make to produce a
+                complete result?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>3 — one per bit, starting from the most
+                        significant bit.</p></statement>
+                        <feedback><p>Correct.  Successive approximation is a binary
+                        search: each comparison determines one bit, so an
+                        <m>N</m>-bit ADC needs exactly <m>N</m> comparisons.  This
+                        is much faster than a flash ADC's <m>2^N - 1</m> simultaneous
+                        comparators, at the cost of taking <m>N</m> clock cycles
+                        instead of just one.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>7 — one for each possible output value
+                        minus one.</p></statement>
+                        <feedback><p>That describes a <em>flash</em> ADC, which uses
+                        <m>2^N - 1</m> simultaneous comparators.  Successive
+                        approximation uses only one comparator and takes <m>N</m>
+                        steps.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>8 — one for each possible output value.</p></statement>
+                        <feedback><p>8 is the number of possible output values for a
+                        3-bit ADC, not the number of comparisons.  Successive
+                        approximation only needs 3 comparisons.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>1 — the comparator determines the result in a
+                        single step.</p></statement>
+                        <feedback><p>A single comparison can only resolve one bit (above
+                        or below the midpoint).  Determining all 3 bits requires
+                        3 comparisons.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
+        <!--
+        CANVAS QUIZ: "Before class — Analog-to-Digital Conversion"
+        (Due 1 hour before class; auto-graded multiple choice; low stakes.)
+
+        Q1. A 12-bit ADC with VREF = 3.3 V returns a count of 1024. What is the
+            corresponding input voltage?
+            A) 1.024 V
+            B) Approximately 0.825 V  ← CORRECT  (1024 × 3.3/4096 ≈ 0.825 V)
+            C) Approximately 1.65 V
+            D) Approximately 3.3 V
+
+        Q2. Increasing an ADC's resolution from 10 bits to 12 bits while keeping
+            VREF the same will:
+            A) Increase the maximum measurable voltage.
+            B) Make each LSB represent a smaller voltage, reducing quantization error.  ← CORRECT
+            C) Make conversions faster.
+            D) Have no effect on measurement accuracy.
+
+        Q3. In a successive-approximation ADC, what component generates the test
+            voltages that are compared against the input?
+            A) A voltage divider made from external resistors.
+            B) An internal DAC (digital-to-analog converter).  ← CORRECT
+            C) The GPIO pin's pull-up resistor.
+            D) The CPU's arithmetic logic unit (ALU).
+
+        Q4. Why must the input voltage remain stable during an ADC conversion?
+            A) The ADC draws large current during conversion, which could disturb the source.
+            B) The successive approximation algorithm assumes a fixed input while it
+               narrows down the answer bit by bit; a changing input gives a wrong result.  ← CORRECT
+            C) A changing voltage would damage the ADC input circuitry.
+            D) The result register can only be updated when the input is stable.
+
+        Q5. A student forgets to configure a GPIO pin in analog mode before using it
+            as an ADC input (it is still in the default digital input mode). What is
+            the most likely consequence?
+            A) The ADC will not start a conversion at all.
+            B) The reading will be incorrect: the digital input buffer clamps the signal
+               and may add noise or prevent the ADC from seeing the true voltage.  ← CORRECT
+            C) The pin will be permanently damaged.
+            D) The ADC result will always be 4095 (maximum count).
+        -->
+
+    </section>
+
+    <section xml:id="sec-adc-concepts">
+        <title>ADC Concepts</title>
+
+        <figure xml:id="fig-adc-signal-chain">
+            <caption>Sensor signal chain.  A sensor converts a physical quantity to a
+            voltage; an Analog Front End (AFE) conditions the signal (amplification,
+            filtering); the ADC digitizes it to an integer; the MCU processes the result.</caption>
+            <image source="slides/Day07-ADC/slide07_e215e61a.png" width="80%"/>
+        </figure>
+
+        <p>
+            The ADC maps the input range <m>[0,\, V_\text{ref}]</m> to integers
+            <m>[0,\, 2^B - 1]</m> where <m>B</m> is the bit width.  For the STM32C031
+            with <m>B = 12</m> and <m>V_\text{ref} = 3.3\,\text{V}</m>:
+        </p>
+
+        <figure xml:id="fig-adc-system-view">
+            <caption>ADC system view.  The analog input (0–3.3 V) maps linearly to a
+            12-bit integer (0–4095).  One LSB corresponds to
+            <m>3.3\,\text{V}/4096 \approx 0.81\,\text{mV}</m>.  To recover the voltage
+            from a count: <m>V = \text{count} \times V_\text{ref} / 4096</m>.</caption>
+            <image source="slides/Day07-ADC/slide08_16307dc7.png" width="75%"/>
+        </figure>
+
+        <p>
+            The STM32C031C6 has 19 ADC-capable pins; 11 of those are accessible on the
+            Nucleo board's headers.  In ENGS 28 we typically use PA0 (ADC channel 0).
+        </p>
+
+        <figure xml:id="fig-adc-pins">
+            <caption>Nucleo pinout highlighting the ADC-accessible pins.  PA0 through PA7
+            map to ADC channels 0–7.  The pin labeling in
+            <url href="external/stm32c031_datasheet.pdf">datasheet</url>
+            Table 12 confirms which pins support analog input.</caption>
+            <image source="slides/Day07-ADC/slide10_d3479492.png" width="75%"/>
+        </figure>
+
+        <figure xml:id="fig-adc-potentiometer">
+            <caption>Test circuit using a potentiometer as a variable voltage source wired
+            to PA0.  The outer terminals of the pot connect to 3.3 V and GND; the wiper
+            (center terminal) connects to PA0.  Turning the knob varies the voltage on PA0
+            from 0 to 3.3 V continuously.</caption>
+            <image source="slides/Day07-ADC/slide12_59bdcc98.png" width="65%"/>
+        </figure>
+
+        <reading-questions xml:id="rq-adc-concepts">
+            <exercise xml:id="rq-adc-resolution">
+                <statement><p>A 12-bit ADC with <m>V_\text{ref} = 3.3\,\text{V}</m> reads
+                a count of 2048.  What is the corresponding input voltage?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>Approximately 1.65 V</p></statement>
+                    <feedback><p>Correct: <m>2048 \times 3.3/4096 = 1.65\,\text{V}</m> — exactly half of VREF.</p></feedback></choice>
+                    <choice><statement><p>2.048 V</p></statement>
+                    <feedback><p>That would be correct for a 10-bit ADC with VREF = 2.048 V.  For 12 bits, divide 3.3 V across 4096 counts.</p></feedback></choice>
+                    <choice><statement><p>Approximately 3.3 V</p></statement>
+                    <feedback><p>3.3 V corresponds to count 4095 (maximum), not 2048.</p></feedback></choice>
+                    <choice><statement><p>Approximately 0.8 mV</p></statement>
+                    <feedback><p>0.8 mV is the value of one LSB.  2048 counts is many LSBs above zero.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+    <section xml:id="sec-adc-config">
+        <title>Configuring the ADC</title>
+        <introduction>
+            <p>
+                ADC initialization involves three clusters of operations: configure the GPIO
+                pin as analog input, set up the ADC clock and channel selection, then enable
+                the ADC and wait for it to be ready.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-adc-clock">
+            <title>ADC Clock</title>
+            <p>
+                The STM32 ADC has its own clock domain, independent of the APB bus.
+                We use the internal RC oscillator divided down to give the ADC a suitable
+                clock rate.
+            </p>
+            <figure xml:id="fig-adc-clock">
+                <caption>ADC clock source selection registers.  The ADC can be clocked from
+                an asynchronous source (independent of the CPU clock), which is convenient
+                for power management.  We set CKMODE = 00 to select the asynchronous HSI
+                clock, then enable it with ADCEN in APBENR2.</caption>
+                <image source="slides/Day07-ADC/slide16_4fab1503.png" width="48%"/>
+                <image source="slides/Day07-ADC/slide16_c5b8a8fb.png" width="48%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-adc-chselr">
+            <title>Channel Selection</title>
+            <p>
+                The <c>ADC_CHSELR</c> register selects which channel(s) to sample.
+                Each bit corresponds to one channel; set bit 0 for channel 0 (PA0).
+            </p>
+            <figure xml:id="fig-adc-chselr">
+                <caption>ADC Channel Selection Register (CHSELR).  Bit <m>n</m> enables
+                channel <m>n</m>.  For a single potentiometer on PA0 (channel 0),
+                write <c>ADC1-&gt;CHSELR = ADC_CHSELR_CHSEL0</c>.</caption>
+                <image source="slides/Day07-ADC/slide17_d0b9ad35.png" width="80%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-adc-enable">
+            <title>Enabling the ADC and Atomic Register Access</title>
+            <p>
+                After configuring the clock and channel, enable the ADC by setting the
+                ADEN bit in <c>ADC_CR</c>.  Then wait for the ADRDY (ADC Ready) bit to set
+                in <c>ADC_ISR</c>.
+            </p>
+
+            <figure xml:id="fig-adc-isr">
+                <caption>ADC Interrupt and Status Register (ADC_ISR).  The ADRDY bit (bit 0)
+                is set by hardware when the ADC finishes its startup calibration and is ready
+                to convert.  Software <em>clears</em> this bit by writing a 1 to it — this is
+                called a <q>write-1-to-clear</q> (rc_w1) bit.</caption>
+                <image source="slides/Day07-ADC/slide18_bee09e4d.png" width="80%"/>
+            </figure>
+
+            <p>
+                Clearing ADRDY uses an assignment, not an OR-equals:
+            </p>
+            <program language="c"><code><![CDATA[
+ADC1->ISR = ADC_ISR_ADRDY;  // write 1 to bit 0 clears it (rc_w1 behavior)
+// NOT: ADC1->ISR &= ~ADC_ISR_ADRDY;  -- this clears ALL other status bits too!
+]]></code></program>
+
+            <insight>
+                <title>Atomic register access and rc_w1 bits</title>
+                <p>
+                    Most ARM Cortex-M registers require 32-bit aligned accesses.  The
+                    read-modify-write sequence of <c>&amp;= ~mask</c> is not atomic: an
+                    interrupt occurring between the read and the write can lose an event.
+                    For status registers with <em>write-1-to-clear</em> bits (labeled rc_w1
+                    in the reference manual), the solution is to write the specific bit(s)
+                    you want cleared using a plain assignment.  This is a safe, single-write
+                    operation that does not affect other bits that are already clear.
+                </p>
+            </insight>
+
+            <figure xml:id="fig-adc-cr">
+                <caption>ADC Control Register (ADC_CR).  Set ADEN (bit 0) to enable the
+                ADC; set ADSTART (bit 2) to begin a conversion; the hardware clears ADSTART
+                automatically when the conversion completes.</caption>
+                <image source="slides/Day07-ADC/slide19_f3cc11dd.png" width="80%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-adc-sample">
+            <title>Taking a Sample</title>
+            <p>
+                Once initialized, taking a measurement is a three-step sequence: wait for
+                ADC ready, start a conversion, wait for end-of-conversion (EOC), then read
+                the result from <c>ADC_DR</c>.
+            </p>
+            <program language="c"><code><![CDATA[
+void pa0_adc_init(void) {
+    /* Configure PA0 as analog input */
+    RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;
+    GPIOA->MODER |= (3U << 0);           // MODER bits [1:0] = 11 (analog)
+
+    /* Enable ADC clock */
+    RCC->APBENR2 |= RCC_APBENR2_ADCEN;
+
+    /* Select channel 0 */
+    ADC1->CHSELR = ADC_CHSELR_CHSEL0;
+
+    /* Clear ADRDY, then enable ADC */
+    ADC1->ISR = ADC_ISR_ADRDY;
+    ADC1->CR |= ADC_CR_ADEN;
+
+    /* Wait until ADC is ready */
+    while (!(ADC1->ISR & ADC_ISR_ADRDY)) {}
+}
+
+uint32_t adc_read(void) {
+    /* Start one conversion */
+    ADC1->CR |= ADC_CR_ADSTART;
+    /* Wait for end of conversion */
+    while (!(ADC1->ISR & ADC_ISR_EOC)) {}
+    return ADC1->DR;   // reading DR automatically clears EOC
+}
+]]></code></program>
+
+            <figure xml:id="fig-adc-dr">
+                <caption>ADC Data Register (ADC_DR).  The 12-bit result is right-aligned
+                in bits [11:0].  Reading the register clears the EOC flag.</caption>
+                <image source="slides/Day07-ADC/slide28_e00b538f.png" width="75%"/>
+            </figure>
+        </subsection>
+    </section>
+
+    <section xml:id="sec-adc-sar">
+        <title>How the ADC Works: Successive Approximation</title>
+        <p>
+            The STM32 ADC uses a <term>successive approximation</term> algorithm.  It
+            maintains a Successive Approximation Register (SAR) and tests one bit at a time,
+            from MSB to LSB, by comparing the analog input against a DAC output.  A 12-bit
+            conversion takes 14 ADC clock cycles.
+        </p>
+        <figure xml:id="fig-adc-sar-block">
+            <caption>Successive approximation ADC block diagram.  The comparator tests the
+            analog input against a DAC output generated from the current SAR value.
+            For each bit position, if the input is greater the bit stays set; otherwise it
+            is cleared.  After 12 comparisons the SAR holds the digital result.</caption>
+            <image source="slides/Day07-ADC/slide33_e65f1e10.png" width="75%"/>
+        </figure>
+        <figure xml:id="fig-adc-timing">
+            <caption>ADC conversion timing diagram.  The ADSTART bit triggers the conversion;
+            the hardware clears it and begins sampling.  After 14 ADC clock cycles the EOC
+            flag is set and the result is available in ADC_DR.</caption>
+            <image source="slides/Day07-ADC/slide34_86c94a2b.png" width="48%"/>
+            <image source="slides/Day07-ADC/slide34_e4c9e156.png" width="48%"/>
+        </figure>
+
+        <reading-questions xml:id="rq-adc-sar">
+            <exercise xml:id="rq-adc-time">
+                <statement><p>The ADC clock runs at 12 MHz and a conversion takes 14 cycles.
+                How long does one 12-bit conversion take?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>About 1.2 µs</p></statement>
+                    <feedback><p>Correct: <m>14 / 12\,\text{MHz} \approx 1.17\,\mu\text{s}</m>.</p></feedback></choice>
+                    <choice><statement><p>About 14 ms</p></statement>
+                    <feedback><p>At 12 MHz, one clock cycle is 83 ns — 14 cycles is about 1.2 µs, not milliseconds.</p></feedback></choice>
+                    <choice><statement><p>About 12 µs</p></statement>
+                    <feedback><p>Close, but 14 cycles at 12 MHz is 14/12,000,000 seconds = 1.17 µs.</p></feedback></choice>
+                    <choice><statement><p>It depends on the input voltage.</p></statement>
+                    <feedback><p>SAR conversion time is fixed at 14 clock cycles regardless of input voltage.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+</chapter>

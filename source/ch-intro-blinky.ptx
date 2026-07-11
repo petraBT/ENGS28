@@ -1,0 +1,1622 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--   This file is part of the Embedded Systems textbook.    -->
+<!--                                                          -->
+<!--      ENGS 28: Embedded Systems                           -->
+<!--      Thayer School of Engineering, Dartmouth College     -->
+<!--                                                          -->
+<!-- Copyright (C) 2026  Petra Bonfert-Taylor                 -->
+<!-- See the file COPYING for copying conditions.             -->
+
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-intro-blinky">
+    <title>GPIO and Blinky: Your First Embedded Program</title>
+
+    <introduction>
+        <p>
+            Welcome to ENGS 28!  The tradition in programming is to start with
+            <q>Hello, World</q>—a minimal program that proves everything is working.
+            In embedded systems, the equivalent is <term>Blinky</term>: a program that
+            makes an LED flash on and off.  By the end of this chapter you will
+            understand every line of a working Blinky program, including the hardware
+            it runs on, the registers it writes to, and the bit-manipulation idioms
+            used throughout the course.
+        </p>
+        <p>
+            The material here corresponds to Days 1, 1X, and 2 of the course.
+            Day 1 is the first class meeting — no pre-class reading is required.
+            The hardware is the <term>STM32 Nucleo-64</term> development board, and
+            the microcontroller on it is the <term>STM32C031C6</term>, based on an
+            Arm<registered /> Cortex<registered />-M0+ processor core.
+        </p>
+        <objectives>
+            <ul>
+                <li>Describe the key hardware components of the STM32 Nucleo-64 board.</li>
+                <li>Explain how GPIO pins are organized into ports and addressed by bit number.</li>
+                <li>Write and explain a complete Blinky program, including the ODR, MODER,
+                    and RCC registers.</li>
+                <li>Apply bit-twiddling idioms to set, clear, toggle, and test individual bits.</li>
+                <li>Wire an external LED on a breadboard and measure its voltage and current.</li>
+                <li>Use <c>delay_ms()</c> to produce accurate time delays.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <!-- ============================================================ -->
+    <!--  READING — read after Day 1, before Day 2; no pre-class quiz  -->
+    <!-- ============================================================ -->
+
+    <section xml:id="sec-mcu-gpio-concepts">
+        <title>Microcontrollers, GPIO, and Registers</title>
+        <introduction>
+            <p>
+                There is no pre-class reading for Day 1 — it is the first meeting
+                of the course.  Read this section <em>after</em> Day 1 and before
+                Day 2.  It explains the conceptual background behind what you did
+                in class: what a microcontroller is, what GPIO means, and how a
+                line of C code changes a voltage on a physical pin.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-what-is-mcu">
+            <title>What Is a Microcontroller?</title>
+            <p>
+                A <term>microcontroller</term> is a self-contained computer on a single
+                chip.  Unlike the processor in your laptop — which is just a CPU that
+                relies on separate chips for memory, storage, and input/output — a
+                microcontroller integrates all of those components into one package:
+                a CPU core, flash memory for your program, RAM for variables, and a
+                collection of hardware peripherals (timers, communication interfaces,
+                analog-to-digital converters, and more).
+            </p>
+            <p>
+                The design philosophy is different too.  A laptop processor is optimized
+                for running a general-purpose operating system and many programs at once.
+                A microcontroller is optimized for running <em>one dedicated task</em>
+                with precise timing, low power consumption, and direct control of
+                external hardware.  It starts executing your program the instant power
+                is applied and never stops.  There is no operating system to boot,
+                no file system to mount, no display driver to load — just your code and
+                the hardware.
+            </p>
+            <p>
+                The microcontroller we use in ENGS 28 is the
+                <term>STM32C031C6</term>, made by STMicroelectronics.  It contains
+                a 32-bit Arm Cortex-M0+ processor core, 32 KB of flash memory, 12 KB
+                of RAM, and a set of peripherals — all in a package smaller than a
+                postage stamp.  It runs at 12 MHz by default, draws a few milliamps,
+                and costs less than a dollar in volume.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-what-is-gpio">
+            <title>GPIO: The Software-Hardware Bridge</title>
+            <p>
+                The physical pins of a microcontroller serve many roles.  Some are
+                dedicated — they carry power or ground, connect to a clock crystal,
+                or provide a reset signal.  But most pins are
+                <term>GPIO</term> pins: <term>General-Purpose Input/Output</term>.
+                <q>General-purpose</q> means they have no fixed function.
+                Each pin is configured independently: one pin might be a
+                digital output driving an LED, an adjacent pin might be a
+                digital input reading a button, and a third might be in
+                <term>alternate function</term> mode, where the GPIO hardware
+                is bypassed and the pin is handed off to a peripheral such as
+                UART or I2C.  There is also an <term>analog</term> mode that
+                connects the pin directly to the analog-to-digital converter,
+                bypassing the digital input circuitry entirely.
+            </p>
+            <p>
+                A GPIO output pin is the simplest possible interface between
+                software and the physical world.  Set it HIGH and current flows
+                through an LED; set it LOW and the LED goes dark.  Drive it HIGH
+                and LOW in a pattern and you are transmitting serial data.  Modulate
+                the ratio of HIGH to LOW time and you are controlling motor speed.
+                Everything in this course starts from that one primitive: a pin
+                whose voltage your code controls.
+            </p>
+            <p>
+                The STM32C031C6 groups its GPIO pins into <term>ports</term> —
+                named A, B, and C — with up to 16 pins per port.  A pin is
+                identified by its port letter and bit number within that port:
+                <term>PA5</term> means Port A, bit 5.  The bit number matters
+                because the hardware registers that control each pin use that
+                number to address the right bit.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-register-model">
+            <title>Peripheral Registers: How Software Talks to Hardware</title>
+            <p>
+                Here is the central insight of embedded systems programming, and the
+                mental model you should take into every class:
+            </p>
+            <insight>
+                <p>
+                    On the STM32, controlling a hardware peripheral means reading from
+                    and writing to specific memory addresses.  Those addresses do not
+                    hold ordinary variables — they are wired directly into hardware
+                    circuits.  Writing a value to the right address changes the state
+                    of the hardware.
+                </p>
+            </insight>
+            <p>
+                These special addresses are called <term>peripheral registers</term>.
+                Every peripheral — GPIO, timers, UART, I2C — has a set of registers
+                that control its behavior.  For example, the
+                <term>Output Data Register</term> (ODR) controls the voltage driven on
+                each individual output pin: bit 5 controls PA5, bit 3 controls PA3,
+                and so on.  For Port A it lives at address <c>0x5000 0014</c>.  When
+                your code writes a value to that address, the GPIO hardware immediately
+                updates each output pin whose corresponding bit changed.
+            </p>
+            <p>
+                In C, you never type a raw address like <c>0x5000 0014</c>.  Instead,
+                the device header file (<c>stm32c031xx.h</c>) defines a pointer named
+                <c>GPIOA</c> that points to a structure of registers at that base
+                address.  So <c>GPIOA-&gt;ODR</c> means <q>the ODR register inside the
+                GPIOA structure,</q> which compiles to exactly the right memory write.
+            </p>
+            <p>
+                Before you can use any register in a peripheral, you must enable that
+                peripheral's <term>clock</term>.  By default, most peripherals are
+                powered down to save energy — their internal clock signal is gated off,
+                so writes to their registers are silently ignored.  Enabling the clock
+                takes one register write: setting the appropriate bit in the
+                <term>Reset and Clock Control</term> (RCC) subsystem.  It is the first
+                thing every initialization function does, and forgetting it is one of
+                the most common sources of bugs in embedded code.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-mcu-gpio-concepts">
+            <exercise xml:id="rq-mcu-vs-cpu">
+                <statement><p>What distinguishes a microcontroller from a
+                general-purpose CPU (like the one in a laptop)?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>A microcontroller integrates CPU, memory, and
+                        peripherals on one chip and is designed to run a single dedicated
+                        task with direct hardware access, whereas a general-purpose CPU
+                        relies on external chips and an operating system.</p></statement>
+                        <feedback><p>Correct.  The all-in-one integration is what makes
+                        microcontrollers cheap, low-power, and suitable for embedded
+                        tasks — but it also means they are not easily repurposed for
+                        general computing.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A microcontroller is always faster than a CPU
+                        because it has no operating system overhead.</p></statement>
+                        <feedback><p>Microcontrollers are almost always
+                        <em>slower</em> than modern laptop CPUs in raw compute speed —
+                        the STM32C031C6 runs at 12 MHz versus several GHz for a laptop.
+                        The advantage is integration and low power, not raw speed.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A microcontroller uses a different programming
+                        language than a general-purpose processor.</p></statement>
+                        <feedback><p>Both are programmed in standard languages like C.
+                        The difference is in the hardware architecture and intended
+                        use, not the programming language.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A microcontroller can only control LEDs and
+                        buttons, while a CPU handles more complex tasks.</p></statement>
+                        <feedback><p>Microcontrollers handle a wide range of tasks —
+                        motor control, wireless communication, sensor fusion, and more.
+                        The distinction is not about task complexity but about integration
+                        and direct hardware access.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-gpio-general-purpose">
+                <statement><p>A microcontroller has 48 physical pins.  Some carry
+                power and ground; others are GPIO.  What does <q>general-purpose</q>
+                mean in GPIO?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The pin has no fixed function — software
+                        configures it as either a digital input or a digital output,
+                        and the same pin can serve different roles in different
+                        projects.</p></statement>
+                        <feedback><p>Correct.  Unlike a dedicated power pin (which is
+                        always connected to VDD) or a crystal pin (which is always an
+                        oscillator input), a GPIO pin's role is determined entirely by
+                        how your code configures it.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The pin can carry analog signals as well as
+                        digital ones.</p></statement>
+                        <feedback><p>Some GPIO pins do have an analog mode, but that is
+                        a specific additional function, not what <q>general-purpose</q>
+                        means.  The core meaning is software-configurable input or
+                        output.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The pin is usable on any microcontroller
+                        brand, not just STM32.</p></statement>
+                        <feedback><p>GPIO is a common concept, but <q>general-purpose</q>
+                        refers to the pin's flexibility within one chip, not cross-brand
+                        compatibility.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The pin can source or sink any amount of
+                        current the connected device needs.</p></statement>
+                        <feedback><p>GPIO pins have strict current limits (typically
+                        8–20 mA).  <q>General-purpose</q> refers to input/output
+                        configurability, not unlimited current capability.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-why-clock-enable">
+                <statement><p>You write to <c>GPIOA-&gt;MODER</c> to configure
+                PA5 as an output, but the pin never responds.  You have not
+                written to <c>RCC-&gt;IOPENR</c>.  What is the most likely
+                explanation?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The GPIOA peripheral's clock has not been
+                        enabled; writes to its registers are silently ignored until
+                        the clock is turned on via RCC.</p></statement>
+                        <feedback><p>Correct.  The STM32 gates peripheral clocks by
+                        default.  <c>RCC-&gt;IOPENR</c> must be set before any GPIO
+                        register is accessed.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The MODER register requires two writes to take
+                        effect; one write is not enough.</p></statement>
+                        <feedback><p>MODER takes effect on the first write — but only
+                        if the peripheral clock is already enabled.  The missing step
+                        is the clock enable, not a second MODER write.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>PA5 is reserved for the on-board LED and cannot
+                        be configured by user code.</p></statement>
+                        <feedback><p>PA5 is the on-board LED pin, but it is fully
+                        accessible to user code — that is the whole point of Blinky.
+                        No pin is <q>reserved</q> in a way that blocks user
+                        access.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The processor must be restarted after writing
+                        to MODER before the new mode takes effect.</p></statement>
+                        <feedback><p>GPIO configuration takes effect immediately on
+                        the write — no restart required.  The missing step is the
+                        clock enable.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
+    </section>
+
+    <!-- ============================================================ -->
+    <!--  DAY 1 IN-CLASS                                               -->
+    <!-- ============================================================ -->
+
+    <section xml:id="sec-blinky-day1">
+        <title>Day 1 In-Class: Your First Blinky</title>
+
+        <introduction>
+            <p>
+                Day 1 is the first meeting of ENGS 28 — no pre-class reading is
+                required.  Bring your laptop with STM32CubeIDE installed, your
+                Nucleo board, and a USB cable.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-day1-run-blinky">
+            <title>Part 1: Get Blinky Running</title>
+
+            <activity xml:id="act-day1-run-blinky">
+                <title>Run Blinky</title>
+                <introduction>
+                    <p>
+                        Follow the Canvas instructions for Day 1 to import the
+                        Blinky project, build it, and flash it to your Nucleo board.
+                        The green on-board LED should begin blinking.
+                    </p>
+                </introduction>
+                <task xml:id="act-day1-t1">
+                    <statement>
+                        <p>
+                            In the <em>Project Explorer</em> panel on the left,
+                            expand your project folder, then expand the <c>Src</c>
+                            subfolder.  Double-click <c>blinky.c</c> to open it in
+                            the editor.
+                        </p>
+                        <p>
+                            Find the delay loop:
+                            <c>for (int i = 0; i &lt; 100000; i++);</c>.
+                            Change <c>100000</c> to <c>1000000</c>.  Then click
+                            the hammer icon (Build) and, once the build succeeds,
+                            the play icon (Run) to flash the board.  What changes?
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-t2">
+                    <statement>
+                        <p>
+                            Change the loop bound to <c>10000</c> and repeat.
+                            How fast can you make the LED blink before it appears
+                            to stop flickering?
+                        </p>
+                    </statement>
+                </task>
+            </activity>
+        </subsection>
+
+        <subsection xml:id="subsec-day1-board-tour">
+            <title>Part 2: The Nucleo Board</title>
+
+            <p>
+                The <term>STM32 Nucleo-64</term> board surrounds the
+                <term>STM32C031C6</term> microcontroller with everything needed to
+                program and power it from a laptop: a USB interface, voltage regulators,
+                Arduino-compatible headers, and a few buttons and LEDs.
+                <xref ref="fig-nucleo-board-photo"/> shows the board and a close-up
+                of the microcontroller.
+            </p>
+
+            <figure xml:id="fig-nucleo-board-photo">
+                <caption>The STM32 Nucleo-64 board (left) and a close-up of the
+                microcontroller area (right).  The orange arrow identifies the
+                STM32C031C6 microcontroller; the pink circles show how its physical
+                pins connect to the Arduino-compatible header pins — the sockets
+                where you plug in jumper wires.</caption>
+                <image source="slides/Day01-Intro-Blinky/slide08_visual.png" width="100%"/>
+            </figure>
+
+            <p>
+                <xref ref="fig-nucleo-board-labeled"/> shows the board layout from above.
+                Running along the left and right edges are two rows of
+                <em>Arduino-compatible header pins</em> — these are where you plug in
+                jumper wires to connect LEDs, buttons, and sensors.  The small green
+                <em>user LED</em> sits at the very top of the board, just to the left
+                of the right Arduino header; the black <em>reset button</em> is just
+                to the left of it.  Flanking the Arduino headers on the outer left and
+                right edges are two additional connectors called <em>Morpho connectors</em>
+                that expose more pins — we will not use those.  The USB-B Mini connector
+                on the top edge carries both power and the programming/debugging link
+                to your laptop.
+            </p>
+
+            <figure xml:id="fig-nucleo-board-labeled">
+                <caption>Annotated top view of the STM32 Nucleo-64 board.  Key
+                components are labeled by color: USB interface and reset button (black),
+                power LED and user LED (green), user button (blue), crystal oscillators
+                (purple), power/ground and analog headers (red), digital I/O header
+                (red arrow, right), Morpho connectors (pink), and the STM32C031C6
+                microcontroller (orange).</caption>
+                <image source="slides/Day01-Intro-Blinky/slide09_visual.png" width="100%"/>
+            </figure>
+
+            <p>
+                The STM32C031C6 has 48 physical pins (<xref ref="fig-stm32-pinout"/>),
+                organized into three <term>GPIO ports</term> named A, B, and C, with up
+                to 16 pins each.  A pin is identified by its port letter and bit number:
+                <em>PA5</em> means Port A, bit 5; <em>PB10</em> means Port B, bit 10.
+                The on-board LED is wired to PA5 — also labeled D13 on the Arduino header.
+                <xref ref="fig-led-pin-connection"/> shows the full pin map with
+                the D13 = PA5 connection highlighted.
+            </p>
+
+            <figure xml:id="fig-stm32-pinout">
+                <caption>Pin diagram of the STM32C031C6 (48-pin LQFP package).  The
+                chip has 48 pins organized into three GPIO ports — A, B, and C — each
+                with up to 16 pins.  PA5 (bottom row, highlighted in red) is the
+                on-board LED pin.</caption>
+                <image source="slides/Day01-Intro-Blinky/slide13_visual.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-led-pin-connection">
+                <caption>Color-coded Nucleo-64 pin map.  Each header pin is shown with
+                its Arduino label (center columns) and corresponding STM32C031C6 port/bit
+                name (outer columns), color-coded by function.  The red box and arrow
+                highlight D13 = PA5 (Port A, bit 5) — the on-board LED pin.</caption>
+                <image source="slides/Day01-Intro-Blinky/slide15_visual.png" width="90%"/>
+            </figure>
+
+        </subsection>
+
+        <subsection xml:id="subsec-day1-blinky-walkthrough">
+            <title>Part 3: Inside blinky.c</title>
+
+            <p>
+                To make an LED blink, the program must do four things in order:
+            </p>
+            <ol>
+                <li>Turn on the clock to GPIO Port A (the peripheral is off by default).</li>
+                <li>Set PA5 to output mode so we can drive it HIGH or LOW.</li>
+                <li>Set bit 5 HIGH to turn the LED on.</li>
+                <li>Clear bit 5 LOW to turn the LED off — then repeat.</li>
+            </ol>
+            <p>
+                Each step is one or two lines of C.  Here is the complete
+                <c>blinky.c</c> source.
+            </p>
+
+            <program language="c"><code><![CDATA[
+#include "stm32C0xx.h"         // all register definitions live here
+
+// Bit 0 of RCC->IOPENR enables the clock for GPIOA
+#define GPIOAEN   (1U << 0)    // 0b...0001  (unsigned 32-bit)
+
+// Bit 5 of GPIOA is wired to the on-board LED
+#define LED_PIN   (1U << 5)    // 0b...0010 0000
+
+int main(void) {
+    RCC->IOPENR  |= GPIOAEN;    // Step 1: enable GPIOA clock
+    GPIOA->MODER |= (1U << 10); // Step 2a: set   bit 10 of MODER
+    GPIOA->MODER &= ~(1U << 11);// Step 2b: clear bit 11 of MODER
+                                 //          → PA5 is now an output
+
+    while (1) {
+        GPIOA->ODR |= LED_PIN;   // Step 3: set bit 5  → LED on
+        for (int i = 0; i < 100000; i++);
+
+        GPIOA->ODR &= ~LED_PIN;  // Step 4: clear bit 5 → LED off
+        for (int i = 0; i < 100000; i++);
+    }
+    return 0; // never reached
+}
+]]></code></program>
+
+            <p>
+                Notice that Steps 3 and 4 sit inside <c>while (1)</c> — an
+                <em>infinite loop</em> that never terminates.  In most programming
+                courses you are told never to write an infinite loop.  Embedded
+                programming is the exception.  An MCU is not a general-purpose
+                computer running an operating system; there is no desktop to return
+                to, no shell to hand control back to.  From the moment power is
+                applied, the processor must keep executing.  The <c>return 0</c>
+                at the end of <c>main()</c> is unreachable — it is there only
+                because the C standard requires it.  Any real embedded program has
+                exactly this shape: one-time setup code <em>before</em>
+                <c>while (1)</c>, then the work the device does <em>forever</em>
+                inside it.
+            </p>
+
+            <p>
+                Before stepping through each line, here are the three C operators
+                used throughout blinky.c.
+            </p>
+
+            <p>
+                <term>Left shift: <c>1U &lt;&lt; n</c>.</term>
+                Writing <c>1U &lt;&lt; n</c> shifts the value 1 left by <c>n</c>
+                bit positions, placing a single <c>1</c> at position <c>n</c>
+                and zeros everywhere else.  The <c>U</c> suffix makes it an
+                <em>unsigned</em> 32-bit integer — required to avoid undefined
+                behavior when shifting near bit 31.
+            </p>
+
+            <program language="c"><code><![CDATA[
+1U       = 0b 0000 0000 0000 0000 0000 0000 0000 0001   (bit  0 is 1)
+1U <<  5 = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit  5 is 1)
+1U << 10 = 0b 0000 0000 0000 0000 0000 0100 0000 0000   (bit 10 is 1)
+]]></code></program>
+
+            <p>
+                This single-<c>1</c> pattern is called a <term>bit mask</term>.
+                Giving it a name with <c>#define</c> makes the code self-documenting:
+                <c>LED_PIN</c> instead of an unexplained <c>(1U &lt;&lt; 5)</c>.
+            </p>
+
+            <p>
+                <term>Setting a bit: OR-assign (<c>|=</c>).</term>
+                The bitwise OR truth table shows what happens to each bit pair:
+            </p>
+
+            <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                <row header="yes" bottom="minor">
+                    <cell>A (register bit)</cell>
+                    <cell>B (mask bit)</cell>
+                    <cell>A | B</cell>
+                </row>
+                <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                <row><cell>0</cell><cell>1</cell><cell>1</cell></row>
+                <row><cell>1</cell><cell>0</cell><cell>1</cell></row>
+                <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
+            </tabular>
+
+            <p>
+                When the mask bit is <c>1</c>, the result is always <c>1</c> —
+                the register bit is forced high regardless of its current value.
+                When the mask bit is <c>0</c>, the result equals the register bit —
+                it is left unchanged.  So <c>register |= mask</c>
+                sets exactly the bits that are <c>1</c> in the mask, leaving
+                all other bits untouched.
+                A plain assignment would overwrite every other bit to zero, potentially
+                disabling things that were already configured.  Always use <c>|=</c>
+                to set bits in peripheral registers.
+            </p>
+
+            <p>
+                <term>Clearing a bit: AND-assign (<c>&amp;=</c>) and bitwise NOT (<c>~</c>).</term>
+                <c>register &amp;= value</c> is shorthand for
+                <c>register = register &amp; value</c> — it AND-assigns any value
+                you give it, exactly like <c>|=</c> is shorthand for OR-assign.
+                The <c>~</c> operator is separate: it flips every bit of its operand.
+                In blinky.c these two operators appear together because clearing a bit
+                requires exactly that combination, but they can each be used on their own.
+            </p>
+
+            <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                <row header="yes" bottom="minor">
+                    <cell>A (register bit)</cell>
+                    <cell>B (mask bit)</cell>
+                    <cell>A &amp; B</cell>
+                </row>
+                <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                <row><cell>0</cell><cell>1</cell><cell>0</cell></row>
+                <row><cell>1</cell><cell>0</cell><cell>0</cell></row>
+                <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
+            </tabular>
+
+            <p>
+                When the mask bit is <c>0</c>, the result is always <c>0</c> —
+                the register bit is forced low regardless of its current value.
+                When the mask bit is <c>1</c>, the result equals the register bit —
+                it is left unchanged.
+                To force a single bit to <c>0</c>, start with a mask that has a
+                <c>1</c> in that position, then apply <c>~</c> to invert it —
+                producing <c>0</c> at that position and <c>1</c>s everywhere else:
+            </p>
+
+            <program language="c"><code><![CDATA[
+LED_PIN  = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit 5 is 1)
+~LED_PIN = 0b 1111 1111 1111 1111 1111 1111 1101 1111   (bit 5 is 0, rest are 1s)
+]]></code></program>
+
+            <p>
+                AND-ing (<c>&amp;</c>) any bit with <c>0</c> forces it to <c>0</c>;
+                AND with <c>1</c> leaves it unchanged.
+                So <c>register &amp;= ~mask</c> clears exactly the bits that were
+                <c>1</c> in the mask, leaving all others untouched.
+            </p>
+
+            <p>
+                With those three operators in hand, each step of blinky.c is
+                straightforward to read.
+            </p>
+
+            <p>
+                <term>Step 1: Enable the GPIOA clock.</term>
+                By default, the clock to each GPIO port is gated off to save power.
+                You cannot read from or write to any GPIO register until its clock is
+                enabled.  The first line of <c>main()</c> — <c>RCC-&gt;IOPENR |= GPIOAEN</c>
+                — enables the clock to Port A; it must appear before any access to
+                <c>GPIOA-&gt;MODER</c> or <c>GPIOA-&gt;ODR</c>.
+            </p>
+
+            <p>
+                <term>Step 2: Configure PA5 as an output.</term>
+                The register that controls this is
+                <c>GPIOA-&gt;MODER</c>, the <term>Mode Register</term> for Port A.
+                MODER is a 32-bit register that stores the mode of every pin in Port A.
+                Each pin can be in one of four modes: input, output, alternate function
+                (for peripherals like UART), or analog.  Because there are four
+                possibilities, two bits are needed to encode the mode of each pin —
+                a single bit could only represent two states.  With 16 pins per port
+                and two bits per pin, MODER is exactly 32 bits wide.
+                The four possible two-bit encodings are:
+            </p>
+
+            <table xml:id="table-moder-encoding">
+                <title>MODER bit-pair encoding</title>
+                <tabular halign="left">
+                    <row header="yes">
+                        <cell>Bits [2n+1 : 2n]</cell><cell>Pin mode</cell>
+                    </row>
+                    <row><cell><c>00</c></cell><cell>Input (reset default)</cell></row>
+                    <row><cell><c>01</c></cell><cell>General-purpose output</cell></row>
+                    <row><cell><c>10</c></cell><cell>Alternate function</cell></row>
+                    <row><cell><c>11</c></cell><cell>Analog</cell></row>
+                </tabular>
+            </table>
+
+            <p>
+                For pin <m>n</m>, MODER uses bits <m>2n</m> (lower) and <m>2n+1</m>
+                (upper).  For PA5, that is bits 10 and 11.  Output mode is encoded
+                as <c>01</c> — bit 10 set to <c>1</c>, bit 11 cleared to <c>0</c>.
+                That is why Step 2 takes two lines: one to set bit 10, one to clear
+                bit 11.
+            </p>
+
+            <aside>
+                <title>Why two lines?</title>
+                <p>
+                    If you only set bit 10 and bit 11 happened to be <c>1</c> already,
+                    the two-bit pattern would be <c>11</c> (analog mode) rather than
+                    <c>01</c> (output).  Always explicitly clear the upper bit to
+                    guarantee the correct mode regardless of the reset state.
+                </p>
+            </aside>
+
+            <p>
+                <term>Steps 3 and 4: Drive PA5 high and low.</term>
+                <c>GPIOA-&gt;ODR |= LED_PIN</c> sets bit 5 to <c>1</c>, pulling
+                PA5 to 3.3 V and turning the LED on.
+                <c>GPIOA-&gt;ODR &amp;= ~LED_PIN</c> clears bit 5 to <c>0</c>,
+                pulling PA5 to 0 V and turning the LED off.
+                Inside <c>while(1)</c>, these two operations alternate forever —
+                producing the blink.
+            </p>
+
+            <activity xml:id="act-day1-bit-ops">
+                <title>Bit Manipulation Practice</title>
+                <introduction>
+                    <p>
+                        Apply the three operators from the walkthrough.  Work through
+                        each task before moving to the next.
+                    </p>
+                </introduction>
+                <task xml:id="act-day1-bitops-t1">
+                    <statement>
+                        <p>
+                            Write out the 32-bit binary value of <c>1U &lt;&lt; 10</c>.
+                            Which bit position is the <c>1</c>?  What is the value in
+                            hexadecimal?
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-bitops-t2">
+                    <statement>
+                        <p>
+                            Based on what you just read about <c>|=</c> and <c>~</c>:
+                            what does <c>GPIOA-&gt;MODER &amp;= ~(1U &lt;&lt; 11)</c>
+                            do to bit 11?  Explain in one sentence.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-bitops-t3">
+                    <statement>
+                        <p>
+                            Compute <c>0b00001111 | 0b10100000</c> by hand (8-bit
+                            example).  Write the result in binary.  Which bits are
+                            <c>1</c> in the result, and why?
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-bitops-t4">
+                    <statement>
+                        <p>
+                            Starting from <c>0b11111111</c>, apply
+                            <c>&amp; 0b11110111</c>.  What is the result?
+                            Which bit changed, and in which direction?
+                        </p>
+                    </statement>
+                </task>
+            </activity>
+
+        </subsection>
+
+        <subsection xml:id="subsec-day1-explore">
+            <title>Part 4: Explore the Registers</title>
+
+            <p>
+                Each of the three setup lines in <c>blinky.c</c> does something
+                specific.  Predict what will happen before making each change,
+                then verify on the board.  Discuss your predictions with a neighbor.
+            </p>
+
+            <activity xml:id="act-day1-explore-registers">
+                <title>Register Exploration</title>
+                <task xml:id="act-day1-reg-t1">
+                    <statement>
+                        <p>
+                            Comment out <c>GPIOA-&gt;MODER |= (1U &lt;&lt; 10);</c>
+                            (leave the clock enable and the MODER clear line).
+                            Will the LED blink, stay on, or stay off?  Build,
+                            flash, and confirm.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-reg-t2">
+                    <statement>
+                        <p>
+                            Restore the MODER line.  Comment out
+                            <c>RCC-&gt;IOPENR |= GPIOAEN;</c>.
+                            Predict before testing.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-reg-t3">
+                    <statement>
+                        <p>
+                            Restore the RCC line.  Replace
+                            <c>GPIOA-&gt;ODR |= LED_PIN;</c> with
+                            <c>GPIOA-&gt;ODR = LED_PIN;</c> (no <c>|=</c>).
+                            Does this change behavior for a single-LED Blinky?
+                            When would it matter?
+                        </p>
+                    </statement>
+                </task>
+            </activity>
+        </subsection>
+
+        <subsection xml:id="subsec-day1-before-next-class">
+            <title>Before Day 1X: Plan on Paper</title>
+
+            <p>
+                In Day 1X we will write <c>blinkySlowToFast.c</c>: the LED starts
+                blinking slowly, gradually speeds up, then resets and repeats.
+                You will not need your Nucleo board for this — just a pencil and paper.
+            </p>
+
+            <activity xml:id="act-day1-plan-slowtofast">
+                <title>Plan blinkySlowToFast on Paper</title>
+                <introduction>
+                    <p>
+                        Think through the logic before writing any C.  You already know
+                        that the loop bound in the delay loop controls the blink rate.
+                        Sketch your approach on paper.
+                    </p>
+                </introduction>
+                <task xml:id="act-day1-plan-t1">
+                    <statement>
+                        <p>
+                            What variable would you introduce to control the delay?
+                            How does it change from one blink to the next?
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-plan-t2">
+                    <statement>
+                        <p>
+                            How will your program know when it has reached
+                            <q>fast</q> and should reset back to <q>slow</q>?
+                            Write the condition in plain English or pseudocode.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-plan-t3">
+                    <statement>
+                        <p>
+                            Sketch the overall structure of <c>main()</c> on paper —
+                            just the logic, not C syntax.  Bring your sketch to Day 1X.
+                        </p>
+                    </statement>
+                </task>
+            </activity>
+        </subsection>
+    </section>
+
+    <!-- ============================================================ -->
+    <!--  DAY 1X IN-CLASS                                              -->
+    <!-- ============================================================ -->
+
+    <section xml:id="sec-blinky-day1x">
+        <title>Day 1X In-Class: blinkySlowToFast</title>
+
+        <introduction>
+            <p>
+                Day 1X is our x-hour.  No pre-class reading is required
+                beyond reviewing your Day 1 Blinky work.  You will implement a more
+                complex blink pattern: the LED starts blinking slowly and gradually
+                speeds up until it resets and repeats.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-day1x-copy-file">
+            <title>Part 1: Managing Multiple Source Files</title>
+
+            <p>
+                A C project can have only one active <c>main()</c> function.
+                When you create a second <c>.c</c> file with its own
+                <c>main()</c>, you must exclude the original from the build.
+            </p>
+            <p>
+                To create <c>blinkySlowToFast.c</c>: right-click <c>blinky.c</c>
+                in the Project Explorer and choose <em>Copy</em>.  Right-click
+                the <c>Src</c> folder, choose <em>Paste</em>, and when prompted
+                enter <c>blinkySlowToFast.c</c> as the new filename.  Open the
+                new file — this is where you will make your edits.
+            </p>
+            <p>
+                To exclude <c>blinky.c</c> from the build: right-click it, choose
+                <em>Resource Configurations → Exclude from Build</em>, click
+                <em>Select All</em>, then OK.  The file icon changes to show it
+                will be skipped (<xref ref="fig-exclude-from-build"/>).
+            </p>
+
+            <figure xml:id="fig-exclude-from-build">
+                <caption>Right-click <c>blinky.c</c> in the Project Explorer and choose
+                <em>Resource Configurations → Exclude from Build…</em> (highlighted in red).
+                In the dialog that appears, click <em>Select All</em> so both Debug and
+                Release configurations exclude the file, then click OK.</caption>
+                <image source="slides/Day01x-Blinky/slide14_ann.png" width="55%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-day1x-slowtofast">
+            <title>Part 2: Implement blinkySlowToFast</title>
+
+            <activity xml:id="act-blinky-slow-to-fast">
+                <title>blinkySlowToFast.c</title>
+                <introduction>
+                    <p>
+                        The goal: the LED blinks slowly at first, the rate
+                        steadily increases until it reaches a fast rate, then
+                        the cycle repeats.
+                    </p>
+                </introduction>
+
+                <task xml:id="act-sltf-t1">
+                    <statement>
+                        <p>
+                            At the end of Day 1 you sketched this logic on paper
+                            as homework.  Take out your sketch now.  If you did not
+                            complete it, spend two minutes writing it down before
+                            continuing — you will need it for the next task.
+                        </p>
+                    </statement>
+                </task>
+
+                <task xml:id="act-sltf-t2">
+                    <statement>
+                        <p>
+                            Exchange your sketch with a neighbor and review their
+                            design.  For their approach, answer the following — then
+                            share your feedback with them:
+                        </p>
+                        <p><ul>
+                            <li>What variable controls the blink rate, and how does
+                                it change from one cycle to the next?</li>
+                            <li>What is the reset condition — how does the program
+                                know it has reached <q>fast</q> and should return
+                                to <q>slow</q>?</li>
+                            <li>Will the approach produce a smooth ramp, or will
+                                there be a jump?  Is there an edge case where the
+                                reset might not trigger correctly?</li>
+                            <li>Is there anything you would change or question?</li>
+                        </ul></p>
+                    </statement>
+                </task>
+
+                <task xml:id="act-sltf-t3">
+                    <statement>
+                        <p>
+                            Implement your own design in <c>blinkySlowToFast.c</c>.
+                            Use descriptive constant names for the starting delay,
+                            ending delay, and step size.  Build, flash, and verify
+                            the behavior on the board.
+                        </p>
+                    </statement>
+                </task>
+            </activity>
+        </subsection>
+    </section>
+
+    <!-- ============================================================ -->
+    <!--  DAY 2 IN-CLASS                                               -->
+    <!-- ============================================================ -->
+
+    <section xml:id="sec-blinky-day2">
+        <title>Day 2 In-Class: External LEDs and delay_ms()</title>
+
+        <introduction>
+            <p>
+                Day 2 introduces <c>delay_ms()</c>, external LEDs on the breadboard,
+                and voltage measurements with the digital multimeter.  At the end
+                of class you will start Lab 1.
+            </p>
+            <p>
+                For a deeper look at how a write to <c>GPIOA-&gt;ODR</c> physically
+                changes a pin voltage — the processor pipeline, memory map, and GPIO
+                output circuit — read <xref ref="sec-mcu-architecture"/> at any point.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-day2-c-to-hardware">
+            <title>Part 1: From C Code to Hardware</title>
+
+            <p>
+                When you write <c>GPIOA-&gt;ODR |= LED_PIN</c>, how does that one
+                line of C actually light an LED?  The path has three stages:
+                compile, flash, execute (<xref ref="fig-how-mcu-runs"/>).
+                C is a compiled language, not an interpreted one — the compiler
+                processes your entire source file at once and produces a single
+                binary (an <c>.elf</c> file) containing all the machine instructions
+                for the whole program.  The IDE then flashes that binary to the
+                chip's 32 KB flash memory in one operation.  Once the board resets,
+                the Cortex-M0+ CPU fetches and executes those stored instructions
+                one by one.  The source lines you wrote no longer exist on the chip —
+                only the machine instructions they were compiled into.
+            </p>
+
+            <figure xml:id="fig-how-mcu-runs">
+                <caption>How a C program runs on the STM32.  The compiler translates
+                C source into machine instructions stored in flash.  At run time the
+                CPU fetches and executes each instruction in sequence.  As a concrete
+                example, the line <c>GPIOA-&gt;ODR |= LED_PIN</c> compiles to a
+                load-OR-store sequence; when executed, the store to the GPIO Output
+                Data Register drives the output pin HIGH.</caption>
+                <image source="slides/Day02-Blinky(2)/slide08_799bfba4.png" width="80%"/>
+            </figure>
+
+            <p>
+                <term>Memory-mapped I/O.</term>
+                The STM32C031C6 has a single 4 GB address space shared by flash,
+                RAM, and every peripheral register (<xref ref="fig-memory-map"/>).
+                There is no separate I/O bus and no special I/O instructions — the
+                CPU reads and writes peripheral registers exactly the same way it
+                reads and writes RAM.  <c>GPIOA-&gt;ODR</c> is not a variable stored
+                in RAM; it is a name for memory address <c>0x5000 0014</c>.
+                When the CPU stores a value to that address, the GPIO hardware
+                detects the write on the bus and responds immediately — within one
+                clock cycle.
+            </p>
+
+            <figure xml:id="fig-memory-map">
+                <caption>Memory map of the STM32C031C6.  Flash (program code) lives at
+                <c>0x0800 0000</c>; RAM is at <c>0x2000 0000</c>.
+                GPIO peripheral registers are in the IOPORT block at <c>0x5000 0000</c>.
+                Writing to a GPIO register is simply a store to a specific address in
+                this map — no special I/O instruction required.</caption>
+                <image source="slides/Day02-Blinky(2)/fullslide_12.png" width="100%"/>
+            </figure>
+
+            <p>
+                <term>How the output pin changes voltage.</term>
+                Each GPIO output contains a pair of transistors — a P-MOS on top and
+                an N-MOS on the bottom — connected between the 3.3 V supply and ground
+                (<xref ref="fig-gpio-output-circuit"/>).  This is called a
+                <term>push-pull</term> output.  Writing a <c>1</c> to the ODR bit
+                turns the P-MOS on (connecting the pin to 3.3 V) and turns the N-MOS
+                off.  Writing a <c>0</c> does the reverse: N-MOS on, P-MOS off, pin
+                driven to 0 V.  The GPIO hardware makes that transistor switch happen
+                within nanoseconds of the CPU store.  Setting MODER to output mode
+                (<c>01</c>) connects this push-pull driver to the pin; in any other
+                mode the driver is disconnected.
+            </p>
+
+            <figure xml:id="fig-gpio-output-circuit">
+                <caption>GPIO output configuration (from the STM32C031C6 reference
+                manual, annotated).  A write to <c>GPIOA-&gt;ODR</c> (bottom-left)
+                passes through output control logic to the P-MOS/N-MOS transistor
+                pair, driving the I/O pin toward the LED.  ODR = 1 turns on P-MOS
+                → pin goes HIGH (3.3 V); ODR = 0 turns on N-MOS → pin goes LOW (0 V).
+                <c>GPIOA-&gt;MODER</c> (bottom-right) selects input vs. output mode.
+                </caption>
+                <image source="slides/Day02-Blinky(2)/fullslide_14.png" width="100%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-day2-delay-ms">
+            <title>Part 2: A Better Delay — delay_ms()</title>
+            <idx><h>delay_ms()</h></idx>
+            <idx><h>ES28.h</h></idx>
+
+            <p>
+                The busy-wait loop produces an imprecise delay whose duration depends
+                on the compiler optimization level and clock speed.  Starting today,
+                use the course-provided <c>delay_ms()</c> function.  Replace the
+                include line at the top of your source file:
+            </p>
+
+            <program language="c"><code><![CDATA[
+// Day 1:
+#include "stm32C0xx.h"
+
+// Day 2 onward — use this instead:
+#include "ES28.h"   // includes stm32C0xx.h AND the prototype for delay_ms()
+]]></code></program>
+
+            <p>
+                With that change you can write readable, self-documenting delays:
+            </p>
+
+            <program language="c"><code><![CDATA[
+#include "ES28.h"
+
+#define GPIOAEN  (1U << 0)
+#define LED_PIN  (1U << 5)
+
+int main(void) {
+    RCC->IOPENR  |= GPIOAEN;
+    GPIOA->MODER |= (1U << 10);
+    GPIOA->MODER &= ~(1U << 11);
+
+    while (1) {
+        GPIOA->ODR |= LED_PIN;   // LED on
+        delay_ms(1000);           // wait 1 second
+
+        GPIOA->ODR &= ~LED_PIN;  // LED off
+        delay_ms(500);            // wait 0.5 second
+    }
+    return 0;
+}
+]]></code></program>
+        </subsection>
+
+        <subsection xml:id="subsec-day2-breadboard">
+            <title>Part 3: External LEDs on the Breadboard</title>
+            <idx><h>breadboard</h></idx>
+            <idx><h>digital multimeter (DMM)</h></idx>
+
+            <p>
+                The on-board LED is convenient for software testing, but the whole
+                point of a microcontroller is to control external devices.  You will
+                wire an LED on a breadboard, drive it from a GPIO pin, and use a
+                digital multimeter to measure the voltages and currents in the circuit.
+            </p>
+            <p>
+                Your breadboard has power rails running along each long edge.
+                Some kits come with these rails already wired to the Nucleo;
+                if yours does not, wire them now as shown in
+                <xref ref="fig-nucleo-breadboard"/>.
+                Use the Nucleo's <em>3.3 V</em> header pin for the positive rails.
+                Also connect all positive rails to each other and all ground rails
+                to each other as shown — this lets you tap 3.3 V or GND from
+                anywhere on the board.
+                Once wired, leave all of these jumpers in place for the entire term.
+            </p>
+
+            <figure xml:id="fig-nucleo-breadboard">
+                <caption>The Nucleo board connected to a breadboard at the start of
+                Lab 1.  Short red and black jumper wires link the Nucleo's 3.3 V and
+                GND header pins to the breadboard's positive and negative power rails.
+                Leave these wires in place for the entire term.</caption>
+                <image source="slides/Day02-Blinky(2)/slide18_7ffed5f7.png" width="80%"/>
+            </figure>
+
+            <p>
+                To build the LED circuit, choose a red or green LED and a 220 Ω
+                resistor.  Wire the circuit as shown in
+                <xref ref="fig-external-led-circuit"/>: the GPIO pin connects to the
+                LED anode (+, longer lead), the LED cathode (−, shorter lead) connects
+                through the resistor to the ground rail.
+            </p>
+
+            <figure xml:id="fig-external-led-circuit">
+                <caption>External LED wired on the breadboard and driven from D13 (PA5).
+                Green arrows show current flow: from the D13 header pin, through the
+                LED (anode to cathode), through the 220 Ω resistor, and into the ground
+                rail.  The resistor limits current to roughly 10–15 mA.  The red and black
+                wires connect the board's 3.3 V and GND headers to the breadboard rails.</caption>
+                <image source="slides/Day02-Blinky(2)/slide23_ann.png" width="60%"/>
+            </figure>
+
+            <p>
+                The digital multimeter (<xref ref="fig-dmm-photo"/>) is essential for
+                verifying circuits.  Set the dial to the 20 V DC range for 3.3 V
+                circuits; turn it off when finished to preserve the battery.
+            </p>
+
+            <figure xml:id="fig-dmm-photo">
+                <caption>The digital multimeter (DMM) from your lab kit.  Turn the
+                dial to the 20 V DC position for 3.3 V circuits.  Black probe in
+                COM, red probe in VΩmA.  Turn to OFF when done.</caption>
+                <image source="slides/Day02-Blinky(2)/slide19_4462fc0a.png" width="35%"/>
+            </figure>
+
+            <activity xml:id="act-day2-external-led">
+                <title>Wire and Measure</title>
+                <introduction>
+                    <p>
+                        Update your blinky program to use <c>delay_ms(2000)</c>
+                        (2 s on, 2 s off) so the DMM display has time to settle.
+                    </p>
+                </introduction>
+                <task xml:id="act-day2-led-t1">
+                    <statement>
+                        <p>
+                            Flash your updated program.  Confirm that both the
+                            on-board LED and the external LED blink.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day2-led-t2">
+                    <statement>
+                        <p>
+                            With the LED lit, measure three voltages.
+                            <m>V_{CC}</m>: from the power rail to ground (expect ≈ 3.3 V).
+                            <m>V_F</m>: across the LED (anode to cathode).
+                            <m>V_R</m>: across the resistor.
+                            Verify Kirchhoff's voltage law: <m>V_{CC} = V_F + V_R</m>.
+                            Calculate the current <m>I_F = V_R / R</m>.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day2-led-t3">
+                    <statement>
+                        <p>
+                            Replace the 220 Ω resistor with a 1 kΩ resistor.
+                            Repeat the measurements.  Calculate the new current.
+                            Is the LED brighter or dimmer?  Why?
+                        </p>
+                    </statement>
+                </task>
+            </activity>
+
+            <figure xml:id="fig-blinky-d4">
+                <caption>The breadboard circuit after moving the LED's anode wire
+                from D13 to D4.  Only one jumper wire is rerouted.</caption>
+                <image source="slides/Day02-Blinky(2)/slide25_e6bdef76.png" width="60%"/>
+            </figure>
+
+            <figure xml:id="fig-nucleo-pinout">
+                <caption>Nucleo-64 pinout reference showing each Arduino header label
+                and its corresponding STM32 port and bit number.  Use this to look up
+                which MCU pin any Arduino header connects to.</caption>
+                <image source="slides/Day02-Blinky(2)/slide26_995cec21.png" width="70%"/>
+            </figure>
+
+            <activity xml:id="act-day2-new-pin">
+                <title>Move to a New Pin</title>
+                <introduction>
+                    <p>
+                        Move the LED's anode wire from D13 to D4
+                        (<xref ref="fig-blinky-d4"/>).
+                        To make the LED blink from D4 you need to make three changes
+                        to your program: enable the correct GPIO port clock, configure
+                        the pin as an output, and drive it.
+                        Before writing any code, answer the following on paper.
+                    </p>
+                </introduction>
+                <task xml:id="act-day2-led-t4a">
+                    <statement>
+                        <p>
+                            Using <xref ref="fig-nucleo-pinout"/>, find which STM32
+                            port and bit number D4 corresponds to.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day2-led-t4b">
+                    <statement>
+                        <p>
+                            In the
+                            <url href="external/stm32c031_rm.pdf">STM32C031C6 Reference Manual</url>,
+                            go to Section 5.4 (RCC registers) and find the
+                            <c>RCC_IOPENR</c> register description.
+                            Which bit enables the clock for the port you identified?
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day2-led-t4c">
+                    <statement>
+                        <p>
+                            From Day 1: for pin <m>n</m>, MODER uses bits <m>2n</m>
+                            and <m>2n+1</m>.  What are the two MODER bit numbers for
+                            the pin you identified?  What value encodes output mode?
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day2-led-t4d">
+                    <statement>
+                        <p>
+                            Update your code with the values you found and verify
+                            the external LED blinks.
+                            The on-board LED (PA5) will stop blinking — that is expected.
+                        </p>
+                    </statement>
+                </task>
+            </activity>
+        </subsection>
+
+        <subsection xml:id="sec-lab1">
+            <title>Part 4: Lab 1 — Three-LED Experiments</title>
+            <idx><h>Lab 1</h></idx>
+
+            <p>
+                Lab 1 extends the single-LED Blinky to a three-LED circuit
+                (<xref ref="fig-three-leds"/>).  Wire three LEDs through 220 Ω resistors
+                to three separate GPIO output pins.
+                Each sub-task asks you to write a separate C file implementing a different
+                blinking pattern.
+            </p>
+
+            <figure xml:id="fig-three-leds">
+                <caption>Three-LED circuit for Lab 1.  Each LED has its own 220 Ω
+                resistor and connects to a separate GPIO output pin.  Build
+                incrementally: get the first LED blinking before adding the second,
+                and the second before adding the third.</caption>
+                <image source="slides/Day02-Blinky(2)/slide37_ca307cb5.png" width="55%"/>
+            </figure>
+
+            <p>
+                Start in a new project: copy your TemplateProject and rename the
+                copy <c>Lab1</c>.  Download <c>template.c</c> from Canvas, place it in
+                the project's <c>Src</c> folder, and rename it to your first target filename.
+                The template includes a header comment block — fill in your name, assignment,
+                a table of I/O pins and what they connect to, and a revision history for
+                every file you submit.
+            </p>
+
+            <p>
+                Build and test incrementally: get one LED working before adding the second
+                and third.  Use descriptive <c>#define</c> names for every pin and timing
+                constant, and keep track of your changes in comments.
+            </p>
+
+            <exercises>
+                <exercise xml:id="act-blinky-sim">
+                    <title>blinkySIM.c — Simultaneous Blink</title>
+                    <statement>
+                        <p>
+                            Write <c>blinkySIM.c</c>: all three LEDs blink on and off
+                            simultaneously at the same rate.  All three should turn on
+                            together, pause, turn off together, pause, and repeat.
+                        </p>
+                        <p>
+                            Hint: if two LEDs are on the same GPIO port, you can set (or
+                            clear) both bits with a single OR (or AND) operation rather than
+                            two separate register writes.
+                        </p>
+                    </statement>
+                </exercise>
+
+                <exercise xml:id="act-blinky-seq">
+                    <title>blinkySEQ.c — Sequential Blink</title>
+                    <statement>
+                        <p>
+                            Once <c>blinkySIM.c</c> is working, copy it to
+                            <c>blinkySEQ.c</c>.  Modify the on/off logic so the three
+                            LEDs blink in sequence — only one lit at a time, cycling
+                            LED 1 → LED 2 → LED 3 → LED 1 → <ellipsis/> continuously.
+                        </p>
+                    </statement>
+                </exercise>
+
+                <exercise xml:id="act-blinky-cnt">
+                    <title>blinkyCNT.c — Binary Counter</title>
+                    <statement>
+                        <p>
+                            Write <c>blinkyCNT.c</c>: the three LEDs display a 3-bit binary
+                            count, cycling through 000, 001, 010, 011, 100, 101, 110, 111,
+                            000, <ellipsis/> with a short pause between each step.  Designate
+                            which LED represents the least significant bit and which the most.
+                        </p>
+                        <p>
+                            Hint: a loop variable incrementing from 0 to 7 can be used to
+                            drive the three LEDs.  Use bit-twiddling expressions to extract
+                            each bit of the counter and map it to the appropriate GPIO pin.
+                        </p>
+                    </statement>
+                </exercise>
+            </exercises>
+
+            <aside>
+                <title>AI Policy for ENGS 28</title>
+                <p>
+                    You are welcome to use the course's HiTA tool (integrated in Canvas)
+                    for help.  Before asking for assistance, engage in genuine problem-solving
+                    on your own — productive struggle is where most learning happens.
+                    If you use any AI tool, disclose it in your code comments, rigorously
+                    test and understand the output, and be prepared to explain every line.
+                    All comments in submitted code must be in your own words.
+                </p>
+            </aside>
+        </subsection>
+    </section>
+
+
+    <!-- ============================================================ -->
+    <!--  REFERENCE: BIT TWIDDLING                                     -->
+    <!-- ============================================================ -->
+
+    <section xml:id="sec-bit-twiddling">
+        <title>Reference: Bit Twiddling</title>
+        <idx><h>bit twiddling</h></idx>
+        <idx><h>bitwise operators</h></idx>
+
+        <p>
+            The operations used in Blinky — setting and clearing individual bits without
+            disturbing the rest of a register — appear in virtually every line of
+            embedded-systems code.  Collectively they are called <term>bit twiddling</term>.
+            They rely on three bitwise operators whose behavior on each pair of bits is
+            captured in these truth tables:
+        </p>
+
+        <sidebyside widths="30% 30% 30%" margins="0% 10%">
+            <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                <row header="yes" bottom="minor">
+                    <cell colspan="3">Bitwise OR ( | )</cell>
+                </row>
+                <row header="yes" bottom="minor">
+                    <cell>A</cell><cell>B</cell><cell>A | B</cell>
+                </row>
+                <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                <row><cell>0</cell><cell>1</cell><cell>1</cell></row>
+                <row><cell>1</cell><cell>0</cell><cell>1</cell></row>
+                <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
+            </tabular>
+            <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                <row header="yes" bottom="minor">
+                    <cell colspan="3">Bitwise AND ( &amp; )</cell>
+                </row>
+                <row header="yes" bottom="minor">
+                    <cell>A</cell><cell>B</cell><cell>A &amp; B</cell>
+                </row>
+                <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                <row><cell>0</cell><cell>1</cell><cell>0</cell></row>
+                <row><cell>1</cell><cell>0</cell><cell>0</cell></row>
+                <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
+            </tabular>
+            <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                <row header="yes" bottom="minor">
+                    <cell colspan="3">Bitwise XOR ( ^ )</cell>
+                </row>
+                <row header="yes" bottom="minor">
+                    <cell>A</cell><cell>B</cell><cell>A ^ B</cell>
+                </row>
+                <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                <row><cell>0</cell><cell>1</cell><cell>1</cell></row>
+                <row><cell>1</cell><cell>0</cell><cell>1</cell></row>
+                <row><cell>1</cell><cell>1</cell><cell>0</cell></row>
+            </tabular>
+        </sidebyside>
+
+        <p>
+            The key insight for register programming: OR with <c>1</c> forces a bit to
+            <c>1</c>; OR with <c>0</c> leaves it unchanged.  AND with <c>0</c> forces a
+            bit to <c>0</c>; AND with <c>1</c> leaves it unchanged.  XOR with <c>1</c>
+            <em>toggles</em> a bit (flips <c>0</c>→<c>1</c> or <c>1</c>→<c>0</c>);
+            XOR with <c>0</c> leaves it unchanged.
+            The three fundamental patterns are:
+        </p>
+
+        <program language="c"><code><![CDATA[
+// Set bit n in register NUM (force that bit to 1):
+NUM |= (1U << n);
+
+// Clear bit n in register NUM (force that bit to 0):
+NUM &= ~(1U << n);
+
+// Toggle bit n in register NUM (flip 0→1 or 1→0):
+NUM ^= (1U << n);
+]]></code></program>
+
+        <p>
+            The expression <c>(1U &lt;&lt; n)</c> is called a <term>bit mask</term>: it
+            has exactly one <c>1</c> bit (at position <m>n</m>) and zeros everywhere
+            else.  The <c>U</c> suffix makes it an <em>unsigned</em> 32-bit integer,
+            which is important when <m>n</m> equals 31 (shifting into the sign bit of
+            a signed <c>int</c> would cause undefined behavior in C).
+        </p>
+
+        <p>
+            Two additional idioms let you <em>test</em> whether a bit is set without
+            modifying the register:
+        </p>
+
+        <program language="c"><code><![CDATA[
+// Test if bit n is 0:
+if ((NUM & (1U << n)) == 0)  { /* bit n is 0 */ }
+
+// Test if bit n is 1 (non-zero):
+if ((NUM & (1U << n)) != 0)  { /* bit n is 1 */ }
+]]></code></program>
+
+        <p>
+            AND-ing a register with a one-bit mask zeroes every bit except the one
+            we care about.  The result is either <c>0</c> (bit was <c>0</c>) or a
+            non-zero value (bit was <c>1</c>).
+        </p>
+
+        <reading-questions xml:id="rq-bit-twiddling">
+            <title>Check Your Understanding</title>
+
+            <exercise xml:id="rq-toggle-example">
+                <statement>
+                    <p>
+                        Suppose <c>NUM = 0b00101101</c> (8-bit example).
+                        What is the value of <c>NUM</c> after
+                        <c>NUM ^= (1U &lt;&lt; 5)</c>?
+                    </p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p><c>0b00001101</c></p></statement>
+                        <feedback><p>Correct.  Bit 5 in <c>0b00101101</c> is
+                        already <c>1</c>; XOR with <c>1</c> toggles it to <c>0</c>,
+                        giving <c>0b00001101</c>.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p><c>0b00101101</c> (unchanged)</p></statement>
+                        <feedback><p>XOR with <c>1</c> always flips the bit; it does
+                        not leave it unchanged.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p><c>0b00111101</c></p></statement>
+                        <feedback><p>This would result from setting bit 4.
+                        Verify: <c>(1U&lt;&lt;5)</c> = <c>0b00100000</c>.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p><c>0b10101101</c></p></statement>
+                        <feedback><p>Check the mask position: <c>(1U&lt;&lt;5)</c>
+                        sets bit 5, which is <c>0b00100000</c>, not bit 7.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-clear-bit">
+                <statement>
+                    <p>
+                        Write the single C statement that clears bit 3 in a 32-bit
+                        register named <c>REG</c> without changing any other bit.
+                    </p>
+                </statement>
+                <response/>
+            </exercise>
+        </reading-questions>
+    </section>
+
+    <!-- ============================================================ -->
+    <!--  REFERENCE: INSIDE THE MICROCONTROLLER                        -->
+    <!-- ============================================================ -->
+
+    <section xml:id="sec-mcu-architecture">
+        <title>Inside the Microcontroller</title>
+
+        <introduction>
+            <p>
+                So far we have treated registers as magic addresses: write a <c>1</c>
+                here and the LED lights up.  This section pulls back the curtain and
+                explains <em>how</em> a write in your C program changes a voltage on
+                a physical pin.  The big picture is in <xref ref="fig-how-mcu-runs"/>;
+                the subsections below fill in the details.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-processor-arch">
+            <title>Processor Architecture</title>
+            <idx><h>Cortex-M0+</h></idx>
+            <idx><h>fetch-decode-execute</h></idx>
+
+            <p>
+                The Cortex-M0+ processor contains a set of <term>registers</term>—fast
+                storage locations inside the processor itself (<xref ref="fig-m0plus-registers"/>).
+                There are 13 general-purpose 32-bit registers (R0–R12) plus three
+                special-purpose registers: SP (stack pointer, R13), LR (link register, R14),
+                and PC (program counter, R15).  All computation uses these registers; data
+                must be loaded from memory first, processed, then written back.
+            </p>
+
+            <figure xml:id="fig-m0plus-registers">
+                <caption>The Cortex-M0+ internal register file.  The processor has
+                thirteen general-purpose 32-bit registers (R0–R12) that hold operands
+                and results during computation, plus three special-purpose registers:
+                SP (stack pointer, R13), LR (link register for return addresses, R14),
+                and PC (program counter, R15).  Every GPIO write ultimately passes
+                through this register file.</caption>
+                <image source="slides/Day02-Blinky(2)/slide10_0d9da36e.png" width="40%"/>
+            </figure>
+
+            <p>
+                When the CPU executes <c>GPIOA-&gt;ODR |= LED_PIN</c>, the underlying
+                machine instructions are:
+            </p>
+            <ol>
+                <li><em>Load</em> the current value of ODR from address <c>0x5000 0014</c>
+                    into a CPU register.</li>
+                <li><em>OR</em> that value with the LED_PIN mask.</li>
+                <li><em>Store</em> the result back to <c>0x5000 0014</c>.</li>
+            </ol>
+
+            <p>
+                This pattern—<term>fetch, decode, execute</term>—repeats for every
+                machine instruction (<xref ref="fig-fetch-execute"/>).  The processor
+                fetches the instruction at the address in the PC, decodes what operation
+                it encodes, executes it, then increments the PC.
+            </p>
+
+            <figure xml:id="fig-fetch-execute">
+                <caption>The instruction fetch-decode-execute cycle, illustrated for a
+                GPIO write.  On each cycle the CPU fetches the next instruction from
+                flash at the address in PC, decodes its opcode, executes the operation
+                (here a store to address <c>0x5000 0014</c>), and advances PC.</caption>
+                <image source="slides/Day02-Blinky(2)/slide11_cb6cab2b.png" width="80%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-memory-mapped-io">
+            <title>Memory-Mapped I/O</title>
+            <idx><h>memory-mapped I/O</h></idx>
+
+            <p>
+                The STM32C031C6 uses <term>memory-mapped I/O</term>: peripheral registers
+                live at specific addresses in the same 4 GB address space as flash and
+                RAM (<xref ref="fig-memory-map"/>).  From the CPU's perspective, writing
+                to a GPIO register looks identical to writing to a RAM variable — but instead
+                of storing a value in a memory cell, it changes the state of a hardware
+                circuit.
+            </p>
+
+            <p>
+                The GPIOA base address is <c>0x5000 0000</c>.  ODR is at offset
+                <c>0x14</c> within the GPIO structure, giving absolute address
+                <c>0x5000 0014</c>.  In the STM32 header file, <c>GPIOA</c> is a C
+                pointer cast to the structure's base address:
+            </p>
+
+            <program language="c"><code><![CDATA[
+// Inside stm32c031xx.h (simplified):
+#define GPIOA  ((GPIO_TypeDef *) 0x50000000UL)
+
+typedef struct {
+    __IO uint32_t MODER;   /* offset 0x00 */
+    __IO uint32_t OTYPER;  /* offset 0x04 */
+    __IO uint32_t OSPEEDR; /* offset 0x08 */
+    __IO uint32_t PUPDR;   /* offset 0x0C */
+    __IO uint32_t IDR;     /* offset 0x10 */
+    __IO uint32_t ODR;     /* offset 0x14 */
+    /* ... */
+} GPIO_TypeDef;
+]]></code></program>
+
+            <p>
+                So <c>GPIOA-&gt;ODR = value</c> is exactly equivalent to writing
+                to address <c>0x5000 0014</c>.  The hardware detects that address on
+                the bus and routes the write to the GPIO output latch rather than to RAM.
+            </p>
+
+            <figure xml:id="fig-odr-address">
+                <caption>Locating <c>GPIOA-&gt;ODR</c> in the address space.  The IOPORT
+                block (left, green) expands to show each GPIO port's 1 KB range; GPIOA sits
+                at <c>0x5000 0000</c>–<c>0x5000 03FF</c> (green box, right table).  Within
+                GPIOA, the register offset table shows ODR at offset <c>0x14</c> (green box).
+                The blue callout explains the bus write: the processor places data, address,
+                and a write signal on the bus; only the peripheral whose address matches
+                activates and latches the data.  The address calculation is shown at the
+                bottom: <c>0x5000 0000 + 0x14 = 0x5000 0014</c>.</caption>
+                <image source="slides/Day02-Blinky(2)/fullslide_15.png" width="100%"/>
+            </figure>
+        </subsection>
+
+        <reading-questions xml:id="rq-mcu-architecture">
+            <title>Check Your Understanding</title>
+
+            <exercise xml:id="rq-memory-mapped">
+                <statement>
+                    <p>What does <q>memory-mapped I/O</q> mean for the STM32C031C6?</p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Peripheral registers (like GPIO ODR) are placed at
+                        specific addresses in the CPU's address space, so reading and writing
+                        them uses the same load/store instructions as accessing ordinary
+                        RAM.</p></statement>
+                        <feedback><p>Correct.  The CPU does not need special I/O instructions;
+                        a store to <c>0x5000 0014</c> changes the GPIO output just as a store
+                        to a RAM variable changes that variable.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The microcontroller maps the contents of RAM to GPIO
+                        pins at startup.</p></statement>
+                        <feedback><p>No.  Memory mapping refers to the address layout of the
+                        address space, not to copying RAM contents to pins.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>GPIO registers are stored in flash memory alongside
+                        program code.</p></statement>
+                        <feedback><p>No.  Flash is at <c>0x0800 0000</c>; GPIO registers
+                        are at <c>0x5000 0000</c>—separate address regions.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The IDE maps source-code line numbers to machine
+                        instruction addresses.</p></statement>
+                        <feedback><p>That is debug-symbol mapping, a completely different
+                        concept.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-fetch-execute">
+                <statement>
+                    <p>
+                        List the three steps in the fetch-decode-execute cycle and
+                        briefly describe what happens at each step for the instruction
+                        <c>GPIOA-&gt;ODR |= LED_PIN</c>.
+                    </p>
+                </statement>
+                <response/>
+            </exercise>
+        </reading-questions>
+    </section>
+
+
+</chapter>

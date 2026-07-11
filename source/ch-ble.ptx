@@ -1,0 +1,592 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-ble">
+    <title>Bluetooth Low Energy</title>
+    <introduction>
+        <p>
+            <term>Bluetooth Low Energy</term> (BLE) is a short-range wireless protocol designed
+            for infrequent, low-volume data exchange with minimal power consumption.  Rather than
+            implementing the BLE stack on the STM32 directly, this chapter uses the Adafruit
+            Bluefruit LE UART Friend — a self-contained BLE module that communicates with the
+            STM32 over a familiar UART interface.  The module handles all BLE protocol details,
+            leaving the firmware free to read and write ASCII strings.
+        </p>
+        <objectives>
+            <ul>
+                <li>Describe the BLE GAP and GATT layers and their roles.</li>
+                <li>Explain the difference between BLE central and peripheral roles.</li>
+                <li>Configure USART1 on the STM32 to communicate with the Bluefruit module.</li>
+                <li>Use the Bluefruit Connect app to exchange data with the STM32 wirelessly.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <!-- ============================================================
+         CANVAS QUIZ QUESTIONS (Before-Class)
+         Q1. A fitness tracker broadcasts its presence so your phone can find it.
+             Which BLE role is the fitness tracker playing?
+             A) Central — it initiates the connection
+             B) Peripheral — it advertises and waits to be connected to (CORRECT)
+             C) Server — it hosts the GATT database
+             D) Scanner — it searches for other devices
+             Explanation: The peripheral advertises; the central (phone) scans
+             and initiates. The fitness tracker is a peripheral.
+
+         Q2. After a BLE connection is established, what stops?
+             A) Data exchange between the two devices
+             B) The GATT server on the peripheral
+             C) Advertising — the peripheral no longer needs to announce itself (CORRECT)
+             D) The phone's ability to read characteristics
+             Explanation: Advertising is only needed during discovery. Once the
+             central has connected, the peripheral stops broadcasting and both
+             sides communicate using GATT.
+
+         Q3. In GATT, what is a "characteristic"?
+             A) The name the peripheral broadcasts during advertising
+             B) A typed, addressable data value that the central can read, write,
+                or subscribe to (CORRECT)
+             C) The encryption key used for the BLE connection
+             D) The physical radio channel the connection uses
+             Explanation: A GATT characteristic is the smallest unit of data —
+             a value with a type (UUID), permissions (read/write/notify), and
+             a current value. For example, the Bluefruit's UART service has
+             TX and RX characteristics.
+
+         Q4. Why do we use the Adafruit Bluefruit module instead of implementing
+             BLE directly on the STM32?
+             A) The STM32C031C6 does not have enough GPIO pins for BLE
+             B) BLE requires a 5 V supply that the STM32 cannot provide
+             C) A complete BLE protocol stack is extremely complex to implement;
+                the Bluefruit handles all of it and presents a simple UART
+                interface (CORRECT)
+             D) BLE requires a separate operating system that the STM32 cannot run
+             Explanation: A full BLE stack involves the physical radio layer,
+             link layer, L2CAP, ATT, GATT, GAP, and security. The Bluefruit
+             module's firmware handles all of this. The STM32 only needs to
+             send and receive bytes over UART.
+
+         Q5. The Bluefruit module is in "data mode." Your STM32 sends the string
+             "Hello" over USART1 to the module. Where does "Hello" appear?
+             A) On the ST-Link virtual COM port connected to your laptop
+             B) In the UART console of the Bluefruit Connect app on the
+                connected phone (CORRECT)
+             C) In a BLE advertising packet broadcast to all nearby phones
+             D) In the module's non-volatile memory for later retrieval
+             Explanation: In data mode, every byte the STM32 sends to the
+             module via UART is forwarded over the BLE connection as a GATT
+             characteristic notification, appearing in the phone app's console.
+         ============================================================ -->
+
+    <section xml:id="sec-ble-concepts">
+        <title>Before Class: Bluetooth Low Energy</title>
+        <introduction>
+            <p>
+                Every protocol you have used so far — UART, I2C, SPI — requires a physical
+                wire connecting the two devices.  This chapter removes the wire.
+                <term>Bluetooth Low Energy</term> (BLE) is a short-range wireless protocol
+                designed for battery-powered devices that need to exchange small amounts of
+                data infrequently.  Before class you will learn what BLE is, how it differs
+                from classic Bluetooth, how two BLE devices discover and communicate with
+                each other, and why using a pre-built module rather than implementing the
+                BLE stack yourself is the right engineering decision.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-ble-what-it-is">
+            <title>What BLE Is — and What It Is Not</title>
+            <p>
+                You have almost certainly used BLE without realizing it.  Fitness trackers,
+                smartwatches, wireless keyboards, glucose monitors, AirTag location beacons,
+                and heart-rate chest straps all communicate with your phone using BLE.  What
+                these devices have in common is that they run on a coin cell or small battery
+                for months or years, and they send small amounts of data — a step count, a
+                heart rate reading, a button press — at relatively infrequent intervals.
+                BLE is optimized for exactly this pattern.
+            </p>
+
+            <figure xml:id="fig-ble-applications">
+                <caption>Two wireless devices, two different protocols.  Left: wireless
+                headphones use <em>classic</em> Bluetooth, which provides the continuous
+                high-bandwidth audio stream needed for music.  Right: a heart-rate monitor
+                armband uses BLE, sending a brief reading every second or so from a
+                coin-cell battery that lasts months.  Same radio band, very different
+                design goals.</caption>
+                <sidebyside widths="38% 38%" margins="5%">
+                    <image source="slides/Day17-BLE/slide06_img1.png"/>
+                    <image source="slides/Day17-BLE/slide06_img2.png"/>
+                </sidebyside>
+            </figure>
+
+            <p>
+                BLE is <em>not</em> the same as classic Bluetooth.  Classic Bluetooth
+                was designed for continuous high-bandwidth streams — audio to headphones,
+                file transfers.  BLE trades bandwidth for dramatically lower power
+                consumption.  A BLE device can sleep between transmissions, waking only
+                long enough to send a few bytes, then returning to sleep.  The two
+                standards share a name and operate on the same 2.4 GHz radio band, but
+                they are otherwise incompatible protocols serving different purposes.
+            </p>
+            <p>
+                BLE also has a short range — typically around 10 meters indoors — and
+                is not suited for streaming video or audio.  Think of it as a wireless
+                replacement for a short serial cable: occasional, low-volume, low-power.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-ble-discovery">
+            <title>How BLE Devices Find Each Other: GAP</title>
+            <p>
+                Before two BLE devices can exchange data, they must find each other.
+                The <term>Generic Access Profile</term> (GAP) defines the rules for
+                this discovery phase.  It assigns every device one of two roles:
+            </p>
+            <p>
+                A <term>peripheral</term> is a device that wants to be found.  It
+                repeatedly broadcasts short radio packets called <term>advertising
+                packets</term> that announce its presence — essentially shouting "I'm
+                here, my name is Bluefruit!" into the surrounding airspace about ten
+                times per second.  The peripheral is typically the small, battery-powered
+                device: the fitness tracker, the sensor node, or in our lab, the
+                Bluefruit module attached to the STM32.
+            </p>
+            <p>
+                A <term>central</term> is a device that initiates connections.  It
+                listens for advertising packets, picks one, and sends a connection
+                request.  The central is typically a phone or laptop — a device with
+                more processing power and a larger battery.  In our lab the central
+                is your phone running the Bluefruit Connect app.
+            </p>
+            <figure xml:id="fig-ble-central-role">
+                <caption>A central device (smartphone) surrounded by BLE peripherals —
+                smart lock, bulb, thermometer, fan, wall switch, and door handle.  Each
+                peripheral advertises independently; the central scans and manages
+                connections to whichever ones it chooses.</caption>
+                <image source="slides/Day17-BLE/slide08_img1.png" width="60%"/>
+            </figure>
+
+            <p>
+                Once the central connects, the peripheral stops advertising — it no
+                longer needs to announce itself because it already has a connection.
+                At this point GAP's job is done, and a different protocol layer takes
+                over to handle the actual data exchange.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-ble-gatt">
+            <title>How Connected Devices Exchange Data: GATT</title>
+            <p>
+                After a connection is established, the <term>Generic Attribute Profile</term>
+                (GATT) defines how the two devices structure and exchange data.  GATT
+                organizes data in a simple hierarchy:
+            </p>
+            <p>
+                A <term>service</term> is a collection of related data.  For example,
+                there is a standard "Heart Rate" service, a "Battery" service, and —
+                relevant to this chapter — a "UART" service on the Bluefruit module.
+                Each service is identified by a unique number called a UUID.
+            </p>
+            <p>
+                Within each service, individual data values are called
+                <term>characteristics</term>.  A characteristic is a single, typed,
+                addressable value — like a variable with permissions attached.
+                The central can <em>read</em> a characteristic to get its current
+                value, <em>write</em> to it to send data to the peripheral, or
+                <em>subscribe to notifications</em> so the peripheral automatically
+                sends an update whenever the value changes.  For example, the Bluefruit's
+                UART service has two characteristics: one the phone writes to in order to
+                send bytes to the STM32 (RX), and one that notifies the phone whenever
+                the STM32 sends bytes back (TX).
+            </p>
+            <figure xml:id="fig-ble-gatt-overview">
+                <caption>The GATT attribute hierarchy.  The outermost box is the
+                peripheral's GATT server — the structured data store it exposes to
+                any connected central.  Inside it are <em>services</em> (named groups
+                of related data), and inside each service are <em>characteristics</em>
+                (individual typed values).  The left service is the UART bridge used
+                in this chapter: the RX characteristic carries bytes from the phone
+                to the STM32 (Write permission), and the TX characteristic carries
+                bytes the other way (Notify permission).  The greyed Battery service
+                on the right illustrates that a peripheral can host multiple services
+                simultaneously.</caption>
+                <image source="gatt_hierarchy.svg" width="100%"/>
+            </figure>
+
+            <p>
+                The net effect is a bidirectional byte stream — just like a serial port,
+                but over the air.  You send a string from the STM32 over UART, the
+                Bluefruit forwards it as a GATT notification, and it appears in the
+                phone app.  You type a command in the phone app, the Bluefruit writes
+                it to a characteristic, and your STM32 receives it over UART.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-ble-module">
+            <title>Why We Use a Module: The Bluefruit as a UART Bridge</title>
+            <p>
+                A complete BLE implementation involves multiple protocol layers — the
+                physical radio, the link layer, logical link control, the attribute
+                protocol, GATT, GAP, and a security manager — running as a real-time
+                firmware stack on a radio-equipped processor.  Writing this from scratch
+                takes months and requires specialist expertise.  Even using a library
+                it is a substantial undertaking.
+            </p>
+            <p>
+                The <term>Adafruit Bluefruit LE UART Friend</term> solves this by
+                putting the entire BLE stack on a separate chip.  The module contains
+                a Nordic Semiconductor nRF51822 — a dedicated BLE processor — running
+                Adafruit's firmware.  It handles advertising, connecting, GAP, GATT,
+                encryption, and retransmission completely on its own.  The interface
+                it presents to the STM32 is simply a UART connection at 9600 baud:
+                bytes in, bytes out.  From the STM32's perspective the Bluefruit looks
+                identical to the CoolTerm serial connection from Chapter 3 — the only
+                difference is that the wire has been replaced by a radio link.
+            </p>
+
+            <figure xml:id="fig-bluefruit-photo">
+                <caption>The Adafruit Bluefruit LE UART Friend module.  The silver
+                rectangle on the blue PCB is the nRF51822 BLE SoC and its antenna.
+                The row of pins along the right edge provides the UART interface
+                (RXI, TXO), power (VIN, GND), and a MODE pin that selects between
+                data pass-through and AT command configuration mode.</caption>
+                <image source="slides/Day17-BLE/slide09_img1.png" width="55%"/>
+            </figure>
+
+            <p>
+                This pattern — a dedicated module that hides a complex protocol behind
+                a simple serial interface — appears frequently in embedded systems.
+                Wi-Fi modules, cellular modems, and GPS receivers all work the same
+                way.  Learning to use the Bluefruit module teaches you how to work
+                with the whole family.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-ble-concepts">
+            <exercise xml:id="rq-ble-peripheral-role">
+                <statement>
+                    <p>In a BLE connection between your phone and the Bluefruit module,
+                    which device advertises its presence and waits to be connected to?</p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The Bluefruit module — it is the peripheral.</p></statement>
+                        <feedback><p>Correct.  The peripheral advertises; the central
+                        (your phone) scans for advertising packets and initiates the
+                        connection.  Once connected, the Bluefruit stops
+                        advertising.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The phone — it broadcasts its identity so the
+                        Bluefruit can find it.</p></statement>
+                        <feedback><p>The phone is the central: it scans and initiates.
+                        The Bluefruit is the peripheral: it advertises and waits.
+                        Advertising always originates from the peripheral.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Both devices advertise simultaneously until one
+                        detects the other.</p></statement>
+                        <feedback><p>Only the peripheral advertises.  The central is
+                        silent during the discovery phase — it listens for advertising
+                        packets rather than sending any.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Neither — BLE connections are established by a
+                        separate pairing server.</p></statement>
+                        <feedback><p>There is no third-party server involved.  GAP defines
+                        the peripheral/central roles so that two devices can discover and
+                        connect to each other directly.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-ble-characteristic">
+                <statement>
+                    <p>The Bluefruit module's UART service has a TX characteristic.
+                    What does "TX" represent in this context, and who sends
+                    notifications on it?</p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>TX carries bytes from the STM32 to the phone.
+                        The Bluefruit (peripheral) sends a notification on the TX
+                        characteristic whenever the STM32 writes a byte to the
+                        module over UART.</p></statement>
+                        <feedback><p>Correct.  The naming is from the module's perspective:
+                        TX means the module is transmitting to the phone.  The STM32 sends
+                        bytes to the module's UART input; the module forwards them as GATT
+                        notifications on the TX characteristic.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>TX carries bytes from the phone to the STM32.
+                        The phone writes to TX to send commands.</p></statement>
+                        <feedback><p>The characteristic that carries phone-to-module data
+                        is the RX characteristic (the module receives it).  TX is for
+                        module-to-phone data — the module transmits it.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>TX is the service UUID that identifies the UART
+                        service to nearby scanning devices.</p></statement>
+                        <feedback><p>The UUID identifies the service, not the TX
+                        characteristic.  TX is a specific characteristic within the
+                        UART service, carrying data in one direction.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>TX is the advertising packet the Bluefruit
+                        broadcasts before a connection is made.</p></statement>
+                        <feedback><p>Advertising packets are part of GAP, not GATT.
+                        The TX characteristic only exists after a connection is
+                        established and GATT communication begins.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-ble-why-module">
+                <statement>
+                    <p>Why do we use the Adafruit Bluefruit module rather than adding
+                    a BLE radio directly to the STM32 and writing our own BLE stack?</p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>A complete BLE stack is extremely complex — multiple
+                        protocol layers including the radio, link layer, GATT, GAP, and
+                        security — and would take months to implement correctly.  The module
+                        handles all of it, presenting a simple UART interface.</p></statement>
+                        <feedback><p>Correct.  This is the standard industry approach:
+                        use a certified module for the complex radio protocol and focus
+                        application code on what your product actually needs to do.
+                        The same pattern applies to Wi-Fi modules, cellular modems,
+                        and GPS receivers.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The STM32C031C6 does not have enough flash memory
+                        to store BLE firmware.</p></statement>
+                        <feedback><p>Memory is one constraint, but the more fundamental
+                        issue is the complexity of writing a correct, standards-compliant
+                        BLE stack.  Even with enough memory, implementing the protocol
+                        from scratch is a major engineering project.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>BLE requires a 5 V power supply that the STM32
+                        cannot provide.</p></statement>
+                        <feedback><p>BLE radios typically operate at 1.8–3.3 V, well
+                        within what the STM32 can provide.  Power supply voltage is
+                        not the reason for using a module.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The module encrypts data automatically, whereas
+                        the STM32 has no encryption hardware.</p></statement>
+                        <feedback><p>Encryption is one feature the module handles, but
+                        it is not the primary reason.  The STM32 actually does have
+                        hardware cryptographic accelerators.  The decisive reason is
+                        the overall complexity of the BLE protocol stack.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+    <section xml:id="sec-ble-protocol">
+        <title>BLE Protocol Overview</title>
+        <p>
+            BLE operates in the 2.4 GHz ISM band with a maximum range of roughly 10 m in
+            typical indoor environments.  The protocol defines two high-level layers that
+            firmware authors encounter: the Generic Access Profile (GAP) and the Generic
+            Attribute Profile (GATT).
+        </p>
+        <p>
+            <term>GAP</term> governs how devices discover each other.  A <term>peripheral</term>
+            broadcasts advertising packets announcing its presence; a <term>central</term>
+            (typically a phone or laptop) scans for those packets and initiates a connection.
+            Once connected, GAP advertising stops and GATT takes over.
+        </p>
+        <p>
+            <term>GATT</term> defines how connected devices exchange structured data.
+            The peripheral hosts a <term>GATT server</term> containing one or more
+            <term>services</term>, each comprising one or more <term>characteristics</term>.
+            A characteristic is a typed, addressable data value — the central reads or writes
+            it, or subscribes to notifications when it changes.  For example, the Bluefruit
+            module exposes a "UART" service with TX and RX characteristics that bridge BLE
+            to a serial byte stream.
+        </p>
+
+        <figure xml:id="fig-ble-modes">
+            <caption>BLE connection lifecycle.  Before connection, the peripheral advertises
+            and the central scans.  After the central connects, advertising stops and bidirectional
+            GATT communication begins.  The connection can be torn down by either side at any time.</caption>
+            <image source="slides/Day17-BLE/slide07_9b1c8200.png" width="70%"/>
+        </figure>
+
+        <figure xml:id="fig-ble-central-peripheral">
+            <caption>Central and peripheral roles.  The phone (central) scans for and connects to
+            the Bluefruit module (peripheral).  Once connected, the phone reads sensor data
+            (characteristic reads/notifications) and sends commands (characteristic writes) to
+            the module, which forwards them over UART to the STM32.</caption>
+            <image source="slides/Day17-BLE/slide08_31c95fb6.png" width="70%"/>
+        </figure>
+
+        <figure xml:id="fig-ble-characteristics">
+            <caption>BLE advertising and GATT characteristics.  In advertise mode the Bluefruit
+            broadcasts its name.  After connection, the GATT server exposes the UART service
+            (UUID 6E400001-...) with an RX characteristic (phone-to-module writes) and a TX
+            characteristic (module-to-phone notifications).  Firmware talks to this via plain
+            USART.</caption>
+            <image source="slides/Day17-BLE/slide11_6e110f71.png" width="75%"/>
+        </figure>
+
+        <reading-questions xml:id="rq-ble-roles">
+            <exercise xml:id="rq-ble-central">
+                <statement><p>In a BLE connection between a smartphone and the Bluefruit module,
+                which device is the central and which is the peripheral?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>The smartphone is the central (it initiates
+                    the connection by scanning); the Bluefruit module is the peripheral (it
+                    advertises).</p></statement>
+                    <feedback><p>Correct.  The central always initiates; the peripheral always
+                    advertises and waits.</p></feedback></choice>
+                    <choice><statement><p>The Bluefruit module is the central; the smartphone is
+                    the peripheral.</p></statement>
+                    <feedback><p>It is the opposite.  The Bluefruit module advertises its presence
+                    and waits to be connected to — that is the peripheral role.</p></feedback></choice>
+                    <choice><statement><p>Both devices can be central or peripheral simultaneously
+                    in a single connection.</p></statement>
+                    <feedback><p>A single BLE connection has exactly one central and one peripheral.
+                    Multi-role is possible across different connections, but not within one.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+    <section xml:id="sec-bluefruit-module">
+        <title>Adafruit Bluefruit LE UART Friend</title>
+        <p>
+            The Adafruit Bluefruit LE UART Friend module contains a Nordic Semiconductor nRF51822
+            BLE SoC running Adafruit's firmware.  It exposes a full BLE UART bridge: anything
+            written to the module's RXI pin over UART appears as a BLE characteristic write to
+            the connected central; anything the central writes appears on the module's TXO pin.
+            From the STM32's perspective the module looks identical to the CoolTerm serial port
+            used in Chapter 3, except that the wire is replaced by a radio link.
+        </p>
+
+        <figure xml:id="fig-bluefruit-module">
+            <caption>Adafruit Bluefruit LE UART Friend.  Key pins: VIN (3.3–16 V, decoupled from
+            3.3 V), GND, RXI (module receive, connect to STM32 TX), TXO (module transmit, connect
+            to STM32 RX), and MODE (leave LOW for UART data mode; pull HIGH for AT command mode).
+            The module defaults to 9600 baud, matching our USART configuration.</caption>
+            <image source="slides/Day17-BLE/slide12_8534a837.png" width="65%"/>
+        </figure>
+
+        <figure xml:id="fig-bluefruit-wiring">
+            <caption>Bluefruit wiring to the Nucleo.  VIN to 3.3 V; GND to GND; RXI to PA9
+            (USART1 TX, AF1); TXO to PA10 (USART1 RX, AF1).  Leave the MODE pin LOW (or
+            floating with its internal pull-down) to stay in data pass-through mode.</caption>
+            <image source="slides/Day17-BLE/slide17_bca63e06.png" width="70%"/>
+        </figure>
+    </section>
+
+    <section xml:id="sec-usart1-config">
+        <title>Configuring USART1 for the Bluefruit</title>
+        <p>
+            The STM32C031C6 has two USARTs.  USART2 was used in Chapter 3 for <c>printf</c>
+            via the ST-Link virtual COM port.  For BLE we use USART1 on a separate set of pins
+            (PA9/PA10, AF1) so that debug printing and BLE communication can operate
+            simultaneously.  The baud rate is 9600 to match the Bluefruit's factory default.
+        </p>
+
+        <program language="c"><code><![CDATA[
+/* USART1 on PA9 (TX, AF1) and PA10 (RX, AF1) at 9600 baud, 12 MHz SYSCLK */
+#define APB_CLK   12000000U
+#define BLE_BAUD  9600U
+
+void usart1_ble_init(void) {
+    RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;
+    RCC->APBENR2 |= RCC_APBENR2_USART1EN;
+
+    /* PA9 = TX (AF1) */
+    GPIOA->MODER  &= ~(3U << 18); GPIOA->MODER  |= (2U << 18);
+    GPIOA->AFR[1] &= ~(0xFU << 4); GPIOA->AFR[1] |= (1U << 4);
+
+    /* PA10 = RX (AF1) */
+    GPIOA->MODER  &= ~(3U << 20); GPIOA->MODER  |= (2U << 20);
+    GPIOA->AFR[1] &= ~(0xFU << 8); GPIOA->AFR[1] |= (1U << 8);
+
+    USART1->BRR = APB_CLK / BLE_BAUD;  // 1250 for 9600 baud
+    USART1->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+}
+
+void usart1_send_char(char c) {
+    while (!(USART1->ISR & USART_ISR_TXE));
+    USART1->TDR = (uint8_t)c;
+}
+
+void usart1_send_string(const char *s) {
+    while (*s) usart1_send_char(*s++);
+}
+
+char usart1_recv_char(void) {
+    while (!(USART1->ISR & USART_ISR_RXNE));
+    return (char)USART1->RDR;
+}
+]]></code></program>
+
+        <p>
+            The Bluefruit module has two operational modes selectable by the MODE pin and by
+            sending the string <c>+++</c>.  In <term>data mode</term> (MODE LOW) every byte
+            written to USART1 is forwarded over BLE to the connected central.  In
+            <term>AT command mode</term> the module interprets bytes as configuration commands
+            (e.g., <c>AT+BLEUARTTX=hello\r\n</c>).  For most lab purposes, data mode is
+            sufficient: the Bluefruit Connect app (iOS/Android) presents a UART console that
+            displays everything the module receives and allows the user to send strings back.
+        </p>
+
+        <figure xml:id="fig-ble-design-notes">
+            <caption>Design notes for the BLE lab, showing the software architecture: USART1
+            driver → Bluefruit module → BLE radio → phone app.  The same layered driver
+            pattern from I2C and UART applies here.</caption>
+            <image source="slides/Day17-BLE/slide24_b49fb152.png" width="65%"/>
+        </figure>
+
+        <reading-questions xml:id="rq-ble-usart">
+            <exercise xml:id="rq-ble-brr">
+                <statement><p>Why is USART1 used for the Bluefruit rather than reusing USART2?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>USART2 is already connected to the ST-Link
+                    virtual COM port for <c>printf</c> debug output.  Using USART1 on separate pins
+                    lets both debug printing and BLE run at the same time.</p></statement>
+                    <feedback><p>Correct.  The STM32C031C6 has two USARTs; assigning each a dedicated
+                    purpose avoids multiplexing the single data channel.</p></feedback></choice>
+                    <choice><statement><p>USART1 supports higher baud rates than USART2.</p></statement>
+                    <feedback><p>Both USARTs support the same baud rates on this device.  The reason
+                    is functional separation, not hardware capability.</p></feedback></choice>
+                    <choice><statement><p>The Bluefruit module requires USART1 specifically.</p></statement>
+                    <feedback><p>The Bluefruit module just needs any UART; the choice of USART1 is
+                    a software design decision to keep BLE separate from debug output.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+    <section xml:id="sec-ble-lab">
+        <title>Lab: Wireless Sensor Readout</title>
+        <exercises>
+            <exercise xml:id="ex-ble-sensor">
+                <title>BLE Sensor Bridge</title>
+                <statement>
+                    <p>Connect the Bluefruit LE UART Friend to USART1 and stream live sensor
+                    data to the Bluefruit Connect app on your phone.</p>
+                    <ol>
+                        <li>Wire the Bluefruit module (VIN, GND, RXI → PA9, TXO → PA10).</li>
+                        <li>Call <c>usart1_ble_init()</c> and <c>servo_init()</c> or
+                        <c>adc_read()</c> as appropriate for your sensor.</li>
+                        <li>In the main loop, read the sensor, format a string with
+                        <c>sprintf</c>, and call <c>usart1_send_string</c> to transmit it.
+                        Send one reading every 200 ms.</li>
+                        <li>Open Bluefruit Connect on your phone, connect to the module,
+                        and open the UART console to see the live data stream.</li>
+                        <li>Send a single character from the phone (<c>'1'</c> to start, <c>'0'</c>
+                        to stop) and implement a simple command parser using <c>usart1_recv_char</c>
+                        in an interrupt handler.</li>
+                    </ol>
+                </statement>
+            </exercise>
+        </exercises>
+    </section>
+
+</chapter>

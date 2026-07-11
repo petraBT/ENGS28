@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- ============================================================
+     Chapter: Reading Component Datasheets  (Day 5X)
+     55-minute standalone class — no pre-class reading required.
+     ============================================================ -->
+
+<chapter xml:id="ch-io-datasheets" xmlns:xi="http://www.w3.org/2001/XInclude">
+    <title>Reading Component Datasheets</title>
+
+    <section xml:id="sec-datasheets-inclass">
+        <title>In-Class: Datasheet Scavenger Hunt</title>
+
+        <!-- ── Opening (≈5 min) ──────────────────────────────── -->
+        <subsection xml:id="subsec-datasheets-intro">
+            <title>Embedded Systems Need Peripherals</title>
+            <p>
+                A microcontroller on its own senses nothing and drives nothing.
+                Every useful embedded system connects the MCU to the physical
+                world through <em>input</em> and <em>output</em> components:
+            </p>
+            <figure xml:id="fig-mcu-io-block">
+                <caption>Top-level view of an embedded system.  Sensors,
+                switches, and data streams feed into the MCU through interfaces;
+                the MCU sends commands out to displays, actuators, and data
+                streams through interfaces on the other side.</caption>
+                <image source="slides/Day05X-InputOutputDatasheets/slide04_img1.png"
+                       width="75%"/>
+            </figure>
+            <p>
+                Getting a peripheral to work requires answers to many questions
+                that only the component's <term>datasheet</term> can provide.
+                What supply voltage does it need — and what are the minimum and
+                maximum operating conditions it can tolerate?  What signal does
+                it produce or consume, and what does that signal actually
+                represent?  Does the chip do its own analog-to-digital
+                conversion and give you numbers over I²C, or does it output a
+                raw voltage that your MCU's ADC must interpret?  Is there a
+                built-in analog front end, or do you need external signal
+                conditioning?  How should you wire it up, and what does your
+                code need to configure before it will respond?  These are a
+                few of the essential questions — but not the only ones.
+            </p>
+            <p>
+                Datasheets can be intimidating — they are written for engineers
+                who already know the jargon, and they pack enormous amounts of
+                information into dense tables.  But they follow a predictable
+                structure.  Once you know where to look, you can navigate any
+                datasheet quickly.
+            </p>
+
+            <insight xml:id="insight-datasheet-sections">
+                <title>Every Datasheet Has the Same Skeleton</title>
+                <p>
+                    The first page always gives the high-level picture:
+                    <em>Features</em> (a bullet list of what the part does)
+                    and a <em>Description</em> paragraph (always read this —
+                    it names the interface and application).  The body then
+                    contains, roughly in this order:
+                </p>
+                <p>
+                    <em>Pinout / Pin descriptions</em> — which pin is which,
+                    and what each one does.
+                    <em>Absolute Maximum Ratings</em> — never exceed these;
+                    doing so destroys the part.
+                    <em>Recommended Operating Conditions</em> — the range
+                    the part is designed to work in.
+                    <em>Electrical Characteristics</em> — voltages, currents,
+                    timing, in a table with Min / Typ / Max columns.
+                    <em>Application Information</em> (sometimes called
+                    "Theory of Operation" or "Detailed Description") —
+                    the most important section for a designer: example
+                    schematics, register maps, and usage notes.
+                    <em>Packaging Information</em> — physical dimensions
+                    of the available package options (DIP, SOT-23, QFN,
+                    etc.).  Rarely relevant for breadboard work, but
+                    critical if you are designing a PCB.
+                </p>
+                <p>
+                    One notation to watch for: a pin name with a bar over it
+                    (or a star next to it in a table) is <em>active low</em>
+                    — you pull it to ground to activate it, rather than
+                    driving it high.
+                </p>
+            </insight>
+        </subsection>
+
+        <!-- ── Scavenger Hunt Activity (≈45 min) ─────────────── -->
+        <subsection xml:id="subsec-datasheets-scavenger">
+            <title>Datasheet Scavenger Hunt</title>
+            <p>
+                Your table will be assigned one component.  Open its
+                datasheet from Canvas, display it on your table's monitor,
+                and complete the Datasheet Passport below.  Be ready to
+                share your answers with the class in the last five minutes.
+            </p>
+            <p>
+                Possible components (one per table):
+                TMP235 (analog temperature sensor),
+                CdS photocell (light-dependent resistor),
+                LSM303AGR (I²C accelerometer and magnetometer),
+                HT16K33 (I²C LED matrix driver),
+                and others as assigned.
+            </p>
+
+            <activity xml:id="act-datasheet-passport">
+                <title>The Datasheet Passport</title>
+
+                <introduction>
+                    <p>
+                        Work through all four parts.  Some questions have
+                        two versions depending on whether your component
+                        is analog or digital — answer the one that applies.
+                        If you finish early, sketch a circuit on the board
+                        showing how you would connect your component to the
+                        STM32 Nucleo.
+                    </p>
+                </introduction>
+
+                <task xml:id="task-passport-a">
+                    <title>Part A — What Is It?</title>
+                    <p><em>These answers are on the first page.</em></p>
+
+                    <p><ol>
+                        <li>
+                            <p>
+                                Read the <em>Description</em> (not the
+                                Features list).  In one sentence, what does
+                                this component do?
+                            </p>
+                        </li>
+                        <li>
+                            <p>
+                                Find the <em>Recommended Operating
+                                Conditions</em>.  What supply voltage range
+                                (VDD or VCC) does the part accept?  Is
+                                3.3 V within that range?
+                                (For passive components with no supply pin,
+                                find the maximum rated operating voltage
+                                and power dissipation instead.)
+                            </p>
+                        </li>
+                        <li>
+                            <p>
+                                Find the <em>Absolute Maximum Ratings</em>
+                                table.  What is the maximum voltage the
+                                part can survive?  Are there any other
+                                limits listed that a careless user might
+                                accidentally exceed?
+                            </p>
+                        </li>
+                    </ol></p>
+                </task>
+
+                <task xml:id="task-passport-b">
+                    <title>Part B — How Does It Communicate?</title>
+                    <p><em>These answers are in the Pinout and Application sections.</em></p>
+
+                    <p><ol>
+                        <li>
+                            <p>
+                                What interface does this component use?
+                                Check one (or more if it supports multiple):
+                                <em>Passive (variable resistance)</em>,
+                                <em>Analog voltage output</em>,
+                                <em>I²C</em>,
+                                <em>SPI</em>,
+                                <em>UART/serial</em>,
+                                <em>PWM input</em>,
+                                <em>Other</em>.
+                            </p>
+                        </li>
+                        <li>
+                            <p>
+                                List every pin needed for a minimal hookup.
+                                For each pin, write its name and what it
+                                connects to (VDD, GND, a specific STM32
+                                pin, etc.).
+                            </p>
+                        </li>
+                    </ol></p>
+                </task>
+
+                <task xml:id="task-passport-c">
+                    <title>Part C — What Does It Output or Require?</title>
+                    <p><em>These answers are in the Electrical Characteristics table.</em></p>
+
+                    <p><ol>
+                        <li>
+                            <p>
+                                <em>If your component is a passive sensor
+                                (variable resistance):</em>
+                                What is the resistance at the minimum and
+                                maximum of its measurement range?  Is the
+                                relationship between resistance and the
+                                measured quantity linear, or does the
+                                datasheet give a curve or formula?
+                            </p>
+                            <p>
+                                <em>If your component has an analog voltage
+                                output:</em>
+                                What is the output voltage at the minimum
+                                and maximum of its measurement range?
+                                Is the relationship linear?  Write the
+                                transfer function — the equation that
+                                converts output voltage to a physical value
+                                (temperature, light level, etc.).
+                            </p>
+                            <p>
+                                <em>If your component uses I²C:</em>
+                                What address(es) can the part use?
+                                Many parts have a fixed base address with
+                                one or two address pins (A0, A1) that let
+                                you set the last bits, so multiple copies
+                                of the same chip can share a bus.  List
+                                the possible addresses.
+                            </p>
+                            <p>
+                                <em>If your component uses SPI:</em>
+                                What SPI mode does it require (clock
+                                polarity CPOL and clock phase CPHA)?
+                                What is the maximum clock frequency it
+                                supports?
+                            </p>
+                        </li>
+                        <li>
+                            <p>
+                                What is the maximum current the part draws
+                                from its supply?  Does that rule out
+                                powering it from a GPIO pin (max 25 mA)?
+                                (For passive components with no supply pin,
+                                find the maximum power dissipation rating
+                                instead.)
+                            </p>
+                        </li>
+                    </ol></p>
+                </task>
+
+                <task xml:id="task-passport-d">
+                    <title>Part D — Making It Work</title>
+                    <p><em>These answers are in the Application Information section.</em></p>
+
+                    <p><ol>
+                        <li>
+                            <p>
+                                Find the example schematic or application
+                                circuit.  Sketch the minimal hookup on the
+                                board at your table —
+                                just power, ground, and signal lines,
+                                labeled with pin names.
+                            </p>
+                        </li>
+                        <li>
+                            <p>
+                                Name one thing you would need to configure
+                                or calculate in code before you could
+                                read data from this component.  (Examples:
+                                set the I²C address, choose a gain setting,
+                                apply a conversion formula to the raw
+                                ADC reading.)
+                            </p>
+                        </li>
+                        <li>
+                            <p>
+                                What was the most confusing or surprising
+                                thing you found in the datasheet?
+                            </p>
+                        </li>
+                    </ol></p>
+                </task>
+
+                <task xml:id="task-passport-slide">
+                    <title>Part E — Group Slide</title>
+                    <p>
+                        Add one slide for your component to the shared class
+                        deck (link on Canvas).  Include your answers to all
+                        of Parts A–D — everything except the board sketch.
+                        Keep it concise: use short phrases, not paragraphs.
+                        Other groups will use this as a reference during the
+                        share-out.
+                    </p>
+                </task>
+
+            </activity>
+        </subsection>
+
+        <!-- ── Share-out (≈5 min) ────────────────────────────── -->
+        <subsection xml:id="subsec-datasheets-shareout">
+            <title>Share-Out</title>
+            <p>
+                Each table presents their slide in 30 seconds or less.
+                Cover at least these three things:
+            </p>
+            <p><ol>
+                <li><p>Component name and what it does (one sentence).</p></li>
+                <li><p>Interface type: passive, analog, I²C, SPI, or other.</p></li>
+                <li><p>One thing that surprised you or that others should know.</p></li>
+            </ol></p>
+            <p>
+                As you listen, note which components use analog interfaces
+                and which use digital ones.  You will use several of these
+                parts later in the course — this is your first look at them.
+            </p>
+        </subsection>
+
+    </section>
+
+</chapter>

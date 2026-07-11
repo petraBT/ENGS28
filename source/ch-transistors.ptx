@@ -1,0 +1,803 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--   This file is part of the Embedded Systems textbook.    -->
+<!--                                                          -->
+<!--      ENGS 28: Embedded Systems                           -->
+<!--      Thayer School of Engineering, Dartmouth College     -->
+<!--                                                          -->
+<!-- Copyright (C) 2026  Petra Bonfert-Taylor                 -->
+<!-- See the file COPYING for copying conditions.             -->
+
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-transistors">
+    <title>Transistors: BJTs and MOSFETs</title>
+    <introduction>
+        <p>
+            A GPIO pin can source or sink only a few milliamps — far too little to drive a
+            motor, relay, or high-brightness LED directly.  A <term>transistor</term> solves
+            this: a tiny signal on the control terminal switches a much larger current through
+            the load.  This chapter introduces Bipolar Junction Transistors (BJTs) and
+            Metal-Oxide-Semiconductor Field-Effect Transistors (MOSFETs).
+        </p>
+        <objectives>
+            <ul>
+                <li>Explain how a transistor acts as a voltage- or current-controlled switch.</li>
+                <li>Identify the terminals and behavior of NPN BJTs and nMOSFETs.</li>
+                <li>Use a transistor to drive a load from a GPIO pin.</li>
+                <li>Read a transistor datasheet to find key parameters.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-transistors-concepts">
+        <title>Before Class: Transistors as Controlled Switches</title>
+        <introduction>
+            <p>
+                The GPIO pins we have used so far can drive small loads — an on-board
+                LED, a logic-level signal line — but their current capacity is limited
+                to roughly 8–20 mA per pin, with a total budget across the chip.
+                Many real-world loads — motors, relays, high-brightness LEDs, solenoids —
+                need hundreds of milliamps or more.  The solution is a
+                <term>transistor</term>: a three-terminal device that uses a small
+                signal on one terminal to control a much larger current through the
+                other two.  The GPIO pin never drives the load directly; it drives
+                the transistor, which does the heavy lifting.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-transistor-switch-concept">
+            <title>The Transistor as a Switch</title>
+            <p>
+                Think of a transistor as a voltage- or current-controlled switch
+                inserted in series with your load.  One terminal — called the
+                <term>control terminal</term> — accepts a small input signal.
+                The other two terminals — the <term>load terminals</term> — form
+                the path through which load current flows.  When the control signal
+                is below a threshold, the switch is open and essentially no current
+                flows through the load.  When the control signal exceeds the threshold,
+                the switch closes and current flows freely.
+            </p>
+            <p>
+                This is the fundamental pattern in embedded systems: a GPIO pin
+                sits on the control side and sees only microamp-to-milliamp currents,
+                while the load side carries whatever current the load requires —
+                potentially much more than the MCU could ever supply.  The two sides
+                share only a ground reference; their current paths are otherwise
+                independent, and the load can be powered from a separate supply
+                entirely if needed.
+            </p>
+
+            <figure xml:id="fig-transistor-switch-concept">
+                <caption>Left: a mechanical switch in series with a lamp and battery.
+                A finger supplies the control force; the switch must carry the full
+                load current.  Right: replacing the mechanical switch with a transistor.
+                A small control circuit on the left (the GPIO pin in practice) drives
+                the transistor's control terminal, which switches the full load current
+                on the right — with no moving parts and no physical contact between
+                the two circuits.</caption>
+                <sidebyside widths="44% 44%" margins="4%">
+                    <image source="slides/Day06-BJTS_and_MOSFETS/slide19_img2.png"/>
+                    <image source="slides/Day06-BJTS_and_MOSFETS/slide20_img3.png"/>
+                </sidebyside>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-bjt-concepts">
+            <title>BJTs: Current-Controlled Switches</title>
+            <p>
+                A <term>Bipolar Junction Transistor</term> (BJT) has three terminals:
+                <term>base</term> (B), <term>collector</term> (C), and
+                <term>emitter</term> (E).  In an NPN BJT — the type most commonly
+                used to switch loads to ground — a small current flowing into the base
+                allows a much larger current to flow from collector to emitter.  The
+                ratio of collector current to base current is called
+                <term><m>h_{FE}</m></term> (or <m>\beta</m>) and is typically
+                50–300 depending on the device.
+            </p>
+            <figure xml:id="fig-bjt-npn-symbol">
+                <caption>Schematic symbol for an NPN BJT.  A small base
+                current <m>I_B</m> flowing into the base allows a much
+                larger collector current <m>I_C = h_{FE} \cdot I_B</m> to
+                flow from collector to emitter.</caption>
+                <image source="bjt_npn_symbol.svg" width="70%"/>
+            </figure>
+            <p>
+                To use an NPN BJT as a switch from a GPIO pin, a resistor is placed
+                between the GPIO pin and the base.  This limits the base current to
+                a safe value while still providing enough drive to saturate the
+                transistor — push it into full conduction — so that the collector-to-emitter
+                voltage drops to nearly zero and the load sees the full supply voltage.
+                Choosing that base resistor is one of the key design calculations for
+                this class.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-mosfet-concepts">
+            <title>MOSFETs: Voltage-Controlled Switches</title>
+            <p>
+                A <term>Metal-Oxide-Semiconductor Field-Effect Transistor</term>
+                (MOSFET) has three terminals: <term>gate</term> (G),
+                <term>drain</term> (D), and <term>source</term> (S).  Unlike a BJT,
+                a MOSFET is controlled by voltage, not current.  The gate is
+                electrically insulated from the rest of the device by a thin oxide
+                layer, so in steady state it draws essentially no current from the
+                GPIO pin.  When the gate voltage exceeds a threshold
+                (<term><m>V_{TH}</m></term>), a channel opens between drain and
+                source and current flows.
+            </p>
+            <figure xml:id="fig-mosfet-nchan-symbol">
+                <caption>Schematic symbol for an N-channel enhancement
+                MOSFET.  The gate is separated from the body by an insulating
+                oxide layer (the gap in the symbol), so the gate draws
+                essentially no DC current.  The three broken dashes indicate
+                enhancement mode: no channel exists until
+                <m>V_{GS} \gt V_{TH}</m>.</caption>
+                <image source="mosfet_nchan_symbol.png" width="35%"/>
+            </figure>
+            <p>
+                For embedded use the key requirement is that <m>V_{TH}</m> be
+                low enough to be driven reliably by a 3.3 V GPIO pin.  Standard
+                MOSFETs may require 5–10 V to turn on fully; <term>logic-level
+                MOSFETs</term> are specified to reach full conduction at
+                <m>V_{GS} = 3.3\text{ V}</m> or lower, making them directly
+                compatible with modern microcontrollers.  Because the gate draws
+                no steady-state current, MOSFETs are often preferred over BJTs
+                when the GPIO drive current budget is tight.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-transistors-concepts">
+            <exercise xml:id="rq-why-transistor">
+                <statement><p>You want to drive a small DC motor that requires
+                200 mA.  The STM32 GPIO pin can source at most 8 mA.  Why can't
+                you connect the motor directly to the GPIO pin?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The motor requires far more current than the GPIO
+                        pin can safely supply; drawing 200 mA from a pin rated for
+                        8 mA would damage the microcontroller.</p></statement>
+                        <feedback><p>Correct.  The solution is to use a transistor:
+                        the GPIO pin drives the control terminal with a small current
+                        or voltage, and the transistor switches the motor's 200 mA
+                        from a separate supply path.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>GPIO pins can only source current, not sink it,
+                        so they cannot drive any motor.</p></statement>
+                        <feedback><p>STM32 GPIO pins can both source and sink current —
+                        the limitation is the magnitude (a few milliamps), not the
+                        direction.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Motors require AC power, and GPIO pins only
+                        produce DC signals.</p></statement>
+                        <feedback><p>Small DC motors run on DC — the same kind of signal
+                        a GPIO pin produces.  The issue is current capacity, not signal
+                        type.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The motor's resistance is too low for the GPIO
+                        pin's output impedance to match.</p></statement>
+                        <feedback><p>Impedance matching is a concern in RF and audio
+                        circuits, not in low-frequency switching applications like
+                        this.  The real issue is that 200 mA exceeds the pin's
+                        current rating.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-bjt-vs-mosfet-control">
+                <statement><p>What is the fundamental difference between how a BJT
+                and a MOSFET are controlled?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>A BJT is controlled by a current into the base;
+                        a MOSFET is controlled by a voltage on the gate and draws
+                        essentially no steady-state current.</p></statement>
+                        <feedback><p>Correct.  This distinction matters for GPIO drive
+                        budget: a BJT requires you to supply base current (limited by
+                        the resistor you choose), while a MOSFET gate draws nearly
+                        zero steady-state current from the GPIO pin.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A BJT is controlled by voltage; a MOSFET is
+                        controlled by current.</p></statement>
+                        <feedback><p>It is the other way around: BJT = current-controlled
+                        (base current), MOSFET = voltage-controlled (gate voltage).</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>BJTs work with AC signals only; MOSFETs work
+                        with DC signals only.</p></statement>
+                        <feedback><p>Both BJTs and MOSFETs work with DC switching
+                        applications.  The distinction between them is about how
+                        the control terminal operates, not AC vs DC.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>BJTs are faster than MOSFETs and therefore
+                        preferred for high-speed switching in embedded systems.</p></statement>
+                        <feedback><p>For the switching speeds used in this course,
+                        both are fast enough.  MOSFETs are often preferred because
+                        they require no steady-state gate current.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-bjt-gain">
+                <statement><p>An NPN BJT has <m>\beta = 150</m>.  A GPIO pin drives
+                the base through a 10 kΩ resistor from 3.3 V
+                (<m>V_{BE} \approx 0.7\,\text{V}</m>).
+                What collector current can this transistor support?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>About 39 mA</p></statement>
+                    <feedback><p>Correct.
+                    <m>I_B = (3.3 - 0.7)/10\,\text{k}\Omega = 260\,\mu\text{A}</m>;
+                    <m>I_C = 150 \times 260\,\mu\text{A} \approx 39\,\text{mA}</m>.</p></feedback>
+                    </choice>
+                    <choice><statement><p>About 3.9 mA</p></statement>
+                    <feedback><p><m>(3.3-0.7)/10000 = 0.26\,\text{mA}</m>, not 0.026 mA — recheck the decimal place.</p></feedback>
+                    </choice>
+                    <choice><statement><p>About 330 mA</p></statement>
+                    <feedback><p>You need to subtract <m>V_{BE} \approx 0.7\,\text{V}</m>
+                    from the supply before dividing by the base resistor.</p></feedback>
+                    </choice>
+                    <choice><statement><p>The BJT stays off; 3.3 V is below the threshold.</p></statement>
+                    <feedback><p>The turn-on threshold is <m>V_{BE} \approx 0.7\,\text{V}</m>.
+                    A 3.3 V supply through a 10 kΩ resistor easily exceeds that.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-logic-level-mosfet">
+                <statement><p>You select a MOSFET with
+                <m>V_{TH} = 4\text{ V}</m> minimum to switch a load from a
+                3.3 V GPIO pin.  What problem will occur?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The GPIO pin can only drive the gate to 3.3 V,
+                        which is below the 4 V threshold; the MOSFET will not turn
+                        on fully (or at all), so the load won't be switched.</p></statement>
+                        <feedback><p>Correct.  This is why <em>logic-level</em> MOSFETs
+                        — specified to turn on fully at 3.3 V or lower — are required
+                        when driving directly from a 3.3 V microcontroller pin.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The MOSFET will turn on too quickly, causing
+                        a large inrush current that damages the load.</p></statement>
+                        <feedback><p>A gate voltage below threshold causes the MOSFET
+                        to turn on <em>less</em>, not more aggressively.  The problem
+                        here is under-drive, not over-drive.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The MOSFET will work correctly because
+                        <m>V_{TH}</m> is the <em>maximum</em> gate voltage
+                        needed.</p></statement>
+                        <feedback><p><m>V_{TH}</m> is the <em>minimum</em>
+                        voltage at which the device begins to conduct — not a maximum.
+                        The GPIO must be able to exceed it to turn the MOSFET on.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Nothing — MOSFETs are always compatible with
+                        3.3 V signals regardless of their threshold specification.</p></statement>
+                        <feedback><p>Not all MOSFETs are logic-level compatible.
+                        Standard (high-threshold) MOSFETs require 5–10 V on the
+                        gate; using one with a 3.3 V GPIO will result in the device
+                        not turning on properly.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
+        <!--
+        CANVAS QUIZ: "Before class — Transistors as Controlled Switches"
+        (Due 1 hour before class; auto-graded multiple choice; low stakes.)
+
+        Q1. A GPIO pin on the STM32 can source a maximum of about 8 mA. A relay coil
+            requires 50 mA to actuate. Which approach is correct?
+            A) Connect the relay coil directly to the GPIO pin and accept reduced performance.
+            B) Use a transistor: the GPIO pin drives the control terminal, and the
+               transistor switches the 50 mA relay current from a separate supply path.  ← CORRECT
+            C) Connect two GPIO pins in parallel to share the 50 mA between them.
+            D) Use an internal pull-up to boost the GPIO pin's current capacity.
+
+        Q2. In an NPN BJT switch circuit, what happens at the collector-to-emitter
+            path when the transistor is fully saturated?
+            A) The path is open and no current flows.
+            B) The path behaves like a large resistor.
+            C) The path behaves like a closed switch — the collector-to-emitter
+               voltage drops to nearly zero and full load current flows.  ← CORRECT
+            D) The path oscillates between open and closed at high frequency.
+
+        Q3. Why is a resistor placed between the GPIO pin and the base of an NPN BJT?
+            A) To increase the base current as much as possible.
+            B) To limit the base current to a safe value while still providing
+               enough drive to saturate the transistor.  ← CORRECT
+            C) To prevent the BJT from entering saturation.
+            D) To match the impedance of the GPIO pin to the transistor's input.
+
+        Q4. A logic-level MOSFET has V_GS(th) = 1.5 V (typical) and is rated for
+            full conduction at V_GS = 3.3 V. A 3.3 V GPIO pin drives the gate.
+            What is the expected behavior?
+            A) The MOSFET will not turn on because 3.3 V is too low for any MOSFET.
+            B) The MOSFET will turn on partially but not reach full conduction.
+            C) The MOSFET will turn on fully, switching the load as intended.  ← CORRECT
+            D) The MOSFET gate will be damaged by the 3.3 V drive.
+
+        Q5. Compared to a BJT, what is the main advantage of a logic-level MOSFET
+            for a GPIO-driven switch circuit?
+            A) MOSFETs are always cheaper than BJTs.
+            B) MOSFETs can handle higher voltages.
+            C) The MOSFET gate draws essentially no steady-state current from the
+               GPIO pin, placing almost no burden on the MCU's drive budget.  ← CORRECT
+            D) MOSFETs do not require a ground connection.
+        -->
+
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-transistors-inclass">
+        <title>In Class: Design and Practice</title>
+
+        <subsection xml:id="subsec-code-interview">
+            <title>Part 1: Code Interview</title>
+            <p>
+                Reading someone else's code is a skill as important as writing your
+                own.  In industry, code reviews are routine: a colleague reads your
+                changes and asks questions before they are merged.  This activity gives
+                you practice in both roles.
+            </p>
+            <activity xml:id="act-code-interview">
+                <title>Reviewing the Keyboard Counter</title>
+                <introduction>
+                    <p>
+                        Exchange your keyboard counter code with a neighbor and read
+                        their code silently for two minutes.  Then take turns asking
+                        the questions below — answer each one about your
+                        <em>partner's</em> code, not your own.  The goal is not to
+                        find bugs; it is to understand the code well enough that you
+                        could modify or maintain it.
+                    </p>
+                </introduction>
+                <task xml:id="task-code-interview-trace">
+                    <title>Trace</title>
+                    <p>
+                        Looking at your partner's code, trace what happens when the
+                        user presses <c>u</c>, then <c>d</c>, then <c>r</c> — each
+                        pressed once just before the RXNE check in a given loop
+                        iteration.  What count value does the terminal display after
+                        each of those three loop cycles?
+                    </p>
+                </task>
+                <task xml:id="task-code-interview-state">
+                    <title>State</title>
+                    <p>
+                        In your partner's code, where is the counter value stored?
+                        What data type is it?  What is the largest value it can hold
+                        before it wraps around?  Is that likely to matter in practice?
+                    </p>
+                </task>
+                <task xml:id="task-code-interview-extend">
+                    <title>Extension</title>
+                    <p>
+                        Without modifying any existing lines in your partner's code,
+                        where and how would you add support for pressing <c>z</c> or
+                        <c>Z</c> to increment the counter by 10?  How many new lines
+                        of code would it take?
+                    </p>
+                </task>
+                <task xml:id="task-code-interview-timing">
+                    <title>Timing</title>
+                    <p>
+                        The RXNE flag is checked once per loop, just before the
+                        <c>printf</c> and <c>delay_ms(500)</c>.  If two different
+                        keys are pressed within the same 500 ms window, what happens?
+                        Could your partner's code miss a keypress, and if so, is that
+                        a fundamental limitation of the design or a bug?
+                    </p>
+                </task>
+            </activity>
+
+        </subsection>
+
+        <subsection xml:id="subsec-code-interview-discussion">
+            <title>Discussion: The Receive Buffer</title>
+            <p>
+                <em>What actually happens during <c>delay_ms</c>?</em>
+                The USART hardware keeps receiving independently of the CPU — it does
+                not pause during <c>delay_ms</c>.  When a byte arrives, the shift
+                register assembles the bits and transfers the byte into RDR, setting
+                the RXNE flag.  That byte then sits in RDR until the next time the
+                loop checks RXNE, up to 500 ms later.  So one keypress is effectively
+                buffered for free.
+            </p>
+            <p>
+                A second key pressed while RDR is still full is a different story.
+                The shift register receives it correctly, but when it tries to transfer
+                to RDR — which is occupied — the hardware sets the
+                <term>Overrun Error</term> (ORE) flag and the new byte is silently
+                discarded.  The first key survives; any key after it is lost.  The
+                program has no way of knowing anything was dropped.
+            </p>
+            <p>
+                This is not a bug — it is a deliberate trade-off that works fine for
+                a slow manual counter.  The general fix is a UART receive interrupt:
+                every incoming byte immediately triggers an ISR that stores it in a
+                software queue, decoupling reception speed from the main loop's pace.
+                That pattern comes up later in the course.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-stm32-macros">
+            <title>Part 2: STM32 Bit-Manipulation Macros</title>
+            <p>
+                Every register write you have done so far has used raw numeric
+                constants — bit positions counted by hand, masks written as hex
+                literals.  That works, but it is fragile: a wrong shift value is
+                invisible to the compiler and can be very hard to spot in a code
+                review.
+            </p>
+            <p>
+                The CMSIS headers (included through <c>ES28.h</c>) define a named
+                macro for every bit field in every register.  Each field gets a mask
+                (<c>_Msk</c>) and a position (<c>_Pos</c>) constant.  The pattern
+                is always the same: clear the field first, then OR in the value
+                shifted into place.  To make this concrete, we will use the
+                <c>MODER</c> register to show how to configure PA5 as an output pin.
+            </p>
+            <figure xml:id="fig-moder-bitfield">
+                <caption>The MODER register.  Each pin has a 2-bit field.  CMSIS
+                defines <c>GPIO_MODER_MODE5_Msk</c> (the mask for pin 5's field)
+                and <c>GPIO_MODER_MODE5_Pos</c> (the bit position, 10), so you
+                never need to count bits by hand.</caption>
+                <image source="slides/Day06-BJTS_and_MOSFETS/slide10_img1.png" width="85%"/>
+            </figure>
+            <program language="c"><code><![CDATA[
+// Raw version — a wrong constant is a silent bug
+GPIOA->MODER &= ~(1U << 11);  // clear bit 11 of the MODE5 field
+GPIOA->MODER &= ~(1U << 10);  // clear bit 10 of the MODE5 field
+GPIOA->MODER |=  (1U << 10);  // set bit 10 (output mode = 0b01)
+
+// Macro version — names are checked by the compiler
+GPIOA->MODER &= ~GPIO_MODER_MODE5_Msk;
+GPIOA->MODER |=  (GPIO_OUTPUT << GPIO_MODER_MODE5_Pos);
+]]></code></program>
+            <p>
+                The ES28 header defines convenient mode constants: <c>GPIO_INPUT</c>
+                (0), <c>GPIO_OUTPUT</c> (1), <c>GPIO_ALTERNATE</c> (2), and
+                <c>GPIO_ANALOG</c> (3).
+            </p>
+            <figure xml:id="fig-moder-macros-ref">
+                <caption>CMSIS macro naming conventions for common GPIO configurations.
+                The same pattern extends to every peripheral register in the device.</caption>
+                <image source="slides/Day06-BJTS_and_MOSFETS/slide14_img1.png" width="55%"/>
+            </figure>
+
+            <activity xml:id="act-macros-rewrite">
+                <title>Rewriting with Macros</title>
+                <introduction>
+                    <p>
+                        The code below configures PB5 as an output — the pin that will
+                        drive the transistor base in the lab.  It is written with raw
+                        constants.  Rewrite it using CMSIS macros.
+                    </p>
+                    <program language="c"><code><![CDATA[
+// Enable GPIOB clock
+RCC->IOPENR |= (1U << 1);
+
+// Set PB5 to output mode
+GPIOB->MODER &= ~(1U << 11);  // clear bit 11 of the MODE5 field
+GPIOB->MODER &= ~(1U << 10);  // clear bit 10 of the MODE5 field
+GPIOB->MODER |=  (1U << 10);  // set bit 10 (output mode = 0b01)
+
+// Drive PB5 high
+GPIOB->ODR |= (1U << 5);
+]]></code></program>
+                </introduction>
+                <task xml:id="task-macros-moder">
+                    <p>
+                        Rewrite the three MODER lines using <c>GPIO_MODER_MODE5_Msk</c>,
+                        <c>GPIO_MODER_MODE5_Pos</c>, and <c>GPIO_OUTPUT</c>.
+                    </p>
+                </task>
+                <task xml:id="task-macros-iopenr">
+                    <p>
+                        The <c>RCC->IOPENR</c> line enables the GPIOB clock with a raw
+                        bit shift.  What CMSIS macro would replace <c>(1U &lt;&lt; 1)</c>?
+                        (Hint: look at how GPIOA's clock was enabled in the UART driver.)
+                    </p>
+                </task>
+                <task xml:id="task-macros-odr">
+                    <p>
+                        Rewrite the <c>ODR</c> line using the CMSIS macro
+                        <c>GPIO_ODR_OD5</c> instead of the raw bit shift
+                        <c>(1U &lt;&lt; 5)</c>.
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+        <subsection xml:id="subsec-npn-driver-design">
+            <title>Part 3: Designing a Low-Side NPN Driver</title>
+            <p>
+                From the pre-class reading you know that a transistor can act as a
+                switch — but where exactly does the load connect?  The answer depends
+                on transistor type: for an NPN, the load sits above the collector
+                (between the supply and C); for a PNP, the load sits below the
+                collector (between C and ground).
+            </p>
+
+            <figure xml:id="fig-low-high-side-topology">
+                <caption>NPN low-side switch (left): load connects between the supply
+                and the collector, emitter to ground.  PNP high-side switch (right):
+                emitter connects to the supply, load connects below the collector to
+                ground.</caption>
+                <image source="slides/Day06-BJTS_and_MOSFETS/slide23_img0_cropped.png" width="85%"/>
+            </figure>
+
+            <p>
+                In this course you will use NPN transistors as low-side switches.
+                The circuit below is one example you will analyze in lab.
+                The load <m>R_{\text{heat}}</m> sits between the supply and the
+                collector.  A small resistor <m>R_{\text{lim}}</m> — the
+                <em>base-current limiting resistor</em> — connects the GPIO pin
+                (<m>V_1</m>) to the base.  The emitter goes to ground.
+            </p>
+
+            <figure xml:id="fig-npn-low-side-circuit">
+                <caption>NPN low-side driver circuit.  <m>R_{\text{lim}}</m> must be
+                chosen so that base current is large enough to saturate the transistor
+                (fully on) while staying within the GPIO pin's safe output limit.</caption>
+                <image source="slides/Day06-BJTS_and_MOSFETS/low-side-cropped.png" width="55%"/>
+            </figure>
+
+            <p>
+                The key design question is: <em>what value should
+                <m>R_{\text{lim}}</m> be?</em>  The goal is to supply enough base
+                current to push the transistor into saturation — fully on — while
+                keeping that current within the GPIO pin's safe limit.
+            </p>
+
+            <example xml:id="ex-npn-rlim">
+                <title>Choosing R<sub>lim</sub></title>
+                <p>
+                    <em>Given:</em> a load that needs 100 mA from a 5 V supply.
+                    The NPN transistor has <m>\beta_{\min} = 50</m> and
+                    <m>V_{BE} = 0.7\,\text{V}</m>.
+                    The GPIO outputs <m>V_{\text{GPIO}} = 3.3\,\text{V}</m>.
+                </p>
+                <p>
+                    <em>Step 1 — collector current:</em>
+                    the load sets <m>I_C = 100\,\text{mA}</m>.
+                </p>
+                <p>
+                    <em>Step 2 — minimum base current to saturate:</em>
+                    <md>I_{B,\min} = \frac{I_C}{\beta_{\min}} = \frac{100\,\text{mA}}{50} = 2\,\text{mA}</md>
+                </p>
+                <p>
+                    <em>Step 3 — apply a safety margin.</em>
+                    Component tolerances and temperature variation mean the real
+                    <m>\beta</m> can be lower than the datasheet minimum.
+                    A factor of 2 is standard, so target <m>I_B = 4\,\text{mA}</m>.
+                </p>
+                <p>
+                    <em>Step 4 — voltage across R<sub>lim</sub>:</em>
+                    KVL around the base-emitter loop gives
+                    <md>V_{R_{\text{lim}}} = V_{\text{GPIO}} - V_{BE} = 3.3 - 0.7 = 2.6\,\text{V}</md>
+                </p>
+                <p>
+                    <em>Step 5 — resistance:</em>
+                    <md>R_{\text{lim}} = \frac{V_{R_{\text{lim}}}}{I_B} = \frac{2.6\,\text{V}}{4\,\text{mA}} = 650\,\Omega</md>
+                    Choose the nearest standard value at or below this (e.g., 620 Ω
+                    or 560 Ω) to ensure the transistor stays in saturation.
+                </p>
+            </example>
+
+            <p>
+                For a low-side <em>MOSFET</em> switch, no base-current calculation
+                is needed — the gate is purely capacitive and draws no steady current.
+                Check two numbers in the datasheet: <m>V_{th}</m> must be below
+                3.3 V (logic-level compatible), and maximum drain current must exceed
+                your load current.  If both hold, drive the gate HIGH to switch on
+                and LOW to switch off.  No R<sub>lim</sub> is needed.
+            </p>
+            <p>
+                The lab also introduces a <em>high-side PFET driver</em>, where the
+                transistor sits between the supply and the load.  A PFET turns on
+                when <m>V_{GS} \lt V_{th}</m> — pulling the gate LOW with respect
+                to the supply turns the load on.  The full analysis is in the lab
+                handout.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-mosfet-intro">
+            <title>Part 4: MOSFETs</title>
+            <p>
+                A MOSFET has three terminals: <term>Gate</term> (G),
+                <term>Drain</term> (D), and <term>Source</term> (S).  Unlike the
+                BJT, it is <em>voltage-controlled</em> — the gate draws essentially
+                no current in steady state because it is insulated from the channel
+                by a thin oxide layer.  When the gate-to-source voltage
+                <m>V_{GS}</m> exceeds the threshold <m>V_{th}</m>, a conductive
+                channel opens between drain and source.
+            </p>
+
+            <figure xml:id="fig-nfet-symbol-inclass">
+                <caption>N-channel enhancement MOSFET schematic symbol with Gate (g),
+                Drain (d), and Source (s) labeled.  The gap between the gate line and
+                the channel represents the insulating oxide layer.</caption>
+                <image source="slides/Day06-BJTS_and_MOSFETS/slide30_img2.png" width="20%"/>
+            </figure>
+
+            <p>
+                For an N-channel low-side switch the load connects between the supply
+                and the drain; the source goes to ground.  Drive the gate HIGH to
+                turn on, LOW to turn off — no limiting resistor needed.  A P-channel
+                MOSFET (PFET) flips the topology: source at the supply, drain below,
+                and the device turns on when the gate is pulled LOW.
+            </p>
+
+            <figure xml:id="fig-nfet-lowside-inclass">
+                <caption>N-channel low-side switch.  Load sits between the supply
+                and the drain; source to ground.</caption>
+                <image source="slides/Day06-BJTS_and_MOSFETS/slide35_img1.png" width="20%"/>
+            </figure>
+
+            <figure xml:id="fig-pfet-highside-inclass">
+                <caption>P-channel high-side switch.  Source connects to the
+                supply; load hangs below the drain.</caption>
+                <image source="slides/Day06-BJTS_and_MOSFETS/slide35_img2.png" width="20%"/>
+            </figure>
+
+            <p>
+                For direct GPIO drive, <m>|V_{th}|</m> must be below 3.3 V —
+                these are called <em>logic-level</em> MOSFETs.  MOSFETs are also
+                easy to saturate fully, which makes them reliable for fast
+                switching without the careful <m>R_{\text{lim}}</m> sizing a BJT
+                requires.  One caution: the thin gate oxide that gives MOSFETs their
+                voltage-controlled behavior also makes them vulnerable to damage from
+                electrostatic discharge (ESD) — handle them carefully.
+            </p>
+
+            <sidebyside widths="92%" margins="4%">
+            <table xml:id="table-bjt-vs-mosfet">
+                <title>BJT vs. MOSFET: key differences for embedded switching</title>
+                <tabular halign="left" top="minor" bottom="minor" left="minor" right="minor">
+                    <row header="yes" bottom="major">
+                        <cell></cell>
+                        <cell>MOSFET</cell>
+                        <cell>BJT</cell>
+                    </row>
+                    <row>
+                        <cell><em>Terminals</em></cell>
+                        <cell>Gate (G), Drain (D), Source (S)</cell>
+                        <cell>Base (B), Collector (C), Emitter (E)</cell>
+                    </row>
+                    <row>
+                        <cell><em>Controlling quantity</em></cell>
+                        <cell>Voltage on the gate; gate current is essentially zero</cell>
+                        <cell>Current into the base; must be supplied continuously while device is on</cell>
+                    </row>
+                    <row>
+                        <cell><em>Saturation</em></cell>
+                        <cell>Easy to saturate fully; no base-resistor calculation needed</cell>
+                        <cell>Requires careful <m>R_{\text{lim}}</m> sizing to guarantee saturation</cell>
+                    </row>
+                    <row>
+                        <cell><em>Power consumption</em></cell>
+                        <cell>Lower — no steady-state gate current</cell>
+                        <cell>Higher — base current flows whenever the device is on</cell>
+                    </row>
+                    <row>
+                        <cell><em>Switching speed</em></cell>
+                        <cell>Excellent for embedded use; gate capacitance limits very high-frequency switching</cell>
+                        <cell>Can be slightly faster at very high frequencies (no gate capacitance to charge), at the cost of more power</cell>
+                    </row>
+                    <row>
+                        <cell><em>ESD sensitivity</em></cell>
+                        <cell>Vulnerable — the thin gate oxide is easily damaged by static discharge</cell>
+                        <cell>More robust to ESD</cell>
+                    </row>
+                </tabular>
+            </table>
+            </sidebyside>
+        </subsection>
+
+        <subsection xml:id="subsec-transistor-datasheets">
+            <title>Part 5: Reading Transistor Datasheets</title>
+            <p>
+                When you open a transistor datasheet you will often see three columns
+                for a single parameter: <em>Min</em>, <em>Typ</em>, and <em>Max</em>.
+                This is not sloppiness — it reflects real manufacturing variation.
+                No two BJTs or MOSFETs coming off the same production line are
+                identical; a parameter like <m>\beta</m> (<m>h_{FE}</m>) can vary
+                by a factor of three or more across a single batch.  Manufacturers
+                characterize this spread statistically: Min and Max mark the
+                3<m>\sigma</m> boundaries of the distribution (only about 0.15% of
+                parts fall outside on either end), and Typ is the mean — the value
+                you are most likely to see in any individual part.
+            </p>
+            <p>
+                Which column should you use?  It depends on what question you are
+                asking.
+            </p>
+            <p>
+                <em>Will my circuit function at all?</em>  Use the worst-case
+                minimum.  If you design for <m>\beta_{\min}</m>, the transistor will
+                saturate even if you happen to pull the weakest part from the box.
+                Designing for <m>\beta_{\max}</m> instead means your circuit fails
+                for the vast majority of real parts.
+            </p>
+            <p>
+                <em>Will my circuit break or overheat?</em>  Use the worst-case
+                maximum.  To check whether you stay inside a power or voltage limit
+                you must assume the highest plausible value — the part that runs
+                hottest, conducts most, or swings highest.
+            </p>
+            <p>
+                The general rule: ask <q>does a higher or lower value make it harder
+                for my design to succeed?</q> and use that value.  Keep in mind that
+                none of these numbers are fixed — <m>\beta</m>, <m>V_{BE}</m>, and
+                <m>V_{th}</m> all shift with temperature, so for critical designs you
+                would also check the datasheet graphs to see how the Min or Max moves
+                when the circuit gets hot or cold.
+            </p>
+            <p>
+                Use the datasheets linked on Canvas to fill in the tables below.
+            </p>
+
+            <activity xml:id="act-bjt-datasheets">
+                <title>BJT Datasheets</title>
+                <p>
+                    Record the type (NPN or PNP), the DC current gain
+                    <m>h_{FE}</m>, and the maximum continuous collector current
+                    for each device.  When a range of <m>h_{FE}</m> values is
+                    listed, record the minimum — that is what governs a worst-case
+                    design.
+                </p>
+                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                    <col width="22%"/>
+                    <col width="26%"/>
+                    <col width="26%"/>
+                    <col width="26%"/>
+                    <row header="yes" bottom="major">
+                        <cell>Part Number</cell>
+                        <cell>Type (NPN or PNP)</cell>
+                        <cell><m>h_{FE}</m> (minimum)</cell>
+                        <cell>Max collector current</cell>
+                    </row>
+                    <row><cell>KSC2073</cell><cell></cell><cell></cell><cell></cell></row>
+                    <row><cell>TIP42</cell><cell></cell><cell></cell><cell></cell></row>
+                    <row><cell>2N3906</cell><cell></cell><cell></cell><cell></cell></row>
+                    <row><cell>2N3904</cell><cell></cell><cell></cell><cell></cell></row>
+                </tabular>
+            </activity>
+
+            <activity xml:id="act-mosfet-datasheets">
+                <title>MOSFET Datasheets</title>
+                <p>
+                    Record the type (NFET or PFET), the threshold voltage
+                    <m>V_{th}</m>, and the maximum continuous drain current.
+                    Pay attention to the sign of <m>V_{th}</m> for PFET devices.
+                </p>
+                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                    <col width="22%"/>
+                    <col width="26%"/>
+                    <col width="26%"/>
+                    <col width="26%"/>
+                    <row header="yes" bottom="major">
+                        <cell>Part Number</cell>
+                        <cell>Type (NFET or PFET)</cell>
+                        <cell>Threshold voltage <m>V_{th}</m></cell>
+                        <cell>Max drain current</cell>
+                    </row>
+                    <row><cell>IRF9Z24</cell><cell></cell><cell></cell><cell></cell></row>
+                    <row><cell>BS250P</cell><cell></cell><cell></cell><cell></cell></row>
+                    <row><cell>IRFZ24</cell><cell></cell><cell></cell><cell></cell></row>
+                    <row><cell>BS107P</cell><cell></cell><cell></cell><cell></cell></row>
+                </tabular>
+            </activity>
+        </subsection>
+
+    </section>
+
+
+</chapter>

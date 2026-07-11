@@ -1,0 +1,679 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--   This file is part of the Embedded Systems textbook.    -->
+<!--                                                          -->
+<!--      ENGS 28: Embedded Systems                           -->
+<!--      Thayer School of Engineering, Dartmouth College     -->
+<!--                                                          -->
+<!-- Copyright (C) 2026  Petra Bonfert-Taylor                 -->
+<!-- See the file COPYING for copying conditions.             -->
+
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-timers-interrupts">
+    <title>Timers and Interrupts</title>
+    <introduction>
+        <p>
+            Delays based on spin loops (<c>for(i=0; i&lt;N; i++)</c>) waste processor cycles
+            and prevent the CPU from doing other work.  Hardware <term>timers</term> count
+            autonomously in the background; <term>interrupts</term> let external or timer
+            events preempt the main program without the program having to poll.
+            Together they enable concurrent, responsive embedded software.
+        </p>
+        <objectives>
+            <ul>
+                <li>Configure TIM14 to generate periodic interrupts.</li>
+                <li>Explain how the Cortex-M interrupt mechanism saves and restores state.</li>
+                <li>Write an Interrupt Service Routine (ISR) and share data between it and main code.</li>
+                <li>Configure an external (GPIO) interrupt from a pushbutton.</li>
+                <li>Use <c>volatile</c> to prevent compiler optimizations that break interrupt code.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-timers-interrupts-concepts">
+        <title>Before Class: Timers and Interrupts</title>
+        <introduction>
+            <p>
+                The programs we have written so far do one thing at a time, in strict
+                sequence.  When we needed a delay we burned through a spin loop;
+                when we needed to check a button we polled it in a tight loop.
+                Both approaches work for simple programs but break down quickly as
+                programs grow: the processor is either burning cycles doing nothing
+                or is so busy polling that it misses events.  Hardware timers and
+                interrupts solve both problems.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-spinloop-problem">
+            <title>The Problem with Spin Loops</title>
+            <p>
+                A spin-loop delay like <c>for (int i = 0; i &lt; N; i++) {}</c>
+                ties up the CPU completely for the duration of the delay.  During
+                those millions of iterations, the processor cannot read a sensor,
+                update a display, respond to a button, or do anything else.  The
+                program is effectively comatose while waiting for time to pass.
+            </p>
+            <p>
+                This is both wasteful and fragile.  It is wasteful because the
+                processor is consuming power to execute instructions that accomplish
+                nothing.  It is fragile because the number of iterations needed for
+                a given delay depends on the clock speed and compiler optimization
+                level — change either one and all your delays change too.
+            </p>
+            <p>
+                The same problem applies to polling.  If you check a button's state
+                in a tight loop, the CPU is constantly reading IDR whether anything
+                is happening or not.  If you also need to blink an LED at a precise
+                rate and sample an ADC, you end up with a loop that tries to do
+                everything at once and does none of it well.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-hardware-timers">
+            <title>Hardware Timers: Counting Completely on Their Own</title>
+            <p>
+                A <term>hardware timer</term> is a dedicated piece of digital circuitry
+                built into the microcontroller chip — separate from the CPU — whose
+                only job is to count clock pulses.  It has its own counter register,
+                its own clock input, and its own logic that detects when the count
+                reaches a target value.  It does not share the CPU's execution pipeline,
+                and it does not need the CPU's attention to keep running.
+            </p>
+            <p>
+                Think of it this way: once you configure a hardware timer and start it,
+                it keeps counting on its own whether the CPU is busy computing,
+                waiting in a loop, executing a completely unrelated function, or even
+                temporarily halted.  You can think of it as a tiny, dedicated
+                stopwatch chip wired into the same package — it simply counts,
+                independently and continuously, until you tell it to stop.
+            </p>
+            <p>
+                The STM32C031C6 has <em>five</em> independent hardware timers: TIM1,
+                TIM3, TIM14, TIM16, and TIM17.  Each can be configured separately with
+                its own period and its own purpose — one could be generating a 1 Hz
+                heartbeat tick while another is producing a 20 kHz PWM signal for
+                a motor, both running simultaneously with no CPU involvement.
+            </p>
+            <p>
+                Each timer consists of a few key parts: a <term>prescaler</term> that
+                divides the system clock down to a slower rate, a <term>counter</term>
+                (CNT) that increments on each prescaled tick, and an
+                <term>auto-reload register</term> (ARR) that sets the value at which
+                the counter resets to zero and signals that a period has elapsed.  By
+                choosing the prescaler and ARR, you can produce any timing period from
+                microseconds to minutes.  For example, with a 12 MHz system clock,
+                a prescaler of 12000 brings the counter clock to 1 kHz (one tick per
+                millisecond); setting ARR to 999 then makes the timer signal an event
+                every 1000 ticks — exactly once per second.  Your initialization code
+                sets these registers once at startup, and after that the CPU never
+                needs to touch the timer again during normal
+                operation.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-interrupts-concept">
+            <title>Interrupts: How the CPU Finds Out</title>
+            <p>
+                A timer counting in the background is only useful if the CPU can find
+                out when the timer fires — and ideally without constantly checking a
+                status register in a loop.  The mechanism for this is an
+                <term>interrupt</term>.
+            </p>
+            <p>
+                An interrupt is a hardware signal — a wire, essentially — that runs
+                from a peripheral (like a timer, a GPIO pin, or a UART) directly into
+                the CPU's control logic.  When that signal is asserted — when the
+                timer period elapses, for example — the CPU notices it as soon as it
+                finishes the instruction it is currently executing.  It then
+                automatically saves a snapshot of its working registers (so it can
+                resume whatever it was doing) and jumps to a special function called
+                an <term>Interrupt Service Routine</term> (ISR).  When the ISR
+                returns, the CPU restores the saved registers and picks up the main
+                program exactly where it left off — as if nothing happened.
+            </p>
+            <p>
+                From the main program's perspective, the ISR runs invisibly between
+                two instructions.  The main loop can do useful work — reading sensors,
+                updating a display, sending I2C messages — and is briefly diverted
+                only when the timer fires.  No polling, no spin loop, no wasted
+                cycles.  The result is software that is both responsive and productive:
+                the hardware handles timing precisely, and the CPU is free to do
+                real work in between.
+            </p>
+            <p>
+                One important rule: ISRs must be short.  While an ISR is running,
+                other interrupts of equal or lower priority are held pending.  A slow
+                ISR — one that loops or waits — can cause the system to miss events or
+                delay responses unpredictably.  The standard pattern is for an ISR to
+                do the minimum necessary — set a flag, increment a counter, record a
+                value — and let the main loop handle any time-consuming follow-up
+                when it notices the flag.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-timers-interrupts-concepts">
+            <exercise xml:id="rq-spinloop-fragile">
+                <statement><p>You write a delay by looping 120,000 times at a
+                12 MHz clock to get approximately 10 ms.  Later, the clock is changed
+                to 48 MHz.  What happens to the delay?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The delay becomes approximately 2.5 ms — four
+                        times shorter — because the same number of iterations now
+                        executes four times faster.</p></statement>
+                        <feedback><p>Correct.  Spin-loop delays are tied to clock
+                        speed.  A hardware timer generates events based on real time
+                        elapsed, not iteration count, and remains accurate regardless
+                        of clock changes.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The delay stays at 10 ms because the compiler
+                        automatically adjusts loop counts for the new clock.</p></statement>
+                        <feedback><p>The compiler has no knowledge of the intended delay
+                        duration — it just generates instructions to execute the loop.
+                        It cannot adjust iteration counts to compensate for a clock
+                        change.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The delay becomes approximately 40 ms — four
+                        times longer — because the higher clock increases power
+                        consumption and slows timing.</p></statement>
+                        <feedback><p>A higher clock makes the CPU run faster, not
+                        slower.  The same number of iterations executes in less time,
+                        making the delay shorter.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The delay is unaffected because loops always
+                        take the same wall-clock time regardless of clock speed.</p></statement>
+                        <feedback><p>Loops execute faster on a faster clock.  A spin
+                        loop is directly dependent on clock speed.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-timer-period">
+                <statement><p>A timer's input clock runs at 1 MHz after prescaling.
+                The auto-reload register (ARR) is set to 499.  How often does the
+                timer generate an update event?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Every 500 µs — the counter increments every
+                        1 µs and resets after 500 ticks (0 through 499).</p></statement>
+                        <feedback><p>Correct.  The counter counts 0, 1, 2, … 499,
+                        then resets — that is 500 ticks at 1 µs each = 500 µs per
+                        period.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Every 499 µs — the counter counts from 1
+                        to 499.</p></statement>
+                        <feedback><p>The counter counts from 0 to ARR inclusive, giving
+                        ARR + 1 = 500 ticks per period, not ARR = 499.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Every 1 ms — the timer always generates events
+                        at 1 kHz regardless of ARR.</p></statement>
+                        <feedback><p>The event period depends on both the prescaled
+                        clock frequency and ARR.  ARR = 499 with a 1 MHz clock gives
+                        500 µs, not 1 ms.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Every 1 µs — the timer fires on every clock
+                        tick.</p></statement>
+                        <feedback><p>The timer only fires when the counter reaches
+                        ARR and resets.  With ARR = 499 it takes 500 clock ticks —
+                        500 µs — between events.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-isr-short">
+                <statement><p>Why should an Interrupt Service Routine be kept as
+                short as possible?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>While the ISR is running, other interrupts of
+                        equal or lower priority are blocked; a slow ISR can cause
+                        the system to miss events or delay responses.</p></statement>
+                        <feedback><p>Correct.  The standard pattern is to set a flag
+                        or update a shared variable in the ISR and let the main loop
+                        handle any time-consuming work triggered by that flag.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>ISRs have a fixed maximum execution time
+                        enforced by the hardware; any ISR that runs longer is
+                        automatically terminated.</p></statement>
+                        <feedback><p>The Cortex-M0+ does not impose a hardware time
+                        limit on ISRs.  An ISR that runs indefinitely will simply
+                        block all other processing indefinitely — the system does
+                        not terminate it automatically.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Long ISRs corrupt the CPU's register save area,
+                        preventing the main program from resuming correctly.</p></statement>
+                        <feedback><p>The CPU saves and restores registers automatically
+                        on interrupt entry and exit.  The problem with long ISRs is
+                        not register corruption but blocked responsiveness.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The compiler cannot optimize ISR code, so
+                        long ISRs waste more memory than equivalent main-loop
+                        code.</p></statement>
+                        <feedback><p>The compiler can optimize ISR code (subject to
+                        <c>volatile</c> constraints on shared variables).  The
+                        reason to keep ISRs short is responsiveness, not memory
+                        usage.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
+        <!--
+        CANVAS QUIZ: "Before class — Timers and Interrupts"
+        (Due 1 hour before class; auto-graded multiple choice; low stakes.)
+
+        Q1. What is the main disadvantage of using a spin loop for delays in
+            embedded software?
+            A) Spin loops are inaccurate because the compiler changes the iteration count.
+            B) The CPU is fully occupied executing useless instructions and cannot
+               respond to sensors, buttons, or other events during the delay.  ← CORRECT
+            C) Spin loops consume more memory than hardware timers.
+            D) Spin loops always produce delays that are too long.
+
+        Q2. A hardware timer's prescaler divides the 12 MHz system clock by 12,000,
+            and ARR is set to 999. What is the timer period?
+            A) 1 µs
+            B) 1 ms
+            C) 1 s  ← CORRECT  (12 MHz / 12,000 = 1 kHz; 1000 ticks at 1 kHz = 1 s)
+            D) 1 min
+
+        Q3. When an interrupt fires, what does the Cortex-M CPU do before jumping
+            to the ISR?
+            A) It finishes all pending instructions in the pipeline, then resets
+               all registers to zero.
+            B) It immediately jumps to the ISR, discarding the current instruction.
+            C) It finishes the current instruction, saves the working registers to
+               the stack, then jumps to the ISR.  ← CORRECT
+            D) It waits for the main loop to reach a safe stopping point.
+
+        Q4. An ISR sets a flag variable each time a timer fires. The main loop
+            checks the flag and blinks an LED when it is set. Why is this pattern
+            preferred over doing the LED blink directly inside the ISR?
+            A) The LED cannot be toggled from inside an ISR.
+            B) It keeps the ISR short so other interrupts are not blocked for long,
+               while the main loop handles the slower LED toggle.  ← CORRECT
+            C) Flag variables are faster to access than GPIO registers.
+            D) Blinking an LED inside an ISR would corrupt the stack.
+
+        Q5. A student needs to share a counter variable between an ISR and the main
+            loop. What keyword must the variable be declared with, and why?
+            A) static — to ensure the variable retains its value between ISR calls.
+            B) const — to prevent the ISR from accidentally changing it.
+            C) volatile — to tell the compiler not to cache the variable in a
+               register, ensuring both the ISR and main loop always see the
+               most recent value.  ← CORRECT
+            D) extern — to make the variable visible across multiple source files.
+        -->
+
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-timers">
+        <title>Hardware Timers</title>
+        <introduction>
+            <p>
+                The STM32C031C6 has five timers: TIM1, TIM3, TIM14, TIM16, and TIM17.
+                TIM14 is the simplest: it counts up from 0 to an <term>auto-reload value</term>
+                (ARR), then resets to 0 and sets an update flag (UIF).  A <term>prescaler</term>
+                divides the system clock before the counter, allowing timing periods from
+                microseconds to minutes.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-timer-block">
+            <title>TIM14 Block Diagram</title>
+            <figure xml:id="fig-timer-counter-block">
+                <caption>Basic counter block: a register stores the current count; on each
+                prescaled clock edge the counter increments; a multiplexer selects up or
+                down counting; a comparator detects when the count reaches the auto-reload
+                value and generates an update event.</caption>
+                <image source="slides/Day08-Interrupts/slide04_9200d3ec.png" width="75%"/>
+            </figure>
+            <figure xml:id="fig-tim14-block">
+                <caption>TIM14 block diagram.  The prescaled clock (PSC+1 divider) feeds
+                the 16-bit counter (CNT).  When CNT reaches ARR the counter resets to 0
+                and an update event is generated (UIF in TIM_SR).</caption>
+                <image source="slides/Day08-Interrupts/slide05_c7cc76e1.png" width="75%"/>
+            </figure>
+            <figure xml:id="fig-tim14-registers">
+                <caption>TIM14 register map.  The key registers for simple timing are:
+                CR1 (enable/disable the counter), PSC (prescaler value), ARR (auto-reload
+                value), CNT (current count), and SR (status register with the UIF flag).</caption>
+                <image source="slides/Day08-Interrupts/slide06_4ed19ad1.png" width="48%"/>
+                <image source="slides/Day08-Interrupts/slide06_3053e1d5.png" width="48%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-timer-prescaler">
+            <title>Setting Period and Prescaler</title>
+            <p>
+                To generate a 500 ms period with a 12 MHz system clock, choose a prescaler
+                and auto-reload value whose product gives 6 000 000 clock cycles:
+            </p>
+            <p>
+                Choose PSC = 12 000 − 1 (divides 12 MHz to 1 kHz) and ARR = 500 − 1
+                (counts 500 millisecond ticks).  The counter resets every 500 ms.
+                Both PSC and ARR are written as (desired value − 1) because the hardware
+                counts from 0 to ARR inclusive.
+            </p>
+            <figure xml:id="fig-timer-prescaler">
+                <caption>Prescaler timing diagram.  The system clock (top) is divided by
+                PSC+1 to produce the counter clock.  The counter increments on each counter
+                clock edge and resets to 0 when it reaches ARR, generating a UIF event.</caption>
+                <image source="slides/Day08-Interrupts/slide11_c3ead6b8.png" width="80%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-timer-polled">
+            <title>Polled Timer</title>
+            <p>
+                The simplest use of TIM14 is to poll the UIF flag in the main loop.
+            </p>
+            <program language="c"><code><![CDATA[
+#define PSC_FACTOR   12000   // 12 MHz / 12000 = 1 kHz counter clock
+#define ARR_FACTOR   500     // 1000 Hz / 500 = 2 Hz -> 500 ms period
+
+void tim14_500ms_init(void) {
+    RCC->APBENR2 |= RCC_APBENR2_TIM14EN; // enable TIM14 clock
+    TIM14->PSC = PSC_FACTOR - 1;         // prescaler
+    TIM14->ARR = ARR_FACTOR - 1;         // auto-reload
+    TIM14->CR1 |= TIM_CR1_CEN;           // start counter
+}
+
+int main(void) {
+    tim14_500ms_init();
+    while (1) {
+        if (TIM14->SR & TIM_SR_UIF) {    // check update flag
+            TIM14->SR = ~TIM_SR_UIF;     // clear flag (write-0-to-clear)
+            GPIOA->ODR ^= LED_PIN;       // toggle LED
+        }
+        // other work can happen here
+    }
+}
+]]></code></program>
+
+            <figure xml:id="fig-timer-setup-1">
+                <caption>Enabling the TIM14 clock in RCC_APBENR2.  The TIM14EN bit is in
+                the APB peripheral enable register 2.  Without this, writes to TIM14
+                registers have no effect.</caption>
+                <image source="slides/Day08-Interrupts/slide14_154ccf61.png" width="80%"/>
+            </figure>
+            <figure xml:id="fig-timer-setup-2">
+                <caption>TIM14 prescaler (PSC) and auto-reload (ARR) registers.  Both are
+                written as (desired count − 1).  The new values take effect at the next
+                update event (when the counter wraps).</caption>
+                <image source="slides/Day08-Interrupts/slide15_9029797c.png" width="80%"/>
+            </figure>
+            <figure xml:id="fig-timer-sr">
+                <caption>TIM14 Status Register (SR).  The UIF (Update Interrupt Flag) bit
+                is set by hardware at each update event.  Clear it by writing 0 to bit 0.
+                Note: unlike ADC_ISR (which uses write-1-to-clear), TIM_SR uses
+                write-0-to-clear for UIF.</caption>
+                <image source="slides/Day08-Interrupts/slide17_2c524508.png" width="48%"/>
+                <image source="slides/Day08-Interrupts/slide17_417df6cc.png" width="48%"/>
+            </figure>
+        </subsection>
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-interrupts">
+        <title>Interrupts</title>
+        <introduction>
+            <p>
+                Polling the UIF flag still consumes CPU cycles checking a register.
+                An <term>interrupt</term> lets the hardware notify the CPU of an event
+                without any polling: when the event occurs, the CPU suspends whatever it
+                is doing, saves its state, runs an <term>Interrupt Service Routine (ISR)</term>,
+                then resumes where it left off.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-interrupt-mechanism">
+            <title>How Interrupts Work</title>
+            <figure xml:id="fig-function-call-stack">
+                <caption>What happens during a normal function call.  The CPU pushes the
+                return address (PC) and key registers onto the stack, loads the function
+                start address into PC, executes the function, then pops the saved state
+                on return.</caption>
+                <image source="slides/Day08-Interrupts/slide31_ff36fa00.png" width="75%"/>
+            </figure>
+            <figure xml:id="fig-interrupt-mechanism">
+                <caption>What happens when an interrupt occurs.  Hardware automatically pushes
+                the CPU state (PC, PSR, r0–r3, r12, lr) onto the stack — the same mechanism
+                as a function call.  The interrupt controller (NVIC) loads the ISR address
+                from a <term>vector table</term> into the PC.  On return from the ISR, the
+                hardware pops the saved state.</caption>
+                <image source="slides/Day08-Interrupts/slide32_a320de49.png" width="75%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-timer-interrupt">
+            <title>Timer Interrupt Setup</title>
+            <p>
+                Enabling a timer interrupt requires three steps in addition to the basic
+                timer setup: enable the update interrupt in the timer itself (DIER), register
+                the ISR with the NVIC (Nested Vectored Interrupt Controller), and write
+                the ISR function with the correct name.
+            </p>
+            <figure xml:id="fig-timer-nvic">
+                <caption>NVIC enable function for TIM14.  The CMSIS function
+                <c>NVIC_EnableIRQ(TIM14_IRQn)</c> sets the enable bit in the NVIC for
+                the TIM14 interrupt line.  The IRQ number is defined in the device header.</caption>
+                <image source="slides/Day08-Interrupts/slide39_8d3f7a34.png" width="48%"/>
+                <image source="slides/Day08-Interrupts/slide39_811bdd0f.png" width="48%"/>
+            </figure>
+
+            <program language="c"><code><![CDATA[
+void tim14_500ms_interrupt_init(void) {
+    __disable_irq();                       // disable global interrupts during setup
+    RCC->APBENR2 |= RCC_APBENR2_TIM14EN;
+    TIM14->PSC = PSC_FACTOR - 1;
+    TIM14->ARR = ARR_FACTOR - 1;
+    TIM14->DIER |= TIM_DIER_UIE;          // enable update interrupt in timer
+    TIM14->CR1  |= TIM_CR1_CEN;           // start counter
+    NVIC_EnableIRQ(TIM14_IRQn);           // enable TIM14 in NVIC
+    __enable_irq();                        // re-enable global interrupts
+}
+
+// ISR — name MUST match the vector table entry
+void TIM14_IRQHandler(void) {
+    if (TIM14->SR & TIM_SR_UIF) {
+        TIM14->SR = ~TIM_SR_UIF;          // clear the flag first
+        GPIOA->ODR ^= LED_PIN;            // toggle LED
+    }
+}
+]]></code></program>
+
+            <insight>
+                <title>ISR best practices</title>
+                <p>
+                    Keep ISRs short.  Long ISRs prevent other interrupts from being serviced.
+                    Set a <c>volatile</c> flag in the ISR and do the work in main:
+                    <c>volatile uint8_t timerFired = 0;</c> — set it in the ISR, check and
+                    clear it in <c>while(1)</c>.  Never call blocking functions (like
+                    <c>printf</c> or <c>delay_ms</c>) inside an ISR.
+                </p>
+            </insight>
+
+            <p>
+                The <c>volatile</c> keyword tells the compiler that a variable can change
+                outside the normal flow of the code (e.g., inside an ISR).  Without it,
+                the compiler may cache the variable in a register and never re-read it from
+                memory, causing the main loop to never see the ISR's update.
+            </p>
+        </subsection>
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-gpio-interrupts">
+        <title>External (GPIO) Interrupts</title>
+        <introduction>
+            <p>
+                A button press can also trigger an interrupt, letting the program respond
+                immediately rather than polling.  The STM32 routes GPIO pins through an
+                <term>EXTI</term> (External Interrupt) multiplexer before reaching the NVIC.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-exti-mux">
+            <title>The EXTI Multiplexer</title>
+            <p>
+                Each GPIO port has pins numbered 0–15.  The EXTI block has 16 lines (EXTI0–15).
+                Pin <m>n</m> of any port maps to line EXTIn — but only one port can be
+                connected to each EXTI line at a time.  The <c>EXTI_EXTICRx</c> registers
+                select which port drives each line.
+            </p>
+            <figure xml:id="fig-exti-mux">
+                <caption>EXTI GPIO multiplexer.  Each EXTI line (0–15) can be connected
+                to pin <m>n</m> of Port A, B, C, D, or F via the EXTICR registers.
+                Only one port per line at a time.  EXTI4 would be connected to PB4 by
+                writing the Port B code into EXTI_EXTICR2 bits [7:0].</caption>
+                <image source="slides/Day09-Interrupts(2)/slide20_f495384e.png" width="48%"/>
+                <image source="slides/Day09-Interrupts(2)/slide20_1407f444.png" width="48%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-exti-config">
+            <title>Configuring a GPIO Interrupt on PB4</title>
+            <p>
+                Setting up an external interrupt for the button on PB4 (falling edge,
+                active-low with pull-up) requires five steps.
+            </p>
+
+            <figure xml:id="fig-exti-button">
+                <caption>Button on PB4 with pull-up and debounce capacitor.  The falling
+                edge occurs when the button is pressed (pin goes from HIGH to LOW).
+                We configure EXTI to trigger on the falling edge.</caption>
+                <image source="slides/Day09-Interrupts(2)/slide21_b404af41.png" width="55%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-ftsr">
+                <caption>EXTI Falling-Trigger Selection Register (FTSR1).  Setting bit 4
+                enables falling-edge detection on EXTI4.  A separate rising-trigger register
+                (RTSR1) handles rising edges; both can be set simultaneously for any-edge
+                detection.</caption>
+                <image source="slides/Day09-Interrupts(2)/slide29_1668932b.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-imr">
+                <caption>EXTI Interrupt Mask Register (IMR1).  Setting bit 4 unmasks EXTI4,
+                allowing it to generate an interrupt request to the NVIC.  A masked line
+                is ignored even if an edge occurs.</caption>
+                <image source="slides/Day09-Interrupts(2)/slide31_873b01af.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-nvic">
+                <caption>NVIC enable for EXTI lines 4–15.  On the STM32C031, EXTI lines
+                4–15 share a single NVIC interrupt line, <c>EXTI4_15_IRQn</c>.  The ISR
+                must check the EXTI_FPR1 register to determine which line triggered.</caption>
+                <image source="slides/Day09-Interrupts(2)/slide33_8d3f7a34.png" width="70%"/>
+            </figure>
+
+            <program language="c"><code><![CDATA[
+void pb4_exti_init(void) {
+    __disable_irq();
+
+    // 1. Configure PB4 as input with pull-up
+    RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
+    GPIOB->PUPDR &= ~(3U << 8);
+    GPIOB->PUPDR |=  (1U << 8);   // pull-up
+
+    // 2. Connect EXTI4 to Port B
+    EXTI->EXTICR[1] &= ~EXTI_EXTICR2_EXTI4_Msk;
+    EXTI->EXTICR[1] |=  (EXTI_EXTICR2_EXTI4_PB);
+
+    // 3. Enable falling-edge detection on EXTI4
+    EXTI->FTSR1 |= EXTI_FTSR1_FT4;
+
+    // 4. Unmask EXTI4
+    EXTI->IMR1 |= EXTI_IMR1_IM4;
+
+    // 5. Enable NVIC for EXTI4_15
+    NVIC_EnableIRQ(EXTI4_15_IRQn);
+
+    __enable_irq();
+}
+
+volatile uint8_t buttonPushed = 0;
+
+void EXTI4_15_IRQHandler(void) {
+    __disable_irq();
+    if (EXTI->FPR1 & EXTI_FPR1_FPIF4) {
+        EXTI->FPR1 = EXTI_FPR1_FPIF4;  // clear pending flag (write-1-to-clear)
+        buttonPushed = 1;
+    }
+    __enable_irq();
+}
+]]></code></program>
+
+            <figure xml:id="fig-exti-exticr">
+                <caption>EXTI_EXTICR2 register showing Port B selected for EXTI4.  The
+                four-bit field [7:0] holds a port code: 0x01 = Port B.  Bits [15:8],
+                [23:16], [31:24] configure EXTI5, EXTI6, EXTI7 respectively.</caption>
+                <image source="slides/Day09-Interrupts(2)/slide24_3eaa0750.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-isr">
+                <caption>EXTI ISR checking and clearing the pending flag.  The Falling
+                Pending Register (FPR1) has one bit per EXTI line; it is set by hardware
+                on a falling edge and cleared by writing 1 to it.  The ISR must clear
+                FPR1 before returning or the interrupt will re-fire immediately.</caption>
+                <image source="slides/Day09-Interrupts(2)/slide38_8b444d34.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-int-flow">
+                <caption>The complete interrupt flow for a GPIO falling edge.  After the
+                EXTI detects the edge it sets the pending bit and signals the NVIC.  The
+                NVIC saves CPU state and vectors to the ISR.  After the ISR returns, the
+                CPU restores state and resumes the main loop exactly where it left off.</caption>
+                <image source="slides/Day09-Interrupts(2)/slide35_a320de49.png" width="75%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-interrupt-pitfalls">
+            <title>Common Interrupt Pitfalls</title>
+            <p>
+                Modifying shared data inside an ISR can cause subtle bugs.  If the ISR
+                increments a multi-byte counter while main is reading it, the read may
+                see a partially-updated value.  The safest pattern: use the ISR only to
+                set a single-byte <c>volatile</c> flag; let main do all the work when
+                it sees that flag set.
+            </p>
+            <p>
+                A second pitfall: the compiler may see that <c>timerFired</c> is never
+                written inside <c>while(1)</c> and optimize the check away entirely,
+                replacing the loop body with an infinite busy-spin.  Always declare
+                ISR-shared variables <c>volatile</c> to prevent this.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-interrupts">
+            <exercise xml:id="rq-volatile">
+                <statement><p>A global variable <c>uint8_t count</c> is incremented in an
+                ISR and printed in main.  The program prints 0 forever even though the ISR
+                runs every second.  What is the most likely cause?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p><c>count</c> is not declared <c>volatile</c>, so the compiler caches it in a register.</p></statement>
+                    <feedback><p>Correct.  Without <c>volatile</c>, the compiler assumes the
+                    value in the register is always current and never re-reads from memory.</p></feedback></choice>
+                    <choice><statement><p>The ISR name is misspelled.</p></statement>
+                    <feedback><p>A misspelled ISR name would cause the ISR to never run, but the problem states the ISR runs every second.</p></feedback></choice>
+                    <choice><statement><p>The NVIC was not enabled.</p></statement>
+                    <feedback><p>If the NVIC were not enabled, the ISR would not run at all.</p></feedback></choice>
+                    <choice><statement><p>The timer prescaler is set incorrectly.</p></statement>
+                    <feedback><p>A wrong prescaler would affect the ISR timing, not the value of <c>count</c>.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+</chapter>

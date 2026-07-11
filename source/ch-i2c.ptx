@@ -1,0 +1,625 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-i2c">
+    <title>I2C: The Two-Wire Serial Bus</title>
+    <introduction>
+        <p>
+            Controlling a four-digit display with a GPIO pin per segment would require 28
+            pins — far more than the MCU has available.  The <term>I2C bus</term> (Inter-
+            Integrated Circuit, also called TWI — Two-Wire Interface) solves this by
+            letting many devices share just two wires: a clock (SCL) and a data line (SDA).
+            Each device has a 7-bit address; the controller selects which device it talks
+            to by broadcasting that address at the start of every transaction.
+        </p>
+        <objectives>
+            <ul>
+                <li>Describe the I2C protocol: START, address, data, ACK, STOP.</li>
+                <li>Configure I2C1 on the STM32 at the register level.</li>
+                <li>Write a device driver for the HT16K33 four-digit 7-segment display.</li>
+                <li>Use the AD2 logic analyzer to observe and decode I2C transactions.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <section xml:id="sec-i2c-how-it-works">
+        <title>Before Class: How I2C Works</title>
+        <introduction>
+            <p>
+                Before looking at the STM32 registers that implement I2C, it helps
+                to understand what the protocol actually does and why it is designed
+                the way it is.  This section covers the protocol concepts; register
+                details come later.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-i2c-physical-reality">
+            <title>Two Wires, One Shared Bus</title>
+            <p>
+                I2C uses exactly two wires: <term>SCL</term> (Serial Clock) and
+                <term>SDA</term> (Serial Data).  Both wires run across the entire circuit,
+                and every I2C device is physically connected to both — not through a
+                separate pair to the controller, but tapped onto the same two wires as
+                every other device.  When the controller puts a bit on SDA, all peripherals
+                see it simultaneously.
+            </p>
+            <p>
+                This shared physical medium is called a <term>bus</term>.  The payoff is
+                efficiency: a display, a temperature sensor, and an accelerometer all
+                connect to the exact same two wires.  Adding a fourth device requires no
+                new wires at all.
+            </p>
+            <p>
+                Both lines idle HIGH, held there by pull-up resistors.  Any device can
+                pull a line LOW, but no device can actively force it HIGH — it only
+                releases the line, and the resistor does the rest.  This is
+                <term>open-drain</term> signaling.  It is what makes the shared bus safe:
+                if two devices simultaneously drive SDA, neither one damages the other —
+                the line simply goes LOW (a logical AND of all drivers), and every device
+                can detect the situation.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-i2c-addressing">
+            <title>Addressing: Who Is Being Called?</title>
+            <p>
+                Since every device hears every bit, the protocol needs a way to reach
+                one specific device without disturbing the others.  Think of an office
+                intercom system: when someone presses <q>Conference Room B,</q> the
+                announcement plays over the same speakers as every other announcement —
+                everyone hears it — but only the people in Conference Room B are
+                expected to respond.
+            </p>
+            <p>
+                I2C works the same way.  Every peripheral has a unique 7-bit address
+                (assigned by its manufacturer and listed somewhere in the datasheet —
+                often near the front, though the exact location varies).  At the very start of each transaction, the controller
+                broadcasts that 7-bit address plus a single read/write bit — eight bits
+                total, clocked out one by one on SDA.  Every device on the bus receives
+                those bits and silently compares them to its own address.
+            </p>
+            <p>
+                The device whose address matches responds by pulling SDA LOW during the
+                ninth clock pulse.  This one-bit response is the <term>ACK</term>
+                (acknowledgment).  From the controller's perspective: SDA LOW after the
+                address byte means a device recognized the address and the transaction can
+                continue.  SDA staying HIGH is a <term>NACK</term> (not acknowledged) —
+                no device claimed that address, which typically means a wrong address,
+                an unpowered device, or a wiring problem.
+            </p>
+            <p>
+                After the address phase, data bytes follow in the same way, each
+                acknowledged by the receiver (the peripheral for writes, the controller
+                for reads).  A NACK on a data byte tells the sender the receiver could
+                not accept it.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-i2c-start-stop">
+            <title>Framing: START and STOP Conditions</title>
+            <p>
+                Normally, SDA is only allowed to change state while SCL is LOW —
+                that is when the receiver knows not to sample the line.  The protocol
+                exploits the one exception to this rule to mark unambiguous transaction
+                boundaries.
+            </p>
+            <p>
+                A <term>START condition</term> is SDA falling (going HIGH to LOW)
+                <em>while SCL is HIGH</em>.  This event can never occur during normal data
+                transfer, so every device on the bus recognizes it immediately:
+                <q>a new transaction is beginning — pay attention.</q>
+            </p>
+            <p>
+                A <term>STOP condition</term> is SDA rising (going LOW to HIGH) while
+                SCL is HIGH.  Again impossible as a data bit, it signals
+                <q>the transaction is complete — the bus is free.</q>
+            </p>
+            <p>
+                Both are visible in <xref ref="fig-i2c-frame-diagram"/>.  The SDA
+                transitions at the START and STOP markers happen while SCL is HIGH;
+                every other SDA edge in the diagram occurs while SCL is LOW.  That
+                contrast is the entire framing mechanism.
+            </p>
+
+            <figure xml:id="fig-i2c-frame-diagram">
+                <caption>I2C write transaction timing.  SCL (top trace) begins clocking
+                as soon as the START condition has occurred.
+                SDA (bottom trace, blue) shows: the START condition (SDA falls while SCL
+                is HIGH); seven address bits plus the write bit (bit pattern 1 1 1 0 0 0 0 0
+                corresponding to address 0x70 with R/W = 0); the ACK from the peripheral
+                (SDA pulled LOW); eight data bits of 0xAA (= 10101010, MSB
+                first), showing the alternating HIGH–LOW pattern; a second ACK; and
+                finally the STOP condition (SDA rises while SCL is HIGH).  Receivers
+                sample SDA during the SCL HIGH phase;
+                SDA is only permitted to change while SCL is LOW.  The START and STOP
+                conditions are the only exceptions to this rule.</caption>
+                <image source="i2c_transaction.svg" width="100%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-i2c-synchronous">
+            <title>No Baud Rate: I2C Is Synchronous</title>
+            <p>
+                Recall that UART requires both sides to agree on a baud rate in advance.
+                If they disagree, the receiver samples bits at the wrong moments and the
+                frame is corrupted.
+            </p>
+            <p>
+                I2C eliminates this problem.  The controller generates SCL, and every
+                peripheral (and the controller itself, when reading) samples SDA during
+                the SCL HIGH phase, any time SCL is HIGH and SDA is guaranteed stable.
+                The clock speed is set by the controller, but it must be one that every
+                device on the bus can keep up with.  The I2C standard defines common
+                speeds: 100 kHz (Standard Mode), 400 kHz (Fast Mode), and 1 MHz
+                (Fast-Mode Plus).  In ENGS 28 we use 100 kHz.  There is no baud rate for the peripheral
+                to configure and no rate for the controller to negotiate.  Adding a new
+                sensor to the bus requires no timing changes on any existing device.
+            </p>
+            <p>
+                This is what <term>synchronous</term> means: the clock is shared, not
+                reconstructed independently by each receiver.  I2C is synchronous;
+                UART is asynchronous.  The price of synchronous communication is the
+                extra wire for the clock — but since I2C also shares the data wire
+                among all devices, the total wire count remains two.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-i2c-how-it-works">
+            <exercise xml:id="rq-i2c-bus-listeners">
+                <statement><p>An I2C bus has four peripherals connected to the same
+                SCL and SDA lines.  The controller sends an address byte of 0x70.
+                How many of the four peripherals examine those address bits?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>All four examine the address; only the one at
+                        address 0x70 responds with ACK.</p></statement>
+                        <feedback><p>Correct.  Because all devices share SDA, every device
+                        sees every bit.  Each one silently compares the received address to
+                        its own; only the matching device pulls SDA LOW for the ACK.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Only the peripheral at address 0x70 sees the bits;
+                        the others are unaware of the transaction.</p></statement>
+                        <feedback><p>All devices are physically connected to SDA and SCL —
+                        they all receive every bit.  There is no mechanism to hide bits
+                        from particular devices before the address is matched.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Two peripherals are selected simultaneously; the
+                        one with the lower address wins.</p></statement>
+                        <feedback><p>Each I2C peripheral has a unique address.  Only one
+                        device can match a given address byte, so there is no collision
+                        to resolve.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The controller pre-selects one device before sending
+                        the address byte, so only that device responds.</p></statement>
+                        <feedback><p>There is no such pre-selection step in I2C.  The address
+                        byte itself is the selection — all devices evaluate it in
+                        parallel.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-i2c-start-unique">
+                <statement><p>What makes a START condition impossible to confuse with
+                a normal data bit?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>SDA transitions while SCL is HIGH; data bits are
+                        only allowed to change while SCL is LOW.</p></statement>
+                        <feedback><p>Correct.  The normal rule is that SDA must be stable
+                        during the SCL HIGH phase (that is when the receiver samples it).
+                        The START and STOP conditions deliberately violate this rule —
+                        a SDA edge while SCL is HIGH cannot be mistaken for a bit
+                        value.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The controller holds SCL LOW for twice as long
+                        before the START condition.</p></statement>
+                        <feedback><p>SCL timing does not change at the START.  What
+                        distinguishes it is SDA changing while SCL is HIGH, not any
+                        change in SCL duty cycle.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The controller transmits a reserved 0xFF byte
+                        immediately before the START condition.</p></statement>
+                        <feedback><p>No such preamble exists in the I2C standard.  START
+                        is identified entirely by the SDA/SCL relationship.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>SDA is held LOW for at least eight SCL cycles
+                        before data transmission begins.</p></statement>
+                        <feedback><p>SDA falls for one transition at the START condition —
+                        not for eight cycles.  The key is <em>when</em> SDA changes
+                        (while SCL is HIGH), not how long it stays LOW.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-i2c-nack-meaning">
+                <statement><p>After sending the 7-bit address and R/W bit, the
+                controller releases SDA and watches it during the ninth SCL pulse.
+                SDA is HIGH during that pulse.  What does this tell the
+                controller?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>No device recognized the address (NACK) — the
+                        controller should issue a STOP and not continue the
+                        transaction.</p></statement>
+                        <feedback><p>Correct.  A matching device would pull SDA LOW (ACK).
+                        If SDA stays HIGH, no device claimed the address.  The controller
+                        must issue a STOP to free the bus.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The transaction completed successfully and the
+                        data was received.</p></statement>
+                        <feedback><p>A successful address phase shows SDA LOW (ACK), not
+                        HIGH.  SDA HIGH after the address byte means NACK — no device
+                        acknowledged.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The peripheral is busy and will pull SDA LOW on the
+                        next SCL pulse when it is ready.</p></statement>
+                        <feedback><p>I2C peripherals can use <em>clock stretching</em>
+                        (holding SCL LOW) to request more time, but a NACK on the address
+                        byte means the device either does not exist at that address or
+                        did not respond.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Two devices share the same address and are
+                        colliding on SDA, producing an indeterminate voltage.</p></statement>
+                        <feedback><p>If two devices shared an address and both tried to
+                        ACK, both would pull SDA LOW — the line would still be LOW
+                        (wired AND).  SDA HIGH means no device responded at all.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
+        <!--
+        CANVAS QUIZ: "Before class — I2C protocol concepts"
+        (Due 1 hour before class; auto-graded multiple choice; low stakes.)
+        These questions test the same concepts as the reading questions above
+        but with different scenarios so the book is not an answer key.
+
+        Q1. Four I2C devices are on the same bus at addresses 0x20, 0x48, 0x70, and 0x77.
+            The controller sends an address byte for 0x48. Which statement is true?
+            A) Only the device at 0x48 drives SDA LOW for the ACK.   ← CORRECT
+            B) All four devices drive SDA LOW simultaneously.
+            C) The devices at 0x48 and 0x49 both respond because they differ by only one bit.
+            D) No device responds until the controller first sends a dedicated "wake" byte.
+            [Tests: shared bus + individual address matching]
+
+        Q2. A student's logic analyzer shows this I2C capture:
+            — START condition occurs
+            — Controller clocks out an 8-bit address + R/W byte
+            — During the 9th SCL pulse, SDA stays HIGH
+            — STOP condition occurs
+            All devices are powered and pull-up resistors are present. What is the most likely cause?
+            A) The controller sent the wrong I2C address.   ← CORRECT
+            B) The SCL frequency is higher than the peripheral supports.
+            C) The controller should have sent a repeated START instead of a regular START.
+            D) The controller forgot to send the R/W bit before the ACK slot.
+            [Tests: NACK diagnosis; a different scenario from the in-book question]
+
+        Q3. You are adding a third I2C sensor (address 0x1D) to a bus that already has two
+            working peripherals. The existing bus runs at 100 kHz. What configuration changes,
+            if any, are required on the two existing devices?
+            A) None — existing devices do not need to be reconfigured.   ← CORRECT
+            B) Each existing device must be notified of the new bus speed via a setup command.
+            C) The existing devices' addresses must each be incremented by one to avoid conflicts.
+            D) Pull-up resistors must be removed and replaced with lower-value resistors.
+            [Tests: shared-bus, no per-device configuration needed]
+
+        Q4. An I2C peripheral uses open-drain signaling on SDA. What does this mean for how
+            the device drives the line?
+            A) The device can pull SDA LOW but cannot actively drive it HIGH;
+               a pull-up resistor returns SDA to HIGH when no device holds it LOW.   ← CORRECT
+            B) The device drives SDA HIGH and LOW at full current, just like a push-pull GPIO.
+            C) SDA is always LOW unless the controller explicitly raises it with a command.
+            D) Open-drain means the peripheral can only receive data, never transmit.
+            [Tests: open-drain concept, different framing from the chapter prose]
+
+        Q5. A controller writes 3 data bytes to a peripheral. The peripheral ACKs bytes 1 and 2
+            but NACKs byte 3. What should the controller do next?
+            A) Issue a STOP condition to end the transaction.   ← CORRECT
+            B) Re-transmit byte 3 automatically on the next SCL pulse.
+            C) Issue a repeated START and re-send all three bytes from the beginning.
+            D) Continue sending additional bytes; a NACK on one byte is not a fatal error.
+            [Tests: NACK response; complementary to the in-book NACK-meaning question]
+        -->
+
+    </section>
+
+    <section xml:id="sec-i2c-motivation">
+        <title>Motivation: Driving a 7-Segment Display</title>
+        <figure xml:id="fig-7seg-display">
+            <caption>A four-digit 7-segment LED display.  Each digit has 7 segment LEDs
+            plus a decimal point — 8 signals per digit, 32 total.  Driving them all
+            directly from GPIO would require more pins than the Nucleo exposes.  An I2C
+            controller backpack (HT16K33) reduces this to two wires.</caption>
+            <image source="slides/Day09X-I2C/slide03_740530ff.png" width="65%"/>
+        </figure>
+    </section>
+
+    <section xml:id="sec-i2c-protocol">
+        <title>The I2C Protocol</title>
+        <p>
+            I2C is a synchronous, multi-device serial bus.  SCL is driven by the
+            <term>controller</term> (the MCU); SDA is bidirectional.  Both lines idle HIGH
+            via pull-up resistors.
+        </p>
+
+        <figure xml:id="fig-i2c-vs-uart">
+            <caption>Comparison of UART and I2C.  UART is asynchronous (no clock), uses
+            separate TX and RX wires, and is point-to-point.  I2C is synchronous (shared
+            SCL), uses a single bidirectional SDA, and supports many devices on one bus.</caption>
+            <image source="slides/Day09X-I2C/slide08_1daa0843.png" width="80%"/>
+        </figure>
+
+        <figure xml:id="fig-i2c-bus">
+            <caption>I2C bus topology.  All devices connect to the same SCL and SDA lines.
+            Pull-up resistors keep both lines HIGH when no device is driving them.  The
+            controller generates SCL; any device (controller or target) can pull SDA LOW.</caption>
+            <image source="slides/Day09X-I2C/slide07_de59e436.png" width="75%"/>
+        </figure>
+
+        <p>
+            A transaction begins with a <term>START condition</term> (SDA pulled LOW while
+            SCL is HIGH).  The controller then clocks out the 7-bit target address followed
+            by a read/write bit.  The addressed device acknowledges (pulls SDA LOW for one
+            clock) — the <term>ACK</term>.  Data bytes follow, each acknowledged by the
+            receiver.  The transaction ends with a <term>STOP condition</term> (SDA released
+            HIGH while SCL is HIGH).
+        </p>
+
+        <figure xml:id="fig-i2c-timing">
+            <caption>I2C timing diagram showing START, 7-bit address, R/W bit, ACK, data
+            byte, and STOP.  SDA is only allowed to change while SCL is LOW; the START and
+            STOP conditions are the only exceptions (they change while SCL is HIGH).</caption>
+            <image source="slides/Day09X-I2C/slide09_094bfbf7.png" width="85%"/>
+        </figure>
+
+        <figure xml:id="fig-i2c-protocol-detail">
+            <caption>Detailed I2C bit-level protocol.  The controller drives SCL.  For
+            each data bit, SDA must be stable while SCL is HIGH.  The target pulls SDA LOW
+            during the ACK clock pulse to confirm receipt; if it does not (NACK), the
+            controller knows something is wrong — typically a wrong address.</caption>
+            <image source="slides/Day09X-I2C/slide10_808711e2.png" width="85%"/>
+        </figure>
+
+        <reading-questions xml:id="rq-i2c-protocol">
+            <exercise xml:id="rq-i2c-nack">
+                <statement><p>You ping address 0x70 but the device is actually at 0x60.
+                What appears on the SDA line after the 8th SCL pulse (the ACK bit)?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>SDA stays HIGH (NACK) — no device at 0x70 pulls it low.</p></statement>
+                    <feedback><p>Correct.  A NACK means no device recognized the address.  The controller must issue a STOP and try again.</p></feedback></choice>
+                    <choice><statement><p>SDA is pulled LOW (ACK) — the device responds anyway.</p></statement>
+                    <feedback><p>Only the device at address 0x70 would ACK; since there is none, the line stays HIGH.</p></feedback></choice>
+                    <choice><statement><p>SCL stops toggling until a device responds.</p></statement>
+                    <feedback><p>The controller generates SCL continuously; it does not wait for a device to claim the clock.</p></feedback></choice>
+                    <choice><statement><p>A bus fault exception is generated on the STM32.</p></statement>
+                    <feedback><p>The I2C hardware sets an error flag, but no CPU exception is generated automatically.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+    <section xml:id="sec-i2c-config">
+        <title>Configuring I2C1 on the STM32</title>
+        <introduction>
+            <p>
+                The I2C library for ENGS 28 uses I2C1 on pins PB8 (SCL) and PB9 (SDA) —
+                the standard Arduino I2C pins.  Configuration requires setting the GPIO pins
+                to Open-Drain Alternate Function mode, enabling the I2C1 clock, and
+                programming the timing register.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-i2c-pins">
+            <title>Pin Configuration</title>
+            <figure xml:id="fig-i2c-pins">
+                <caption>I2C-capable pins on the Nucleo board.  PB8 and PB9 (the standard
+                Arduino I2C header pins, labeled SCL and SDA) connect to I2C1 with AF1.
+                Both pins must be configured as open-drain outputs in alternate function
+                mode, with external pull-up resistors on both lines.</caption>
+                <image source="slides/Day09X-I2C/slide12_9cc8dd97.png" width="75%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-i2c-timingr">
+            <title>The Timing Register</title>
+            <p>
+                The <c>I2C_TIMINGR</c> register controls the SCL frequency by specifying
+                the durations of the high and low phases, the rise and fall time compensations,
+                and a prescaler.  For 100 kHz standard mode with a 12 MHz clock, the
+                reference manual provides recommended values.
+            </p>
+            <figure xml:id="fig-i2c-timingr">
+                <caption>I2C_TIMINGR register fields.  PRESC divides the clock; SCLDEL and
+                SDADEL compensate for rise/fall times; SCLH and SCLL set the high and low
+                phase durations.  Together they determine the SCL frequency and satisfy
+                the I2C timing spec.</caption>
+                <image source="slides/Day09X-I2C/slide23_8893b5ba.png" width="48%"/>
+                <image source="slides/Day09X-I2C/slide23_23c8851f.png" width="48%"/>
+            </figure>
+
+            <figure xml:id="fig-i2c-init-summary">
+                <caption>I2C initialization timing summary showing how PRESC, SCLDEL,
+                SDADEL, SCLH, and SCLL combine to produce 100 kHz SCL from a 12 MHz
+                peripheral clock.</caption>
+                <image source="slides/Day09X-I2C/slide20_20827e86.png" width="75%"/>
+            </figure>
+
+            <program language="c"><code><![CDATA[
+void i2c1_init(void) {
+    // Enable clocks for GPIOB and I2C1
+    RCC->IOPENR  |= RCC_IOPENR_GPIOBEN;
+    RCC->APBENR1 |= RCC_APBENR1_I2C1EN;
+
+    // PB8 (SCL) and PB9 (SDA): Alternate Function mode (AF6 = I2C1)
+    GPIOB->MODER &= ~((3U << 16) | (3U << 18)); // clear MODER for PB8, PB9
+    GPIOB->MODER |=  ((2U << 16) | (2U << 18)); // AF mode
+    GPIOB->OTYPER |= (1U << 8) | (1U << 9);     // open-drain
+    GPIOB->AFR[1] &= ~((0xFU << 0) | (0xFU << 4));
+    GPIOB->AFR[1] |=  ((6U  << 0) | (6U  << 4)); // AF6 = I2C1
+
+    // Configure timing for 100 kHz @ 12 MHz clock
+    I2C1->TIMINGR = 0x00000002 |
+                    (0x4U << I2C_TIMINGR_SCLDEL_Pos) |
+                    (0x2U << I2C_TIMINGR_SDADEL_Pos) |
+                    (0xFU << I2C_TIMINGR_SCLH_Pos)   |
+                    (0x13U<< I2C_TIMINGR_SCLL_Pos);
+
+    // Enable I2C1
+    I2C1->CR1 |= I2C_CR1_PE;
+}
+]]></code></program>
+        </subsection>
+
+        <subsection xml:id="subsec-i2c-send-receive">
+            <title>Sending and Receiving</title>
+            <figure xml:id="fig-i2c-cr2">
+                <caption>I2C Control Register 2 (CR2).  To start a transaction, write the
+                target address (SADD), the transfer direction (RD_WRN), the byte count
+                (NBYTES), and set START.  The hardware generates the START condition and
+                address phase automatically.</caption>
+                <image source="slides/Day09X-I2C/slide28_03772860.png" width="48%"/>
+                <image source="slides/Day09X-I2C/slide28_f8e1b448.png" width="48%"/>
+            </figure>
+
+            <figure xml:id="fig-i2c-hardware">
+                <caption>STM32 I2C hardware block showing the shift register, address
+                match logic, and relevant registers: CR1 (enable/interrupt config),
+                CR2 (transaction control), TIMINGR (SCL timing), ISR (status),
+                and TXDR/RXDR (data registers).</caption>
+                <image source="slides/Day09X-I2C/slide18_1529bf8a.png" width="75%"/>
+            </figure>
+        </subsection>
+    </section>
+
+    <section xml:id="sec-i2c-7seg">
+        <title>The HT16K33 Seven-Segment Display Driver</title>
+        <introduction>
+            <p>
+                The HT16K33 is a RAM-mapping LED controller that drives the four-digit
+                display.  It communicates over I2C at address 0x70.  Writing to its internal
+                RAM turns individual segments on or off.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-7seg-display">
+            <title>Display Wiring and RAM Map</title>
+            <figure xml:id="fig-7seg-wiring">
+                <caption>AD2 and Nucleo wiring for the HT16K33 display.  The SCL (yellow)
+                and SDA (blue) lines from PB8/PB9 connect to the display's backpack.
+                Pull-up resistors on the breakout board are already installed.</caption>
+                <image source="slides/Day10-I2C(2)/slide17_9b07545b.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-7seg-digit-wiring">
+                <caption>Internal wiring of the four-digit 7-segment display.  All four
+                digits share the seven segment anodes (a–g) but have separate cathodes.
+                The HT16K33 drives 9 anode lines and 5 cathode lines using time-division
+                multiplexing, reducing the required I/O to 14 lines — plus I2C control.</caption>
+                <image source="slides/Day10-I2C(2)/slide32_2bf016ee.png" width="70%"/>
+            </figure>
+
+            <figure xml:id="fig-ht16k33-block">
+                <caption>HT16K33 controller block diagram.  Internal RAM holds the display
+                data (which segments are on).  I2C commands write RAM and control oscillator,
+                brightness, and blink rate.</caption>
+                <image source="slides/Day10-I2C(2)/slide33_71145d90.png" width="48%"/>
+                <image source="slides/Day10-I2C(2)/slide33_9fb57a9f.png" width="48%"/>
+            </figure>
+
+            <figure xml:id="fig-ht16k33-ram">
+                <caption>HT16K33 display RAM structure.  Each pair of bytes controls one
+                digit; the first byte holds the seven segment bits (a–g) and the decimal
+                point.  To light segment G of digit 0, write 0b01000000 to RAM address 0.</caption>
+                <image source="slides/Day10-I2C(2)/slide35_3c9b2946.png" width="75%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-7seg-driver">
+            <title>Firmware Architecture</title>
+            <figure xml:id="fig-firmware-layers">
+                <caption>Firmware design layers for the display.  The I2C library
+                (<c>i2c.c</c>) handles physical bus timing; the device driver
+                (<c>SevenSeg.c</c>) translates display commands into I2C write
+                sequences; application code calls high-level functions like
+                <c>SevenSeg_writeDigit()</c> without knowing about I2C at all.</caption>
+                <image source="slides/Day10-I2C(2)/slide45_ce15e3ed.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-ht16k33-init">
+                <caption>HT16K33 initialization I2C sequence.  Two commands are needed:
+                turn on the internal oscillator (0x21) and then configure the display
+                mode and blink rate (0x81 = display on, no blink).  Each command is a
+                one-byte write to the device address.</caption>
+                <image source="slides/Day10-I2C(2)/slide39_58fc47d7.png" width="80%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-i2c-scope">
+            <title>Debugging I2C with the AD2 Logic Analyzer</title>
+            <figure xml:id="fig-i2c-scope-wiring">
+                <caption>AD2 wiring for I2C monitoring.  The digital channels (in the
+                larger flying-lead bundle) connect: DIO0 to SDA, DIO1 to SCL, and one
+                ground lead to circuit GND.  The Waveforms Logic Analyzer then decodes
+                the I2C protocol automatically.</caption>
+                <image source="slides/Day10-I2C(2)/slide26_abeedc23.png" width="48%"/>
+                <image source="slides/Day10-I2C(2)/slide26_eb812817.png" width="48%"/>
+            </figure>
+
+            <figure xml:id="fig-i2c-scope-capture">
+                <caption>Waveforms Logic Analyzer capture of an I2C transaction pinging
+                address 0x70.  The decoded display shows the START condition, 7-bit address
+                (0x70 shown as 0x38 because the hardware right-shifts by one), the write
+                bit (0), the ACK from the display, and the STOP condition.</caption>
+                <image source="slides/Day10-I2C(2)/slide27_d1bb93ee.png" width="80%"/>
+            </figure>
+
+            <figure xml:id="fig-i2c-scope-nack">
+                <caption>Logic analyzer capture when pinging the wrong address (0x60).
+                After the address byte, SDA remains HIGH (NACK) because no device
+                acknowledges.  The I2C hardware detects this and sets an error flag in ISR.</caption>
+                <image source="slides/Day10-I2C(2)/slide30_5d606e73.png" width="80%"/>
+            </figure>
+
+            <figure xml:id="fig-i2c-waveforms-setup">
+                <caption>Waveforms Logic Analyzer setup for I2C decoding.  Add DIO0 (SDA)
+                and DIO1 (SCL) as digital channels, then add an I2C bus decoder selecting
+                those signals.  Set the time base to ~20 µs to see individual bits at 100 kHz.</caption>
+                <image source="slides/Day10-I2C(2)/slide28_8de2b643.png" width="80%"/>
+            </figure>
+        </subsection>
+    </section>
+
+    <section xml:id="sec-i2c-accel-driver">
+        <title>I2C Device Driver Pattern</title>
+        <p>
+            All I2C sensor drivers follow the same pattern: read from a register,
+            write to a register, and initialize.  The I2C library functions
+            <c>i2c1_byteWrite()</c>, <c>i2c1_memWrite()</c>, and <c>i2c1_memRead()</c>
+            provide the building blocks; the device driver wraps them with
+            device-specific addresses and data formats.
+        </p>
+
+        <figure xml:id="fig-i2c-transfer-pattern">
+            <caption>I2C read and write transfer patterns.  A register write sends: START,
+            device address + W, register address (ACK), data byte (ACK), STOP.  A register
+            read sends: START, device address + W, register address (ACK), repeated START,
+            device address + R, data byte, NACK, STOP.</caption>
+            <image source="slides/Day13-I2C(3)/slide29_c59c860f.png" width="85%"/>
+        </figure>
+
+        <figure xml:id="fig-firmware-layers-accel">
+            <caption>Firmware layers for the LSM303AGR accelerometer, mirroring the
+            display driver architecture.  The same I2C library is reused; only the
+            device driver layer changes.</caption>
+            <image source="slides/Day13-I2C(3)/slide27_ce15e3ed.png" width="70%"/>
+        </figure>
+    </section>
+
+</chapter>

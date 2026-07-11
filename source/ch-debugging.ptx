@@ -1,0 +1,491 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--   This file is part of the Embedded Systems textbook.    -->
+<!--                                                          -->
+<!--      ENGS 28: Embedded Systems                           -->
+<!--      Thayer School of Engineering, Dartmouth College     -->
+<!--                                                          -->
+<!-- Copyright (C) 2026  Petra Bonfert-Taylor                 -->
+<!-- See the file COPYING for copying conditions.             -->
+
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-debugging">
+    <title>Debugging Embedded Programs</title>
+    <introduction>
+        <p>
+            Debugging embedded software is different from debugging desktop programs:
+            there is no console, no operating system, and often no clear error message —
+            just an LED that does not blink or a sensor that reads the wrong value.
+            This chapter covers the systematic strategies used in ENGS 28: print-statement
+            debugging, hardware inspection, and the STM32CubeIDE interactive debugger.
+        </p>
+        <objectives>
+            <ul>
+                <li>Apply a systematic debugging process to find hardware and software bugs.</li>
+                <li>Use diagnostic <c>printf</c> statements to trace program execution.</li>
+                <li>Use the STM32CubeIDE debugger to step through code and inspect registers.</li>
+                <li>Set breakpoints and watch variables in the debugger.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-debugging-concepts">
+        <title>Before Class: Debugging as a Skill</title>
+        <introduction>
+            <p>
+                Every programmer spends a significant fraction of their time debugging.
+                In embedded systems that fraction is higher, and the process is harder,
+                than in desktop software.  This section explains why, and introduces
+                the mindset and toolkit that make it manageable.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-debug-why-different">
+            <title>Why Embedded Debugging Is Different</title>
+            <p>
+                When a desktop program crashes, the operating system usually catches the
+                error and prints a message — a stack trace, a segmentation fault, an
+                exception — that tells you roughly where things went wrong.  An embedded
+                program has none of that safety net.  When something goes wrong on the
+                STM32, the program typically does one of three things: it silently
+                produces the wrong output, it hangs in an infinite loop, or it enters
+                a hardware fault handler and sits there with no message at all.
+            </p>
+            <p>
+                The second complication is that bugs can live in either hardware or
+                software — or both at once.  An LED that never turns on might indicate
+                a wrong register value, a backwards LED, a broken wire, or a missing
+                clock enable.  You cannot assume the hardware is correct just because
+                the code looks right, and you cannot assume the code is correct just
+                because the hardware looks right.
+            </p>
+            <p>
+                The third complication is visibility.  On a desktop you can print to a
+                console at any time.  On a microcontroller, getting a message out
+                requires a working UART, correct baud rate settings, and a terminal
+                program on the PC — all of which can themselves be sources of bugs.
+                When nothing works yet, you may have very few ways to observe what the
+                program is actually doing.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-debug-mindset">
+            <title>The Scientific Debugging Mindset</title>
+            <p>
+                Effective debugging is not random — it is a scientific process.
+                The key steps are:
+            </p>
+            <p>
+                <em>Reproduce the problem reliably.</em>  A bug you cannot reproduce
+                consistently is almost impossible to fix.  Note exactly what inputs,
+                conditions, and sequence of events lead to the wrong behavior.
+            </p>
+            <p>
+                <em>Form a hypothesis.</em>  Before touching anything, think about
+                what could cause the symptom you observe.  Write it down.  A vague
+                sense that <q>something is wrong with the ADC</q> is not a hypothesis;
+                <q>the ADC clock is not enabled, so the result register always reads
+                zero</q> is.
+            </p>
+            <p>
+                <em>Design a minimal test.</em>  Change one thing — not five — and
+                observe whether the symptom changes.  If you change multiple things
+                at once and the bug disappears, you will not know which change fixed
+                it, and the bug may reappear later in a different form.
+            </p>
+            <p>
+                <em>Use bisection.</em>  If you are not sure where in the code the
+                problem lies, divide it in half: confirm that execution reaches the
+                midpoint correctly, then narrow to the half that contains the fault.
+                Each test eliminates half the remaining possibilities.
+            </p>
+            <p>
+                <em>Keep notes.</em>  When a bug takes more than a few minutes to
+                find, write down what you tried and what you observed.  This prevents
+                testing the same hypothesis twice and helps you hand the problem off
+                to a classmate or course staff member with a clear description.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-debug-toolkit">
+            <title>The Debugging Toolkit</title>
+            <p>
+                In ENGS 28 you have three main tools, each suited to different
+                situations.
+            </p>
+            <p>
+                <term>Diagnostic <c>printf</c></term> is the fastest way to trace
+                program execution and print variable values.  It works at the level
+                of your C code and requires nothing beyond a working UART connection.
+                Use it to confirm that the program reaches a particular function,
+                to print register values, and to compare expected versus actual results.
+                Its limitation is that it requires UART to be working — you cannot use
+                it to debug the UART initialization itself.
+            </p>
+            <p>
+                <term>The Analog Discovery 2</term> lets you see what is actually
+                happening on the hardware — voltages, timing, signal shapes.  It is
+                indispensable for hardware bugs (wrong voltage levels, missing signals)
+                and for timing problems (signals that are too fast or too slow to
+                verify with <c>printf</c>).  Beyond the oscilloscope, the AD2's
+                built-in logic analyzer can decode digital protocols: connect it to
+                your I2C, UART, or SPI lines and Waveforms will display the decoded
+                bytes alongside the raw waveform, making it easy to confirm that your
+                peripheral is sending what you expect.  The AD2 operates independently
+                of your code, so it works even when the program is completely frozen.
+            </p>
+            <p>
+                <term>The STM32CubeIDE interactive debugger</term> lets you pause
+                execution, step through code one line at a time, and inspect any
+                register or variable — without adding a single <c>printf</c>.  It is
+                the most powerful tool for software bugs: you can watch a variable
+                change value as you step through a loop, or check exactly what bits
+                are set in a peripheral register at the moment a fault occurs.  Its
+                limitation is that pausing the processor can affect time-sensitive
+                behavior, so it is less useful for debugging interrupts and
+                hardware-timing problems.
+            </p>
+            <p>
+                Most debugging sessions use all three tools at different stages.
+                A common workflow: use the oscilloscope to confirm the hardware is
+                behaving as expected, then use <c>printf</c> to narrow down which
+                section of code is at fault, then use the interactive debugger to
+                inspect the exact register or variable state that reveals the bug.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-debugging-concepts">
+            <exercise xml:id="rq-debug-symptom">
+                <statement><p>Your program is supposed to blink an LED at 1 Hz,
+                but the LED stays on constantly.  Before touching any code, what should
+                you do first?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Form a specific hypothesis about what could cause
+                        the LED to stay on — for example, that the delay function is
+                        not working, or that the GPIO output register is being set but
+                        never cleared — and then design a test to check it.</p></statement>
+                        <feedback><p>Correct.  Jumping straight to changing code without
+                        a hypothesis leads to random changes that may mask the bug
+                        without fixing it.  A clear hypothesis produces a focused,
+                        informative test.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Rewrite the entire program from scratch, since
+                        something is clearly wrong with the existing code.</p></statement>
+                        <feedback><p>Rewriting without understanding the cause usually
+                        reproduces the same bug.  Systematic diagnosis is faster and
+                        more instructive than starting over.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Replace the LED immediately, in case it is
+                        defective.</p></statement>
+                        <feedback><p>A defective LED would typically not light up at
+                        all, not stay on constantly.  Hardware substitution is a useful
+                        technique, but it should follow a hypothesis — not precede
+                        one.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Add <c>printf</c> statements throughout the entire
+                        program to see what is happening everywhere at once.</p></statement>
+                        <feedback><p>Scattering <c>printf</c> statements everywhere
+                        produces too much output to interpret.  A focused hypothesis
+                        tells you exactly where to put the <em>one or two</em> prints
+                        that will answer your question.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-debug-tool-choice">
+                <statement><p>You suspect that a GPIO pin is being driven HIGH
+                for too short a time — possibly only a few microseconds — before
+                returning LOW.  Which tool is best suited to verify this?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The Analog Discovery 2 oscilloscope, which can
+                        capture and display signals at microsecond timescales independently
+                        of the running program.</p></statement>
+                        <feedback><p>Correct.  A <c>printf</c> statement takes far longer
+                        than a few microseconds to execute, so it would interfere with
+                        the timing you are trying to measure.  The oscilloscope is
+                        the right tool for fast hardware signals.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A <c>printf</c> inside the relevant code block,
+                        printing a message each time the pin goes HIGH.</p></statement>
+                        <feedback><p>A <c>printf</c> call takes many microseconds to
+                        execute over UART at 115200 baud — far longer than the pulse
+                        itself.  Adding it would change the timing and make the
+                        problem disappear or become different.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The STM32CubeIDE interactive debugger with a
+                        breakpoint on the line that sets the pin HIGH.</p></statement>
+                        <feedback><p>A breakpoint pauses the processor, which prevents
+                        any time-sensitive behavior from occurring normally.  For
+                        microsecond-level timing, the oscilloscope is the right
+                        tool.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Reading the GPIO IDR register in a tight polling
+                        loop and printing the result.</p></statement>
+                        <feedback><p>Polling the IDR in software is much slower than
+                        the few-microsecond pulse and would likely miss it entirely.
+                        The oscilloscope captures the actual waveform in
+                        hardware.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-debug-bisection">
+                <statement><p>Your ADC program reads the wrong value.  The
+                initialization code spans 30 lines across three functions.  What is
+                the most efficient way to find which function contains the bug?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Add a <c>printf</c> after the first function
+                        completes to check whether its output is correct, then after
+                        the second, narrowing by bisection until the faulty function
+                        is identified.</p></statement>
+                        <feedback><p>Correct.  Bisection cuts the search space in half
+                        with each test — three functions require at most two tests to
+                        pinpoint.  Testing one line at a time from the beginning
+                        would take up to 30 steps for the same result.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Add a <c>printf</c> after every line of
+                        initialization code and examine all 30 outputs.</p></statement>
+                        <feedback><p>This produces correct results eventually, but
+                        30 print statements is far more work than necessary.  Bisection
+                        finds the same answer with two or three targeted prints.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Comment out the third function first, since bugs
+                        are usually in the last code added.</p></statement>
+                        <feedback><p>While it is worth starting with recently changed
+                        code, assuming the bug is in the last function without evidence
+                        is a guess, not a systematic method.  If that guess is wrong,
+                        you have learned nothing about where to look next.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Rewrite all three functions using the interactive
+                        debugger to step through each line.</p></statement>
+                        <feedback><p>Stepping through all 30 lines in the debugger
+                        works but is slow.  Bisection with a few <c>printf</c> calls
+                        is usually faster for narrowing the location of the bug before
+                        engaging the debugger for fine-grained inspection.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
+        <!--
+        CANVAS QUIZ: "Before class — Debugging Embedded Programs"
+        (Due 1 hour before class; auto-graded multiple choice; low stakes.)
+
+        Q1. Which of the following best describes why embedded debugging is harder
+            than debugging a desktop program?
+            A) Embedded programs are written in C, which is harder to debug than Python.
+            B) There is no operating system to catch errors and report them; bugs may
+               cause silent wrong output, a hang, or a fault handler with no message.  ← CORRECT
+            C) Embedded debuggers are slower and less accurate than desktop debuggers.
+            D) Hardware bugs do not exist in desktop computers, making those programs
+               easier to debug.
+
+        Q2. A student makes five changes to their code at once, and the bug disappears.
+            What is the problem with this approach?
+            A) Making five changes at once is fine as long as the bug is gone.
+            B) It is impossible to know which of the five changes fixed the bug, so
+               the root cause is still unknown and the bug may reappear.  ← CORRECT
+            C) Making multiple changes at once is the recommended strategy for
+               embedded debugging.
+            D) The changes probably introduced new bugs even though the original
+               bug is gone.
+
+        Q3. A student wants to check whether a specific function is being called and
+            what value a variable holds inside it. Which tool is most appropriate?
+            A) The Analog Discovery 2 oscilloscope.
+            B) A diagnostic printf statement printing the variable value.  ← CORRECT
+            C) The hardware fault handler.
+            D) The GPIO IDR register.
+
+        Q4. Which limitation makes the interactive debugger less suitable for debugging
+            hardware-timing problems?
+            A) The debugger can only inspect variables, not registers.
+            B) Pausing the processor at a breakpoint disrupts the real-time timing
+               behavior being investigated.  ← CORRECT
+            C) The debugger requires a separate USB cable not available on the Nucleo.
+            D) The debugger cannot display values in hexadecimal.
+
+        Q5. A student's program hangs immediately after startup. The UART is not yet
+            initialized. Which tool can still provide useful information?
+            A) Diagnostic printf statements.
+            B) The STM32CubeIDE interactive debugger, which does not require
+               UART to be working.  ← CORRECT
+            C) CoolTerm serial terminal.
+            D) None — there is no way to debug a program before UART is working.
+        -->
+
+    </section>
+
+    <section xml:id="sec-debug-prevention">
+        <title>Preventing Bugs</title>
+        <p>
+            The most effective debugging technique is to write correct code from the start.
+            Good practices that reduce bug rate:
+        </p>
+        <p>
+            Plan on paper before writing code — draw a block diagram, write pseudocode, or
+            sketch a state diagram.  Use descriptive variable names.  Put a file header in
+            every source file (author, date, description, hardware notes).  Write one small
+            change at a time and test it before moving on.  Know common mistake patterns:
+            missing semicolons, incorrect register names, mismatched braces, off-by-one
+            errors, and forgetting to enable a peripheral clock.
+        </p>
+    </section>
+
+    <section xml:id="sec-debug-hardware">
+        <title>Debugging Hardware</title>
+        <p>
+            Before blaming software, verify the hardware.  Common hardware bugs:
+        </p>
+        <p>
+            Check power and ground connections to every device on the breadboard.
+            Verify LED polarity (long lead = anode = positive).  Confirm that bypass
+            capacitors are installed near IC power pins.  Use the AD2 voltmeter or
+            oscilloscope to measure actual voltages rather than assuming they are correct.
+            Swap suspect components to rule out defective parts.
+        </p>
+    </section>
+
+    <section xml:id="sec-debug-printf">
+        <title>Diagnostic printf Statements</title>
+        <p>
+            Once hardware is ruled out, instrument the code with <c>printf</c> statements
+            that reveal whether each section was reached and what values look like.
+        </p>
+        <program language="c"><code><![CDATA[
+// Did we reach this function?
+printf("pa0_adc_init(): entered\r\n");
+
+// Is the ADC ready?
+printf("ADC ISR = 0x%08lX\r\n", ADC1->ISR);
+
+// Is the value reasonable?
+int count = adc_read();
+printf("ADC count = %d, voltage = %.2f V\r\n",
+       count, count * 3.3f / 4096.0f);
+]]></code></program>
+        <p>
+            Effective print debugging: print what you <em>expect</em> the value to be
+            alongside what you <em>got</em>.  Narrow the location of the bug by adding
+            prints at the boundaries of suspected sections and using bisection to
+            home in on it.  Remove or comment out debug prints before submitting
+            finished code (they slow execution and clutter output).
+        </p>
+    </section>
+
+    <section xml:id="sec-debug-ide">
+        <title>Using the STM32CubeIDE Debugger</title>
+        <introduction>
+            <p>
+                The interactive debugger lets you pause execution, step through code one line
+                at a time, and inspect register and variable values — without adding any
+                <c>printf</c> statements.  It communicates with the Nucleo board over the
+                same USB cable used for programming.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-debug-launch">
+            <title>Launching the Debugger</title>
+            <p>
+                Click the bug icon (or press F11) in STM32CubeIDE to build and start
+                a debug session.  The IDE flashes the program, connects over ST-LINK, and
+                halts at the first line of <c>main()</c>.  A Registers pane appears on the
+                right showing the current values of all peripheral registers.
+            </p>
+            <figure xml:id="fig-debugger-registers">
+                <caption>STM32CubeIDE debugger showing the peripheral register view.
+                Expand a peripheral (e.g., RCC, GPIOA, ADC1) to see individual register
+                fields and their current values in real time as you step through code.</caption>
+                <image source="slides/Day07x-Debugging/slide16_0b4375ee.png" width="48%"/>
+                <image source="slides/Day07x-Debugging/slide16_1bd7a976.png" width="48%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-debug-step">
+            <title>Stepping and Breakpoints</title>
+            <p>
+                The main stepping controls are Step Over (F6), Step Into (F5), and Resume
+                (F8).  Step Over executes the current line and stops at the next one without
+                entering function calls.  Step Into follows into called functions.  Resume
+                runs until the next breakpoint.
+            </p>
+            <figure xml:id="fig-debugger-controls">
+                <caption>STM32CubeIDE debug toolbar icons.  From left: Resume, Suspend,
+                Terminate, Step Into, Step Over, Step Return.  Use Step Over for most
+                debugging; use Step Into when you need to trace into a function.</caption>
+                <image source="slides/Day07x-Debugging/slide20_f789c46b.png" width="70%"/>
+            </figure>
+            <p>
+                To set a breakpoint, click in the thin blue margin to the left of a source
+                line.  A blue dot appears.  When the program reaches that line it halts
+                and the Registers and Variables panes update.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-debug-variables">
+            <title>Watching Variables</title>
+            <p>
+                The Variables pane lists local variables and their current values.  Add a
+                global variable to the Expressions pane to monitor it across function calls.
+                This is especially useful for checking that a counter increments as expected
+                or that an ADC value is in the right range.
+            </p>
+            <figure xml:id="fig-debugger-variables">
+                <caption>Debugger Variables pane showing a counter variable and its current
+                value during a step-through of the keyboard-controlled counter program.
+                The pane updates after each step, making it easy to see when a variable
+                changes unexpectedly.</caption>
+                <image source="slides/Day07x-Debugging/slide21_0c66d8d2.png" width="75%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-debug-registers">
+            <title>Inspecting Peripheral Registers</title>
+            <p>
+                One of the most powerful uses of the debugger in embedded work is inspecting
+                peripheral registers directly.  After setting a breakpoint just after an
+                initialization function, check the relevant registers to verify that the
+                right bits were set.  For example, after calling <c>pa0_adc_init()</c>,
+                expand ADC1 in the register view and confirm that ADEN is 1 and ADRDY is 1.
+            </p>
+            <figure xml:id="fig-debugger-launch">
+                <caption>Debugger launch configuration in STM32CubeIDE showing the target
+                device and debug probe selection.  The ST-LINK on the Nucleo board is the
+                debug probe; select <q>ST-LINK (OpenOCD)</q> or the built-in ST-LINK option
+                depending on your IDE version.</caption>
+                <image source="slides/Day07x-Debugging/slide15_e0e04b9f.png" width="70%"/>
+            </figure>
+        </subsection>
+
+        <reading-questions xml:id="rq-debugging">
+            <exercise xml:id="rq-debug-method">
+                <statement><p>Your ADC program reads a constant value of 0 regardless of
+                the potentiometer position.  Which of the following is the most systematic
+                first step?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>Use the debugger to check the ADC_ISR register and confirm ADRDY = 1 before calling adc_read().</p></statement>
+                    <feedback><p>Correct.  Verifying the ADC is ready before sampling rules out the most common initialization error.</p></feedback></choice>
+                    <choice><statement><p>Rewrite the entire adc_read() function from scratch.</p></statement>
+                    <feedback><p>Rewriting without diagnosis is slow and may not fix the underlying problem.</p></feedback></choice>
+                    <choice><statement><p>Swap the potentiometer for a different one.</p></statement>
+                    <feedback><p>Hardware swapping comes after you have ruled out a software/configuration cause.  Check the ADC configuration first.</p></feedback></choice>
+                    <choice><statement><p>Submit the lab as-is and ask the TA.</p></statement>
+                    <feedback><p>Systematic self-debugging is the expected approach.  Try the debugger first.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+</chapter>

@@ -1,0 +1,1407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--   This file is part of the Embedded Systems textbook.    -->
+<!--                                                          -->
+<!--      ENGS 28: Embedded Systems                           -->
+<!--      Thayer School of Engineering, Dartmouth College     -->
+<!--                                                          -->
+<!-- Copyright (C) 2026  Petra Bonfert-Taylor                 -->
+<!-- See the file COPYING for copying conditions.             -->
+
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-switches">
+    <title>Digital Inputs: Switches and Debouncing</title>
+    <introduction>
+        <p>
+            Reading a pushbutton seems trivial—the pin is either high or low.
+            In practice, mechanical switches <em>bounce</em>: the contacts chatter
+            for a few milliseconds every time you press or release them,
+            generating dozens of spurious transitions.  This chapter covers how to
+            configure a GPIO pin as an input, read it in a polling loop, observe
+            the bounce on an oscilloscope, and eliminate it in hardware or software.
+        </p>
+        <objectives>
+            <ul>
+                <li>Configure a GPIO pin as a digital input with an internal pull-up resistor.</li>
+                <li>Read the Input Data Register (IDR) and respond to button presses.</li>
+                <li>Use the Analog Discovery 2 oscilloscope to observe and measure signals.</li>
+                <li>Explain contact bounce and why it is a problem for embedded software.</li>
+                <li>Implement hardware debouncing with an RC filter and software debouncing with a state machine.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-switches-concepts">
+        <title>Before Class: Switches, Pull-ups, and Bounce</title>
+        <introduction>
+            <p>
+                The previous chapter covered GPIO outputs — pins your code drives HIGH
+                or LOW.  This chapter introduces the other direction: GPIO inputs, where
+                the outside world drives the pin and your code reads it.  A pushbutton
+                is the simplest possible input device, but getting reliable readings from
+                one turns out to require a bit of thought.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-reading-a-pin">
+            <title>Reading a Pin: The Input Data Register</title>
+            <p>
+                When a GPIO pin is configured as an input, the STM32 continuously
+                samples the voltage present on that pin and reflects it in the
+                <term>Input Data Register</term> (IDR).  Like the ODR, the IDR is
+                a 16-bit register — one bit per pin in the port.  Bit 13 of
+                <c>GPIOC-&gt;IDR</c>, for example, reflects the current voltage on PC13,
+                which is where the Nucleo board's blue user button is connected.  If the
+                pin is at 3.3 V, the bit reads 1; if it is at 0 V, the bit reads 0.
+            </p>
+            <p>
+                The input circuitry does not interpret voltage as a strict binary
+                threshold at a single point.  Instead, there are two separate
+                thresholds.  Any voltage below <term><m>V_{IL}</m></term> (the
+                maximum low input voltage, roughly <m>0.3 \times V_{DD} \approx
+                1.0\text{ V}</m> on a 3.3 V system) is reliably read as logic 0.
+                Any voltage above <term><m>V_{IH}</m></term> (the minimum high input
+                voltage, roughly <m>0.7 \times V_{DD} \approx 2.3\text{ V}</m>)
+                is reliably read as logic 1.  Voltages in between fall in an
+                indeterminate zone where the result is unpredictable.
+            </p>
+            <p>
+                In normal digital circuits — where signals are driven cleanly to
+                ground or the supply rail — you stay well outside this zone and never
+                notice it.  It becomes important when signals are slow to transition
+                (for example, a slowly rising voltage from a large RC filter), when
+                there is significant noise on a line, or when interfacing devices that
+                operate at different supply voltages.
+            </p>
+            <p>
+                Reading a button in code is therefore straightforward in practice,
+                as long as the pin voltage is always driven firmly to one rail or the
+                other.  The subtleties arise not from the reading itself but from what
+                the hardware is doing — or not doing — when the button is open.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-floating-pins">
+            <title>Floating Pins and Pull-up Resistors</title>
+            <p>
+                When a pushbutton is open (not pressed), it disconnects the pin from
+                whatever it was connected to.  If nothing else is driving the pin,
+                the pin is said to be <term>floating</term>: its voltage is undefined,
+                drifting with electrical noise, nearby signals, and even the movement
+                of your hand near the board.  Reading a floating pin produces
+                unpredictable 0s and 1s that have nothing to do with the button state.
+            </p>
+            <p>
+                The standard fix is a <term>pull-up resistor</term>: a resistor
+                connected between the pin and the supply voltage (3.3 V).  When the
+                button is open, the resistor gently pulls the pin to 3.3 V, giving it
+                a well-defined logic 1.  When the button is pressed and connects the
+                pin to ground, the ground wins and the pin reads logic 0.  This
+                <q>active-low</q> convention — pressed = 0, released = 1 — is the most
+                common arrangement for buttons.
+            </p>
+            <p>
+                Alternatively, a <term>pull-down resistor</term> connects the pin to
+                ground, so the unpressed state reads 0 and pressing (which connects to
+                3.3 V) reads 1.  The STM32 has pull-up and pull-down resistors built
+                into the chip, selectable per pin via the
+                <term>Pull-up/Pull-down Register</term> (PUPDR), so in most cases
+                you do not need an external resistor at all.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-contact-bounce">
+            <title>Contact Bounce</title>
+            <p>
+                Even with a stable pull-up, mechanical buttons introduce a second
+                problem: <term>contact bounce</term>.  The metal contacts inside a
+                switch are tiny springy leaves.  When you press or release the button,
+                they do not make clean, instantaneous contact — they collide, rebound,
+                collide again, and chatter back and forth for anywhere from a few
+                hundred microseconds to a few milliseconds before settling.  During
+                this chatter, the pin toggles between 0 and 1 dozens of times in rapid
+                succession.
+            </p>
+            <p>
+                To a human finger, a press and release takes tens of milliseconds —
+                plenty of time to do something once.  But to a microcontroller running
+                at 12 MHz, those milliseconds contain millions of instruction cycles.
+                If your code detects a rising or falling edge on the pin, it may see
+                50 edges in the time your finger takes to press once.  Depending on
+                what action each edge triggers — incrementing a counter, toggling an
+                LED, sending a message — this can cause serious errors.
+            </p>
+            <p>
+                There are two main strategies for eliminating bounce, which this
+                chapter covers in detail:
+            </p>
+            <p>
+                <term>Hardware debouncing</term> adds an RC filter (a resistor and
+                capacitor) that smooths out the fast chatter.  The capacitor cannot
+                charge or discharge instantaneously, so the rapid bounces are averaged
+                away before they reach the pin.
+            </p>
+            <p>
+                <term>Software debouncing</term> ignores the pin for a short time
+                after detecting the first edge, letting the bounce die out before
+                sampling again.  A simple approach waits a fixed delay (say, 20 ms)
+                after the first transition and then reads the pin's stable final state.
+                More robust approaches use a state machine that requires the pin to
+                hold a consistent value for several consecutive samples before
+                accepting it as a real transition.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-switches-concepts">
+            <exercise xml:id="rq-floating-pin">
+                <statement><p>A GPIO pin is configured as an input with no pull-up
+                or pull-down resistor enabled, and nothing is connected to it.
+                What value will <c>GPIOC-&gt;IDR</c> show for that pin?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>An unpredictable value — the pin is floating and
+                        its voltage is undefined.</p></statement>
+                        <feedback><p>Correct.  A floating pin picks up electrical noise
+                        and nearby signals, so its IDR bit cannot be trusted.  Always
+                        enable a pull-up or pull-down, or supply an external one.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Always 0, because an undriven pin defaults to
+                        ground.</p></statement>
+                        <feedback><p>An undriven pin does not default to ground — it
+                        floats.  Only a pull-down resistor would guarantee a 0.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Always 1, because the STM32 has an implicit
+                        internal pull-up on every pin.</p></statement>
+                        <feedback><p>The STM32's internal pull-ups must be explicitly
+                        enabled in PUPDR.  They are off by default.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The last value that was written to the ODR for
+                        that pin.</p></statement>
+                        <feedback><p>The IDR reflects the voltage present on the pin,
+                        not what was last written to the ODR.  In input mode the ODR
+                        value is irrelevant to what IDR reads.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-active-low">
+                <statement><p>A button connects PC13 to ground when pressed.  An
+                internal pull-up is enabled on PC13.  You write
+                <c>if (GPIOC-&gt;IDR &amp; (1U &lt;&lt; 13))</c> to detect a press.
+                Will this detect the button press correctly?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>No — with an active-low button, pressing gives
+                        IDR bit 13 = 0, so the condition is false when pressed and
+                        true when released.</p></statement>
+                        <feedback><p>Correct.  The pull-up holds the pin HIGH (1) when
+                        open; pressing pulls it LOW (0).  To detect a press, the
+                        condition should check for 0, not 1 — for example,
+                        <c>!(GPIOC-&gt;IDR &amp; (1U &lt;&lt; 13))</c>.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Yes — the pull-up drives the pin HIGH when pressed,
+                        so bit 13 is 1 and the condition is true.</p></statement>
+                        <feedback><p>It is the opposite: pressing connects the pin to
+                        ground, overriding the pull-up and driving the pin LOW (0).
+                        The pull-up is active when the button is <em>open</em>,
+                        not when it is pressed.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Yes — the IDR always returns 1 for pins with
+                        pull-ups enabled, regardless of button state.</p></statement>
+                        <feedback><p>The pull-up sets the default state to 1 only when
+                        nothing else is driving the pin.  A pressed button actively
+                        drives it to 0, overriding the pull-up.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>No — you cannot read a pin that has a pull-up
+                        enabled; PUPDR and IDR cannot be used simultaneously.</p></statement>
+                        <feedback><p>Pull-ups and IDR work together — that is exactly
+                        how buttons are normally wired.  The pull-up sets the default
+                        level; IDR reads whatever voltage is currently on the pin.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-bounce-consequence">
+                <statement><p>Your code increments a counter each time it
+                detects a falling edge on a button pin.  After pressing the button
+                once slowly and deliberately, the counter shows 23.  What is the
+                most likely explanation?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Contact bounce — the button contacts chattering
+                        during the press generated 23 falling edges instead of
+                        one.</p></statement>
+                        <feedback><p>Correct.  Without debouncing, each press can
+                        produce many edges as the contacts bounce.  The solution is
+                        hardware debouncing (RC filter) or software debouncing
+                        (ignore edges for ~20 ms after the first one).</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The pull-up resistor value is too large,
+                        causing the pin to charge slowly and cross the threshold
+                        multiple times.</p></statement>
+                        <feedback><p>A large pull-up slows the rise time but does not
+                        by itself cause multiple threshold crossings — the signal rises
+                        monotonically.  Multiple edges are the signature of
+                        bounce.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The microcontroller's clock is too fast, so it
+                        samples the IDR more times than expected during a single
+                        press.</p></statement>
+                        <feedback><p>The clock speed is irrelevant here — the issue is
+                        not how often IDR is sampled but how many actual edges appear
+                        on the pin due to bouncing contacts.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The counter variable overflowed and wrapped
+                        around to 23.</p></statement>
+                        <feedback><p>A counter starting at 0 would need to overflow
+                        past its maximum value to wrap to 23 — unlikely for a single
+                        press.  The extra counts come from bounce, not overflow.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
+        <!--
+        CANVAS QUIZ: "Before class — Switches, Pull-ups, and Bounce"
+        (Due 1 hour before class; auto-graded multiple choice; low stakes.)
+
+        Q1. A GPIO pin configured as an input has no pull-up, no pull-down, and
+            nothing connected to it. What does the corresponding IDR bit reliably tell you?
+            A) The pin is HIGH (logic 1).
+            B) The pin is LOW (logic 0).
+            C) Nothing — the pin is floating and the bit value is unpredictable.  ← CORRECT
+            D) The same value that was last written to the ODR.
+
+        Q2. A button connects PA0 to ground when pressed. An internal pull-up is
+            enabled on PA0. What is the IDR bit value for PA0 when the button is pressed?
+            A) 1, because the pull-up holds it HIGH.
+            B) 0, because the button connects the pin to ground, overriding the pull-up.  ← CORRECT
+            C) Floating — you cannot predict it.
+            D) Alternating 0 and 1 rapidly.
+
+        Q3. You need a GPIO pin to read 0 when idle and 1 when a button is pressed
+            (active-high convention). Which internal resistor mode should you enable?
+            A) Pull-up (PUPDR = 01).
+            B) Pull-down (PUPDR = 10).  ← CORRECT
+            C) No pull (PUPDR = 00).
+            D) Analog mode.
+
+        Q4. Contact bounce typically lasts:
+            A) Several seconds.
+            B) Microseconds to a few milliseconds.  ← CORRECT
+            C) Exactly one clock cycle of the microcontroller.
+            D) As long as the button is held down.
+
+        Q5. A hardware RC debounce filter uses a resistor and capacitor in series
+            between the button and the GPIO pin. What does the capacitor do?
+            A) It amplifies the signal so the MCU can read it more easily.
+            B) It stores the last button state so the MCU doesn't need to poll.
+            C) It slows down voltage changes, smoothing out the rapid bounces so
+               the pin sees a single clean transition.  ← CORRECT
+            D) It provides the pull-up current so no internal pull-up is needed.
+        -->
+
+    </section>
+
+    <!-- ============================================================
+         DAY 3 IN-CLASS  (75 min)
+         ============================================================ -->
+    <section xml:id="sec-switches-day3">
+        <title>Day 3 In-Class: Digital Inputs and the Oscilloscope</title>
+
+        <!-- ── Part 1: Code Review (≈10 min) ──────────────────── -->
+        <subsection xml:id="subsec-day3-code-review">
+            <title>Part 1: Code Review — blinkyCNT.c</title>
+            <p>
+                Share your <c>blinkyCNT.c</c> from Lab 1 within your table group.
+                Read each other's solutions and be ready to explain the approach
+                you used to display a 3-bit binary count on three LEDs.
+            </p>
+            <activity xml:id="act-day3-code-review">
+                <title>blinkyCNT Code Review</title>
+                <task>
+                    <p>
+                        Read your partners' code.  Can you follow the logic?
+                        For each solution you read, identify how bits are placed
+                        into the correct LED positions in <c>GPIOA-&gt;ODR</c>.
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Compare the approach in the code below with your own.
+                        What does the shift <c>count &lt;&lt; LED1_BIT</c> accomplish?
+                        Why is it necessary to clear the LED bits first?
+                    </p>
+                    <program language="c"><code><![CDATA[
+// Clear the three LED bits, then write the new count
+GPIOA->ODR &= ~LED_ALL;
+GPIOA->ODR |= (count << LED1_BIT);
+]]></code></program>
+                </task>
+            </activity>
+        </subsection>
+
+        <!-- ── Part 2: AD2 Oscilloscope (≈20 min) ─────────────── -->
+        <subsection xml:id="subsec-day3-ad2">
+            <title>Part 2: The Analog Discovery 2 Oscilloscope</title>
+            <p>
+                The <term>Analog Discovery 2</term> (AD2) is a compact USB
+                instrument that combines a two-channel oscilloscope, a waveform
+                generator, a logic analyzer, and more in a pocket-sized package.
+                Plug it into your laptop and open the <em>Waveforms</em>
+                application — this is your window into the real voltages on your
+                circuit.
+            </p>
+
+            <figure xml:id="fig-ad2-photo">
+                <caption>The Analog Discovery 2 (AD2).  The USB port connects
+                to a laptop running Waveforms.  The multicolored
+                <q>flying lead</q> cables connect to your breadboard and Nucleo
+                board.</caption>
+                <image source="slides/Day03-Switches/slide16_31ca4cb7.png"
+                       width="75%"/>
+            </figure>
+
+            <p>
+                The AD2 connects to your circuit through flexible
+                <term>flying leads</term> — color-coded wires that plug directly
+                into breadboard holes.  The two oscilloscope channels are labeled
+                <c>1+</c>/<c>1−</c> (orange) and <c>2+</c>/<c>2−</c> (blue).
+                The minus leads have a white stripe — always connect these to your
+                circuit's GND rail.
+            </p>
+
+            <figure xml:id="fig-ad2-pinout">
+                <caption>AD2 flying-lead connector pinout.  Channels 1 and 2
+                each have a plus (signal) lead and a minus (ground reference)
+                lead with a white stripe.  Additional leads support the waveform
+                generator, digital I/O, and power supply, covered in later
+                labs.</caption>
+                <image source="slides/Day03-Switches/slide17_e3a60d59.png"
+                       width="80%"/>
+            </figure>
+
+            <p>
+                Connect the minus leads to GND, then connect channel 1's plus
+                lead to one LED anode and channel 2's plus lead to a second LED
+                anode, as shown below.  Load <c>blinkySEQ.c</c> onto your
+                Nucleo.
+            </p>
+
+            <figure xml:id="fig-ad2-wiring">
+                <caption>Wiring the AD2 to observe two of the three LEDs from
+                Lab 1.  The minus (white-stripe) leads connect to ground; the
+                plus leads of channels 1 and 2 connect to two LED
+                anodes.</caption>
+                <image source="slides/Day03-Switches/slide18_b0119462.png"
+                       width="80%"/>
+            </figure>
+
+            <p>
+                Open <em>Scope</em> in Waveforms and press <em>Run</em>.
+                Four controls you will use constantly:
+                <term>Time Base</term> — how much time fits across the screen
+                (100 ms/div for a full blink cycle; 20 µs/div to reveal switch
+                bounce).
+                <term>Range</term> — the vertical scale in volts per division;
+                adjust until the waveform fills roughly half the screen height.
+                <term>Offset</term> — shifts a channel up or down; use this to
+                separate overlapping traces.
+                <term>Trigger</term> — starts the capture when a signal crosses
+                a threshold, useful for catching a single button press.
+            </p>
+
+            <figure xml:id="fig-ad2-waveform">
+                <caption>Waveforms scope view of a sequentially-blinking LED
+                program.  Orange (CH1) and blue (CH2) pulses alternate; each is
+                about 100 ms wide.  The settings panel (right) shows Time Base
+                at 100 ms/div, both channels at 2 V/div, with an offset on CH2
+                to keep the traces from overlapping.</caption>
+                <sidebyside widths="68% 28%" margins="2%">
+                    <image source="slides/Day03-Switches/slide19_5c4e2225.png"/>
+                    <image source="slides/Day03-Switches/slide19_settings_panel.png"/>
+                </sidebyside>
+            </figure>
+
+            <p>
+                To measure a time interval precisely, use the
+                <term>cursor</term> tool: drag two vertical cursor lines to the
+                rising and falling edges of a pulse and the toolbar shows the
+                time difference between them.
+            </p>
+
+            <figure xml:id="fig-ad2-cursors">
+                <caption>Using the Waveforms cursor tool to measure pulse width.
+                Two vertical cursors bracket one LED pulse; the toolbar shows
+                the time difference.</caption>
+                <image source="slides/Day03x-Debounce/slide04_9157d76f.png"
+                       width="85%"/>
+            </figure>
+
+            <activity xml:id="act-day3-ad2-explore">
+                <title>Exploring the Oscilloscope</title>
+                <introduction>
+                    <p>
+                        Load <c>blinkySEQ.c</c> onto your Nucleo.  Wire the AD2:
+                        minus (white-stripe) leads to GND, channel 1 plus lead to
+                        one LED anode, channel 2 plus lead to a second LED anode.
+                    </p>
+                </introduction>
+                <task>
+                    <p>
+                        Run the scope and observe both channels.  Then experiment
+                        with the following settings and answer each question at
+                        your table:
+                    </p>
+                    <p><ol>
+                        <li><p>What does <em>Time Base</em> control?  What value shows one full blink cycle across the screen?</p></li>
+                        <li><p>What does <em>Range</em> control?  Set it so the waveform fills roughly half the vertical space.</p></li>
+                        <li><p>What does <em>Offset</em> do?  How do you use it to separate two overlapping channels?</p></li>
+                        <li><p>What voltage does the scope measure on a GPIO pin when the LED connected to it is on?</p></li>
+                    </ol></p>
+                </task>
+                <task>
+                    <p>
+                        Measure the pulse width of one LED's ON period using
+                        the cursor tool.  Place two vertical cursors at the
+                        rising and falling edges of a single pulse and read the
+                        time difference from the toolbar.  Does it match the
+                        <c>delay_ms</c> value in your code?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Open your <c>blinkySIM</c> project, change the delays
+                        to 1 ms ON / 10 ms OFF, and flash it to your Nucleo.
+                        Observe the LED brightness and the waveform on the scope.
+                        Then swap to 10 ms ON / 1 ms OFF and flash again.
+                        How does brightness change, and why?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        You want to observe a switch bounce that lasts about
+                        1 ms.  Which time base setting would you choose, and
+                        why?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Save a screenshot of your scope view:
+                        <em>File → Export → Image tab → Save</em>.
+                        You will need this skill for all future lab reports.
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+        <!-- ── Part 3: Digital Inputs (≈25 min) ───────────────── -->
+        <subsection xml:id="subsec-day3-inputs">
+            <title>Part 3: Wiring and Reading a Digital Input</title>
+            <p>
+                Add a pushbutton to your breadboard as shown below.  Use
+                <em>D5 (PB4)</em> specifically — the <c>button.c</c>
+                starter code is written for PB4.  Wire one side of the
+                button to D5 and the other side to GND.
+            </p>
+
+            <figure xml:id="fig-pushbutton-wiring">
+                <caption>Breadboard wiring for a pushbutton connected to a
+                GPIO input.  The button bridges two rows of the breadboard;
+                one terminal goes to the GPIO pin, the other to GND.  The
+                Nucleo's internal pull-up resistor keeps the pin HIGH when
+                the button is open.</caption>
+                <image source="slides/Day03-Switches/slide23_cdfa0eb4.png"
+                       width="65%"/>
+            </figure>
+
+            <p>
+                Without any extra circuitry, an unconnected GPIO pin
+                <term>floats</term>: its voltage drifts with electrical noise
+                and reading it produces random 0s and 1s.  The fix is a
+                <term>pull-up resistor</term> between the pin and 3.3 V.
+                When the button is open, the resistor holds the pin firmly
+                HIGH.  Pressing the button connects the pin to GND and pulls
+                it LOW.  This <term>active-low</term> convention —
+                pressed = 0, released = 1 — is the standard arrangement for
+                buttons.  The STM32 has built-in ~40 kΩ pull-up resistors
+                that you enable in software; no external resistor is needed.
+            </p>
+
+            <figure xml:id="fig-pushbutton-schematic">
+                <caption>Alternative wiring using an <em>external</em>
+                pull-up resistor between the power rail and the button.
+                The resistor holds the pin HIGH when the button is open;
+                pressing the button pulls it LOW.  On the STM32 we use
+                the built-in internal pull-up instead, so no external
+                resistor is needed.</caption>
+                <image source="slides/Day03-Switches/slide24_07d739fd.png"
+                       width="70%"/>
+            </figure>
+
+            <figure xml:id="fig-io-port-bit">
+                <caption>Internal structure of one GPIO bit, showing both
+                directions.  For reads (input): the pin voltage passes through
+                an optional pull-up or pull-down and a Schmitt trigger, then
+                lands in the Input Data Register.  For writes (output): data
+                flows from the Output Data Register through the output control
+                circuit to the pin.  The same pull-up and pull-down are
+                available in both modes.</caption>
+                <image source="slides/Day03-Switches/ann-22.png"
+                       width="80%"/>
+            </figure>
+
+            <p>
+                Three registers control GPIO input behavior on the STM32.
+                <c>GPIOx→MODER</c> (where x is the port letter: A, B, C, D,
+                or F) sets the pin mode — input, output, alternate function,
+                or analog.  <c>GPIOx→PUPDR</c> turns the internal pull-up or
+                pull-down on or off.  <c>GPIOx→IDR</c> is read-only: each bit
+                reflects the current logic level on the corresponding pin.
+                The specific bit values for each setting are in the reference
+                manual.
+            </p>
+
+            <figure xml:id="fig-input-config-diagram">
+                <caption>Which registers control which parts of a GPIO input.
+                <c>GPIOx→MODER</c> selects input vs. output mode.
+                <c>GPIOx→PUPDR</c> controls the internal pull-up or
+                pull-down.  The blue path shows the signal from the button,
+                through the pull-up circuit and Schmitt trigger, into
+                <c>GPIOx→IDR</c>.</caption>
+                <image source="slides/Day03-Switches/ann-23.png"
+                       width="85%"/>
+            </figure>
+
+            <activity xml:id="act-day3-ref-manual">
+                <title>Finding Configuration Details in the Reference Manual</title>
+                <introduction>
+                    <p>
+                        You know what MODER, PUPDR, and IDR do — but not yet
+                        the specific bit values to write.  Open the
+                        <url href="external/stm32c031_rm.pdf">STM32C031 reference manual</url>,
+                        navigate to the <em>General-purpose I/Os (GPIO)</em>
+                        section via the table of contents, then go to
+                        <em>Section 6.4 GPIO registers</em>.
+                        Looking up register details is a skill you will use
+                        constantly — this is practice.
+                    </p>
+                </introduction>
+                <task>
+                    <p>
+                        Find <c>GPIOx_MODER</c> (Section 6.4.1).  What
+                        two-bit value selects input mode?  What is the
+                        power-on default for all pins?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Find <c>GPIOx_PUPDR</c>.  Which two-bit value enables
+                        the internal pull-up?  Write the C statements that
+                        enable the pull-up on PB4 (pin 4 of Port B), using
+                        bit masks.
+                    </p>
+                </task>
+            </activity>
+
+            <activity xml:id="act-day3-button-c">
+                <title>Reading a Button in Code</title>
+                <introduction>
+                    <p>
+                        In STM32CubeIDE, make a copy of your
+                        <c>TemplateProject</c> and name the copy
+                        <c>Buttons</c>.
+                        Then download <c>button.c</c> from Canvas and place it
+                        in the <c>Src</c> folder of your new project.
+                        Read through the code, then answer the questions below
+                        before flashing it.
+                    </p>
+                </introduction>
+                <task>
+                    <p>
+                        The code calls <c>delay_ms(50)</c> immediately after
+                        enabling the pull-up resistor.  Why?  What do you
+                        think would happen if you removed that line?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        The main loop uses
+                        <c>(GPIOB-&gt;IDR &amp; BUTTON_PIN) == 0</c>
+                        to detect a button press.  Why <c>== 0</c> rather
+                        than <c>!= 0</c>?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Flash the code and verify: pressing the button turns
+                        on the LED; releasing turns it off.  Then modify
+                        <c>blinkySEQ.c</c> so that pressing the button
+                        interrupts the sequence and lights all three LEDs;
+                        releasing returns to the sequence.
+                    </p>
+                </task>
+            </activity>
+
+            <figure xml:id="fig-pullup-settling">
+                <caption>Oscilloscope trace of the pin voltage rising after
+                the internal pull-up is enabled.  The pin reaches the HIGH
+                threshold in about 2.5 µs; reading IDR before it settles
+                returns a spurious 0.</caption>
+                <image source="slides/Day03-Switches/slide36_428a4d33.png"
+                       width="75%"/>
+            </figure>
+        </subsection>
+
+        <!-- ── Part 4: Button Exercises (≈15 min) ─────────────── -->
+        <subsection xml:id="subsec-day3-button-exercises">
+            <title>Part 4: Button Exercises</title>
+            <p>
+                These exercises are a head start on Lab 2.  You may not finish
+                them in class — that is fine.
+            </p>
+            <activity xml:id="act-day3-button-exercises">
+                <title>Button Exercises</title>
+                <task>
+                    <p>
+                        Modify <c>blinkyCNT.c</c> so that pressing the button
+                        pauses the counter and releasing resumes it.
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        <em>Homework (due Thursday):</em>
+                        Write <c>toggleLED.c</c> so the on-board LED toggles
+                        each time the button is pressed and released:
+                        first press turns LED on, second press turns it off,
+                        and so on.  You will likely observe erratic behavior
+                        (<q>glitches</q>) — bring your observations to Day 3X.
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+    </section>
+
+
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-gpio-input-config">
+        <title>Configuring a Pin as an Input</title>
+        <p>
+            Every GPIO pin on the STM32C031 can be configured as a digital input, digital
+            output, analog input, or alternate function.  For a pushbutton we use digital
+            input mode.  The internal structure of one I/O port bit is shown in
+            <xref ref="fig-io-port-bit"/>: an optional internal pull-up or pull-down
+            resistor, a read path (IDR), and a write path (ODR).
+        </p>
+
+        <p>
+            The register fields involved in input configuration are:
+        </p>
+        <p>
+            <c>GPIOx→MODER</c> — two bits per pin.  Writing <c>00</c> selects input mode
+            (the power-on default).  For most input pins no MODER write is needed.
+        </p>
+        <p>
+            <c>GPIOx→PUPDR</c> — two bits per pin.  Writing <c>01</c> enables the internal
+            pull-up; <c>10</c> enables the pull-down; <c>00</c> leaves the pin floating.
+        </p>
+        <p>
+            <c>GPIOx→IDR</c> — read-only.  Bit <m>n</m> reflects the current logic level
+            on pin <m>n</m>.
+        </p>
+
+        <insight>
+            <title>Why use a pull-up resistor?</title>
+            <p>
+                A floating input pin picks up electrical noise and reads unpredictably.
+                Connecting a <term>pull-up resistor</term> (from the pin to VCC) makes the
+                idle state HIGH.  When the button closes, it connects the pin to GND, pulling
+                it LOW.  This is called <term>active-low</term> logic: pressed = 0, released = 1.
+                The STM32's built-in pull-up resistors are typically 40 kΩ,
+                so no external resistor is needed.
+                <xref ref="fig-pushbutton-wiring"/> shows the breadboard
+                wiring using the internal pull-up.
+                <xref ref="fig-pushbutton-schematic"/> shows the alternative:
+                an external pull-up resistor on the breadboard.
+            </p>
+        </insight>
+
+        <p>
+            Setting up PB4 (D5 on the Nucleo) as an input with pull-up enabled,
+            as in <c>button.c</c>:
+        </p>
+        <program language="c"><code><![CDATA[
+#define GPIOBEN    (1U << 1)   // bit 1 of IOPENR enables GPIOB clock
+#define BUTTON_PIN (1U << 4)   // PB4 = D5
+
+// 1. Enable GPIOB clock
+RCC->IOPENR |= GPIOBEN;
+
+// 2. MODER bits [9:8] for PB4 are 00 by default (input mode)
+//    No MODER write needed.
+
+// 3. Enable internal pull-up on PB4
+//    PUPDR bits [9:8]: 01 = pull-up
+GPIOB->PUPDR |=  (1U << 8);   // set bit 8
+GPIOB->PUPDR &= ~(1U << 9);   // clear bit 9
+]]></code></program>
+
+        <p>
+            After a short settling time (the pull-up charges any stray capacitance;
+            see <xref ref="fig-pullup-settling"/>; a <c>delay_ms(1)</c> is sufficient),
+            the pin reads HIGH when the button is released and LOW when pressed.
+            Test it with:
+        </p>
+        <program language="c"><code><![CDATA[
+// Active-low: IDR bit = 0 means button is pressed
+if ((GPIOB->IDR & BUTTON_PIN) == 0) {
+    // button is pressed — take action here
+}
+]]></code></program>
+
+        <reading-questions xml:id="rq-gpio-input">
+            <exercise xml:id="rq-idr-value">
+                <statement><p>With the internal pull-up enabled on PB4 and the button wired from
+                D5 to GND, what value does <c>GPIOB-&gt;IDR &amp; BUTTON_PIN</c>
+                return when the button is pressed?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>0 (zero)</p></statement>
+                    <feedback><p>Correct.  Pressing the button pulls the pin to GND, so the IDR
+                    bit is 0 (active-low).</p></feedback></choice>
+                    <choice><statement><p>1</p></statement>
+                    <feedback><p>The pin is HIGH (1) when the button is <em>released</em>, not pressed.</p></feedback></choice>
+                    <choice><statement><p>It depends on the MODER setting</p></statement>
+                    <feedback><p>MODER selects input vs. output mode, but once in input mode the
+                    IDR reflects the pin voltage regardless of PUPDR.</p></feedback></choice>
+                    <choice><statement><p>Undefined — floating</p></statement>
+                    <feedback><p>The pull-up resistor prevents the pin from floating; it is
+                    well-defined as HIGH when the switch is open.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+    <!-- ============================================================
+         DAY 3X IN-CLASS  (55 min, no pre-class reading)
+         ============================================================ -->
+    <section xml:id="sec-switches-day3x">
+        <title>Day 3X In-Class: Observing and Fixing Bounce</title>
+
+        <!-- ── Part 1: Observing and Fixing Bounce (≈20 min) ───── -->
+        <subsection xml:id="subsec-day3x-bounce">
+            <title>Part 1: Observing and Fixing Bounce</title>
+            <p>
+                Load your <c>toggleLED.c</c> (or <c>button.c</c> if your
+                homework is not finished).  Wire the AD2 with CH1 (orange)
+                on D5 (PB4, button) and CH2 (blue) on D13 (PA5, LED),
+                as shown in <xref ref="fig-bounce-wiring"/>.
+            </p>
+
+            <figure xml:id="fig-bounce-wiring">
+                <caption>AD2 wiring for observing button bounce.  CH1 (orange)
+                connects to D5/PB4 (button); CH2 (blue) connects to D13/PA5 (LED).
+                Minus leads (white stripe) connect to GND.</caption>
+                <image source="slides/Day03x-Debounce/ann-d3x-wiring.png" width="80%"/>
+            </figure>
+
+            <activity xml:id="act-day3x-observe-bounce">
+                <title>Capturing Switch Bounce</title>
+                <task>
+                    <p>
+                        In Waveforms, configure the trigger as shown in
+                        <xref ref="fig-day3x-trigger-setup"/>: Source: Channel 1,
+                        Type: Edge, Condition: Falling, Level: 1 V.
+                        Set the time base to 20 µs/div.
+                        (Depending on your Waveforms version, you may need
+                        Normal or Auto trigger mode.)
+                    </p>
+                    <figure xml:id="fig-day3x-trigger-setup">
+                        <caption>Waveforms trigger settings for capturing switch bounce.
+                        Source: Channel 1 (button signal), Condition: Falling edge,
+                        Level: 1 V.  Time base 20 µs/div is a good starting point;
+                        adjust if your bounce is shorter or longer.</caption>
+                        <image source="slides/Day03x-Debounce/ann-d3x-trigger.png" width="85%"/>
+                    </figure>
+                    <p>
+                        Click <em>Single</em>, press the button once, and
+                        examine the captured waveform.  What do you see
+                        instead of a clean falling edge?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Use cursors to measure the total duration of the
+                        bounce on your button.  Compare results with other
+                        groups — do all switches bounce the same amount?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Look at channel 2 (LED).  How many times does the
+                        LED change state during a single physical button press?
+                        Why?
+                    </p>
+                </task>
+            </activity>
+
+            <figure xml:id="fig-bounce-scope">
+                <caption>Switch bounce captured on CH1 (orange): a single button press
+                produces many rapid HIGH/LOW transitions before the signal settles low.
+                CH2 (blue) shows the LED toggling on each bounce — not just once.
+                Bounce duration varies by switch, typically 50 µs to a few ms.</caption>
+                <image source="slides/Day03x-Debounce/ann-d3x-bounce.png" width="85%"/>
+            </figure>
+
+            <activity xml:id="act-day3x-hw-debounce">
+                <title>Hardware Fix: Adding a Capacitor</title>
+                <introduction>
+                    <p>
+                        Hardware debouncing works by adding a small capacitor
+                        across the switch.  When the switch closes, the capacitor
+                        discharges through the low-resistance contacts rather than
+                        bouncing; when the switch opens, the internal pull-up
+                        recharges it slowly through its ~40 kΩ resistance.
+                        The RC time constant smooths out the bounce spikes.
+                        See <xref ref="subsec-hw-debounce"/> for the circuit details.
+                    </p>
+                    <figure xml:id="fig-cap-codes">
+                        <caption>Reading metal film capacitor markings.
+                        The three fields encode value, tolerance, and maximum voltage.
+                        Value is two digits and a decimal point; the decimal point
+                        can be an <c>n</c> (nano), a <c>p</c> (pico), or a dot (micro).
+                        Example: <c>.1J63</c> = 0.1 µF, ±5%, 63 V.</caption>
+                        <image source="slides/Day03x-Debounce/ann-d3x-cap-codes.png" width="80%"/>
+                    </figure>
+                    <figure xml:id="fig-rc-debounce-circuit">
+                        <caption>Place a 0.1 µF capacitor from D5 (PB4) to GND on the
+                        breadboard, in parallel with the button.  The red dashed line
+                        shows where the capacitor connects.  Identify the correct
+                        capacitor by reading its marking code (Task 1 below).</caption>
+                        <image source="slides/Day03x-Debounce/ann-d3x-rc-wiring.png" width="75%"/>
+                    </figure>
+                </introduction>
+                <task>
+                    <p>
+                        Identify the 0.1 µF capacitor in your kit using its
+                        marking code.
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Place the capacitor across the button (one leg on
+                        the GPIO pin side, the other to GND).  Capture the
+                        button waveform again with the same scope settings.
+                        How has it changed?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Look at channel 2 (LED) again.  Does the LED now
+                        toggle exactly once per press?  Save a screenshot
+                        showing both channels, with and without the capacitor,
+                        for your lab report.
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+        <!-- ── Part 3: The Toggle Problem (≈15 min) ────────────── -->
+        <subsection xml:id="subsec-day3x-toggle-problem">
+            <title>Part 2: The Toggle Problem</title>
+            <p>
+                Reading a pin on every iteration of the main loop — checking
+                its state and acting on it — is called <term>polling</term>.
+                It is the simplest way to respond to an input, but it has a
+                subtle problem when the desired action is a toggle.
+                Even with a debounced switch, consider this loop:
+            </p>
+            <program language="c"><code><![CDATA[
+while (1) {
+    buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0);
+    if (buttonPushed) {
+        GPIOA->ODR ^= LED_PIN;   // toggle LED
+    }
+}
+]]></code></program>
+            <activity xml:id="act-day3x-toggle-problem">
+                <title>The Toggle Problem</title>
+                <task>
+                    <p>
+                        Predict what this code will do if you press and hold
+                        the button for half a second.  How many times will the
+                        LED toggle?  Why?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        The loop runs at approximately 12 MHz.  Roughly how
+                        many times does it execute while a human holds the
+                        button down for 200 ms?  How many toggles does that
+                        produce?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        The fix is to detect the <em>transition</em> from
+                        unpressed to pressed — not just the level.  The code
+                        below uses a <c>buttonAlreadyPressed</c> flag to do
+                        this.  Trace through it: when does the LED toggle?
+                        When does it not toggle even though the button is down?
+                    </p>
+                    <program language="c"><code><![CDATA[
+unsigned buttonAlreadyPressed = 0;
+while (1) {
+    buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0);
+    if (!buttonAlreadyPressed && buttonPushed) {
+        GPIOA->ODR ^= LED_PIN;      // toggle on leading edge only
+        buttonAlreadyPressed = 1;
+    } else if (!buttonPushed) {
+        buttonAlreadyPressed = 0;   // reset when released
+    }
+}
+]]></code></program>
+                </task>
+                <task>
+                    <p>
+                        Day 4 will show you a cleaner way to write this same
+                        logic — the <em>state machine</em> design pattern.
+                        Before then, read <xref ref="sec-state-machine"/> and
+                        be ready to discuss how the <c>state</c> variable
+                        corresponds to <c>buttonAlreadyPressed</c>.
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-bounce">
+        <title>Contact Bounce</title>
+        <introduction>
+            <p>
+                When a mechanical switch closes, the metal contacts physically collide and
+                spring apart several times before settling into steady contact.  This produces
+                a burst of rapid HIGH/LOW transitions that can last anywhere from a few
+                microseconds to 20 ms, depending on the switch.  To the STM32 running at
+                12 MHz, each bounce looks like a separate button press.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-hw-debounce">
+            <title>Hardware Debouncing: RC Filter</title>
+            <p>
+                The classic hardware fix is to add a small capacitor (e.g., 0.1 µF) across
+                the switch terminals.  When the switch closes, the capacitor discharges through
+                the low-resistance closed contacts instead of bouncing.  When the switch opens,
+                the internal pull-up recharges the capacitor through its 40 kΩ resistance.
+                The resulting RC time constant smooths out the bounce spikes.
+                Breadboard placement is shown in <xref ref="fig-rc-debounce-circuit"/>.
+            </p>
+
+            <figure xml:id="fig-rc-schematic">
+                <caption>RC debounce circuit: the internal pull-up (Rpu ≈ 40 kΩ) and the
+                external capacitor form an RC low-pass filter.  When the switch bounces open,
+                the capacitor recharges slowly through Rpu; if C is large enough, the voltage
+                never rises above V<sub>IH</sub> during the bounce window.</caption>
+                <image source="slides/Day03x-Debounce/ann-d3x-rc-circuit.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-rc-results">
+                <caption>Effect of capacitor size on bounce suppression.  Top: C = 0.01 µF —
+                bounce recovers quickly and can reach V<sub>IH</sub>, causing spurious edges.
+                Bottom: C = 0.1 µF — bounce recovers so slowly that the voltage stays
+                below V<sub>IH</sub>, eliminating spurious transitions.</caption>
+                <image source="slides/Day03x-Debounce/ann-d3x-rc-results.png" width="70%"/>
+            </figure>
+
+            <figure xml:id="fig-bounce-comparison">
+                <caption>Side-by-side oscilloscope view: without capacitor (left) vs. with
+                0.1 µF (right).  Orange (CH1) = button signal; blue (CH2) = LED.
+                Without debouncing, the LED toggles multiple times per press.
+                With the capacitor, each press produces exactly one toggle.</caption>
+                <image source="slides/Day03x-Debounce/ann-d3x-compare.png" width="85%"/>
+            </figure>
+
+            <p>
+                Hardware debouncing is reliable and requires no CPU time, but adds a component
+                to every button on the board and must be sized for the specific switch.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-sw-debounce">
+            <title>Software Debouncing</title>
+            <p>
+                The simplest software debounce: after detecting a press, wait longer than the
+                maximum bounce duration before checking again.
+            </p>
+            <program language="c"><code><![CDATA[
+if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
+    delay_ms(20);                   // wait for bounce to settle (>10 ms typical)
+    if (!(GPIOC->IDR & BTN_PIN)) { // confirm still pressed
+        GPIOA->ODR ^= LED_PIN;      // take action
+        while (!(GPIOC->IDR & BTN_PIN)); // wait for release
+        delay_ms(20);               // debounce the release too
+    }
+}
+]]></code></program>
+            <p>
+                This works but <em>blocks</em> the CPU for 20 ms twice per button press.
+                A state-machine approach (see <xref ref="sec-state-machine"/>) avoids blocking
+                while still debouncing reliably.
+            </p>
+
+            <insight>
+                <title>Hardware vs. software debouncing trade-offs</title>
+                <p>
+                    Hardware debouncing (RC filter) consumes no CPU cycles but costs a
+                    component on the board and is hard to adjust after fabrication.
+                    Software debouncing is free in hardware but ties up the processor during
+                    the delay and must be tuned to the slowest switch you ever use.
+                    In practice, a small capacitor plus a short software delay gives the best
+                    of both worlds.
+                </p>
+            </insight>
+        </subsection>
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-state-machine">
+        <title>State Machine Design Pattern</title>
+        <p>
+            Blocking <c>while</c> loops waiting for a button to settle prevent the rest of
+            your program from running.  A <term>finite state machine</term> (FSM) solves this
+            by tracking <em>what happened last time</em> in a state variable and only acting
+            on genuine transitions.
+        </p>
+        <p>
+            For a button toggle, we need two states: <c>UNPRESSED</c> and <c>PRESSED</c>.
+            We toggle the LED exactly once per press, when transitioning from UNPRESSED to
+            PRESSED.  Once in the PRESSED state we ignore further LOW readings (which could
+            be bounce or held-down time) until the pin goes HIGH again.
+        </p>
+        <p>
+            An FSM is often drawn as a <em>state diagram</em>: circles represent states,
+            arrows represent transitions, and each arrow is labeled with the event that
+            triggers it and the action taken.  Before coming to class, draw the state
+            diagram for the button-toggle FSM described above on paper.  Label each state,
+            each transition arrow with its triggering event, and the action taken.
+        </p>
+
+        <reading-questions xml:id="rq-fsm">
+            <exercise xml:id="rq-fsm-states">
+                <statement><p>In a button-toggle FSM with states UNPRESSED and PRESSED,
+                the program is in state PRESSED and the button is still held down (pin LOW).
+                What should happen on the next pass through the main loop?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes"><statement><p>Nothing — stay in PRESSED and do not toggle the LED.</p></statement>
+                    <feedback><p>Correct.  The PRESSED state only acts when the button is released,
+                    so holding the button causes no additional toggles.</p></feedback></choice>
+                    <choice><statement><p>The LED toggles again.</p></statement>
+                    <feedback><p>That would happen with a flag-based approach that toggles on
+                    every LOW reading.  The state machine prevents repeated toggles by staying
+                    in PRESSED until the button is released.</p></feedback></choice>
+                    <choice><statement><p>The state transitions back to UNPRESSED.</p></statement>
+                    <feedback><p>PRESSED → UNPRESSED only when the pin goes HIGH (button released).</p></feedback></choice>
+                    <choice><statement><p>The program gets stuck in an infinite loop.</p></statement>
+                    <feedback><p>There is no blocking loop inside the state machine; it returns
+                    to the top of <c>while(1)</c> each cycle.</p></feedback></choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+    </section>
+
+    <!-- ============================================================
+         DAY 4 IN-CLASS  (75 min)
+         Pre-class reading: sec-state-machine (state machines)
+         ============================================================ -->
+    <section xml:id="sec-switches-day4">
+        <title>Day 4 In-Class: State Machines</title>
+
+        <!-- ── Part 1: Code Review (≈10 min) ──────────────────── -->
+        <subsection xml:id="subsec-day4-code-review">
+            <title>Part 1: Code Review — toggleLED.c</title>
+            <p>
+                Set up your Nucleo with your <c>toggleLED.c</c> code (with
+                the 0.15 µF debounce capacitor across the switch) and share
+                it with your group.
+            </p>
+            <activity xml:id="act-day4-code-review">
+                <title>toggleLED Code Review</title>
+                <task>
+                    <p>
+                        Read each partner's code.  Can you follow its logic
+                        and explain it line by line?  There are at least two
+                        valid structures using a <c>buttonAlreadyPressed</c>
+                        flag — one checks the flag in the outer <c>if</c>,
+                        the other checks <c>buttonPushed</c> first.  Are
+                        both correct?  Is one clearer?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Identify the parts of your code that correspond to FSM concepts:
+                        where is the <em>state</em> stored?  What are the <em>events</em>?
+                        What <em>action</em> happens on which transition?
+                        We will formalize this in the mini-lecture that follows.
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+        <!-- ── Part 2: FSM Mini-Lecture (≈15 min) ────────────── -->
+        <subsection xml:id="subsec-day4-fsm-lecture">
+            <title>Part 2: The State Machine Pattern</title>
+            <p>
+                Your <c>toggleLED.c</c> code already implements a finite state machine —
+                the <c>buttonAlreadyPressed</c> variable <em>is</em> the state variable.
+                Here is the same logic expressed as a formal state diagram and then as
+                idiomatic C using <c>typedef enum</c> and <c>switch</c>.
+            </p>
+
+            <figure xml:id="fig-state-diagram">
+                <caption>State diagram for the button-toggle FSM.  The two states
+                (Unpressed/Pressed) track whether the button is currently down.
+                The LED toggles exactly once — on the Unpressed→Pressed transition —
+                and the code snippet on each arrow is the C expression that triggers it.
+                The legend (right) maps the color-coded terms to the FSM vocabulary.</caption>
+                <image source="slides/Day04-Debounce/ann-d4-state-diagram.png" width="80%"/>
+            </figure>
+
+            <program language="c"><code><![CDATA[
+#include "ES28.h"
+
+typedef enum { UNPRESSED, PRESSED } state_t;
+
+int main(void) {
+    // --- GPIO setup (GPIOA: LED on PA5; GPIOB: button on PB4) ---
+    RCC->IOPENR |= (1U << 0) | (1U << 1);  // enable GPIOA and GPIOB clocks
+    GPIOA->MODER &= ~(3U << 10);            // PA5 input (clear)
+    GPIOA->MODER |=  (1U << 10);            // PA5 output
+    // PB4: MODER = 00 (input, default); enable pull-up
+    GPIOB->PUPDR |=  (1U << 8);             // PB4 pull-up bit [9:8] = 01
+    GPIOB->PUPDR &= ~(1U << 9);
+
+    state_t state = UNPRESSED;
+
+    while (1) {
+        int btn = !(GPIOB->IDR & (1U << 4)); // 1 if pressed (active-low)
+
+        switch (state) {
+            case UNPRESSED:
+                if (btn) {
+                    GPIOA->ODR ^= (1U << 5); // toggle LED on press
+                    state = PRESSED;
+                }
+                break;
+            case PRESSED:
+                if (!btn) {
+                    state = UNPRESSED;        // wait for release
+                }
+                break;
+        }
+    }
+}
+]]></code></program>
+
+            <p>
+                Because there is no blocking <c>while</c> loop, this FSM can be embedded
+                in a larger main loop that also blinks LEDs, reads a UART, or does other
+                work — the state variable preserves context across iterations.
+            </p>
+        </subsection>
+
+        <!-- ── Part 3: State Machine Design (≈20 min) ─────────── -->
+        <subsection xml:id="subsec-day4-fsm-design">
+            <title>Part 3: Designing State Machines</title>
+            <p>
+                A <term>finite state machine</term> (FSM) captures behavior
+                as a set of <em>states</em>, <em>events</em> that cause
+                transitions between them, and <em>actions</em> taken on
+                each transition.  The key advantage over a simple flag
+                variable: the pattern scales cleanly when you add more states
+                or more events.
+            </p>
+            <activity xml:id="act-day4-fsm-draw">
+                <title>Drawing a State Diagram</title>
+                <introduction>
+                    <p>
+                        Before writing any code, draw the state diagram on
+                        paper or your table's whiteboard.  Label each state
+                        (box), each transition arrow with its triggering event,
+                        and each action taken on the transition.
+                    </p>
+                </introduction>
+                <task>
+                    <p>
+                        Draw the state diagram for a 3-state LED cycling FSM:
+                        each button press advances to the next LED pattern
+                        (pattern A → B → C → A → …).  You choose the patterns.
+                        How many states do you need?  What are the events?
+                        What action happens on each transition?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Draw the state diagram for the Lab 2 pause/resume
+                        counter: the counter blinks normally until a button
+                        press pauses it; a second press resumes.
+                        How is this different from the 3-state cycling FSM?
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+        <!-- ── Part 4: Implementing State Machines (≈30 min) ───── -->
+        <subsection xml:id="subsec-day4-fsm-code">
+            <title>Part 4: Implementing a State Machine in C</title>
+            <p>
+                Translate one of your diagrams from Part 3 into working code
+                using the <c>typedef enum</c> / <c>switch</c> pattern from
+                the mini-lecture above.
+            </p>
+            <activity xml:id="act-day4-fsm-implement">
+                <title>Implementing Your FSM</title>
+                <introduction>
+                    <p>
+                        Start from your <c>toggleLED.c</c> or <c>blinkyCNT.c</c>
+                        project.  Replace any blocking logic or bare flag
+                        variables with a proper FSM.
+                    </p>
+                </introduction>
+                <task>
+                    <p>
+                        Implement the pause/resume counter FSM.  The counter
+                        should blink the LEDs in binary (as in <c>blinkyCNT.c</c>)
+                        and a button press should pause or resume counting.
+                        Test it: does a single physical press always produce
+                        exactly one state change?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        If you finish early, implement the 3-state LED cycling
+                        FSM from your diagram.  Or: add a second button that
+                        resets the counter to zero from either state.
+                        How does the state diagram change?
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        Verify on the oscilloscope that the LED transitions
+                        are clean (no multiple toggles per press) both with
+                        and without the debounce capacitor.
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+        <!-- ── Part 4: Lab 2 Introduction (≈15 min) ────────────── -->
+        <subsection xml:id="subsec-day4-lab2-intro">
+            <title>Part 4: Lab 2 Introduction</title>
+            <p>
+                Lab 2 has two design challenges.  Read the full spec in
+                <xref ref="sec-switch-lab"/> and start work on whichever
+                challenge you have not already completed above.
+            </p>
+            <activity xml:id="act-day4-lab2-start">
+                <title>Lab 2 Design Challenges</title>
+                <task>
+                    <p>
+                        <em>Challenge 1 — Pause/resume counter:</em>
+                        If your FSM from Part 3 already implements this,
+                        review the lab spec and make sure your solution
+                        meets all requirements (correct state behavior,
+                        debouncing, clean oscilloscope traces).
+                    </p>
+                </task>
+                <task>
+                    <p>
+                        <em>Challenge 2 — Reaction time game:</em>
+                        Draw the state diagram before writing code.
+                        How many states does the game have?  What are the
+                        events (button presses, timer expiry)?  What actions
+                        does each transition trigger?
+                    </p>
+                </task>
+            </activity>
+        </subsection>
+
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-switch-lab">
+        <title>Lab 2: Switches and State Machines</title>
+        <p>
+            Lab 2 has two parts: a Technical Study on RC debouncer design (prelab math),
+            and two Design Challenges implemented on the Nucleo.  Read the full lab handout
+            for the prelab deliverables.
+        </p>
+
+        <figure xml:id="fig-lab2-setup">
+            <caption>Lab 2 breadboard setup: three LEDs (two red WIN LEDs and one green
+            starter LED), two pushbutton switches, and debounce capacitors.  Each LED has
+            its own 220 Ω current-limiting resistor.</caption>
+            <image source="slides/Day03x-Debounce/slide20_cdfa0eb4.png" width="70%"/>
+        </figure>
+
+        <exercises>
+            <exercise xml:id="exer-pause-resume">
+                <title>Design Challenge 1 — Pushbutton Counter</title>
+                <statement>
+                    <p>
+                        Starting from <c>blinkyCNT.c</c>, implement a button-controlled
+                        pause/resume: pressing the button once pauses the LED counter;
+                        pressing again resumes it.  Use a 0.15 µF debounce capacitor
+                        across the switch.  Use the FSM pattern to avoid blocking.
+                    </p>
+                </statement>
+            </exercise>
+            <exercise xml:id="exer-reaction-game">
+                <title>Design Challenge 2 — Reaction Time Game</title>
+                <statement>
+                    <p>
+                        Each player has a debounced button and a red WIN LED.
+                        A third green LED is the start signal.
+                        The game runs as follows:
+                    </p>
+                    <p><ol>
+                        <li><p>Initially, the green starter LED is on (or blinking rapidly).</p></li>
+                        <li><p>Either player presses their button to start the game.</p></li>
+                        <li><p>The starter LED flashes three times, one second apart,
+                        then glows steadily — this is the go signal.</p></li>
+                        <li><p>Each player presses their button as soon as they see the
+                        steady light.  The first player to press wins; their WIN LED lights
+                        (or blinks rapidly) for one second.</p></li>
+                        <li><p>The system returns to step 1.</p></li>
+                    </ol></p>
+                    <p>
+                        Design with a state machine.  Start with a paper state diagram
+                        before writing any code; include it in your submission along with
+                        pseudocode and a debugging diary.
+                    </p>
+                    <p>
+                        <em>Optional extensions (no extra points):</em>
+                        (a) A false start — pressing before the steady light — awards
+                        the win to the other player.
+                        (b) Make the delay between the last flash and the steady ON
+                        slightly random (run a fast counter in the background and
+                        sample it when a player starts the game) to prevent timing the flashes.
+                    </p>
+                </statement>
+            </exercise>
+        </exercises>
+    </section>
+
+</chapter>
