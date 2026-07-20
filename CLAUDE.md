@@ -16,6 +16,12 @@ textbook. Read this before editing any source files.
 Build: `./build.sh` from the repo root (wraps `pretext build web`; fixes a macOS
 permission issue with the external assets folder).
 
+Authoring small changes: `./preview-edit.sh` builds and serves the `web-edit`
+target, where alt-clicking a paragraph opens it in an editor at the right
+file and line, and alt-shift-clicking edits its text in place. Useful for
+finding the source of something you can see rendered. See
+`scripts/README-editing.md`.
+
 ---
 
 ## Repository structure
@@ -27,7 +33,9 @@ assets/
                  Each subfolder contains the PDF export and extracted PNGs
   *.pdf          Hosted reference documents (linked via external/)
 output/web/      Built HTML (git-ignored; recreated by build)
+scripts/         Authoring tooling for preview-edit.sh (see README-editing.md)
 build.sh         Build wrapper
+preview-edit.sh  Authoring preview: click the rendered page to reach its source
 publication.ptx  PreTeXt publication settings
 ```
 
