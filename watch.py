@@ -2,11 +2,18 @@
 """
 watch.py — auto-rebuild PreTeXt whenever a .ptx source file is saved.
 
-Run once from the ENGS28 project root:
-    python3 watch.py
+Run once from the project root:
+    python3 watch.py                            # builds the "web" target
+    python3 watch.py web-edit                   # builds another target
+    python3 watch.py --command ./scripts/build-edit.sh
 
 Then just save any .ptx file in your editor — the build triggers automatically.
 Press Ctrl+C to stop.
+
+--command exists because a target is not always the whole build: the
+C-Programming book needs post-build steps (applets, sibling directories) that
+`pretext build` alone doesn't do, so there it watches a script instead. This
+file is kept byte-identical between the two books so fixes move across cleanly.
 """
 
 import subprocess
@@ -26,8 +33,8 @@ except ImportError:
 
 
 class PTXHandler(FileSystemEventHandler):
-    def __init__(self, target="web"):
-        self.target = target
+    def __init__(self, command):
+        self.command = command
         self._lock = threading.Lock()
         self._pending = False
         self._last_file = ""
@@ -59,7 +66,7 @@ class PTXHandler(FileSystemEventHandler):
         print("  building...", flush=True)
         t0 = time.time()
         result = subprocess.run(
-            ["pretext", "build", self.target],
+            self.command,
             capture_output=True,
             text=True,
         )
@@ -72,15 +79,25 @@ class PTXHandler(FileSystemEventHandler):
             for line in result.stderr.splitlines():
                 if line.strip():
                     print(f"    {line}")
-        print()
+        # Flush explicitly: when this runs from preview-edit.sh its output may
+        # not be a terminal, and Python block-buffers in that case - the build
+        # would finish while the log still said "building...".
+        print(flush=True)
 
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "web"
-    print(f"Watching source/ — will run 'pretext build {target}' on every .ptx save.")
+    if "--command" in sys.argv:
+        command = sys.argv[sys.argv.index("--command") + 1:]
+        if not command:
+            sys.exit("--command needs something to run")
+    else:
+        target = sys.argv[1] if len(sys.argv) > 1 else "web"
+        command = ["pretext", "build", target]
+
+    print(f"Watching source/ — will run '{' '.join(command)}' on every .ptx save.")
     print("Press Ctrl+C to stop.\n")
 
-    handler = PTXHandler(target=target)
+    handler = PTXHandler(command)
     observer = Observer()
     observer.schedule(handler, "source", recursive=True)
     observer.start()

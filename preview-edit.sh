@@ -19,12 +19,22 @@ set -e
 # deliberately absent from build.sh, because it is the one target carrying a
 # script that talks to a server able to rewrite source files.
 #
-# Usage: ./preview-edit.sh [port]   (defaults to 8931)
+# Usage: ./preview-edit.sh [port] [--no-watch]   (port defaults to 8931)
+#
+# --no-watch skips the rebuild-on-save watcher, for when you want the preview
+# held still at a known build.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-PORT="${1:-8931}"
+PORT=8931
+WATCH=yes
+for arg in "$@"; do
+  case "$arg" in
+    --no-watch) WATCH=no ;;
+    *) PORT="$arg" ;;
+  esac
+done
 
 # Same macOS permission workaround as build.sh: shutil.copy2 preserves source
 # permissions, which can leave the copies read-only and break the next build.
@@ -58,6 +68,16 @@ else
   python3 scripts/edit-server.py &
   STARTED+=($!)
   echo "  - edit server on port 8927"
+fi
+
+# Rebuilds on every .ptx save, so an edit made in your editor - or in place in
+# the preview - shows up after a refresh instead of needing a manual build.
+if [ "$WATCH" = "yes" ]; then
+  python3 watch.py web-edit &
+  STARTED+=($!)
+  echo "  - file watcher (rebuilds on save)"
+else
+  echo "  - file watcher off (--no-watch); rebuild with ./preview-edit.sh"
 fi
 
 echo ""

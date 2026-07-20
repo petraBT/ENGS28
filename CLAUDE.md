@@ -19,8 +19,10 @@ permission issue with the external assets folder).
 Authoring small changes: `./preview-edit.sh` builds and serves the `web-edit`
 target, where alt-clicking a paragraph opens it in an editor at the right
 file and line, and alt-shift-clicking edits its text in place. Useful for
-finding the source of something you can see rendered. See
-`scripts/README-editing.md`.
+finding the source of something you can see rendered.
+
+See `AUTHORING.md` for the whole workflow — editing, building, git, deploying —
+and `scripts/README-editing.md` for the editing tooling specifically.
 
 ---
 
