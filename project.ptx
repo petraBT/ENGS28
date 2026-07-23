@@ -5,8 +5,15 @@
 <!-- This file, the project manifest, provides the overall configuration for your PreTeXt project. To edit the content of your document, open `source/main.ptx`. See https://pretextbook.org/doc/guide/html/processing-CLI.html#cli-project-manifest. -->
 <project ptx-version="2">
   <targets>
-    <target name="web" format="html" />
-    <target name="print" format="pdf" />
+    <!-- All HTML/print targets use the custom stylesheets so PreTeXt knows the
+         <slide> element (the condensed in-class projector form of a piece of
+         content, authored beside its full prose - see xsl/engs28-html.xsl).
+         By default <slide> blocks are STRIPPED: the reading book shows the full
+         prose, never the condensed form, and never the instructor-only notes or
+         solutions a slide may inline. Only the "web-deck" target renders them
+         (as hidden <div>s the classroom deck player extracts). -->
+    <target name="web" format="html" xsl="engs28-html.xsl" />
+    <target name="print" format="pdf" xsl="engs28-latex.xsl" />
     <!-- Authoring build: "web" plus the click-to-source helper, assets/ptx-edit.js.
          Alt-click any paragraph to open it in your editor; alt-shift-click to edit
          its text in place. Requires scripts/edit-server.py to be running - use
@@ -14,10 +21,18 @@
          Local only, and deliberately so: this is the one target carrying a script
          that talks to a server able to rewrite source files, so it is kept out of
          build.sh. -->
-    <target name="web-edit" format="html">
+    <target name="web-edit" format="html" xsl="engs28-html.xsl">
       <!-- PreTeXt copies everything under assets/ into <output-dir>/external/,
            so this resolves without any extra build step. -->
       <stringparams html.js.extra="external/ptx-edit.js" />
+    </target>
+    <!-- Classroom-deck build: the reading "web" content, but with <slide> blocks
+         RENDERED as hidden <div class="deck-slide"> (deck.slides=render) and the
+         CSS that keeps them out of the reading view (assets/deck.css ->
+         external/deck.css). The deck player (external/class.html) extracts those
+         hidden blocks by xml:id. This is the build the player reads. -->
+    <target name="web-deck" format="html" xsl="engs28-html.xsl">
+      <stringparams html.css.extra="external/deck.css" deck.slides="render" />
     </target>
   </targets>
 </project>

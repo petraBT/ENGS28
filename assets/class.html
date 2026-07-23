@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ENGS 28 — Class</title>
+    <style>
+      /* ENGS 28 classroom deck player — static, no backend. A deck (decks/*.json)
+         is a thin PLAYLIST: most slides are `ref` slides that pull a hidden
+         <slide> block out of a built book page (one source of truth); the rest
+         are short in-class glue (title/section/agenda/recap/prompt) rendered
+         here. Pinned to light so the projector and every laptop agree. */
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; height: 100%; background: #111; color: #1a1a19;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        overflow: hidden;
+      }
+      #stage-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      /* Strict 16:9 box letterboxed into the room's projector; type is sized
+         against the stage (cqmin), not the viewport, so a slide lays out the
+         same on the projector and an iPad. */
+      #stage {
+        position: relative;
+        width: min(100vw, calc(100vh * 16 / 9));
+        height: min(100vh, calc(100vw * 9 / 16));
+        background: #fff; overflow: hidden; container-type: size;
+        -webkit-user-select: none; user-select: none; touch-action: manipulation;
+      }
+      .slide { position: absolute; inset: 0; display: none; flex-direction: column; }
+      .slide.on { display: flex; }
+
+      /* Every slide's deck title, uniform across types. */
+      .slide h2.deck-title {
+        margin: 0; padding: 2.4% 4% 0 4%;
+        font-size: 3.2vmin; font-size: 3.2cqmin; font-weight: 600; color: #256abf;
+        letter-spacing: .01em; text-transform: uppercase;
+      }
+      .slide h2.deck-title:empty { display: none; }
+
+      /* --- glue slides (title / section / agenda / recap / prompt) --------- */
+      #glue { padding: 5.5% 7%; justify-content: center; }
+      #glue.top { justify-content: flex-start; }
+      #glue h2 {
+        margin: 0 0 .6em 0; font-size: 3.1vmin; font-size: 3.1cqmin; font-weight: 600;
+        letter-spacing: .01em; color: #256abf; text-transform: uppercase;
+      }
+      #glue .big { font-size: 4.6vmin; font-size: 4.6cqmin; font-weight: 600; line-height: 1.25; margin: 0 0 .5em 0; }
+      #glue .sub { font-size: 2.8vmin; font-size: 2.8cqmin; color: #52514e; margin: .2em 0 0 0; }
+      #glue ul { margin: 0; padding: 0; list-style: none; }
+      #glue li {
+        font-size: 3.4vmin; font-size: 3.4cqmin; line-height: 1.55; margin-bottom: .7em;
+        padding-left: 1.4em; position: relative;
+      }
+      #glue li::before {
+        content: ""; position: absolute; left: 0; top: .55em;
+        width: .5em; height: .5em; border-radius: 50%; background: #2a78d6;
+      }
+      #glue .note { font-size: 2.6vmin; font-size: 2.6cqmin; color: #52514e; margin-top: .8em; line-height: 1.5; }
+      #glue code { font-family: "SFMono-Regular", Consolas, Menlo, monospace; font-size: .92em; background: #f0efec; padding: .12em .38em; border-radius: 4px; }
+      /* A "title" slide and a "section" divider are centered statements. */
+      #glue.center { align-items: center; text-align: center; justify-content: center; }
+      #glue .title-main { font-size: 6vmin; font-size: 6cqmin; font-weight: 700; color: #1a1a19; line-height: 1.15; }
+      #glue .section-kicker { font-size: 2.6vmin; font-size: 2.6cqmin; text-transform: uppercase; letter-spacing: .12em; color: #2a78d6; margin-bottom: .5em; }
+      #glue .section-main { font-size: 5vmin; font-size: 5cqmin; font-weight: 700; color: #1a1a19; }
+
+      /* --- ref slides (extracted from a built book page) ------------------- */
+      #ref { padding: 3.2% 4% 3.2% 4%; }
+      #ref .ref-cols { flex: 1; min-height: 0; display: flex; gap: 4%; align-items: flex-start; }
+      #ref .ref-body { flex: 1; min-width: 0; overflow: hidden; }
+      #ref .ref-media { flex: 1.05; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #ref.single .ref-media { display: none; }
+      #ref.single .ref-body { flex: 1; }
+      /* Extracted PreTeXt content, styled for the projector (arrives without the
+         book stylesheet). Scoped under #ref so nothing leaks to glue slides. */
+      #ref .ref-body p, #ref .ref-body .para { font-size: 3vmin; font-size: 3cqmin; line-height: 1.5; margin: 0 0 .6em 0; }
+      #ref .ref-body ul, #ref .ref-body ol { margin: 0; padding: 0; list-style: none; }
+      #ref .ref-body li {
+        font-size: 3.1vmin; font-size: 3.1cqmin; line-height: 1.5; margin-bottom: .6em;
+        padding-left: 1.3em; position: relative;
+      }
+      #ref .ref-body li::before {
+        content: ""; position: absolute; left: 0; top: .55em;
+        width: .45em; height: .45em; border-radius: 50%; background: #2a78d6;
+      }
+      #ref code { font-family: "SFMono-Regular", Consolas, Menlo, monospace; font-size: .9em; background: #f0efec; padding: .1em .35em; border-radius: 4px; }
+      #ref pre.program {
+        font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+        font-size: 2.2vmin; font-size: 2.2cqmin; line-height: 1.4; margin: .3em 0;
+        background: #f7f6f3; border: 1px solid #ddd9d0; border-radius: 6px;
+        padding: 1em 1.2em; white-space: pre; overflow: auto;
+      }
+      #ref pre.program code { background: none; padding: 0; font-size: 1em; }
+      /* Syntax colours (highlightC), lifted from the coding window's theme. */
+      #ref pre .t-keyword { color: #708; } #ref pre .t-type { color: #085; }
+      #ref pre .t-number { color: #164; } #ref pre .t-comment { color: #a50; }
+      #ref pre .t-string { color: #a11; } #ref pre .t-meta { color: #555; }
+      /* The resolved figure (image + caption). */
+      #ref .ref-media figure, #ref .ref-media .figure-like { margin: 0; text-align: center; }
+      #ref .ref-media img { max-width: 100%; max-height: 66cqh; object-fit: contain; }
+      #ref .ref-media figcaption, #ref .ref-media .figure-caption {
+        font-size: 1.9vmin; font-size: 1.9cqmin; color: #52514e; line-height: 1.4; margin-top: .6em;
+      }
+      #ref .ref-media .autopermalink, #ref .autopermalink { display: none; }
+
+      #err { padding: 8cqmin; font-size: 3cqmin; color: #b3261e; display: none; }
+      #err.on { display: block; }
+
+      /* --- chrome --------------------------------------------------------- */
+      #bar {
+        position: absolute; left: 0; right: 0; bottom: 0; height: 34px; z-index: 6;
+        display: flex; align-items: center; gap: 14px; padding: 0 14px;
+        background: rgba(13,13,13,.86); font-size: 12px; color: #c3c2b7; border-top: 1px solid #2c2c2a;
+      }
+      #bar .spacer { flex: 1; }
+      #bar button { font: inherit; color: #ccc; background: transparent; border: 1px solid #3a3a38; border-radius: 4px; padding: 3px 9px; cursor: pointer; }
+      #bar button:hover { background: #232322; }
+      #title { color: #f2f2f2; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div id="stage-wrap">
+      <div id="stage">
+        <div id="glue" class="slide"></div>
+        <div id="ref" class="slide">
+          <h2 class="deck-title" id="ref-title"></h2>
+          <div class="ref-cols">
+            <div class="ref-body" id="ref-body"></div>
+            <div class="ref-media" id="ref-media"></div>
+          </div>
+        </div>
+        <div id="err" class="slide"></div>
+        <div id="bar">
+          <span id="title"></span>
+          <span class="spacer"></span>
+          <span id="pos"></span>
+          <button id="prev" type="button">&larr;</button>
+          <button id="next" type="button">&rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        'use strict'
+        var params = new URLSearchParams(location.search)
+        var deckId = params.get('deck')
+
+        var glueEl = document.getElementById('glue')
+        var refEl = document.getElementById('ref')
+        var refTitle = document.getElementById('ref-title')
+        var refBody = document.getElementById('ref-body')
+        var refMedia = document.getElementById('ref-media')
+        var errEl = document.getElementById('err')
+        var titleEl = document.getElementById('title')
+        var posEl = document.getElementById('pos')
+
+        var deck = null
+
+        function fail(msg) { errEl.textContent = msg; showOnly(errEl) }
+        function showOnly(el) {
+          ;[glueEl, refEl, errEl].forEach(function (s) { s.classList.toggle('on', s === el) })
+        }
+        // Deck text is authored by us, so small markup (<code>, &rarr;) is HTML.
+        function html(s) { return String(s == null ? '' : s) }
+        function esc(s) {
+          return String(s).replace(/[&<>"]/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+          })
+        }
+
+        function currentIndex() {
+          var n = parseInt(location.hash.replace('#', ''), 10)
+          if (isNaN(n) || n < 1) n = 1
+          if (deck && n > deck.slides.length) n = deck.slides.length
+          return n
+        }
+        function go(n) {
+          var max = deck ? deck.slides.length : 1
+          n = Math.max(1, Math.min(max, n))
+          if (n === currentIndex() && location.hash) { render(); return }
+          location.hash = String(n)
+        }
+
+        /* --- a self-contained C highlighter, reused from the ENGS 20 handout so
+           extracted code listings match the coding window. Left-to-right scan so
+           a keyword inside a string/comment is not miscoloured; output escaped. */
+        function highlightC(src) {
+          var KEYWORDS = { 'if':1,'else':1,'for':1,'while':1,'do':1,'switch':1,'case':1,'default':1,
+            'break':1,'continue':1,'return':1,'goto':1,'sizeof':1,'typedef':1,'struct':1,'union':1,
+            'enum':1,'static':1,'const':1,'extern':1,'register':1,'volatile':1,'auto':1,'inline':1 }
+          var TYPES = { 'int':1,'char':1,'float':1,'double':1,'void':1,'short':1,'long':1,
+            'unsigned':1,'signed':1,'bool':1,'size_t':1,'FILE':1,'uint8_t':1,'uint16_t':1,'uint32_t':1 }
+          var i = 0, n = src.length, out = '', atLineStart = true
+          function emit(cls, text) { out += '<span class="t-' + cls + '">' + esc(text) + '</span>' }
+          var isIdent = /[A-Za-z0-9_]/, isDigit = /[0-9]/, isNum = /[0-9a-fA-FxX.uUlLfF]/
+          while (i < n) {
+            var c = src.charAt(i)
+            if (c === '\n') { out += '\n'; i++; atLineStart = true; continue }
+            if (c === ' ' || c === '\t') { out += c; i++; continue }
+            if (c === '#' && atLineStart) {
+              var e = i; while (e < n && src.charAt(e) !== '\n') e++
+              var line = src.slice(i, e)
+              var m = line.match(/^(#\s*[a-z]+\s*)(<[^>]*>|"[^"]*")?([\s\S]*)$/)
+              if (m) { emit('meta', m[1]); if (m[2]) emit('string', m[2]); if (m[3]) emit('meta', m[3]) }
+              else { emit('meta', line) }
+              i = e; atLineStart = false; continue
+            }
+            atLineStart = false
+            if (c === '/' && src.charAt(i + 1) === '/') {
+              var le = i; while (le < n && src.charAt(le) !== '\n') le++
+              emit('comment', src.slice(i, le)); i = le; continue
+            }
+            if (c === '/' && src.charAt(i + 1) === '*') {
+              var be = i + 2; while (be < n && !(src.charAt(be) === '*' && src.charAt(be + 1) === '/')) be++
+              be = Math.min(n, be + 2); emit('comment', src.slice(i, be)); i = be; continue
+            }
+            if (c === '"' || c === "'") {
+              var se = i + 1; while (se < n && src.charAt(se) !== c) { if (src.charAt(se) === '\\') se++; se++ }
+              se = Math.min(n, se + 1); emit('string', src.slice(i, se)); i = se; continue
+            }
+            if (isDigit.test(c) || (c === '.' && isDigit.test(src.charAt(i + 1)))) {
+              var ne = i; while (ne < n && isNum.test(src.charAt(ne))) ne++
+              emit('number', src.slice(i, ne)); i = ne; continue
+            }
+            if (/[A-Za-z_]/.test(c)) {
+              var we = i; while (we < n && isIdent.test(src.charAt(we))) we++
+              var word = src.slice(i, we)
+              if (KEYWORDS[word]) emit('keyword', word)
+              else if (TYPES[word]) emit('type', word)
+              else out += esc(word)
+              i = we; continue
+            }
+            out += esc(c); i++
+          }
+          return out
+        }
+
+        // Book pages, fetched once and cached (several slides can share a page).
+        var pageCache = {}
+        function fetchPage(page) {
+          if (pageCache[page]) return pageCache[page]
+          var url = new URL('../' + page, location.href).href
+          pageCache[page] = fetch(url)
+            .then(function (r) { return r.ok ? r.text() : null })
+            .then(function (t) { return t == null ? null : { doc: new DOMParser().parseFromString(t, 'text/html'), url: url } })
+            .catch(function () { return null })
+          return pageCache[page]
+        }
+
+        // Relative URLs in extracted markup (image src, etc.) are relative to the
+        // BOOK PAGE, but we render inside external/class.html, so re-resolve them
+        // against the page's own URL or they 404.
+        function absolutize(root, baseUrl) {
+          ;[].forEach.call(root.querySelectorAll('img[src]'), function (img) {
+            img.src = new URL(img.getAttribute('src'), baseUrl).href
+          })
+          ;[].forEach.call(root.querySelectorAll('a[href]'), function (a) {
+            a.href = new URL(a.getAttribute('href'), baseUrl).href
+          })
+        }
+        // Re-highlight PreTeXt code blocks (they arrive as plain escaped text).
+        function highlightBlocks(root) {
+          ;[].forEach.call(root.querySelectorAll('pre.program code, pre.program'), function (el) {
+            if (el.tagName === 'PRE' && el.querySelector('code')) return
+            el.innerHTML = highlightC(el.textContent)
+          })
+        }
+        // Strip book chrome that has no meaning on a slide.
+        function strip(root) {
+          ;[].forEach.call(root.querySelectorAll('.autopermalink, script, .knowl-output'), function (el) {
+            if (el.parentNode) el.parentNode.removeChild(el)
+          })
+        }
+
+        function renderRef(slide) {
+          refTitle.innerHTML = html(slide.title || '')
+          titleEl.innerHTML = html(slide.title || '')
+          refBody.innerHTML = ''
+          refMedia.innerHTML = ''
+          refEl.classList.add('single')
+          showOnly(refEl)
+          fetchPage(slide.page).then(function (res) {
+            if (!res) { fail('Could not load ' + slide.page); return }
+            var block = res.doc.getElementById(slide.slide)
+            if (!block) { fail('Slide "' + slide.slide + '" not found on ' + slide.page); return }
+            var body = block.querySelector('.deck-slide-body') || block
+            var bodyClone = body.cloneNode(true)
+            strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone)
+            while (bodyClone.firstChild) refBody.appendChild(bodyClone.firstChild)
+
+            var refId = block.getAttribute('data-deck-ref')
+            if (refId) {
+              var target = res.doc.getElementById(refId)
+              if (target) {
+                var mediaClone = target.cloneNode(true)
+                strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone)
+                refMedia.appendChild(mediaClone)
+                refEl.classList.remove('single')
+              }
+            }
+          })
+        }
+
+        function renderGlue(slide) {
+          showOnly(glueEl)
+          glueEl.className = 'slide on'   // reset modifiers
+          titleEl.innerHTML = html(slide.title || '')
+          var parts = []
+          if (slide.type === 'title') {
+            glueEl.classList.add('center')
+            parts.push('<div class="title-main">' + html(slide.title || '') + '</div>')
+            if (slide.subtitle) parts.push('<div class="sub">' + html(slide.subtitle) + '</div>')
+          } else if (slide.type === 'section') {
+            glueEl.classList.add('center')
+            if (slide.kicker) parts.push('<div class="section-kicker">' + html(slide.kicker) + '</div>')
+            parts.push('<div class="section-main">' + html(slide.title || '') + '</div>')
+          } else {
+            // agenda / recap / prompt: title + bullets and/or body + note
+            if (slide.type === 'prompt') glueEl.classList.add('top')
+            parts.push('<h2>' + html(slide.title || '') + '</h2>')
+            if (slide.body) parts.push('<p class="big">' + html(slide.body) + '</p>')
+            if (slide.items) {
+              parts.push('<ul>')
+              slide.items.forEach(function (it) { parts.push('<li>' + html(it) + '</li>') })
+              parts.push('</ul>')
+            }
+            if (slide.note) parts.push('<p class="note">' + html(slide.note) + '</p>')
+          }
+          glueEl.innerHTML = parts.join('')
+        }
+
+        function render() {
+          if (!deck) return
+          var slide = deck.slides[currentIndex() - 1]
+          posEl.textContent = currentIndex() + ' / ' + deck.slides.length
+          if (!slide) return
+          if (slide.type === 'ref') renderRef(slide)
+          else renderGlue(slide)
+        }
+
+        window.addEventListener('hashchange', render)
+        document.getElementById('prev').addEventListener('click', function () { go(currentIndex() - 1) })
+        document.getElementById('next').addEventListener('click', function () { go(currentIndex() + 1) })
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(currentIndex() + 1) }
+          else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(currentIndex() - 1) }
+          else if (e.key === 'Home') { e.preventDefault(); go(1) }
+          else if (e.key === 'End') { e.preventDefault(); go(deck ? deck.slides.length : 1) }
+        })
+
+        if (!deckId) { fail('No deck specified. Open with ?deck=<id>.'); return }
+        fetch('decks/' + encodeURIComponent(deckId) + '.json')
+          .then(function (r) { if (!r.ok) throw new Error('no deck "' + deckId + '" (' + r.status + ')'); return r.json() })
+          .then(function (d) {
+            deck = d
+            if (!deck.slides || !deck.slides.length) throw new Error('deck has no slides')
+            document.title = 'ENGS 28 — ' + (deck.title || deckId)
+            if (!location.hash) location.hash = '1'
+            render()
+          })
+          .catch(function (e) { fail('Could not load this deck. ' + e.message) })
+      })()
+    </script>
+  </body>
+</html>
