@@ -35,6 +35,15 @@
      number to the unknown element (which errors under the stock stylesheet). -->
 <xsl:param name="deck.slides" select="'strip'"/>
 
+<!-- Inline coloured text for slides: <clr c="orange">Channel 1</clr> ->
+     <span class="deck-clr-orange">. Colours are styled in the deck player
+     (assets/class.html). Meant for slide bullets that mirror a colour in the
+     figure beside them (e.g. scope channels); the reading book strips <slide>
+     entirely, so this never affects normal prose. -->
+<xsl:template match="clr">
+    <span class="deck-clr-{@c}"><xsl:apply-templates/></span>
+</xsl:template>
+
 <!-- The condensed in-class slide form of the surrounding content.
        <slide xml:id="sl-..."  ref="fig-...optional">
          <ul> ...condensed bullets... </ul>   (or short <p>s)
