@@ -717,33 +717,73 @@ int main(void) {
                 </ul>
             </slide>
 
+            <slide xml:id="sl-day1-or-operator">
+                <p>First the operator on its own. Bitwise <c>|</c> (OR) compares two values one column at a time — the result bit is <c>1</c> if <em>either</em> input bit is <c>1</c>:</p>
+                <sidebyside widths="56% 32%" margins="2%" valign="middle">
+                    <program language="c"><code><![CDATA[
+    0b 0000 1111
+  | 0b 1010 0000
+  --------------
+  = 0b 1010 1111
+]]></code></program>
+                    <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                        <row header="yes" bottom="minor"><cell>A</cell><cell>B</cell><cell>A | B</cell></row>
+                        <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                        <row><cell>0</cell><cell>1</cell><cell>1</cell></row>
+                        <row><cell>1</cell><cell>0</cell><cell>1</cell></row>
+                        <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
+                    </tabular>
+                </sidebyside>
+                <p>Each column is independent — there is no carrying like in addition.</p>
+            </slide>
+
             <slide xml:id="sl-day1-set-bit">
-                <p><c>reg |= mask</c> — bitwise OR <em>sets</em> every bit that is <c>1</c> in the mask, and leaves the rest alone:</p>
-                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
-                    <row header="yes" bottom="minor"><cell>A (reg bit)</cell><cell>B (mask bit)</cell><cell>A | B</cell></row>
-                    <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
-                    <row><cell>0</cell><cell>1</cell><cell>1</cell></row>
-                    <row><cell>1</cell><cell>0</cell><cell>1</cell></row>
-                    <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
-                </tabular>
+                <p>Now <c>reg |= mask</c> — shorthand for <c>reg = reg | mask</c>. OR-ing with a mask <em>sets</em> the mask's <c>1</c>-bits and leaves every other bit untouched, so you can turn one bit on without disturbing the rest:</p>
+                <program language="c"><code><![CDATA[
+    ODR      = 0b 0000 0010     bit 1 already on
+  | LED_PIN  = 0b 0010 0000     the mask: bit 5
+  ---------------------------
+  = ODR      = 0b 0010 0010     bit 5 now on, bit 1 untouched
+]]></code></program>
                 <ul>
-                    <li>Mask bit <c>1</c> → result forced to <c>1</c>. Mask bit <c>0</c> → bit left unchanged.</li>
-                    <li><c>GPIOA-&gt;ODR |= LED_PIN;</c> forces bit 5 high (LED on) and touches nothing else.</li>
+                    <li>Where the mask is <c>1</c> the bit is forced to <c>1</c>; where the mask is <c>0</c> the bit is left as-is.</li>
+                    <li><c>GPIOA-&gt;ODR |= LED_PIN;</c> turns the LED on and touches nothing else.</li>
                 </ul>
             </slide>
 
+            <slide xml:id="sl-day1-and-operator">
+                <p>Clearing a bit takes two operators. Bitwise <c>&amp;</c> (AND) keeps a <c>1</c> only where <em>both</em> inputs are <c>1</c> — so AND with <c>0</c> forces a bit to <c>0</c>, and AND with <c>1</c> leaves it unchanged:</p>
+                <sidebyside widths="56% 32%" margins="2%" valign="middle">
+                    <program language="c"><code><![CDATA[
+    0b 1010 1111
+  & 0b 1111 0111
+  --------------
+  = 0b 1010 0111
+]]></code></program>
+                    <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                        <row header="yes" bottom="minor"><cell>A</cell><cell>B</cell><cell>A &amp; B</cell></row>
+                        <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                        <row><cell>0</cell><cell>1</cell><cell>0</cell></row>
+                        <row><cell>1</cell><cell>0</cell><cell>0</cell></row>
+                        <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
+                    </tabular>
+                </sidebyside>
+                <p>To clear one bit we need a mask that is <c>0</c> in just that spot — that is what <c>~</c> builds.</p>
+            </slide>
+
             <slide xml:id="sl-day1-clear-bit">
-                <p><c>reg &amp;= ~mask</c> — <c>~</c> flips the mask (a single <c>0</c> among <c>1</c>s), then AND clears just that bit:</p>
-                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
-                    <row header="yes" bottom="minor"><cell>A (reg bit)</cell><cell>B (mask bit)</cell><cell>A &amp; B</cell></row>
-                    <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
-                    <row><cell>0</cell><cell>1</cell><cell>0</cell></row>
-                    <row><cell>1</cell><cell>0</cell><cell>0</cell></row>
-                    <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
-                </tabular>
+                <p><c>~</c> flips every bit, turning a single-<c>1</c> mask into a single-<c>0</c> mask. Then <c>reg &amp;= ~mask</c> clears just that bit and leaves the rest:</p>
+                <program language="c"><code><![CDATA[
+    LED_PIN  = 0b 0010 0000     the mask: bit 5
+   ~LED_PIN  = 0b 1101 1111     one 0, rest 1s
+
+    ODR      = 0b 0010 0010
+  & ~LED_PIN = 0b 1101 1111
+  ---------------------------
+  = ODR      = 0b 0000 0010     bit 5 cleared, bit 1 untouched
+]]></code></program>
                 <ul>
-                    <li><c>~LED_PIN</c> = <c>…1101 1111</c> — a <c>0</c> at bit 5, <c>1</c>s elsewhere. AND with <c>0</c> forces low; AND with <c>1</c> leaves unchanged.</li>
-                    <li><c>GPIOA-&gt;ODR &amp;= ~LED_PIN;</c> forces bit 5 low (LED off) and touches nothing else.</li>
+                    <li><c>GPIOA-&gt;ODR &amp;= ~LED_PIN;</c> turns the LED off and touches nothing else.</li>
                 </ul>
             </slide>
 
