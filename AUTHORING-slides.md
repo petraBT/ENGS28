@@ -149,7 +149,12 @@ complex diagram gets its own image-dominant slide so she can talk over it.
   instructive caption right).
 - *the diagram/photo IS the point* (register diagrams, scope captures) →
   image-dominant, big, with just an instructive caption.
+- *a WIDE image with a few talking points* → `<slide ref="fig" stack="yes">`:
+  bullets span the full width on top, the figure sits full-width (large) below.
 - *code or an activity* → full width.
+
+Slide figures fill the space automatically (the book's small reading-page image
+width is overridden), so you don't size them per slide.
 
 **Solutions and instructor reminders are never student-facing.** Solution
 listings are `"instructor": true`; how-to-solve-it hints are `<note>`s.
