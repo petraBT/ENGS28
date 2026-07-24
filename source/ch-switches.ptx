@@ -1493,6 +1493,9 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
             </p>
             <activity xml:id="act-day4-code-review">
                 <title>toggleLED Code Review</title>
+                <introduction>
+                    <p>Set up your Nucleo with your <c>toggleLED.c</c> (debounce capacitor across the switch) and share it with your group.</p>
+                </introduction>
                 <task>
                     <p>
                         Read each partner's code.  Can you follow its logic
@@ -1512,6 +1515,61 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
                     </p>
                 </task>
             </activity>
+
+
+            <slide xml:id="sl-day4-sol1">
+                <p>Solution — toggleLED.c (structure 1)</p>
+                <program language="c"><code><![CDATA[
+#include "ES28.h"
+#define GPIOAEN (1U<<0)
+#define GPIOBEN (1U<<1)
+#define LED_PIN    (1U<<5)   // PA5 / D13
+#define BUTTON_PIN (1U<<4)   // PB4 / D5
+int main(void) {
+    unsigned buttonAlreadyPressed = 0, buttonPushed;
+    RCC->IOPENR |= (GPIOAEN | GPIOBEN);
+    GPIOA->MODER |= (1U<<10);  GPIOA->MODER &= ~(1U<<11);   // PA5 output
+    GPIOB->MODER &= ~(1U<<8) & ~(1U<<9);                    // PB4 input
+    GPIOB->PUPDR |= (1U<<8);   GPIOB->PUPDR &= ~(1U<<9);    // PB4 pull-up
+    while (1) {
+        buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0);
+        if (!buttonAlreadyPressed) {
+            if (buttonPushed) { GPIOA->ODR ^= LED_PIN; buttonAlreadyPressed = 1; }
+        } else {
+            if (!buttonPushed) buttonAlreadyPressed = 0;
+        }
+    }
+}
+]]></code></program>
+            </slide>
+
+            <slide xml:id="sl-day4-sol2">
+                <p>Solution — toggleLED.c (structure 2)</p>
+                <program language="c"><code><![CDATA[
+#include "ES28.h"
+#define GPIOAEN (1U<<0)
+#define GPIOBEN (1U<<1)
+#define LED_PIN    (1U<<5)   // PA5 / D13
+#define BUTTON_PIN (1U<<4)   // PB4 / D5
+int main(void) {
+    unsigned buttonAlreadyPressed = 0, buttonPushed;
+    RCC->IOPENR |= (GPIOAEN | GPIOBEN);
+    GPIOA->MODER |= (1U<<10);  GPIOA->MODER &= ~(1U<<11);   // PA5 output
+    GPIOB->MODER &= ~(1U<<8) & ~(1U<<9);                    // PB4 input
+    GPIOB->PUPDR |= (1U<<8);   GPIOB->PUPDR &= ~(1U<<9);    // PB4 pull-up
+    while (1) {
+        buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0);
+        if (buttonPushed) {
+            if (buttonAlreadyPressed == 0) {
+                GPIOA->ODR ^= LED_PIN; buttonAlreadyPressed = 1;
+            }
+        } else {
+            buttonAlreadyPressed = 0;
+        }
+    }
+}
+]]></code></program>
+            </slide>
         </subsection>
 
         <!-- ── Part 2: FSM Mini-Lecture (≈15 min) ────────────── -->
@@ -1574,6 +1632,49 @@ int main(void) {
                 in a larger main loop that also blinks LEDs, reads a UART, or does other
                 work — the state variable preserves context across iterations.
             </p>
+
+
+            <slide xml:id="sl-day4-fsm-diagram" ref="fig-state-diagram">
+                <ul>
+                    <li>The <c>buttonAlreadyPressed</c> variable is the state.</li>
+                    <li>Two states: Unpressed / Pressed.</li>
+                    <li>The LED toggles exactly once — on the Unpressed → Pressed transition.</li>
+                    <li>The snippet on each arrow is the C expression that triggers it.</li>
+                </ul>
+                <caption>Button-toggle FSM: two states, with the triggering C expression on each transition.</caption>
+            </slide>
+
+            <slide xml:id="sl-day4-enum-switch">
+                <p>The same logic as idiomatic C — <c>typedef enum</c> + <c>switch</c>:</p>
+                <program language="c"><code><![CDATA[
+typedef enum { UNPRESSED, PRESSED } state_t;
+state_t state = UNPRESSED;
+while (1) {
+    int btn = !(GPIOB->IDR & (1U << 4));   // 1 if pressed (active-low)
+    switch (state) {
+    case UNPRESSED:
+        if (btn) {
+            GPIOA->ODR ^= (1U << 5);   // toggle LED on press
+            state = PRESSED;
+        }
+        break;
+    case PRESSED:
+        if (!btn) state = UNPRESSED;    // wait for release
+        break;
+    }
+}
+]]></code></program>
+            </slide>
+
+            <slide xml:id="sl-day4-why">
+                <p><em>Why write it this way?</em></p>
+                <ul>
+                    <li>No blocking <c>while</c> loop inside — the FSM does a little work each pass and returns.</li>
+                    <li>So it embeds inside a larger main loop that also blinks LEDs, reads a UART, or does other work.</li>
+                    <li>The state variable preserves context across iterations.</li>
+                    <li>A finite state machine = states, events that cause transitions, and actions on each transition. It scales cleanly as you add states or events.</li>
+                </ul>
+            </slide>
         </subsection>
 
         <!-- ── Part 3: State Machine Design (≈20 min) ─────────── -->
