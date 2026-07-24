@@ -349,17 +349,77 @@ GPIOA->ODR |= (count << LED1_BIT);
                 </task>
             </activity>
 
-            <!-- Code slide whose listing is INSTRUCTOR-ONLY (a full solution not
-                 in the student book): inlined here, so it is hidden from readers
-                 but projected on the slide. (Programs are not ref-targetable in
+            <!-- Instructor solution listings for the Lab 1 blinky programs.
+                 Inlined in <slide> blocks so they are hidden from the reading
+                 book but projected in class. (Programs are not ref-targetable in
                  PreTeXt, so code lives inline; figures/activities use ref.) -->
-            <slide xml:id="sl-day3-cnt-solution">
-                <p>Solution — <c>blinkyCNT.c</c> inner loop:</p>
+            <slide xml:id="sl-day3-sim-solution">
+                <p>Solution — <c>blinkySIM.c</c></p>
                 <program language="c"><code><![CDATA[
-for (count = 0; count < 8; count++) {
-    GPIOA->ODR &= ~LED_ALL;             // clear the three LED bits
-    GPIOA->ODR |= (count << LED1_BIT);  // write the 3-bit count
-    delay_ms(500);
+#include "ES28.h"
+#define GPIOAEN   (1U<<0)     // bit 0 enables clock for GPIOA
+// LEDs on D13, D12, D11 (PA5, 6, 7)
+#define LED_PIN1  (1U<<5)
+#define LED_PIN2  (1U<<6)
+#define LED_PIN3  (1U<<7)
+#define LED_ALL   (LED_PIN1 | LED_PIN2 | LED_PIN3)
+int main(void) {
+    RCC->IOPENR |= GPIOAEN;                       // 1. clock access to GPIOA
+    GPIOA->MODER |= (1U<<10)|(1U<<12)|(1U<<14);   // 2. PA5,6,7 as outputs
+    GPIOA->MODER &= ~(1U<<11) & ~(1U<<13) & ~(1U<<15);
+    while (1) {
+        GPIOA->ODR |=  LED_ALL;   // 3. turn LEDs on
+        delay_ms(500);
+        GPIOA->ODR &= ~LED_ALL;   // 4. turn LEDs off
+        delay_ms(500);
+    }
+}
+]]></code></program>
+            </slide>
+            <slide xml:id="sl-day3-seq-solution">
+                <p>Solution — <c>blinkySEQ.c</c></p>
+                <program language="c"><code><![CDATA[
+#include "ES28.h"
+#define GPIOAEN   (1U<<0)
+#define LED_PIN1  (1U<<5)
+#define LED_PIN2  (1U<<6)
+#define LED_PIN3  (1U<<7)
+int main(void) {
+    RCC->IOPENR |= GPIOAEN;                       // clock access to GPIOA
+    GPIOA->MODER |= (1U<<10)|(1U<<12)|(1U<<14);   // PA5,6,7 as outputs
+    GPIOA->MODER &= ~(1U<<11) & ~(1U<<13) & ~(1U<<15);
+    while (1) {
+        GPIOA->ODR = (GPIOA->ODR & ~LED_PIN3) | LED_PIN1;  // -> LED1
+        delay_ms(500);
+        GPIOA->ODR = (GPIOA->ODR & ~LED_PIN1) | LED_PIN2;  // -> LED2
+        delay_ms(500);
+        GPIOA->ODR = (GPIOA->ODR & ~LED_PIN2) | LED_PIN3;  // -> LED3
+        delay_ms(500);
+    }
+}
+]]></code></program>
+            </slide>
+            <slide xml:id="sl-day3-cnt-solution">
+                <p>Solution — <c>blinkyCNT.c</c></p>
+                <program language="c"><code><![CDATA[
+#include "ES28.h"
+#define GPIOAEN   (1U<<0)
+#define LED1_BIT  5
+#define LED_PIN1  (1U<<LED1_BIT)
+#define LED_PIN2  (1U<<(LED1_BIT+1))
+#define LED_PIN3  (1U<<(LED1_BIT+2))
+#define LED_ALL   (LED_PIN1 | LED_PIN2 | LED_PIN3)
+int main(void) {
+    RCC->IOPENR |= GPIOAEN;                       // clock access to GPIOA
+    GPIOA->MODER |= (1U<<10)|(1U<<12)|(1U<<14);   // PA5,6,7 as outputs
+    GPIOA->MODER &= ~(1U<<11) & ~(1U<<13) & ~(1U<<15);
+    while (1) {
+        for (unsigned count = 0; count < 8; count++) {
+            GPIOA->ODR &= ~LED_ALL;          // turn all LEDs off
+            GPIOA->ODR |= count << LED1_BIT; // write the count
+            delay_ms(500);
+        }
+    }
 }
 ]]></code></program>
             </slide>
@@ -386,6 +446,14 @@ for (count = 0; count < 8; count++) {
                        width="75%"/>
             </figure>
 
+            <slide xml:id="sl-day3-ad2-photo" ref="fig-ad2-photo">
+                <ul>
+                    <li>A compact USB instrument: oscilloscope, waveform generator, logic analyzer, and more.</li>
+                    <li>Plug it into your laptop and open the <em>Waveforms</em> application.</li>
+                    <li>Your window into the real voltages on your circuit.</li>
+                </ul>
+            </slide>
+
             <p>
                 The AD2 connects to your circuit through flexible
                 <term>flying leads</term> — color-coded wires that plug directly
@@ -411,7 +479,8 @@ for (count = 0; count < 8; count++) {
             <slide xml:id="sl-day3-ad2-pinout" ref="fig-ad2-pinout">
                 <ul>
                     <li>Color-coded flying leads plug straight into breadboard holes.</li>
-                    <li>Channel 1 = <c>1+</c>/<c>1−</c> (orange); Channel 2 = <c>2+</c>/<c>2−</c> (blue).</li>
+                    <li><clr c="orange">Channel 1 = 1+ / 1−  (orange)</clr></li>
+                    <li><clr c="blue">Channel 2 = 2+ / 2−  (blue)</clr></li>
                     <li>Each channel has a plus (signal) and a minus (ground-reference) lead.</li>
                     <li>The minus leads have a white stripe — always connect these to GND.</li>
                 </ul>
@@ -433,6 +502,14 @@ for (count = 0; count < 8; count++) {
                 <image source="images/Day03-Switches/slide18_b0119462.png"
                        width="80%"/>
             </figure>
+
+            <slide xml:id="sl-day3-ad2-wiring" ref="fig-ad2-wiring">
+                <ul>
+                    <li>Load <c>blinkySEQ.c</c> onto your Nucleo.</li>
+                    <li>Connect both minus (white-stripe) leads to GND.</li>
+                    <li>CH1 (+) → one LED anode; CH2 (+) → a second LED anode.</li>
+                </ul>
+            </slide>
 
             <p>
                 Open <em>Scope</em> in Waveforms and press <em>Run</em>.
@@ -460,6 +537,16 @@ for (count = 0; count < 8; count++) {
                 </sidebyside>
             </figure>
 
+            <slide xml:id="sl-day3-ad2-debrief" ref="fig-ad2-waveform">
+                <ul>
+                    <li><term>Time Base</term> — time across the screen (100 ms/div for a blink; 20 µs/div for bounce).</li>
+                    <li><term>Range</term> — vertical scale, V/div; fill about half the height.</li>
+                    <li><term>Offset</term> — shift a channel to separate overlapping traces.</li>
+                    <li><term>Trigger</term> — start capture when a signal crosses a threshold.</li>
+                </ul>
+                <note>REVEAL after the Exploring activity — confirm what students discovered about each control.</note>
+            </slide>
+
             <p>
                 To measure a time interval precisely, use the
                 <term>cursor</term> tool: drag two vertical cursor lines to the
@@ -474,6 +561,14 @@ for (count = 0; count < 8; count++) {
                 <image source="images/Day03x-Debounce/slide04_9157d76f.png"
                        width="85%"/>
             </figure>
+
+            <slide xml:id="sl-day3-ad2-cursors" ref="fig-ad2-cursors">
+                <ul>
+                    <li>Drag two vertical cursors to the rising and falling edges of a pulse.</li>
+                    <li>The toolbar shows the time difference (Δt) between them.</li>
+                    <li>You will use this to measure pulse widths — and soon, switch bounce.</li>
+                </ul>
+            </slide>
 
             <activity xml:id="act-day3-ad2-explore">
                 <title>Exploring the Oscilloscope</title>
@@ -552,6 +647,14 @@ for (count = 0; count < 8; count++) {
                        width="65%"/>
             </figure>
 
+            <slide xml:id="sl-day3-pushbutton-wiring" ref="fig-pushbutton-wiring">
+                <ul>
+                    <li>Add a pushbutton to your Lab 1 breadboard.</li>
+                    <li>Wire one side to D5, the other side to GND.</li>
+                    <li>Use <em>D5 (PB4)</em> specifically — <c>button.c</c> is written for PB4.</li>
+                </ul>
+            </slide>
+
             <p>
                 Without any extra circuitry, an unconnected GPIO pin
                 <term>floats</term>: its voltage drifts with electrical noise
@@ -576,17 +679,34 @@ for (count = 0; count < 8; count++) {
                        width="70%"/>
             </figure>
 
+            <slide xml:id="sl-day3-pushbutton-active-low" ref="fig-pushbutton-schematic">
+                <ul>
+                    <li>An unconnected pin <term>floats</term> — it drifts with noise, reading random 0s and 1s.</li>
+                    <li>A pull-up resistor to 3.3 V holds the pin HIGH when the button is open.</li>
+                    <li>Pressing connects the pin to GND → pulls it LOW.</li>
+                    <li><term>Active-low</term>: pressed = 0, released = 1.</li>
+                    <li>The STM32 has ~40 kΩ internal pull-ups you enable in software — no external resistor needed.</li>
+                </ul>
+            </slide>
+
             <figure xml:id="fig-io-port-bit">
-                <caption>Internal structure of one GPIO bit, showing both
-                directions.  For reads (input): the pin voltage passes through
-                an optional pull-up or pull-down and a Schmitt trigger, then
-                lands in the Input Data Register.  For writes (output): data
-                flows from the Output Data Register through the output control
-                circuit to the pin.  The same pull-up and pull-down are
-                available in both modes.</caption>
+                <caption>One GPIO bit: read path (pin → Schmitt trigger → IDR) and write path (ODR → output control → pin).</caption>
                 <image source="images/Day03-Switches/ann-22.png"
                        width="80%"/>
             </figure>
+
+            <!-- Diagram-dominant slides: no bullets, so the deck renders the
+                 figure large for the instructor to talk over. These three views
+                 of the same port-bit diagram are each shown full-size. -->
+            <slide xml:id="sl-day3-portbit" ref="fig-io-port-bit"></slide>
+
+            <figure xml:id="fig-switch-port-bit">
+                <caption>The same bit wired to a button: the internal pull-up holds the pin HIGH when the switch is open; closing it pulls the pin LOW (blue path into IDR).</caption>
+                <image source="images/Day03-Switches/ann-24.png"
+                       width="80%"/>
+            </figure>
+
+            <slide xml:id="sl-day3-switch-portbit" ref="fig-switch-port-bit"></slide>
 
             <p>
                 Three registers control GPIO input behavior on the STM32.
@@ -600,15 +720,37 @@ for (count = 0; count < 8; count++) {
             </p>
 
             <figure xml:id="fig-input-config-diagram">
-                <caption>Which registers control which parts of a GPIO input.
-                <c>GPIOx→MODER</c> selects input vs. output mode.
-                <c>GPIOx→PUPDR</c> controls the internal pull-up or
-                pull-down.  The blue path shows the signal from the button,
-                through the pull-up circuit and Schmitt trigger, into
-                <c>GPIOx→IDR</c>.</caption>
+                <caption>Registers for a GPIO input: MODER (mode), PUPDR (pull-up/down), IDR (live level). Blue path: button → pull-up → Schmitt trigger → IDR.</caption>
                 <image source="images/Day03-Switches/ann-23.png"
                        width="85%"/>
             </figure>
+
+            <slide xml:id="sl-day3-input-config" ref="fig-input-config-diagram"></slide>
+
+            <slide xml:id="sl-day3-pb4-config">
+                <p>Reveal — configuring PB4 as an input:</p>
+                <program language="c"><code><![CDATA[
+// PB4 = D5, active-low button with internal pull-up
+#define GPIOBEN    (1U << 1)   // IOPENR bit 1 -> GPIOB clock
+#define BUTTON_PIN (1U << 4)   // PB4 = D5
+RCC->IOPENR |= GPIOBEN;        // 1. enable GPIOB clock
+// 2. MODER [9:8] = 00 by default -> input (no write needed)
+GPIOB->PUPDR |=  (1U << 8);    // 3. PUPDR [9:8] = 01 -> pull-up
+GPIOB->PUPDR &= ~(1U << 9);
+]]></code></program>
+                <note>OPTIONAL / REVEAL — show after the reference-manual activity if useful, or skip if the class is on track.</note>
+            </slide>
+
+            <slide xml:id="sl-day3-vil-vih">
+                <p><em>Reference — reading a pin (V_IL / V_IH):</em></p>
+                <ul>
+                    <li>Below V_IL (≈ 0.3 × VDD ≈ 1.0 V) reads a reliable 0.</li>
+                    <li>Above V_IH (≈ 0.7 × VDD ≈ 2.3 V) reads a reliable 1.</li>
+                    <li>In between is indeterminate — the result is unpredictable.</li>
+                    <li>Matters for slow-rising signals, noisy lines, or mixed supply voltages.</li>
+                </ul>
+                <note>OPTIONAL / REVEAL.</note>
+            </slide>
 
             <activity xml:id="act-day3-ref-manual">
                 <title>Finding Configuration Details in the Reference Manual</title>
@@ -640,6 +782,22 @@ for (count = 0; count < 8; count++) {
                     </p>
                 </task>
             </activity>
+
+            <slide xml:id="sl-day3-button-excerpt">
+                <p><c>button.c</c> — reading a pin (excerpt):</p>
+                <program language="c"><code><![CDATA[
+// PB4 = D5 button, PA5 = D13 LED (active-low button)
+GPIOB->PUPDR |=  (1U << 8);   // enable pull-up on PB4
+GPIOB->PUPDR &= ~(1U << 9);
+delay_ms(50);                 // give the pull-up time to pull the pin HIGH
+while (1) {
+    if ((GPIOB->IDR & BUTTON_PIN) == 0)  // low-true: 0 = pressed
+        GPIOA->ODR |=  LED_PIN;          // LED on
+    else
+        GPIOA->ODR &= ~LED_PIN;          // LED off
+}
+]]></code></program>
+            </slide>
 
             <activity xml:id="act-day3-button-c">
                 <title>Reading a Button in Code</title>
@@ -688,6 +846,24 @@ for (count = 0; count < 8; count++) {
                 <image source="images/Day03-Switches/slide36_428a4d33.png"
                        width="75%"/>
             </figure>
+
+            <slide xml:id="sl-day3-pullup-settling" ref="fig-pullup-settling">
+                <ul>
+                    <li>The pin does not jump to HIGH instantly — the pull-up charges the pin capacitance.</li>
+                    <li>It reaches the HIGH threshold in about 2.5 µs.</li>
+                    <li>Read IDR before it settles and you get a spurious 0 — so delay first.</li>
+                </ul>
+            </slide>
+
+            <slide xml:id="sl-day3-debounce-preview">
+                <p><em>Preview — a debounce capacitor slows this down more:</em></p>
+                <ul>
+                    <li>Tomorrow we add a capacitor across the button to tame bounce.</li>
+                    <li>With a 0.1 µF cap the pin takes ~4 ms to reach HIGH.</li>
+                    <li>Even more time to accidentally read the old 0 — a preview of Day 3X.</li>
+                </ul>
+                <note>OPTIONAL / REVEAL — preview of Day 3X.</note>
+            </slide>
         </subsection>
 
         <!-- ── Part 4: Button Exercises (≈15 min) ─────────────── -->
