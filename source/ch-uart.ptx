@@ -464,7 +464,40 @@
             If you load the wrong BRR, the hardware has no idea — it just
             divides.  That's why mismatch corrupts every byte."
             -->
-        </subsection>
+        
+
+            <slide xml:id="sl-uart-live-counter" ref="fig-counter-project-structure">
+                <ul>
+                    <li>You'll set up a project that prints a live counter over UART.</li>
+                    <li>Same workflow you'll use as a debugging tool all term.</li>
+                    <li><c>uart.c</c>/<c>uart.h</c> live in <c>Library/mylib/</c>; <c>counter.c</c> in <c>Src/</c>. All three from Canvas.</li>
+                </ul>
+                <caption>Finished Counter project in STM32CubeIDE.</caption>
+                <note>INSTRUCTOR DEMO — run the finished counter yourself (CoolTerm at 9600, press reset), let them watch, then switch to 4800 and 115200 and ask what they see. Don’t answer — let them hypothesize.</note>
+            </slide>
+
+            <figure xml:id="fig-coolterm-settings">
+                <caption>CoolTerm Options: Serial Port and Data Handling.</caption>
+                <sidebyside widths="48%% 48%%">
+                    <image source="images/Day05-UART/slide11_4fcf6192.png"/>
+                    <image source="images/Day05-UART/slide11_5bdba585.png"/>
+                </sidebyside>
+            </figure>
+
+            <slide xml:id="sl-uart-coolterm" ref="fig-coolterm-settings">
+                <caption>Serial Port: pick the USB-modem port; 9600 · 8 · None · 1, no flow control. Data Handling: Format TAB-separated text + Convert Non-printable Characters.</caption>
+            </slide>
+
+            <slide xml:id="sl-uart-see" ref="fig-counter-output">
+                <ul>
+                    <li>Each line prints once per 500 ms.</li>
+                    <li>Press the Nucleo reset button and the count restarts from zero.</li>
+                    <li>4800 baud is half the correct rate — the receiver samples each bit for twice as long, so every byte is corrupted. Baud mismatch = garbage.</li>
+                </ul>
+                <caption>CoolTerm showing counter output at 9600 baud.</caption>
+                <note>OPTIONAL / REVEAL — after the baud experiment.</note>
+            </slide>
+            </subsection>
 
         <!-- ── printf reference ─────────────────────────────────────── -->
         <subsection xml:id="subsec-uart-printf-usage">
@@ -529,7 +562,23 @@ int main(void) {
                 <c>int mV = (int)(voltage * 1000)</c> and print
                 <c>printf("%d mV", mV)</c>.
             </p>
-        </subsection>
+        
+
+            <slide xml:id="sl-uart-printf">
+                <ul>
+                    <li>Setup: add <c>#include &lt;stdio.h&gt;</c> and <c>#include "uart.h"</c>, and call <c>uart2_init()</c> once before any printf.</li>
+                    <li>End each line with <c>\r\n</c> (not just <c>\n</c>) so the cursor returns to the left edge.</li>
+                    <li>No <c>%%f</c>: convert first — <c>int mV = (int)(v*1000); printf("%%d mV", mV);</c></li>
+                </ul>
+                <program language="c"><code><![CDATA[
+printf("count = %d\r\n", count);            // signed decimal
+printf("MODER = 0x%08lx\r\n", GPIOA->MODER); // 32-bit reg: %lx (long)
+printf("adc_val = 0x%04x\r\n", adc_val);     // 16-bit: %x
+printf("%d\t%x\r\n", count, count);           // tab-separated columns
+printf("key = %c\r\n", ch);                  // single character
+]]></code></program>
+            </slide>
+            </subsection>
 
         <!-- ── Part 2 ─────────────────────────────────────────────── -->
         <subsection xml:id="subsec-uart-part2">
@@ -607,7 +656,71 @@ int uart2_read(void) {
 }
 // ─────────────────────────────────────────────────────────────────
 ]]></code></program>
-        </subsection>
+        
+
+            <slide xml:id="sl-uart-jigsaw">
+                <p><em>Jigsaw — annotate the driver:</em></p>
+                <ul>
+                    <li>Below is <c>uart.c</c> with all comments stripped. Annotate your assigned section — what each line does and why.</li>
+                    <li>Groups A &amp; B: <c>uart2_init</c> (GPIO/AF, then clock/BRR/CR1). Groups C &amp; D: <c>uart2_write</c> and <c>uart2_read</c>.</li>
+                    <li>After 8 minutes, pair up across the split and teach each other.</li>
+                </ul>
+            </slide>
+
+            <slide xml:id="sl-uart-driver-stripped">
+                <p><c>uart.c</c> — comments stripped:</p>
+                <program language="c"><code><![CDATA[
+#define APB_CLK 12000000U
+#define BAUD_RATE   9600U
+void uart2_init(void) {
+    // -- Group A --
+    RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
+    GPIOA->MODER &= ~((3U<<4) | (3U<<6));
+    GPIOA->MODER |=  ((2U<<4) | (2U<<6));
+    GPIOA->AFR[0] &= ~((0xFU<<8) | (0xFU<<12));
+    GPIOA->AFR[0] |=  ((1U<<8) | (1U<<12));
+    // -- Group B --
+    RCC->APBENR1 |= RCC_APBENR1_USART2EN;
+    USART2->BRR = APB_CLK / BAUD_RATE;
+    USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+}
+// -- Group C --
+void uart2_write(int ch) {
+    while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {}
+    USART2->TDR = (ch & 0xFF);
+}
+// -- Group D --
+int uart2_read(void) {
+    while (!(USART2->ISR & USART_ISR_RXNE_RXFNE)) {}
+    return USART2->RDR & 0xFF;
+}
+]]></code></program>
+            </slide>
+
+            <slide xml:id="sl-uart-driver-annotated">
+                <p>Driver reference (annotated) — instructor key</p>
+                <program language="c"><code><![CDATA[
+void uart2_init(void) {
+    RCC->IOPENR |= RCC_IOPENR_GPIOAEN;          // clock to GPIOA
+    GPIOA->MODER &= ~((3U<<4)|(3U<<6));          // clear PA2/PA3 mode
+    GPIOA->MODER |=  ((2U<<4)|(2U<<6));          // 10 = alternate function
+    GPIOA->AFR[0] &= ~((0xFU<<8)|(0xFU<<12));    // clear AF nibbles
+    GPIOA->AFR[0] |=  ((1U<<8)|(1U<<12));        // AF1 = USART2 TX/RX
+    RCC->APBENR1 |= RCC_APBENR1_USART2EN;        // clock to USART2 (APB bus)
+    USART2->BRR = APB_CLK / BAUD_RATE;           // 12e6/9600 = 1250
+    USART2->CR1 = USART_CR1_TE|USART_CR1_RE|USART_CR1_UE; // TX,RX,enable last
+}
+void uart2_write(int ch) {
+    while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {} // wait: TX register empty
+    USART2->TDR = (ch & 0xFF);                       // send one byte
+}
+int uart2_read(void) {
+    while (!(USART2->ISR & USART_ISR_RXNE_RXFNE)) {} // wait: byte received
+    return USART2->RDR & 0xFF;                        // read it (clears RXNE)
+}
+]]></code></program>
+            </slide>
+            </subsection>
 
         <!-- ── Part 3 ─────────────────────────────────────────────── -->
         <subsection xml:id="subsec-uart-part3">
@@ -687,7 +800,50 @@ while (1) {
                     </p>
                 </statement>
             </activity>
-        </subsection>
+        
+
+            <slide xml:id="sl-uart-listen">
+                <ul>
+                    <li>Your counter only sends — now make it listen. Pressing a key should change the count.</li>
+                    <li>Calling <c>uart2_read()</c> at the top of the loop would block forever waiting for a key, freezing the counter.</li>
+                    <li>The fix: poll the RXNE flag. If a byte is waiting, read it and act; if not, skip to the print and delay.</li>
+                </ul>
+                <program language="c"><code><![CDATA[
+while (1) {
+    if (USART2->ISR & USART_ISR_RXNE_RXFNE) {
+        char key = /* read from the right register */;  // complete this
+        // handle key here ...
+    }
+    printf("count = %d\r\n", count);
+    delay_ms(500);
+}
+]]></code></program>
+            </slide>
+
+            <slide xml:id="sl-uart-keyboard-solution">
+                <p>Solution — keyboard counter (reference)</p>
+                <program language="c"><code><![CDATA[
+#include <stdio.h>
+#include "ES28.h"
+#include "uart.h"
+int main(void) {
+    int count = 0;
+    uart2_init();
+    printf("Keyboard-controlled counter\r\n");
+    while (1) {
+        if (USART2->ISR & USART_ISR_RXNE_RXFNE) {
+            char key = USART2->RDR & 0xFF;
+            if      (key == 'u' || key == 'U') count++;
+            else if (key == 'd' || key == 'D') count--;
+            else if (key == 'r' || key == 'R') count = 0;
+        }
+        printf("count = %d\r\n", count);
+        delay_ms(500);
+    }
+}
+]]></code></program>
+            </slide>
+            </subsection>
     </section>
 
 
@@ -818,7 +974,28 @@ GPIOA->MODER |= (GPIO_ALTERNATE << GPIO_MODER_MODE3_Pos);
                         count bit positions yourself.  The compact form above combines
                         both pins into one line to show the pattern concisely.
                     </p>
-        </subsection>
+        
+
+            <slide xml:id="sl-uart-physical" ref="fig-uart-physical-connection">
+                <ul>
+                    <li>The ST-Link section (top of the board) is a second STM32 — programmer AND USB-to-serial bridge.</li>
+                    <li>USART2 TX = PA2, RX = PA3 connect internally (solder bridges) to the ST-Link — no external wiring.</li>
+                    <li>The ST-Link appears on your laptop as a USB serial device.</li>
+                    <li>So: printf → PA2 → ST-Link → USB → CoolTerm.</li>
+                </ul>
+                <caption>PA2 (TX) and PA3 (RX) connect internally to the ST-Link, which is the USB serial device.</caption>
+            </slide>
+
+            <slide xml:id="sl-uart-af" ref="fig-uart-afr-register">
+                <ul>
+                    <li>One physical pin can serve many peripherals — two fields decide which.</li>
+                    <li><c>GPIOA->MODER</c> = 10 puts PA2/PA3 in Alternate Function mode.</li>
+                    <li><c>GPIOA->AFR[0]</c> picks which function — 4 bits per pin. AF1 = USART2 for PA2/PA3.</li>
+                    <li>That is exactly the Group A code in the driver.</li>
+                </ul>
+                <caption>AFRL — 4 bits per pin: PA2 = bits [11:8], PA3 = bits [15:12]; write 0001 (AF1) into each.</caption>
+            </slide>
+            </subsection>
 
         <subsection xml:id="subsec-uart-clock">
             <title>Step 2: Enable the USART Clock</title>
@@ -905,7 +1082,27 @@ USART2->BRR = APB_CLK / UART_BAUD_RATE;   // = 1250
                         by the baud rate.  With 12 MHz and 9600 baud the division is exact,
                         so both formulas give 1250.
                     </p>
-        </subsection>
+        
+
+            <slide xml:id="sl-uart-baud" ref="fig-uart-brr-register">
+                <ul>
+                    <li>No shared clock wire, so both ends must agree on the bit rate in advance.</li>
+                    <li><c>USART_BRR</c> holds USARTDIV, a plain divisor of the APB clock.</li>
+                    <li>BRR = f_APB / baud = 12,000,000 / 9600 = 1250.</li>
+                    <li>Load the wrong divisor and every bit is mistimed → garbage. That is the 4800 experiment.</li>
+                </ul>
+                <caption>USART_BRR bits [15:0] = USARTDIV. 9600 baud at 12 MHz → 1250 (0x04E2).</caption>
+            </slide>
+
+            <slide xml:id="sl-uart-oversampling" ref="fig-uart-oversampling">
+                <ul>
+                    <li>Each byte is framed: line idles HIGH, a START bit (LOW) begins it, 8 data bits LSB-first, a STOP bit (HIGH) ends it (8N1).</li>
+                    <li>The receiver samples at 16× the baud rate: catch the START edge, count 8 ticks to bit center, then sample every 16 ticks — always mid-bit.</li>
+                    <li>That is how it reads several identical bits correctly with no clock wire.</li>
+                </ul>
+                <caption>Dense ticks = the 16× sample clock. Black arrow = start-bit center; red arrows = each bit sampled at its center.</caption>
+            </slide>
+            </subsection>
 
         <subsection xml:id="subsec-uart-cr1">
             <title>Step 4: Enable Transmitter, Receiver, and USART</title>
@@ -931,7 +1128,17 @@ USART2->BRR = APB_CLK / UART_BAUD_RATE;   // = 1250
 // Enable transmitter (TE) and receiver (RE), then enable USART (UE) last
 USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
 ]]></code></program>
-        </subsection>
+        
+
+            <slide xml:id="sl-uart-cr1" ref="fig-uart-cr1">
+                <ul>
+                    <li>The reset value of CR1/CR2 (0x00000000) already gives 8 data bits, no parity, 1 stop bit, oversampling ×16 — exactly 8N1.</li>
+                    <li>So we set only three bits: TE (transmit), RE (receive), UE (enable).</li>
+                    <li>UE must be set last, after BRR. That is the Group B code.</li>
+                </ul>
+                <caption>USART_CR1/CR2: reset already selects 8N1 + oversampling ×16; set TE, RE, UE (UE last).</caption>
+            </slide>
+            </subsection>
 
         <subsection xml:id="subsec-uart-send-receive">
             <title>Sending and Receiving Data</title>
