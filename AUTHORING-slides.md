@@ -44,7 +44,7 @@ without duplicating its image.
 | **Diagram (image is the point)** | `<slide ref="fig-X"></slide>` — **no bullets** | image-dominant: the figure fills the slide |
 | **Code listing** | `<slide><p>lead</p><program language="c"><code><![CDATA[ … ]]></code></program></slide>` | full-width, syntax-highlighted, scrolls if long |
 | **Text / prompt** | `<slide><ul><li>…</li></ul></slide>` (or `<p>`) | full-width |
-| **Activity** | *no `<slide>` block* — the deck refs the `<activity>`'s own `xml:id` | full-width; the activity's own heading is hidden (deck title names it) |
+| **Activity** | *no `<slide>` block* — the deck refs the `<activity>`'s own `xml:id` | full-width; the activity's own heading is hidden, and any figures it embeds are dropped (they get their own slides) |
 
 **Instructive caption** (short line under the figure): add a `<caption>…</caption>`
 child. The player shows THIS under the image and **hides the book figure's full
