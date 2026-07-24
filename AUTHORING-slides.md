@@ -157,6 +157,15 @@ the worked code inline — the deck follows the classroom progression.)
 and instructive captions, not full prose — the book prose carries the detail. A
 complex diagram gets its own image-dominant slide so she can talk over it.
 
+**A concept that is new to students gets its own mini-arc, not one dense slide.**
+Motivate → mechanic → mechanic → a predict/practice warm-up, then the hands-on
+activity. (Day 1 bitwise ops: *why bitwise* → *masks* → *OR-set* → *AND-clear* →
+*predict the bits* → the bit-manipulation activity, under a "Bitwise Operations"
+divider.) Don't compress a first-encounter topic to save slides — slides are free;
+confusion is not. A short truth table or a few binary-pattern lines can sit right in
+the `<slide>` body (a bare `<tabular>` renders full-width; a `<program>` shows the
+bit pattern) so each rule comes with its evidence.
+
 **Layout signals meaning:**
 - *talking points + a supporting image* → two-column (bullets left, figure +
   instructive caption right).
