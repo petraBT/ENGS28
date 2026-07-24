@@ -46,6 +46,11 @@ without duplicating its image.
 | **Text / prompt** | `<slide><ul><li>…</li></ul></slide>` (or `<p>`) | full-width |
 | **Activity** | *no `<slide>` block* — the deck refs the `<activity>`'s own `xml:id` | full-width; the activity's own heading is hidden (deck title names it) |
 
+**Instructive caption** (short line under the figure): add a `<caption>…</caption>`
+child. The player shows THIS under the image and **hides the book figure's full
+caption** — slide captions are a one-line "what to notice," not the textbook
+caption. See the educational patterns below.
+
 **Presenter note** (instructor-only, never projected): add a `<note>…</note>`
 child to any `<slide>`. It reaches you via the (planned) handout / `?notes` view,
 not the projector.
@@ -90,8 +95,11 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
 
 ## Conventions (apply going forward)
 
-- **Captions: one short line.** Not a paragraph. Shorten in the book source — it
-  fixes both the slide and the reading view; the prose carries the detail.
+- **Captions are INSTRUCTIVE, not descriptive.** A slide caption is a one-line
+  "what to notice / what this shows / what to do" (e.g. *"CH1 on the button, CH2
+  on the LED; minus leads to GND"*), NOT the book's full figure caption. Author it
+  as the slide's `<caption>`; the book's own figcaption is hidden on slides. Keep
+  it to a line or two.
 - **Diagram slides are image-dominant** (no bullets) so the figure is large
   enough to explain. Don't cram a complex diagram beside bullets.
 - **Multiple annotated views of one diagram = multiple figures + multiple
@@ -104,6 +112,47 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   `"instructor": true`. (Note: `?student` hides them from the *view*, but the
   content is still in the page source until a solutions-free build is added at
   deploy time.)
+
+## Educational patterns (Petra's design — follow these for new days)
+
+Observed across the prototyped decks (Days 3–6). Use these when generating slides
+for days that have no PowerPoint yet.
+
+**Lesson arc.** A day opens with a title, a short *review / where-we're-headed*,
+and an *agenda*; it's split into timed **Part N** sections (put the time budget in
+`presenterNote`, e.g. "≈ 20 min"); it ends with a *recap* or *looking ahead to the
+next day*.
+
+**Observe → explain → fix.** Concepts are taught by having students SEE the
+phenomenon first, then explaining it, then fixing it. (Day 3X: scope the bounce →
+explain contact bounce → fix in hardware (capacitor) → fix in software (edge
+detection).) Don't lead with the answer.
+
+**Activity before reveal.** Students DO or PREDICT first (an `activity` slide),
+and only then a **reveal** slide (marked `<note>OPTIONAL / REVEAL — show after the
+activity</note>`) confirms/debriefs what they found. Reveals are skippable so she
+can adapt to pace. Reference/threshold slides are optional too.
+
+**Teaching code.** The progression is: a **naive / broken** version → an
+**activity** to work out why it fails → a **skeleton with `// TODO` blanks** for
+students to fill in → the **full solution as an instructor-only slide**
+(`"instructor": true`). Never show the finished solution before the fill-in step.
+(This is why the deck can diverge from the book's reading version, which may show
+the worked code inline — the deck follows the classroom progression.)
+
+**A slide poses; the instructor explains.** Slides carry condensed talking points
+and instructive captions, not full prose — the book prose carries the detail. A
+complex diagram gets its own image-dominant slide so she can talk over it.
+
+**Layout signals meaning:**
+- *talking points + a supporting image* → two-column (bullets left, figure +
+  instructive caption right).
+- *the diagram/photo IS the point* (register diagrams, scope captures) →
+  image-dominant, big, with just an instructive caption.
+- *code or an activity* → full width.
+
+**Solutions and instructor reminders are never student-facing.** Solution
+listings are `"instructor": true`; how-to-solve-it hints are `<note>`s.
 
 ## Where things live
 

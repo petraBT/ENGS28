@@ -64,8 +64,16 @@
                 </xsl:attribute>
             </xsl:if>
             <div class="deck-slide-body">
-                <xsl:apply-templates select="*[not(self::note)]"/>
+                <xsl:apply-templates select="*[not(self::note) and not(self::caption)]"/>
             </div>
+            <!-- A slide's own short, instructive caption for the figure it shows
+                 (the deck player uses this INSTEAD of the book figure's full
+                 caption). -->
+            <xsl:for-each select="caption">
+                <div class="deck-slide-caption">
+                    <xsl:apply-templates/>
+                </div>
+            </xsl:for-each>
             <xsl:for-each select="note">
                 <div class="deck-slide-note">
                     <xsl:apply-templates/>

@@ -143,6 +143,12 @@
         font-size: 1.9vmin; font-size: 1.9cqmin; color: #52514e; line-height: 1.4; margin-top: .6em;
       }
       #ref .ref-media .autopermalink, #ref .autopermalink { display: none; }
+      /* A slide's own instructive caption, under the figure. */
+      #ref .ref-media .slide-caption {
+        font-size: 2vmin; font-size: 2.1cqmin; color: #52514e; line-height: 1.45;
+        margin-top: .7em; text-align: center; max-width: 92%;
+      }
+      #ref .ref-media .slide-caption p, #ref .ref-media .slide-caption .para { margin: 0; font-size: inherit; }
       /* Inline colour for slide text (see the <clr> element in engs28-html.xsl),
          e.g. matching oscilloscope-channel colours. */
       #ref .deck-clr-orange { color: #c26a1f; font-weight: 600; }
@@ -344,6 +350,10 @@
             strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone)
             while (bodyClone.firstChild) refBody.appendChild(bodyClone.firstChild)
 
+            // The slide's own short, instructive caption (shown under the figure
+            // instead of the book figure's full caption).
+            var capBlock = block.querySelector('.deck-slide-caption')
+
             var refId = block.getAttribute('data-deck-ref')
             if (refId) {
               var target = res.doc.getElementById(refId)
@@ -351,10 +361,18 @@
                 var mediaClone = target.cloneNode(true)
                 strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone)
                 if (mediaClone.querySelector('img')) {
-                  // An image figure. With bullets → two-column beside them; with
-                  // no bullets → image-dominant, shown large (a complex diagram
-                  // the instructor explains verbally).
+                  // A figure. Drop its book caption — slides carry their own
+                  // instructive one. Bullets → two-column; none → image-dominant.
+                  ;[].forEach.call(mediaClone.querySelectorAll('figcaption, .figure-caption'), function (el) {
+                    if (el.parentNode) el.parentNode.removeChild(el)
+                  })
                   refMedia.appendChild(mediaClone)
+                  if (capBlock) {
+                    var capClone = capBlock.cloneNode(true)
+                    strip(capClone); absolutize(capClone, res.url)
+                    capClone.className = 'slide-caption'
+                    refMedia.appendChild(capClone)
+                  }
                   if (refBody.textContent.trim() === '') {
                     refEl.classList.remove('single'); refEl.classList.add('figure-focus')
                   } else {
