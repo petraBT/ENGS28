@@ -424,6 +424,14 @@
                 software queue, decoupling reception speed from the main loop's pace.
                 That pattern comes up later in the course.
             </p>
+
+            <slide xml:id="sl-day6-buffer">
+                <ul>
+                    <li>The USART keeps receiving independently of the CPU — it doesn't pause during <c>delay_ms</c>. A byte's bits are assembled in the shift register, transferred to RDR, and RXNE is set. The byte waits in RDR until the loop checks — so one keypress is buffered for free.</li>
+                    <li>A second key while RDR is still full is lost. The shift register receives it, but transferring to an occupied RDR sets the Overrun Error (ORE) flag and the new byte is silently discarded. The first key survives; the program never knows.</li>
+                    <li>Not a bug — a deliberate trade-off that works for a slow manual counter. The general fix is a UART receive interrupt that stores each byte in a software queue (later in the course).</li>
+                </ul>
+            </slide>
         </subsection>
 
         <subsection xml:id="subsec-stm32-macros">
@@ -513,6 +521,60 @@ GPIOB->ODR |= (1U << 5);
                     </p>
                 </task>
             </activity>
+
+            <slide xml:id="sl-day6-moder" ref="fig-moder-bitfield">
+                <ul>
+                    <li>Every register write so far used raw bit positions and hex masks. That works, but a wrong shift is invisible to the compiler.</li>
+                    <li>CMSIS (via <c>ES28.h</c>) names every bit field: each gets a mask (<c>_Msk</c>) and a position (<c>_Pos</c>).</li>
+                    <li>The pattern is always: clear the field, then OR in the value shifted into place.</li>
+                    <li>The MODER register: each pin has a 2-bit field. CMSIS defines <c>GPIO_MODER_MODE5_Msk</c> and <c>_Pos</c> (= 10).</li>
+                </ul>
+                <caption>MODER: each pin owns a 2-bit field; the mask and position macros mean you never count bits by hand.</caption>
+            </slide>
+
+            <slide xml:id="sl-day6-raw-vs-macro">
+                <p>Configuring PA5 as an output — raw bits vs. named macros:</p>
+                <program language="c"><code><![CDATA[
+// Raw version — a wrong constant is a silent bug
+GPIOA->MODER &= ~(1U << 11);   // clear bit 11 of the MODE5 field
+GPIOA->MODER &= ~(1U << 10);   // clear bit 10 of the MODE5 field
+GPIOA->MODER |=  (1U << 10);   // set bit 10 (output = 0b01)
+
+// Macro version — names are checked by the compiler
+GPIOA->MODER &= ~GPIO_MODER_MODE5_Msk;
+GPIOA->MODER |=  (GPIO_OUTPUT << GPIO_MODER_MODE5_Pos);
+
+// ES28 mode constants: GPIO_INPUT 0, GPIO_OUTPUT 1,
+//                      GPIO_ALTERNATE 2, GPIO_ANALOG 3
+]]></code></program>
+            </slide>
+
+            <slide xml:id="sl-day6-macros-activity">
+                <p>This code configures PB5 as an output (the pin that drives the transistor base in lab). Rewrite it using CMSIS macros:</p>
+                <program language="c"><code><![CDATA[
+RCC->IOPENR |= (1U << 1);       // enable GPIOB clock
+GPIOB->MODER &= ~(1U << 11);
+GPIOB->MODER &= ~(1U << 10);
+GPIOB->MODER |=  (1U << 10);    // PB5 output
+GPIOB->ODR |= (1U << 5);        // drive PB5 high
+]]></code></program>
+                <ol>
+                    <li>Rewrite the three MODER lines with <c>GPIO_MODER_MODE5_Msk</c>, <c>_Pos</c>, and <c>GPIO_OUTPUT</c>.</li>
+                    <li>What macro replaces <c>(1U &lt;&lt; 1)</c> for the GPIOB clock? (Hint: how was GPIOA's clock enabled in the UART driver?)</li>
+                    <li>Rewrite the ODR line using <c>GPIO_ODR_OD5</c> instead of <c>(1U &lt;&lt; 5)</c>.</li>
+                </ol>
+            </slide>
+
+            <slide xml:id="sl-day6-macros-solution">
+                <p>Solution — macro rewrite:</p>
+                <program language="c"><code><![CDATA[
+RCC->IOPENR |= RCC_IOPENR_GPIOBEN;           // enable GPIOB clock
+GPIOB->MODER &= ~GPIO_MODER_MODE5_Msk;       // clear PB5 field
+GPIOB->MODER |=  (GPIO_OUTPUT << GPIO_MODER_MODE5_Pos);
+GPIOB->ODR |= GPIO_ODR_OD5;                  // drive PB5 high
+]]></code></program>
+                <note>Instructor reference — hidden from the student export.</note>
+            </slide>
         </subsection>
 
         <subsection xml:id="subsec-npn-driver-design">
@@ -606,6 +668,32 @@ GPIOB->ODR |= (1U << 5);
                 to the supply turns the load on.  The full analysis is in the lab
                 handout.
             </p>
+
+            <slide xml:id="sl-day6-load-connect" ref="fig-low-high-side-topology">
+                <caption>NPN low-side (left): load above the collector, emitter to ground. PNP high-side (right): emitter to the supply, load below the collector.</caption>
+            </slide>
+
+            <slide xml:id="sl-day6-npn-driver" ref="fig-npn-low-side-circuit">
+                <ul>
+                    <li>In this course you'll use NPN transistors as low-side switches.</li>
+                    <li>The load R_heat sits between the supply and the collector.</li>
+                    <li>R_lim (base-current limiting resistor) connects the GPIO pin to the base; the emitter goes to ground.</li>
+                    <li>Design question: what value should R_lim be?</li>
+                </ul>
+                <caption>NPN low-side driver: R_lim sets the base current.</caption>
+            </slide>
+
+            <slide xml:id="sl-day6-rlim">
+                <ul>
+                    <li>Given: load needs 100 mA from 5 V; NPN has β_min = 50, V_BE = 0.7 V; GPIO outputs 3.3 V.</li>
+                    <li>1 — Collector current: the load sets I_C = 100 mA.</li>
+                    <li>2 — Min base current to saturate: I_B,min = I_C / β_min = 100 mA / 50 = 2 mA.</li>
+                    <li>3 — Safety margin ×2 (real β can be below the datasheet min) → target I_B = 4 mA.</li>
+                    <li>4 — Voltage across R_lim: V = V_GPIO − V_BE = 3.3 − 0.7 = 2.6 V.</li>
+                    <li>5 — Resistance: R_lim = 2.6 V / 4 mA = 650 Ω → pick the nearest standard value at or below (620 Ω or 560 Ω) to stay in saturation.</li>
+                    <li>MOSFET low-side switch: no R_lim needed — the gate is capacitive. Just check V_th &lt; 3.3 V and max drain current &gt; load current.</li>
+                </ul>
+            </slide>
         </subsection>
 
         <subsection xml:id="subsec-mosfet-intro">
@@ -635,16 +723,16 @@ GPIOB->ODR |= (1U << 5);
                 and the device turns on when the gate is pulled LOW.
             </p>
 
-            <figure xml:id="fig-nfet-lowside-inclass">
-                <caption>N-channel low-side switch.  Load sits between the supply
-                and the drain; source to ground.</caption>
-                <image source="images/Day06-BJTS_and_MOSFETS/slide35_img1.png" width="20%"/>
-            </figure>
-
-            <figure xml:id="fig-pfet-highside-inclass">
-                <caption>P-channel high-side switch.  Source connects to the
-                supply; load hangs below the drain.</caption>
-                <image source="images/Day06-BJTS_and_MOSFETS/slide35_img2.png" width="20%"/>
+            <figure xml:id="fig-nfet-pfet-topologies">
+                <caption>N-channel low-side switch (left): load sits between the
+                supply and the drain, source to ground — drive the gate HIGH to turn
+                on.  P-channel high-side switch (right): source connects to the
+                supply, load hangs below the drain — turns on when the gate is pulled
+                LOW.</caption>
+                <sidebyside widths="44% 44%" margins="2%" valign="middle">
+                    <image source="images/Day06-BJTS_and_MOSFETS/slide35_img1.png"/>
+                    <image source="images/Day06-BJTS_and_MOSFETS/slide35_img2.png"/>
+                </sidebyside>
             </figure>
 
             <p>
@@ -699,6 +787,24 @@ GPIOB->ODR |= (1U << 5);
                 </tabular>
             </table>
             </sidebyside>
+
+            <slide xml:id="sl-day6-mosfet-symbol" ref="fig-nfet-symbol-inclass">
+                <ul>
+                    <li>Three terminals: Gate (G), Drain (D), Source (S).</li>
+                    <li>Voltage-controlled — the gate draws essentially no steady current (insulated by a thin oxide).</li>
+                    <li>When V_GS exceeds the threshold V_th, a channel opens between drain and source.</li>
+                    <li>The gap between the gate line and the channel in the symbol represents that oxide.</li>
+                </ul>
+                <caption>N-channel enhancement MOSFET.</caption>
+            </slide>
+
+            <slide xml:id="sl-day6-nfet-pfet" ref="fig-nfet-pfet-topologies">
+                <caption>N-channel low-side (left): load between supply and drain, source to ground — gate HIGH to turn on. P-channel high-side (right): source at the supply, load below the drain — turns on when the gate is pulled LOW.</caption>
+            </slide>
+
+            <slide xml:id="sl-day6-bjt-vs-mosfet" ref="table-bjt-vs-mosfet">
+                <caption>For direct GPIO drive, use logic-level MOSFETs: |V_th| below 3.3 V.</caption>
+            </slide>
         </subsection>
 
         <subsection xml:id="subsec-transistor-datasheets">
@@ -743,6 +849,15 @@ GPIOB->ODR |= (1U << 5);
             <p>
                 Use the datasheets linked on Canvas to fill in the tables below.
             </p>
+
+            <slide xml:id="sl-day6-minmaxtyp">
+                <ul>
+                    <li>Three columns reflect real manufacturing spread. β (h_FE) can vary 3× across one batch. Min/Max mark the ±3σ boundaries; Typ is the mean.</li>
+                    <li>Will my circuit function at all? Use the worst-case minimum. Design for β_min and it saturates even with the weakest part.</li>
+                    <li>Will my circuit break or overheat? Use the worst-case maximum — the part that conducts most or swings highest.</li>
+                    <li>Rule of thumb: ask “does a higher or lower value make it harder to succeed?” and use that value. All these numbers shift with temperature.</li>
+                </ul>
+            </slide>
 
             <activity xml:id="act-bjt-datasheets">
                 <title>BJT Datasheets</title>

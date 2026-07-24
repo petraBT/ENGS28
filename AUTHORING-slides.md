@@ -44,7 +44,14 @@ without duplicating its image.
 | **Diagram (image is the point)** | `<slide ref="fig-X"></slide>` — **no bullets** | image-dominant: the figure fills the slide |
 | **Code listing** | `<slide><p>lead</p><program language="c"><code><![CDATA[ … ]]></code></program></slide>` | full-width, syntax-highlighted, scrolls if long |
 | **Text / prompt** | `<slide><ul><li>…</li></ul></slide>` (or `<p>`) | full-width |
-| **Activity** | *no `<slide>` block* — the deck refs the `<activity>`'s own `xml:id` | full-width; the activity's own heading is hidden, and any figures it embeds are dropped (they get their own slides) |
+| **Activity** | *no `<slide>` block* — the deck refs the `<activity>`'s own `xml:id` | full-width; the activity's own heading is hidden, and any figures **or code listings** it embeds are dropped (they get their own slides) |
+| **Table** | `<slide ref="table-X"><caption>takeaway</caption></slide>` (tables are targetable) | the table full-width, with the instructive caption below it |
+
+**A code activity you want shown *with* its code** (e.g. "rewrite this snippet") must be
+authored as a **self-contained `<slide>` block** — put the `<program>` and the questions
+(`<ol>`) directly in the block. Do **not** ref the `<activity>`: an activity ref strips
+`pre.program`, so the code the students are meant to work from would vanish. (Day 6
+"Rewriting with Macros" is the pattern.)
 
 **Instructive caption** (short line under the figure): add a `<caption>…</caption>`
 child. The player shows THIS under the image and **hides the book figure's full
@@ -104,6 +111,12 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   enough to explain. Don't cram a complex diagram beside bullets.
 - **Multiple annotated views of one diagram = multiple figures + multiple
   image-dominant slides.** Never merge them into one.
+- **Two images to compare side by side** → one `<figure>` with a
+  `<sidebyside widths="44% 44%" margins="2%">` of the two images, ref'd (no bullets)
+  → image-dominant, both large. (The player fills the media column and drops the
+  book's outer sidebyside margins so the panels don't collapse.) If the reading
+  already had them as two separate small figures with no xref, replace those with the
+  one combined figure — it reads better in the book too. (Day 6 N/P-channel topologies.)
 - **No `<m>` math in slides** — the player doesn't load MathJax. Use plain text
   (e.g. `V_IL`, not `<m>V_{IL}</m>`).
 - **Watch for old PowerPoint titles baked into extracted images** — re-export the
