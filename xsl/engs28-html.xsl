@@ -63,6 +63,13 @@
                     <xsl:value-of select="@ref"/>
                 </xsl:attribute>
             </xsl:if>
+            <!-- Optional layout hint: stack="yes" → bullets full width on top,
+                 figure full width (large) below, for wide images. -->
+            <xsl:if test="@stack">
+                <xsl:attribute name="data-deck-stack">
+                    <xsl:value-of select="@stack"/>
+                </xsl:attribute>
+            </xsl:if>
             <div class="deck-slide-body">
                 <xsl:apply-templates select="*[not(self::note) and not(self::caption)]"/>
             </div>
