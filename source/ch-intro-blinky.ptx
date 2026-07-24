@@ -418,6 +418,22 @@
                 <image source="images/Day01-Intro-Blinky/slide15_visual.png" width="90%"/>
             </figure>
 
+            <slide xml:id="sl-day1-board-photo" ref="fig-nucleo-board-photo">
+                <caption>The Nucleo-64 wraps the STM32C031C6 (orange arrow) with USB, regulators, headers, buttons, and LEDs — everything to program and power it from a laptop.</caption>
+            </slide>
+
+            <slide xml:id="sl-day1-board-labeled" ref="fig-nucleo-board-labeled">
+                <caption>Board tour: the Arduino headers are where jumper wires go; the user LED and reset button sit up top; the USB carries both power and the programming link.</caption>
+            </slide>
+
+            <slide xml:id="sl-day1-pinout" ref="fig-stm32-pinout">
+                <caption>48 pins → three GPIO ports A, B, C (up to 16 pins each). PA5 = Port A, bit 5 (red) is the on-board LED.</caption>
+            </slide>
+
+            <slide xml:id="sl-day1-pinmap" ref="fig-led-pin-connection">
+                <caption>On the Arduino header, D13 = PA5 — the pin our program will drive.</caption>
+            </slide>
+
         </subsection>
 
         <subsection xml:id="subsec-day1-blinky-walkthrough">
@@ -644,6 +660,56 @@ LED_PIN  = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit 5 is 1)
                 Inside <c>while(1)</c>, these two operations alternate forever —
                 producing the blink.
             </p>
+
+            <slide xml:id="sl-day1-four-steps">
+                <ol>
+                    <li>Turn on the clock to GPIO Port A (peripherals are off by default).</li>
+                    <li>Set PA5 to output mode so we can drive it HIGH or LOW.</li>
+                    <li>Set bit 5 HIGH → LED on.</li>
+                    <li>Clear bit 5 LOW → LED off — then repeat, forever, inside <c>while (1)</c>.</li>
+                </ol>
+                <note>Embedded is the exception to "never write an infinite loop": setup runs once, then the device works forever. <c>return 0</c> is unreachable.</note>
+            </slide>
+
+            <slide xml:id="sl-day1-code">
+                <p>The complete <c>blinky.c</c> — set up once, then blink forever:</p>
+                <program language="c"><code><![CDATA[
+#include "stm32C0xx.h"          // all register definitions live here
+#define GPIOAEN  (1U << 0)      // RCC->IOPENR bit 0: clock for GPIOA
+#define LED_PIN  (1U << 5)      // GPIOA bit 5: the on-board LED
+
+int main(void) {
+    RCC->IOPENR  |= GPIOAEN;     // Step 1: enable GPIOA clock
+    GPIOA->MODER |= (1U << 10);  // Step 2a: set   bit 10
+    GPIOA->MODER &= ~(1U << 11); // Step 2b: clear bit 11 → PA5 output
+
+    while (1) {
+        GPIOA->ODR |= LED_PIN;   // Step 3: bit 5 = 1 → LED on
+        for (int i = 0; i < 100000; i++);
+        GPIOA->ODR &= ~LED_PIN;  // Step 4: bit 5 = 0 → LED off
+        for (int i = 0; i < 100000; i++);
+    }
+    return 0;                    // never reached
+}
+]]></code></program>
+            </slide>
+
+            <slide xml:id="sl-day1-operators">
+                <ul>
+                    <li><c>1U &lt;&lt; n</c> — a <term>bit mask</term>: a single 1 at position n, zeros elsewhere. Name it with <c>#define</c> (<c>LED_PIN</c>, not a bare <c>(1U&lt;&lt;5)</c>).</li>
+                    <li><c>register |= mask</c> — <em>sets</em> the mask's 1-bits, leaves the rest. (OR: mask 1 forces the bit high; mask 0 leaves it unchanged.) Never plain <c>=</c> — it clobbers every other bit.</li>
+                    <li><c>register &amp;= ~mask</c> — <em>clears</em> the mask's 1-bits, leaves the rest. (<c>~</c> flips every bit; AND with 0 forces low, with 1 leaves unchanged.)</li>
+                </ul>
+            </slide>
+
+            <slide xml:id="sl-day1-moder" ref="table-moder-encoding">
+                <ul>
+                    <li>Four modes per pin → 2 bits each. 16 pins × 2 = MODER is 32 bits wide.</li>
+                    <li>PA5 uses bits 10 &amp; 11. Output = <c>01</c> → set bit 10, clear bit 11.</li>
+                    <li>Why two lines? Setting bit 10 alone could leave bit 11 = 1 → <c>11</c> (analog), not output.</li>
+                </ul>
+                <caption>MODER bit-pair encoding.</caption>
+            </slide>
 
             <activity xml:id="act-day1-bit-ops">
                 <title>Bit Manipulation Practice</title>
