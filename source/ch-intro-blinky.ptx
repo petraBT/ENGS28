@@ -694,12 +694,68 @@ int main(void) {
 ]]></code></program>
             </slide>
 
-            <slide xml:id="sl-day1-operators">
+            <!-- ── Bitwise operations mini-arc (new to most students) ── -->
+            <slide xml:id="sl-day1-why-bits">
                 <ul>
-                    <li><c>1U &lt;&lt; n</c> — a <term>bit mask</term>: a single 1 at position n, zeros elsewhere. Name it with <c>#define</c> (<c>LED_PIN</c>, not a bare <c>(1U&lt;&lt;5)</c>).</li>
-                    <li><c>register |= mask</c> — <em>sets</em> the mask's 1-bits, leaves the rest. (OR: mask 1 forces the bit high; mask 0 leaves it unchanged.) Never plain <c>=</c> — it clobbers every other bit.</li>
-                    <li><c>register &amp;= ~mask</c> — <em>clears</em> the mask's 1-bits, leaves the rest. (<c>~</c> flips every bit; AND with 0 forces low, with 1 leaves unchanged.)</li>
+                    <li>One 32-bit register packs many independent settings — e.g. <c>MODER</c> holds the mode of all 16 pins in a port at once.</li>
+                    <li>To configure one pin you must change <em>its</em> bits and leave the other 30 exactly as they were.</li>
+                    <li>A plain <c>reg = value</c> overwrites all 32 bits — it would clobber every other setting in the register.</li>
+                    <li>Bitwise operators let you touch <em>exactly</em> the bits you mean: build a <term>mask</term>, then set / clear / test through it.</li>
                 </ul>
+            </slide>
+
+            <slide xml:id="sl-day1-shift-mask">
+                <p><c>1U &lt;&lt; n</c> puts a single <c>1</c> at position <c>n</c> — a <term>bit mask</term>:</p>
+                <program language="c"><code><![CDATA[
+1U       = 0b 0000 0000 0000 0000 0000 0000 0000 0001   (bit  0)
+1U <<  5 = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit  5)
+1U << 10 = 0b 0000 0000 0000 0000 0000 0100 0000 0000   (bit 10)
+]]></code></program>
+                <ul>
+                    <li>The <c>U</c> makes it an unsigned 32-bit value — required for shifts near bit 31.</li>
+                    <li>Name masks with <c>#define</c>: <c>LED_PIN</c> reads better than a bare <c>(1U&lt;&lt;5)</c>.</li>
+                </ul>
+            </slide>
+
+            <slide xml:id="sl-day1-set-bit">
+                <p><c>reg |= mask</c> — bitwise OR <em>sets</em> every bit that is <c>1</c> in the mask, and leaves the rest alone:</p>
+                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                    <row header="yes" bottom="minor"><cell>A (reg bit)</cell><cell>B (mask bit)</cell><cell>A | B</cell></row>
+                    <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                    <row><cell>0</cell><cell>1</cell><cell>1</cell></row>
+                    <row><cell>1</cell><cell>0</cell><cell>1</cell></row>
+                    <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
+                </tabular>
+                <ul>
+                    <li>Mask bit <c>1</c> → result forced to <c>1</c>. Mask bit <c>0</c> → bit left unchanged.</li>
+                    <li><c>GPIOA-&gt;ODR |= LED_PIN;</c> forces bit 5 high (LED on) and touches nothing else.</li>
+                </ul>
+            </slide>
+
+            <slide xml:id="sl-day1-clear-bit">
+                <p><c>reg &amp;= ~mask</c> — <c>~</c> flips the mask (a single <c>0</c> among <c>1</c>s), then AND clears just that bit:</p>
+                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                    <row header="yes" bottom="minor"><cell>A (reg bit)</cell><cell>B (mask bit)</cell><cell>A &amp; B</cell></row>
+                    <row><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                    <row><cell>0</cell><cell>1</cell><cell>0</cell></row>
+                    <row><cell>1</cell><cell>0</cell><cell>0</cell></row>
+                    <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
+                </tabular>
+                <ul>
+                    <li><c>~LED_PIN</c> = <c>…1101 1111</c> — a <c>0</c> at bit 5, <c>1</c>s elsewhere. AND with <c>0</c> forces low; AND with <c>1</c> leaves unchanged.</li>
+                    <li><c>GPIOA-&gt;ODR &amp;= ~LED_PIN;</c> forces bit 5 low (LED off) and touches nothing else.</li>
+                </ul>
+            </slide>
+
+            <slide xml:id="sl-day1-bits-practice">
+                <p>Predict each — write the answer before we check:</p>
+                <ol>
+                    <li>What is <c>1U &lt;&lt; 3</c> in binary? Which bit is set? In hex?</li>
+                    <li>Start with <c>x = 0b0000 0001</c>. What is <c>x</c> after <c>x |= (1U &lt;&lt; 2)</c>?</li>
+                    <li>Start with <c>x = 0b1111 1111</c>. What is <c>x</c> after <c>x &amp;= ~(1U &lt;&lt; 4)</c>?</li>
+                    <li>Why use <c>|=</c> and <c>&amp;= ~</c> instead of just writing the whole value with <c>=</c>?</li>
+                </ol>
+                <note>Quick warm-up before the hands-on activity — take predictions from the room, then reveal.</note>
             </slide>
 
             <slide xml:id="sl-day1-moder" ref="table-moder-encoding">
