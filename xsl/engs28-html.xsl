@@ -117,8 +117,9 @@
      every page; revisit if that ever changes.
 
      Because it is published with the book, the same copy is also a standalone
-     URL you can link from Canvas:
-       https://petrabt.github.io/ENGS28/external/board-sim/index.html
+     URL you can link from Canvas (the petrabt.github.io/ENGS28 form redirects
+     to the same place):
+       https://engs20book.thayer.dartmouth.edu/ENGS28/external/board-sim/index.html
      Override this param to point at a separately hosted simulator instead. -->
 <xsl:param name="sim.tool" select="'external/board-sim/index.html'"/>
 

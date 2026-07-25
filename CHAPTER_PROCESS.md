@@ -1,165 +1,234 @@
-# ENGS 28 Textbook — Chapter Editing Process
+# The per-chapter workflow
 
-Lessons learned from ch-uart.ptx, distilled into a repeatable workflow.
+How a chapter of this book gets written, from nothing to Petra's sign-off. The
+goal of the process is that **the draft that reaches her is already near-final** —
+her corrections should be judgment calls, not the same twelve fixes every time.
+Those twelve fixes are now rules, in `AUTHORING-book.md`.
 
----
-
-## Deferred topics (do not forget)
-
-- **BSRR register** — introduce in `ch-timers-interrupts.ptx`, not before. The motivation is that ISRs sharing GPIO state with the main loop create a race condition on ODR read-modify-write; BSRR's atomic set/clear is the fix. Students need to have hit the problem (or seen it explained) before BSRR makes sense. Hook: "you're now writing ISRs that share GPIO pins with the main loop — here's why that matters and here's the one-line fix." CMSIS macros: `GPIO_BSRR_BS5` to set, `GPIO_BSRR_BR5` to clear.
-
----
-
-## Standing rules (apply to every chapter)
-
-- **Never say**: "working in pairs," "work individually," "before you leave." Grouping is given verbally.
-- **No `%f` in printf examples.** The course printf library doesn't support floating-point. Use integer scaling instead (`int mV = (int)(v * 1000)`, print with `%d`).
-- **Avoid "gate" language** for clocks. Say "enable the clock" / "until its clock is enabled," not "open the gate."
-- **"Prototypes"**, not "forward declarations."
-- **Be specific with hardware names.** "STM32C031" not "target MCU." Match peripheral names to the datasheet exactly.
+- **What to write** → `AUTHORING-book.md` (rules P-n, B-n, S-n, L-n)
+- **Slide markup mechanics** → `AUTHORING-slides.md`
+- **Build, git, deploy** → `AUTHORING.md`
 
 ---
 
-## What we learned matters most
+## The workflow
 
-### 1. Read the actual driver files before writing anything
+| Step | Produces | Gate |
+| --- | --- | --- |
+| 0 | Ground truth: driver code, downstream constraints, datasheet/RM pages | |
+| 1 | Mined old deck: arc, speaker notes, rebuilt annotated images | |
+| 2 | **Lesson plan** (1 page) | **Gate 1** — small panel |
+| 3 | Book chapter | |
+| 4 | `<slide>` blocks + deck JSON | |
+| 5 | Mechanical checks pass | |
+| 6 | Committee review → prioritized change list | **Gate 2** — full panel |
+| 7 | Petra's sign-off | **her** |
 
-The biggest source of errors was writing from memory or generic examples instead of the real `.c` file. The actual driver determines:
-- Which headers are included
-- What `#define`s set the clock/baud constants
-- Whether helpers are separate functions or inline
-- Whether CR1 is written in one step or two (two: `RE|TE` first, then `|= UE`)
-- What the retarget does (uart.c `__io_putchar` does **not** insert `\r` — students must write `\r\n` themselves)
-- Which CMSIS macros are used (vs. raw bit shifts)
-
-**Rule: read the `.c` and `.h` files in the slide folder before writing a single line of explanation.**
-
-### 2. Verify slides exist and are non-empty before referencing them
-
-Some slides are empty files; some listed in conversations don't actually exist. Always `ls -la` the relevant slide folder and check sizes before writing `<image source="..."/>`.
-
-### 3. Crop slides when only part is relevant
-
-Don't drop a full slide into a section when you only need one diagram or waveform. Crop to the meaningful region (e.g., the oversampling waveform from the bottom half of slide42). Full slides in the middle of a section feel like PowerPoint pasted into a textbook.
-
-### 4. Step counts in section intros must match reality
-
-If the intro says "four steps," count the actual subsections. This drifts easily when steps are added or merged.
-
-### 5. Reading questions must be grounded in actual code
-
-Before finalizing any reading question, check that the correct answer reflects what the real driver does — not a plausible but invented behavior. The `rq-uart-crlf` question was wrong because it assumed the retarget inserted `\r` when it doesn't.
-
-### 6. Explanation placement should follow logical flow
-
-Put concepts where they are needed, not where they first appear. Oversampling belongs in the BRR section (it explains why BRR = f/baud), not in the CR1 section where it's first mentioned in passing.
-
-### 7. Figure captions and cross-references must be precise
-
-Captions should describe what is actually shown, with correct hardware names, register names, and bit labels. When a slide image shows the wrong register, replace it (screenshot if the PDF can't be extracted).
+Two gates, not one. A problem with the arc or the objectives costs one page to fix
+at Gate 1 and a whole chapter at Gate 2.
 
 ---
 
-## Efficient chapter workflow
+### Step 0 — Ground truth
 
-### Phase 0 — Inventory (5 min)
+Before reading anything written *about* the topic, collect what is actually true.
+
+1. **The driver.** Find the real `.c`/`.h`. Check, in order: the repo
+   (`assets/images/Day*/`), then **the old deck's code slides** — full driver
+   listings are frequently pasted there as text and are recoverable with
+   `scripts/pptx_mine.py`. Only if both fail, ask Petra.
+   Never reconstruct driver code from memory (B-6).
+2. **Downstream constraints.** Read the lab this chapter feeds (`assets/Labs/`),
+   and note what the chapter must have covered by then.
+   **The lab is a constraint, not the goal (P-13).** In-class and homework learning
+   have their own objectives; do not let the lab set the chapter's scope.
+3. **The datasheet / reference manual pages.** Identify the specific tables and
+   sections students will be sent to, by name and number (P-11).
+4. **Continuity.** What has been taught already, and what later chapters depend on
+   this one for. Check the deferred-topics list at the bottom of this file.
+
+Note what you found and what is missing. Missing driver code blocks Step 3, not
+Steps 1–2 — keep going.
+
+### Step 1 — Mine `ClassSlidesOLD`
+
+The old deck is the authority for the **intended in-class arc**.
 
 ```bash
-ls assets/slides/<DayXX-ChapterName>/
-find assets/slides/<DayXX-ChapterName>/ -name "*.c" -o -name "*.h"
+python3 scripts/pptx_mine.py assets/ClassSlidesOLD/DayNN-Name.pptx
 ```
 
-Note: which slides exist, which `.c`/`.h` files are present, approximate slide count.
+Extract:
 
-### Phase 1 — Ground truth: read the driver
-
-Driver and header files are not in the slide folders by default — ask Petra to drop them in, or ask directly in chat: *"Can you add the `.c` and `.h` files for this chapter?"* Don't reconstruct or invent driver code.
-
-Read every `.c` and `.h` file provided. Note:
-- Includes and defines
-- Init function structure and step order
-- Any course-specific constraints (no `%f`, `\r\n` handling, etc.)
-- CMSIS macro names used for registers
-- Any multi-step writes to a single register
-
-### Phase 2 — Read the existing `.ptx` top to bottom
-
-The `.ptx` files have all the content — they are the source of truth. The slides folders are supplementary (images only) and are incomplete due to an extraction failure.
-
-Skim the full chapter file. Flag:
-- Sections that reference slides (verify they exist on disk)
-- Step counts in section intros
-- Code blocks (are they from the actual driver or invented?)
-- Reading questions (do correct answers match actual behavior?)
-- Standing rule violations
-
-### Phase 3 — Edit section by section
-
-For each section:
-1. Verify any `<image source="..."/>` path exists on disk. If a slide is missing:
-   - Try re-extracting from the PDF first
-   - If that fails, ask Petra: *"Slide N from Day XX is missing — can you take a screenshot and drop it in the folder?"*
-2. If a full slide is used — does only part of it matter? If so, crop it
-3. Check code blocks against actual driver files
-4. Verify explanation placement is logical (don't explain X in section Y if X motivates section Z)
-5. Check standing rules in every paragraph
-
-### Phase 4 — Reading question audit
-
-For each `<exercise>`:
-- Read the correct answer: does it describe what the actual hardware/driver does?
-- Read each distractor: is the feedback accurate?
-- Check that the question isn't based on a behavior the real driver doesn't have
-
-### Phase 5 — Final grep scan
+- **The arc** — slide titles in order. This is the teaching sequence Petra actually
+  used, including the asides and the "wait, what?" moments that a topic-ordered
+  rewrite destroys.
+- **Speaker notes** — often the richest source in the whole deck. They contain the
+  explanations, the analogies, and the in-class demonstrations (the ADC deck teaches
+  successive approximation as a live number-guessing game, which existed *only* in a
+  speaker note).
+- **Code slides** — the real driver, as text (see Step 0).
+- **Images, with their annotations rebuilt** (P-12):
 
 ```bash
-grep -n "before you leave\|working in pairs\|work individually" ch-XXX.ptx
-grep -n "gate" ch-XXX.ptx          # clock gate language
-grep -n "%f" ch-XXX.ptx            # unsupported printf format
-grep -n "forward declar" ch-XXX.ptx
+python3 scripts/pptx_annotate.py assets/ClassSlidesOLD/DayNN-Name.pptx --slide 17
 ```
 
-Verify all `<image source="..."/>` paths:
-```bash
-grep -o 'source="[^"]*"' ch-XXX.ptx | sed 's/source="//;s/"//' | \
-  while read f; do [ -f "assets/$f" ] || echo "MISSING: $f"; done
+The annotations are PowerPoint shapes layered over the picture; plain media
+extraction drops them, which is why the images currently in the rough chapters are
+worse than the originals. The script re-composites them. Fall back to a LibreOffice
+render for any figure the script can't reproduce.
+
+### Step 2 — The lesson plan (one page)
+
+Write `plans/dayNN.md`:
+
+- **Objectives** — what a student can do afterwards.
+- **The CRUCIAL step** (P-2) — one sentence. The thing every student must reach.
+- **The STRETCH** (P-3) — what the fastest students do instead of waiting.
+- **The activity sequence** — Part 1..k, each with a time budget, marked as
+  do / predict / explain / reveal.
+- **Datasheet moment** (P-11) — which lookup, which table.
+- **Hand-offs** — what pre-class reading must establish; what the homework is; what
+  the lab downstream needs.
+
+One page. If the crucial step won't fit in a sentence, the class isn't designed yet.
+
+### Gate 1 — the lesson plan review
+
+Small panel, minutes to run:
+
 ```
+expert-active-learning, expert-cognitive-load, expert-continuity-auditor,
+expert-class-logistics, learner-firstgen-novice, learner-arduino-veteran,
+learner-anxious-nonhardware
+```
+
+Asking: is the arc sound, is the crucial step actually crucial and actually
+reachable, does the timing survive contact with a real classroom, does it depend on
+anything not yet taught? Fix the plan, then proceed.
+
+### Step 3 — Write the book
+
+Per `AUTHORING-book.md`. Order within the chapter:
+
+1. Objectives and chapter introduction.
+2. **Before Class** reading + reading questions (B-2, B-3).
+3. In-class `Part N` subsections matching the lesson plan (B-4), each with its
+   figures, activities, and instructor solutions.
+4. Reference material at the end (B-10).
+
+Write the prose and the figures. **Do not write `<slide>` blocks yet.**
+
+### Step 4 — Condense into slides
+
+Now author the `<slide>` blocks beside the prose, and the deck JSON.
+See `AUTHORING-slides.md`.
+
+This is deliberately last, and deliberately mechanical: the lesson plan already
+fixed the arc, so this step is condensation, not design. If a section resists
+condensing to a slide, that is a signal the section is not clear yet — fix the
+section.
+
+Remember the deck may legitimately diverge from the reading (P-9): the book may
+show worked code that the deck presents as a fill-in-the-blank skeleton.
+
+### Step 5 — Mechanical checks
+
+```bash
+python3 scripts/check_rules.py source/ch-NAME.ptx    # L-1..L-6, image paths, step counts
+pretext build web-deck                               # must build clean
+```
+
+Plus: every deck `ref` resolves; every coded activity has an instructor solution
+(P-10); code matches the driver (B-6).
+
+Fix everything here — the committee's time should go to teaching, not typos.
+
+### Gate 2 — the committee
+
+Full panel (see `.claude/agents/`), then the synthesizer, which returns a
+**prioritized, actionable change list** with rule IDs. Apply it.
+
+### Step 6 — Sign-off
+
+Petra reviews a near-final draft. Her corrections are fed back into
+`AUTHORING-book.md` as new rules if they are general — that is what keeps the next
+chapter cheaper than this one.
 
 ---
 
-## Remaining chapters
+## Definition of done
 
-| File | Slide folder(s) | Driver files? | Status |
-|------|----------------|---------------|--------|
-| ch-intro-blinky.ptx | Day01, Day01x, Day02 | — | done |
-| ch-switches.ptx | Day03, Day03x, Day04 | — | in progress |
-| ch-transistors.ptx | Day06 | — | in progress |
-| ch-adc.ptx | Day07 | — | in progress |
-| ch-debugging.ptx | Day07x | — | in progress |
-| ch-timers-interrupts.ptx | Day08, Day09 | — | in progress |
-| ch-i2c.ptx | Day09x, Day10, Day13 | — | in progress |
-| ch-motors.ptx | Day11, Day11x, Day12 | — | in progress |
-| ch-accelerometers.ptx | Day13x, Day14 | — | in progress |
-| ch-servos.ptx | Day15, Day15x | — | in progress |
-| ch-photosensors.ptx | Day16 | — | in progress |
-| ch-ble.ptx | Day17 | — | in progress |
-| ch-power.ptx | Day17x | — | in progress |
-| ch-uart.ptx | Day05, Day05x | uart.c, uart.h | **done** |
+A chapter is done when all of these are true.
+
+**Structure**
+- [ ] Objectives stated; every objective is actually taught and practiced
+- [ ] Before-class reading stands alone without hardware or class (B-2)
+- [ ] In-class sections are `Part N` subsections matching the lesson plan (B-4)
+- [ ] Reference material is at the end, not inline (B-10)
+- [ ] No concept taught twice (B-8)
+
+**Teaching**
+- [ ] The crucial step is named and scaffolded to the slowest student (P-2)
+- [ ] A genuine stretch exists for the fastest (P-3)
+- [ ] No forward references — verified by reading in order (P-1)
+- [ ] Every abstract idea has a visual (P-4)
+- [ ] First-encounter concepts get a mini-arc, not one dense unit (P-7)
+- [ ] At least one datasheet/RM lookup, named by table and section (P-11)
+
+**Correctness**
+- [ ] All code matches the real driver's idiom (B-6)
+- [ ] Reading-question answers *and* distractor feedback match real behavior (B-3)
+- [ ] Register and bit names match the reference manual (L-6)
+- [ ] `check_rules.py` passes (L-1…L-6, image paths, step counts)
+
+**Artifacts**
+- [ ] Every coded activity has an instructor solution (P-10)
+- [ ] Images are the annotated versions, cropped to what matters (P-12, B-11)
+- [ ] Book captions describe; slide captions instruct (B-7, S-3)
+- [ ] Deck built, every `ref` resolves, arc matches the lesson plan (S-8)
+- [ ] Practice/predict slides have writing room (S-2)
+- [ ] `pretext build web-deck` clean; student view (`?student`) hides solutions
+
+**Sign-off**
+- [ ] Committee change list applied
+- [ ] Petra approved
+- [ ] Any general correction she made is now a rule in `AUTHORING-book.md`
 
 ---
 
-## Quick-reference: things that bit us in ch-uart
+## Deferred topics — do not forget
 
-| Mistake | Fix |
-|---------|-----|
-| Invented driver code instead of real uart.c | Read `.c` file first |
-| Referenced slide41 (empty file) | Always `ls -la` before using |
-| Dropped full slide42 into BRR section | Cropped to waveform only |
-| Said "five steps" in intro | Recount after any structural change |
-| `rq-uart-crlf` assumed `\r` insertion | RQ must match actual driver |
-| Oversampling explanation in CR1 section | Moved to BRR where it belongs |
-| "retarget layer in uart.h" | It's in uart.c |
-| %f example in printf section | Removed; added explicit "not supported" note |
-| "forward declarations" | "Prototypes" |
-| "until this gate is opened" | "until its clock is enabled" |
+- **BSRR register** — introduce in `ch-timers-interrupts.ptx`, not before. The
+  motivation is that ISRs sharing GPIO state with the main loop create a race on the
+  ODR read-modify-write; BSRR's atomic set/clear is the fix. Students need to have hit
+  the problem before BSRR makes sense. Hook: "you're now writing ISRs that share GPIO
+  pins with the main loop — here's why that matters and here's the one-line fix."
+  CMSIS: `GPIO_BSRR_BS5` to set, `GPIO_BSRR_BR5` to clear.
+- **Missing image** `assets/images/Day08-Interrupts/slide11_c3ead6b8.png`
+  (`ch-timers-interrupts.ptx`) — Petra to supply.
+
+## Chapter status
+
+| File | Old deck(s) | Status |
+| --- | --- | --- |
+| ch-intro-blinky.ptx | Day01, Day01x, Day02 | **done** (Days 1, 1x, 2) |
+| ch-switches.ptx | Day03, Day03x, Day04 | **done** (Days 3, 3x, 4) |
+| ch-uart.ptx | Day05 | **done** (Day 5) |
+| ch-io-datasheets.ptx | Day05X | **done** (Day 5x) |
+| ch-transistors.ptx | Day06 | **done** (Day 6) |
+| ch-adc.ptx | Day07 | pilot |
+| ch-debugging.ptx | Day07x | rough |
+| ch-timers-interrupts.ptx | Day08, Day09 | rough |
+| ch-i2c.ptx | Day09X, Day10, Day13 | rough |
+| ch-motors.ptx | Day11, Day11x, Day12 | rough |
+| ch-accelerometers.ptx | Day13x, Day14 | rough |
+| ch-servos.ptx | Day15, Day15x | rough |
+| ch-photosensors.ptx | Day16 | rough |
+| ch-ble.ptx | Day17 | rough |
+| ch-power.ptx | Day17x | rough |
+
+"Rough" means: assembled from raw slide extraction, with duplicated concepts,
+unannotated images, invented code, and no in-class structure. Assume nothing in a
+rough chapter is correct until checked against Step 0 ground truth.

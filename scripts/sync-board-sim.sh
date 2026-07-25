@@ -10,7 +10,7 @@
 # together, and the published copy doubles as the standalone URL you can link
 # from Canvas:
 #
-#   https://petrabt.github.io/ENGS28/external/board-sim/index.html
+#   https://engs20book.thayer.dartmouth.edu/ENGS28/external/board-sim/index.html
 #
 # assets/board-sim/ is BUILT OUTPUT and is committed deliberately, only by
 # running this script - never edit it by hand. Fix the simulator in its own

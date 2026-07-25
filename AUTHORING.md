@@ -69,8 +69,13 @@ deployed site, with no separate hosting or deploy step. The deployed copy is
 also the standalone URL to link from Canvas:
 
 ```
-https://petrabt.github.io/ENGS28/external/board-sim/index.html
+https://engs20book.thayer.dartmouth.edu/ENGS28/external/board-sim/index.html
 ```
+
+It takes the same parameters as an embed — `?example=blinky`, or
+`?src=../sim-starters/<name>.c` for one of this book's starters. (The
+`petrabt.github.io/ENGS28/…` form redirects here, so old links keep working,
+but link the Dartmouth host.)
 
 `assets/board-sim/` is **built output — never edit it by hand.** Fix the
 simulator in its own repo, then:

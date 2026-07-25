@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+"""Mechanical rule checks for an ENGS 28 chapter (Step 5 of CHAPTER_PROCESS.md).
+
+Enforces the lintable rules L-1..L-6 from AUTHORING-book.md, plus image paths,
+unresolved cross-references, and the count-drift trap ("four steps" when there are
+five).  These are the errors that should never reach a human reviewer.
+
+    python3 scripts/check_rules.py source/ch-adc.ptx
+    python3 scripts/check_rules.py source/*.ptx --quiet   # errors only
+"""
+
+import argparse
+import os
+import re
+import sys
+from xml.etree import ElementTree as ET
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ASSETS = os.path.join(REPO, "assets")
+
+NUMBER_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+}
+
+# (id, regex, message, severity)
+RULES = [
+    ("L-1", r"\bworking in pairs\b|\bwork individually\b|\bbefore you leave\b",
+     "grouping/timing language — given verbally, never written", "error"),
+    ("L-2", r"%[-+ #0-9.]*f\b",
+     "%f in printf — the course printf has no floating point; scale to int and use %d",
+     "error"),
+    ("L-3", r"\b(open|opening|opens|closed|closing)\s+the\s+gate\b|\bclock\s+gate\b|\bgated?\s+(on|off|open)\b",
+     "'gate' language for clocks — say 'enable the clock'", "error"),
+    ("L-4", r"forward\s+declaration",
+     "say 'prototype', not 'forward declaration'", "error"),
+    ("L-5", r"\bthe target MCU\b|\bthe microcontroller chip\b(?! on our)|\bour MCU\b",
+     "vague hardware name — say STM32C031C6", "warn"),
+]
+
+# Bit/register names that must keep reference-manual casing.
+CASE_TRAPS = [
+    (r"\bAdc1\b|\badc1->", "ADC1"), (r"\bGpioa\b", "GPIOA"),
+    (r"\bChselr\b", "CHSELR"), (r"\bModer\b", "MODER"),
+    (r"\bAdrdy\b", "ADRDY"), (r"\bAdstart\b", "ADSTART"),
+]
+
+
+def strip_comments(text):
+    """Blank out XML comments so authoring notes don't trip the linter."""
+    return re.sub(r"<!--.*?-->", lambda m: re.sub(r"[^\n]", " ", m.group(0)),
+                  text, flags=re.S)
+
+
+# A deliberate violation is marked in the source by putting, immediately before
+# the element it applies to:
+#     <!-- check-rules: allow L-2  (teaching that %f is unsupported) -->
+# It suppresses the listed rules for the whole of that following element.
+TAG = re.compile(r"<(/?)([A-Za-z][\w:-]*)([^>]*?)(/?)>", re.S)
+
+
+def element_span(raw, pos):
+    """(start, end) of the first element beginning at or after `pos`."""
+    m = TAG.search(raw, pos)
+    while m and (m.group(1) or m.group(2).startswith("!")):
+        m = TAG.search(raw, m.end())
+    if not m:
+        return pos, len(raw)
+    if m.group(4):  # self-closing
+        return m.start(), m.end()
+    name, depth, cur = m.group(2), 1, m.end()
+    for t in TAG.finditer(raw, m.end()):
+        if t.group(2) != name or t.group(4):
+            continue
+        depth += -1 if t.group(1) else 1
+        cur = t.end()
+        if depth == 0:
+            return m.start(), cur
+    return m.start(), len(raw)
+
+
+def allowances(raw):
+    """{rule_id: [(first_line, last_line), ...]} from check-rules directives."""
+    out = {}
+    for m in re.finditer(r"<!--\s*check-rules:\s*allow\s+([A-Z]+-\d+(?:\s*,\s*[A-Z]+-\d+)*)",
+                         raw, re.I):
+        close = raw.find("-->", m.end())
+        start, end = element_span(raw, close + 3 if close != -1 else m.end())
+        span = (line_of(raw, m.start()), line_of(raw, end))
+        for rid in re.split(r"\s*,\s*", m.group(1).strip()):
+            out.setdefault(rid.upper(), []).append(span)
+    return out
+
+
+def line_of(text, pos):
+    return text.count("\n", 0, pos) + 1
+
+
+def check_file(path, quiet=False):
+    raw = open(path, encoding="utf-8").read()
+    text = strip_comments(raw)
+    problems = []
+
+    for rid, pattern, msg, sev in RULES:
+        for m in re.finditer(pattern, text, re.I):
+            problems.append((sev, line_of(text, m.start()), rid,
+                             f"{msg}  ->  {m.group(0)!r}"))
+
+    for pattern, correct in CASE_TRAPS:
+        for m in re.finditer(pattern, text):
+            if m.group(0) != correct and m.group(0).lower() != correct.lower() + "->":
+                problems.append(("warn", line_of(text, m.start()), "L-6",
+                                 f"register/bit casing: {m.group(0)!r} should be {correct!r}"))
+
+    # Images resolve on disk.
+    for m in re.finditer(r'<image\s+source="([^"]+)"', text):
+        src = m.group(1)
+        if src.startswith(("http://", "https://")):
+            continue
+        if not os.path.exists(os.path.join(ASSETS, src)):
+            problems.append(("error", line_of(text, m.start()), "B-11",
+                             f"missing image: {src}"))
+
+    # xref targets exist somewhere in the book.
+    ids = set(re.findall(r'xml:id="([^"]+)"', raw))
+    for other in os.listdir(os.path.join(REPO, "source")):
+        if other.endswith(".ptx") and os.path.basename(path) != other:
+            ids |= set(re.findall(r'xml:id="([^"]+)"',
+                                  open(os.path.join(REPO, "source", other),
+                                       encoding="utf-8").read()))
+    for m in re.finditer(r'<xref\s+ref="([^"]+)"', text):
+        if m.group(1) not in ids:
+            problems.append(("error", line_of(text, m.start()), "B-9",
+                             f"xref to unknown id: {m.group(1)}"))
+
+    # Slide refs point at targetable elements that exist.
+    for m in re.finditer(r'<slide[^>]*\bref="([^"]+)"', text):
+        if m.group(1) not in ids:
+            problems.append(("error", line_of(text, m.start()), "S-4",
+                             f"slide ref to unknown id: {m.group(1)}"))
+
+    # Count drift: "four steps" vs. how many actually follow.
+    for m in re.finditer(r"\b(" + "|".join(NUMBER_WORDS) + r")\s+(steps|things|parts|stages)\b",
+                         text, re.I):
+        claimed = NUMBER_WORDS[m.group(1).lower()]
+        window = text[m.end():m.end() + 4000]
+        actual = len(re.findall(r"<li\b", window[:window.find("</ol>") + 1])) if "</ol>" in window[:2000] else None
+        if actual and actual != claimed:
+            problems.append(("warn", line_of(text, m.start()), "B-9",
+                             f"says {m.group(1)} {m.group(2)} but the next list has {actual} items"))
+
+    # Well-formedness.
+    try:
+        ET.parse(path)
+    except ET.ParseError as e:
+        problems.append(("error", getattr(e, "position", (0, 0))[0], "XML",
+                         f"not well-formed: {e}"))
+
+    allowed = allowances(raw)
+    problems = [p for p in problems
+                if not any(lo <= p[1] <= hi for lo, hi in allowed.get(p[2], []))]
+
+    problems.sort(key=lambda p: (p[1], p[2]))
+    errors = sum(1 for p in problems if p[0] == "error")
+
+    if problems and not (quiet and errors == 0):
+        print(f"\n{os.path.relpath(path, REPO)}")
+        for sev, line, rid, msg in problems:
+            if quiet and sev != "error":
+                continue
+            mark = "ERROR" if sev == "error" else "warn "
+            print(f"  {mark} {line:5d}  [{rid}]  {msg}")
+    return errors, len(problems) - errors
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("files", nargs="+")
+    ap.add_argument("--quiet", action="store_true", help="errors only")
+    args = ap.parse_args()
+
+    e = w = 0
+    for f in args.files:
+        fe, fw = check_file(f, args.quiet)
+        e += fe
+        w += fw
+    print(f"\n{e} error(s), {w} warning(s)")
+    sys.exit(1 if e else 0)
+
+
+if __name__ == "__main__":
+    main()
