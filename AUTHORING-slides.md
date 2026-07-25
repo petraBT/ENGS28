@@ -175,6 +175,11 @@ in one panel, `<tabular>` in the other). Slide tables honor PreTeXt's `halign`/`
   instructive caption right).
 - *the diagram/photo IS the point* (register diagrams, scope captures) →
   image-dominant, big, with just an instructive caption.
+- *a TALL / portrait image* (a vertical screenshot, a menu + dialog) is lost on an
+  image-dominant slide — it can only grow to ~72–80% of the slide *height*, which
+  leaves it narrow and marooned in a wide frame. Give it a **two-column** slide
+  instead (a few step bullets left, the image right): the half-width column suits the
+  portrait aspect and the image reads large beside its steps. (Day 1x exclude-from-build.)
 - *a WIDE image with a few talking points* → `<slide ref="fig" stack="yes">`:
   bullets span the full width on top, the figure sits full-width (large) below.
 - *code or an activity* → full width.
