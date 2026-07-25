@@ -1593,6 +1593,7 @@ int main(void) {
 
             <slide xml:id="sl-day2-breadboard" ref="fig-nucleo-breadboard">
                 <ul>
+                    <li><clr c="red">Always unplug the USB cable</clr> — cutting power to the Nucleo — before you wire or rewire anything. Reconnect it only when you're ready to test.</li>
                     <li>Power the breadboard's rails from the Nucleo's <em>3.3 V</em> header pin.</li>
                     <li>Tie all + rails together and all − rails together, so you can tap 3.3 V or GND anywhere.</li>
                     <li>Leave these power jumpers in place for the whole term.</li>
@@ -1624,6 +1625,28 @@ int main(void) {
 
             <slide xml:id="sl-day2-pinout" ref="fig-nucleo-pinout">
                 <caption>Nucleo-64 pinout: each Arduino label with its STM32 port/bit. Use it to find which pin D4 is.</caption>
+            </slide>
+
+            <slide xml:id="sl-day2-newpin-solution">
+                <p>Solution — blinking on D4 (PB10). Only the port letter and the bit numbers change:</p>
+                <program language="c"><code><![CDATA[
+#include "ES28.h"
+#define GPIOBEN  (1U << 1)    // bit 1 enables the GPIOB clock
+#define LED_PIN  (1U << 10)   // D4 = PB10
+
+int main(void) {
+    RCC->IOPENR  |= GPIOBEN;      // enable GPIOB clock  (was GPIOA)
+    GPIOB->MODER |= (1U << 20);   // PB10 output: set bit 20    (2*10)
+    GPIOB->MODER &= ~(1U << 21);  // clear bit 21               (2*10+1)
+    while (1) {
+        GPIOB->ODR |=  LED_PIN;   // D4 high → LED on
+        delay_ms(500);
+        GPIOB->ODR &= ~LED_PIN;   // D4 low  → LED off
+        delay_ms(500);
+    }
+}
+]]></code></program>
+                <note>D4 = Port B, bit 10. From PA5: clock bit 0→1, MODER bits 10/11→20/21, ODR bit 5→10.</note>
             </slide>
         </subsection>
 

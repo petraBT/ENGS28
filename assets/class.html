@@ -98,7 +98,9 @@
       #ref.stacked .ref-cols { flex-direction: column; align-items: stretch; gap: 1.5%; }
       #ref.stacked .ref-body { flex: none; }
       #ref.stacked .ref-media { flex: 1; min-height: 0; }
-      #ref.stacked .ref-media img { max-height: 100%; }
+      /* Cap the stacked image by stage height (not 100% of an unconstrained box) so
+         it — and its caption below — fit under the bullets instead of being clipped. */
+      #ref.stacked .ref-media img { max-height: 55cqh; }
       #ref .ref-body p, #ref .ref-body .para { font-size: 3vmin; font-size: 3cqmin; line-height: 1.6; margin: 0 0 .85em 0; }
       /* Unordered lists get a dot; ordered lists (activity tasks) keep numbers. */
       #ref .ref-body ul { margin: 0; padding: 0; list-style: none; }
@@ -157,7 +159,7 @@
          (e.g. width:55%) for the reading page; on a slide we want them as large
          as the space allows, so override that and let the image use the column. */
       #ref .ref-media .image-box { width: 100% !important; margin: 0 !important; }
-      #ref .ref-media img { width: 100%; max-width: 100%; max-height: 80cqh; object-fit: contain; }
+      #ref .ref-media img { width: 100%; max-width: 100%; max-height: 72cqh; object-fit: contain; }
       /* Guard against any figure spilling past the slide, and re-enable the CSS
          grid a PreTeXt <sidebyside> uses (without the book stylesheet its panels
          would stack and overflow instead of sitting in a row). */
@@ -396,6 +398,27 @@
             if (el.parentNode) el.parentNode.removeChild(el)
           })
         }
+        // The player doesn't load MathJax, so PreTeXt <m> math arrives as raw LaTeX
+        // in .process-math spans (e.g. "\(V_{CC}\)"). Convert the simple inline math
+        // the in-class content uses into readable plain text.
+        function demath(root) {
+          ;[].forEach.call(root.querySelectorAll('.process-math'), function (el) {
+            var t = el.textContent
+            t = t.replace(/\\[()\[\]]/g, '')                       // \( \) \[ \]
+                 .replace(/\\text\s*\{([^{}]*)\}/g, '$1')          // \text{...}
+                 .replace(/\\mathrm\s*\{([^{}]*)\}/g, '$1')
+                 .replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1/$2')
+                 .replace(/\\Omega/g, 'Ω').replace(/\\mu/g, 'µ').replace(/\\beta/g, 'β')
+                 .replace(/\\cdot/g, '·').replace(/\\times/g, '×').replace(/\\approx/g, '≈')
+                 .replace(/\\leq?/g, '≤').replace(/\\geq?/g, '≥').replace(/\\pm/g, '±')
+                 .replace(/\\,|\\;|\\ /g, ' ')
+                 .replace(/_\{([^{}]*)\}/g, '_$1').replace(/\^\{([^{}]*)\}/g, '^$1')
+                 .replace(/\\[a-zA-Z]+/g, '')                      // any leftover command
+                 .replace(/[{}]/g, '')
+            el.textContent = t
+            el.classList.remove('process-math')
+          })
+        }
 
         function renderRef(slide) {
           refTitle.innerHTML = html(slide.title || '')
@@ -415,7 +438,7 @@
             if (slide.room || block.getAttribute('data-deck-room')) refBody.classList.add('roomy')
             var body = block.querySelector('.deck-slide-body') || block
             var bodyClone = body.cloneNode(true)
-            strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone)
+            strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone); demath(bodyClone)
             // An activity shown as a slide may embed figures or code listings
             // that are already shown on their own slides — drop them so the slide
             // shows just the tasks and doesn't overflow. (Only for activities;
