@@ -164,7 +164,11 @@ activity. (Day 1 bitwise ops: *why bitwise* → *masks* → *OR-set* → *AND-cl
 divider.) Don't compress a first-encounter topic to save slides — slides are free;
 confusion is not. A short truth table or a few binary-pattern lines can sit right in
 the `<slide>` body (a bare `<tabular>` renders full-width; a `<program>` shows the
-bit pattern) so each rule comes with its evidence.
+bit pattern) so each rule comes with its evidence. Put a small reference table off
+to the **side** of the worked example with a `<sidebyside>` in the slide body (program
+in one panel, `<tabular>` in the other). Slide tables honor PreTeXt's `halign`/`valign`
+— the player maps PreTeXt's per-cell alignment classes (`c`/`l`/`r`, `m`/`t`/`b`) — so
+`halign="center"` really centers the data under the headers.
 
 **Layout signals meaning:**
 - *talking points + a supporting image* → two-column (bullets left, figure +
