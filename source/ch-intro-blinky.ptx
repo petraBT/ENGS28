@@ -798,13 +798,56 @@ int main(void) {
                 <note>Quick warm-up before the hands-on activity — take predictions from the room, then reveal.</note>
             </slide>
 
+            <!-- ── Step-by-step walkthrough: remind the code + step, then explain ── -->
+            <slide xml:id="sl-day1-step1">
+                <p><term>Step 1 — enable the GPIOA clock.</term></p>
+                <program language="c"><code><![CDATA[
+RCC->IOPENR |= GPIOAEN;    // Step 1: turn on Port A's clock
+]]></code></program>
+                <ul>
+                    <li>Every GPIO port's clock is gated <em>off</em> at reset, to save power.</li>
+                    <li>Until the clock is on, reads and writes to that port's registers do nothing.</li>
+                    <li>So this line must come <em>before</em> any <c>GPIOA-&gt;MODER</c> or <c>GPIOA-&gt;ODR</c> access.</li>
+                </ul>
+            </slide>
+
+            <slide xml:id="sl-day1-step2">
+                <p><term>Step 2 — make PA5 an output.</term></p>
+                <program language="c"><code><![CDATA[
+GPIOA->MODER |=  (1U << 10);   // Step 2a: set   bit 10
+GPIOA->MODER &= ~(1U << 11);   // Step 2b: clear bit 11  → PA5 output
+]]></code></program>
+                <ul>
+                    <li><c>MODER</c> is Port A's <term>Mode Register</term> — it stores the mode of all 16 pins.</li>
+                    <li>Each pin gets 2 bits (four possible modes). PA5 uses bits 10 &amp; 11.</li>
+                    <li>Output mode is <c>01</c>: set bit 10, clear bit 11 — exactly the two lines above.</li>
+                </ul>
+            </slide>
+
             <slide xml:id="sl-day1-moder" ref="table-moder-encoding">
                 <ul>
-                    <li>Four modes per pin → 2 bits each. 16 pins × 2 = MODER is 32 bits wide.</li>
-                    <li>PA5 uses bits 10 &amp; 11. Output = <c>01</c> → set bit 10, clear bit 11.</li>
-                    <li>Why two lines? Setting bit 10 alone could leave bit 11 = 1 → <c>11</c> (analog), not output.</li>
+                    <li>16 pins × 2 bits = one 32-bit register. Each 2-bit field picks a mode:</li>
+                    <li>Output is <c>01</c> — that's why Step 2 needs two lines, not one.</li>
+                    <li>Set bit 10 alone and bit 11 might still be <c>1</c> → <c>11</c> (analog). Always clear the upper bit too.</li>
                 </ul>
                 <caption>MODER bit-pair encoding.</caption>
+            </slide>
+
+            <slide xml:id="sl-day1-step34">
+                <p><term>Steps 3 &amp; 4 — drive PA5 high, then low, forever.</term></p>
+                <program language="c"><code><![CDATA[
+while (1) {
+    GPIOA->ODR |=  LED_PIN;   // Step 3: bit 5 = 1 → 3.3 V → LED on
+    for (int i = 0; i < 100000; i++);          // delay
+    GPIOA->ODR &= ~LED_PIN;   // Step 4: bit 5 = 0 → 0 V  → LED off
+    for (int i = 0; i < 100000; i++);          // delay
+}
+]]></code></program>
+                <ul>
+                    <li><c>ODR</c> is the <term>Output Data Register</term> — bit 5 sets PA5's voltage.</li>
+                    <li>Set bit 5 → LED on; clear bit 5 → LED off. The two delay loops set how long each lasts.</li>
+                    <li>Inside <c>while (1)</c> they alternate forever — that is the blink.</li>
+                </ul>
             </slide>
 
             <activity xml:id="act-day1-bit-ops">
