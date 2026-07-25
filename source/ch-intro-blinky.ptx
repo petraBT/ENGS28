@@ -704,6 +704,26 @@ int main(void) {
                 </ul>
             </slide>
 
+            <slide xml:id="sl-day1-register">
+                <p>A register is just a row of bits. In <c>GPIOA->ODR</c> each bit is one pin's on/off switch — bit <em>n</em> drives pin PA<em>n</em>:</p>
+                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                    <col width="20%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/>
+                    <row header="yes" bottom="minor">
+                        <cell>bit</cell><cell>7</cell><cell>6</cell><cell>5</cell><cell>4</cell><cell>3</cell><cell>2</cell><cell>1</cell><cell>0</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>pin</cell><cell>PA7</cell><cell>PA6</cell><cell>PA5</cell><cell>PA4</cell><cell>PA3</cell><cell>PA2</cell><cell>PA1</cell><cell>PA0</cell>
+                    </row>
+                    <row>
+                        <cell><c>ODR</c></cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell>
+                    </row>
+                </tabular>
+                <ul>
+                    <li>16 bits → 16 pins, PA0–PA15 (low 8 shown). A <c>1</c> drives that pin HIGH (3.3 V); a <c>0</c> drives it LOW.</li>
+                    <li>Bit 5 = PA5 = the on-board LED — the lone <c>1</c> turns it on.</li>
+                </ul>
+            </slide>
+
             <slide xml:id="sl-day1-shift-mask">
                 <p><c>1U &lt;&lt; n</c> puts a single <c>1</c> at position <c>n</c> — a <term>bit mask</term>:</p>
                 <program language="c"><code><![CDATA[
@@ -738,15 +758,16 @@ int main(void) {
             </slide>
 
             <slide xml:id="sl-day1-set-bit">
-                <p>Now <c>reg |= mask</c> — shorthand for <c>reg = reg | mask</c>. OR-ing with a mask <em>sets</em> the mask's <c>1</c>-bits and leaves every other bit untouched, so you can turn one bit on without disturbing the rest:</p>
-                <program language="c"><code><![CDATA[
-    ODR      = 0b 0000 0010     bit 1 already on
-  | LED_PIN  = 0b 0010 0000     the mask: bit 5
-  ---------------------------
-  = ODR      = 0b 0010 0010     bit 5 now on, bit 1 untouched
-]]></code></program>
+                <p>Now apply it to the register. <c>reg |= mask</c> (shorthand for <c>reg = reg | mask</c>) <em>sets</em> the mask's <c>1</c>-bits and leaves the rest — turn PA5 on without disturbing PA2:</p>
+                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                    <col width="26%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/>
+                    <row header="yes" bottom="minor"><cell>bit</cell><cell>7</cell><cell>6</cell><cell>5</cell><cell>4</cell><cell>3</cell><cell>2</cell><cell>1</cell><cell>0</cell></row>
+                    <row><cell><c>ODR</c></cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell></row>
+                    <row><cell><c>| LED_PIN</c></cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                    <row top="minor"><cell><c>= ODR</c></cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell></row>
+                </tabular>
                 <ul>
-                    <li>Where the mask is <c>1</c> the bit is forced to <c>1</c>; where the mask is <c>0</c> the bit is left as-is.</li>
+                    <li>Mask <c>1</c> forces that bit to <c>1</c>; mask <c>0</c> leaves the bit as-is — so bit 5 turns on and PA2 stays on.</li>
                     <li><c>GPIOA-&gt;ODR |= LED_PIN;</c> turns the LED on and touches nothing else.</li>
                 </ul>
             </slide>
@@ -772,17 +793,16 @@ int main(void) {
             </slide>
 
             <slide xml:id="sl-day1-clear-bit">
-                <p><c>~</c> flips every bit, turning a single-<c>1</c> mask into a single-<c>0</c> mask. Then <c>reg &amp;= ~mask</c> clears just that bit and leaves the rest:</p>
-                <program language="c"><code><![CDATA[
-    LED_PIN  = 0b 0010 0000     the mask: bit 5
-   ~LED_PIN  = 0b 1101 1111     one 0, rest 1s
-
-    ODR      = 0b 0010 0010
-  & ~LED_PIN = 0b 1101 1111
-  ---------------------------
-  = ODR      = 0b 0000 0010     bit 5 cleared, bit 1 untouched
-]]></code></program>
+                <p>Clearing works the same way on the register. <c>~</c> flips the mask to a single <c>0</c>, then <c>reg &amp;= ~mask</c> clears just that bit — turn PA5 off, keep PA2:</p>
+                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                    <col width="26%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/>
+                    <row header="yes" bottom="minor"><cell>bit</cell><cell>7</cell><cell>6</cell><cell>5</cell><cell>4</cell><cell>3</cell><cell>2</cell><cell>1</cell><cell>0</cell></row>
+                    <row><cell><c>ODR</c></cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell></row>
+                    <row><cell><c>&amp; ~LED_PIN</c></cell><cell>1</cell><cell>1</cell><cell>0</cell><cell>1</cell><cell>1</cell><cell>1</cell><cell>1</cell><cell>1</cell></row>
+                    <row top="minor"><cell><c>= ODR</c></cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell></row>
+                </tabular>
                 <ul>
+                    <li><c>~LED_PIN</c> is all <c>1</c>s except a <c>0</c> at bit 5. AND with <c>1</c> keeps a bit; AND with <c>0</c> forces it low — so bit 5 clears and PA2 stays on.</li>
                     <li><c>GPIOA-&gt;ODR &amp;= ~LED_PIN;</c> turns the LED off and touches nothing else.</li>
                 </ul>
             </slide>
@@ -832,6 +852,20 @@ GPIOA->MODER &= ~(1U << 11);   // Step 2b: clear bit 11  → PA5 output
                     <li>That's why Step 2 is two lines: set bit 10 alone and bit 11 might still be <c>1</c> → <c>11</c> (analog). Always clear the upper bit too.</li>
                 </ul>
                 <caption>MODER bit-pair encoding.</caption>
+            </slide>
+
+            <slide xml:id="sl-day1-moder-register">
+                <p>Here is MODER as boxes — <em>two</em> per pin. PA5's pair is bits 10 &amp; 11, and <c>01</c> means output:</p>
+                <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+                    <col width="16%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/>
+                    <row header="yes" bottom="minor"><cell>bit</cell><cell>11</cell><cell>10</cell><cell>9</cell><cell>8</cell><cell>7</cell><cell>6</cell><cell>5</cell><cell>4</cell><cell>3</cell><cell>2</cell><cell>1</cell><cell>0</cell></row>
+                    <row bottom="minor"><cell>pin</cell><cell>PA5</cell><cell>PA5</cell><cell>PA4</cell><cell>PA4</cell><cell>PA3</cell><cell>PA3</cell><cell>PA2</cell><cell>PA2</cell><cell>PA1</cell><cell>PA1</cell><cell>PA0</cell><cell>PA0</cell></row>
+                    <row><cell><c>MODER</c></cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell></row>
+                </tabular>
+                <ul>
+                    <li>Each pin has its own 2-bit field (four modes: <c>00</c> input, <c>01</c> output, <c>10</c> alternate, <c>11</c> analog).</li>
+                    <li>PA5's bits read <c>01</c>: bit 10 = <c>1</c>, bit 11 = <c>0</c> — exactly the two lines of Step 2.</li>
+                </ul>
             </slide>
 
             <slide xml:id="sl-day1-step34">
