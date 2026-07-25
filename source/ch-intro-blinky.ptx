@@ -665,9 +665,10 @@ LED_PIN  = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit 5 is 1)
                 <ol>
                     <li>Turn on the clock to GPIO Port A (peripherals are off by default).</li>
                     <li>Set PA5 to output mode so we can drive it HIGH or LOW.</li>
-                    <li>Set bit 5 HIGH → LED on.</li>
-                    <li>Clear bit 5 LOW → LED off — then repeat, forever, inside <c>while (1)</c>.</li>
+                    <li><em>In the loop:</em> set bit 5 HIGH → LED on, then wait.</li>
+                    <li><em>In the loop:</em> clear bit 5 LOW → LED off, then wait.</li>
                 </ol>
+                <p>Steps 1–2 run <em>once</em> at startup. Steps 3 and 4 repeat <em>together, forever</em> inside <c>while (1)</c> — that alternation is the blink.</p>
                 <note>Embedded is the exception to "never write an infinite loop": setup runs once, then the device works forever. <c>return 0</c> is unreachable.</note>
             </slide>
 
@@ -707,19 +708,19 @@ int main(void) {
             <slide xml:id="sl-day1-register">
                 <p>A register is just a row of bits. In <c>GPIOA->ODR</c> each bit is one pin's on/off switch — bit <em>n</em> drives pin PA<em>n</em>:</p>
                 <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
-                    <col width="20%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/><col width="10%"/>
+                    <col width="12%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/>
                     <row header="yes" bottom="minor">
-                        <cell>bit</cell><cell>7</cell><cell>6</cell><cell>5</cell><cell>4</cell><cell>3</cell><cell>2</cell><cell>1</cell><cell>0</cell>
+                        <cell>bit</cell><cell>15</cell><cell>14</cell><cell>13</cell><cell>12</cell><cell>11</cell><cell>10</cell><cell>9</cell><cell>8</cell><cell>7</cell><cell>6</cell><cell>5</cell><cell>4</cell><cell>3</cell><cell>2</cell><cell>1</cell><cell>0</cell>
                     </row>
                     <row bottom="minor">
-                        <cell>pin</cell><cell>PA7</cell><cell>PA6</cell><cell>PA5</cell><cell>PA4</cell><cell>PA3</cell><cell>PA2</cell><cell>PA1</cell><cell>PA0</cell>
+                        <cell>pin</cell><cell>PA15</cell><cell>PA14</cell><cell>PA13</cell><cell>PA12</cell><cell>PA11</cell><cell>PA10</cell><cell>PA9</cell><cell>PA8</cell><cell>PA7</cell><cell>PA6</cell><cell>PA5</cell><cell>PA4</cell><cell>PA3</cell><cell>PA2</cell><cell>PA1</cell><cell>PA0</cell>
                     </row>
                     <row>
-                        <cell><c>ODR</c></cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell>
+                        <cell><c>ODR</c></cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell>
                     </row>
                 </tabular>
                 <ul>
-                    <li>16 bits → 16 pins, PA0–PA15 (low 8 shown). A <c>1</c> drives that pin HIGH (3.3 V); a <c>0</c> drives it LOW.</li>
+                    <li>16 bits → 16 pins, PA0–PA15. A <c>1</c> drives that pin HIGH (3.3 V); a <c>0</c> drives it LOW.</li>
                     <li>Bit 5 = PA5 = the on-board LED — the lone <c>1</c> turns it on.</li>
                 </ul>
             </slide>
@@ -822,12 +823,13 @@ int main(void) {
             <slide xml:id="sl-day1-step1">
                 <p><term>Step 1 — enable the GPIOA clock.</term></p>
                 <program language="c"><code><![CDATA[
-RCC->IOPENR |= GPIOAEN;    // Step 1: turn on Port A's clock
+RCC->IOPENR |= GPIOAEN;    // GPIOAEN is (1U << 0) — the mask for bit 0
 ]]></code></program>
                 <ul>
-                    <li>Every GPIO port's clock is gated <em>off</em> at reset, to save power.</li>
-                    <li>Until the clock is on, reads and writes to that port's registers do nothing.</li>
-                    <li>So this line must come <em>before</em> any <c>GPIOA-&gt;MODER</c> or <c>GPIOA-&gt;ODR</c> access.</li>
+                    <li><c>IOPENR</c> (I/O Port Enable Register) is another row of bits — but here each bit is one whole <em>port's</em> clock: bit 0 = Port A, bit 1 = Port B, bit 2 = Port C.</li>
+                    <li><c>GPIOAEN</c> is just <c>(1U &lt;&lt; 0)</c> — the mask for bit 0 — so this line sets bit 0 and switches on Port A's clock.</li>
+                    <li>Every port's clock is gated <em>off</em> at reset to save power; until it's on, reads and writes to that port's registers do nothing.</li>
+                    <li>So Step 1 must come <em>before</em> any <c>GPIOA-&gt;MODER</c> or <c>GPIOA-&gt;ODR</c> access.</li>
                 </ul>
             </slide>
 
