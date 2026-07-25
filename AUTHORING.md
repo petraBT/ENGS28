@@ -44,6 +44,45 @@ preserves read-only permissions on the copies it made last time).
 carrying a script that talks to a server able to rewrite your source files, so
 it must never end up in something you publish.
 
+## The board simulator in the book
+
+Any exercise can carry a live, in-browser Nucleo — the
+[board simulator](https://github.com/petraBT/ENGS28-board-sim), which runs the
+same register-level C as the real board. Drop a `<sim>` into the source:
+
+```xml
+<sim starter="blinkySlowToFast"/>   <!-- assets/sim-starters/<name>.c -->
+<sim example="blinky"/>             <!-- a built-in example -->
+<sim starter="…" height="720"/>     <!-- taller frame (default 660) -->
+```
+
+Starter code is a plain `.c` file in `assets/sim-starters/` — no registration
+step, no tool: create the file, name it in `starter=`, done. Put a `<sim>`
+inside a `<slide>` to project the live simulator in class (a *demo* slide);
+a `<sim>` inside an `<activity>` is dropped when that activity is projected,
+the same as the figures and code listings an activity embeds.
+
+**The simulator ships inside the book.** Its built output is committed at
+`assets/board-sim/`, which PreTeXt copies to `external/board-sim/` on every
+target — so it works in the local preview, in the deck build, and on the
+deployed site, with no separate hosting or deploy step. The deployed copy is
+also the standalone URL to link from Canvas:
+
+```
+https://petrabt.github.io/ENGS28/external/board-sim/index.html
+```
+
+`assets/board-sim/` is **built output — never edit it by hand.** Fix the
+simulator in its own repo, then:
+
+```sh
+./scripts/sync-board-sim.sh    # builds it there, copies the result here
+./build.sh                     # see it
+git add assets/board-sim && git commit -m "Update the board simulator"
+```
+
+If you skip the sync, the deployed book keeps the old simulator.
+
 ## Git
 
 Separate from deploying — history and backup, not your publish step.
@@ -68,7 +107,9 @@ pretext deploy
 
 This builds and publishes to the `gh-pages` branch, which GitHub Pages serves.
 Unlike the C-Programming book — whose deploy reads the working tree directly —
-here deploying goes through git, so commit and push first.
+here deploying goes through git, so commit and push first. That includes
+`assets/board-sim/`: the simulator is published as part of the book, so an
+unsynced or uncommitted simulator change simply doesn't ship (see above).
 
 ## Watching without the preview
 

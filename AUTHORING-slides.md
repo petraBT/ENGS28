@@ -46,12 +46,22 @@ without duplicating its image.
 | **Text / prompt** | `<slide><ul><li>…</li></ul></slide>` (or `<p>`) | full-width |
 | **Activity** | *no `<slide>` block* — the deck refs the `<activity>`'s own `xml:id` | full-width; the activity's own heading is hidden, and any figures **or code listings** it embeds are dropped (they get their own slides) |
 | **Table** | `<slide ref="table-X"><caption>takeaway</caption></slide>` (tables are targetable) | the table full-width, with the instructive caption below it |
+| **Demo** (live board simulator) | `<slide><p>lead-in</p><sim starter="…"/></slide>` | lead-in line on top, the running simulator filling the rest of the slide |
 
 **A code activity you want shown *with* its code** (e.g. "rewrite this snippet") must be
 authored as a **self-contained `<slide>` block** — put the `<program>` and the questions
 (`<ol>`) directly in the block. Do **not** ref the `<activity>`: an activity ref strips
 `pre.program`, so the code the students are meant to work from would vanish. (Day 6
 "Rewriting with Macros" is the pattern.)
+
+**A demo slide** puts ENGS 28's coding surface on the projector: a `<slide>` whose body
+is a `<sim>` (see AUTHORING.md) is shown as the live simulator, full slide, with the
+lead-in line above it. This is ENGS 20's `demo` slide type, arrived at the book-native
+way — there is no `"type": "demo"` in the deck JSON; it is an ordinary `ref` to a
+`<slide>` that happens to contain a `<sim>`. (Day 1, `sl-day1-sim-demo`, is the pattern.)
+A `<sim>` embedded in an **activity** is dropped when that activity is projected, exactly
+like the figures and code listings an activity embeds — the students already have it in
+the book, and the slide should show the tasks.
 
 **Instructive caption** (short line under the figure): add a `<caption>…</caption>`
 child. The player shows THIS under the image and **hides the book figure's full

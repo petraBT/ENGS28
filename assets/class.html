@@ -153,6 +153,21 @@
       #ref pre .t-keyword { color: #708; } #ref pre .t-type { color: #085; }
       #ref pre .t-number { color: #164; } #ref pre .t-comment { color: #a50; }
       #ref pre .t-string { color: #a11; } #ref pre .t-meta { color: #555; }
+      /* A board simulator projected as a demo slide (a <slide> whose body is a
+         <sim>). The book page's own breakout rule — which widens the embed past
+         the reading column — rides along inside the extracted markup, so undo it
+         here and just fill the slide. The "open in a new tab" link is for readers
+         of the book, not for the projector. */
+      #ref .ref-body > .sim-embed, #ref .sim-embed {
+        width: 100%; margin: 0;
+      }
+      #ref .sim-embed iframe { width: 100%; height: 100%; border: 0; display: block; }
+      #ref .sim-embed-links { display: none; }
+      /* A demo slide is its lead-in line stacked over the tool, and the tool
+         takes every pixel that is left — the simulator needs width for its
+         editor / board / registers columns, and height for the board. */
+      #ref .ref-body.has-sim { display: flex; flex-direction: column; overflow: hidden; }
+      #ref .ref-body.has-sim > .sim-embed { flex: 1; min-height: 0; }
       /* The resolved figure (image + caption). */
       #ref .ref-media figure, #ref .ref-media .figure-like { margin: 0; text-align: center; }
       /* Fill the available column with the figure. The book sizes images small
@@ -384,6 +399,12 @@
           ;[].forEach.call(root.querySelectorAll('a[href]'), function (a) {
             a.href = new URL(a.getAttribute('href'), baseUrl).href
           })
+          // Embedded tools (the board simulator, <sim> in the book source) —
+          // same problem, and worse: an unresolved src would silently load
+          // nothing on the projector.
+          ;[].forEach.call(root.querySelectorAll('iframe[src]'), function (f) {
+            f.src = new URL(f.getAttribute('src'), baseUrl).href
+          })
         }
         // Re-highlight PreTeXt code blocks (they arrive as plain escaped text).
         function highlightBlocks(root) {
@@ -425,7 +446,7 @@
           titleEl.innerHTML = html(slide.title || '')
           refBody.innerHTML = ''
           refMedia.innerHTML = ''
-          refBody.classList.remove('roomy')
+          refBody.classList.remove('roomy', 'has-sim')
           refEl.classList.remove('figure-focus', 'stacked')
           refEl.classList.add('single')
           showOnly(refEl)
@@ -439,16 +460,19 @@
             var body = block.querySelector('.deck-slide-body') || block
             var bodyClone = body.cloneNode(true)
             strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone); demath(bodyClone)
-            // An activity shown as a slide may embed figures or code listings
-            // that are already shown on their own slides — drop them so the slide
-            // shows just the tasks and doesn't overflow. (Only for activities;
-            // a code slide's own <program> must stay.)
+            // An activity shown as a slide may embed figures, code listings or a
+            // board simulator that are already shown on their own slides — drop
+            // them so the slide shows just the tasks and doesn't overflow. (Only
+            // for activities; a code slide's own <program>, and a demo slide's
+            // own <sim>, must stay.)
             var isActivity = bodyClone.classList && (bodyClone.classList.contains('activity') ||
               bodyClone.classList.contains('exercise-like') || bodyClone.classList.contains('project-like'))
-            ;[].forEach.call(bodyClone.querySelectorAll(isActivity ? 'figure, .figure-like, .code-box, pre.program' : 'figure, .figure-like'), function (el) {
+            ;[].forEach.call(bodyClone.querySelectorAll(isActivity ? 'figure, .figure-like, .code-box, pre.program, .sim-embed' : 'figure, .figure-like'), function (el) {
               if (el.parentNode) el.parentNode.removeChild(el)
             })
             while (bodyClone.firstChild) refBody.appendChild(bodyClone.firstChild)
+            // A demo slide (its body is a board simulator) gets the whole slide.
+            refBody.classList.toggle('has-sim', !!refBody.querySelector('.sim-embed'))
 
             // The slide's own short, instructive caption (shown under the figure
             // instead of the book figure's full caption).

@@ -34,12 +34,27 @@ assets/
   slides/        Slide images, one subfolder per day (DayNN-Title/)
                  Each subfolder contains the PDF export and extracted PNGs
   *.pdf          Hosted reference documents (linked via external/)
+  board-sim/     BUILT output of the board simulator — do not edit by hand;
+                 refresh with scripts/sync-board-sim.sh (see AUTHORING.md)
+  sim-starters/  Per-exercise starter .c files loaded by <sim starter="…"/>
 output/web/      Built HTML (git-ignored; recreated by build)
 scripts/         Authoring tooling for preview-edit.sh (see README-editing.md)
+                 plus sync-board-sim.sh, which refreshes assets/board-sim/
 build.sh         Build wrapper
 preview-edit.sh  Authoring preview: click the rendered page to reach its source
 publication.ptx  PreTeXt publication settings
 ```
+
+**Custom elements** — two elements are this book's own, taught to PreTeXt in
+`xsl/engs28-html.xsl` (with print behaviour in `xsl/engs28-latex.xsl`):
+
+- `<slide>` — the condensed in-class form of the surrounding content, rendered
+  only in the `web-deck` build. See `AUTHORING-slides.md`.
+- `<sim starter="name"/>` — an embedded board simulator (the in-browser
+  Nucleo-C031C6, register-level C) seeded with `assets/sim-starters/name.c`.
+  See `AUTHORING.md`. The simulator's built output is committed here at
+  `assets/board-sim/` and deploys with the book — no separate hosting; its
+  source repo is `~/repos/ENGS28-board-sim`.
 
 **Hosted reference PDFs** (in `assets/`, linked as `external/filename.pdf`):
 - `stm32c031_rm.pdf` — STM32C0x1 Reference Manual
