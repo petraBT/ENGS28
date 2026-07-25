@@ -70,6 +70,13 @@
                     <xsl:value-of select="@stack"/>
                 </xsl:attribute>
             </xsl:if>
+            <!-- Optional: room="yes" → leave writing space after each list item,
+                 for predict/practice slides students (and the instructor) write on. -->
+            <xsl:if test="@room">
+                <xsl:attribute name="data-deck-room">
+                    <xsl:value-of select="@room"/>
+                </xsl:attribute>
+            </xsl:if>
             <div class="deck-slide-body">
                 <xsl:apply-templates select="*[not(self::note) and not(self::caption)]"/>
             </div>

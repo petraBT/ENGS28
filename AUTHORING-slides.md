@@ -65,6 +65,11 @@ not the projector.
 **Coloured text**: `<clr c="orange">Channel 1</clr>` (`orange | blue | red |
 green`) — for bullets that mirror a colour in the figure beside them.
 
+**Writing room** (predict/practice slides): add `room="yes"` to a `<slide>` (or
+`"room": true` to a deck `ref`, e.g. an activity) to leave a couple of blank lines
+after each list item / task, so students — and you — can write an answer in class.
+Slide content top-aligns, so the room falls below each problem.
+
 ### The `@ref` rule (important)
 
 PreTeXt emits an HTML `id` only for **targetable** elements — `<figure>`,
