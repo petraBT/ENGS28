@@ -99,6 +99,9 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
 - **`"instructor": true`** marks a slide instructor-only. The plain URL shows it
   with an "instructor only" badge; **`?student`** drops it (the student version).
 - **`presenterNote`** = instructor-only timing/cue on a glue slide; not projected.
+  (On a `prompt` slide, a `note` field is rendered **visibly** as sub-text — use
+  `presenterNote` for anything the class shouldn't see, e.g. a think-pair-share
+  reveal.)
 
 ## Conventions (apply going forward)
 
