@@ -1314,6 +1314,35 @@ while (1) {
                 </caption>
                 <image source="images/Day02-Blinky(2)/fullslide_14.png" width="100%"/>
             </figure>
+
+            <slide xml:id="sl-day2-compile" ref="fig-how-mcu-runs">
+                <ul>
+                    <li>C is <em>compiled</em>, not interpreted: the compiler turns your whole source file into one binary (an <c>.elf</c>) of machine instructions.</li>
+                    <li>The IDE <em>flashes</em> that binary into the chip's 32 KB flash in a single operation.</li>
+                    <li>On reset the Cortex-M0+ <em>fetches and executes</em> those instructions one by one.</li>
+                    <li>Your source lines no longer exist on the chip — only the machine code they became.</li>
+                </ul>
+                <caption>Compile → flash → execute. <c>GPIOA->ODR |= LED_PIN</c> becomes a load-OR-store; the store drives the pin HIGH.</caption>
+            </slide>
+
+            <slide xml:id="sl-day2-memmap" ref="fig-memory-map" stack="yes">
+                <ul>
+                    <li>One 4 GB address space holds flash, RAM, and every peripheral register — no separate I/O bus, no special I/O instructions.</li>
+                    <li><c>GPIOA->ODR</c> isn't a variable in RAM — it's a name for address <c>0x5000 0014</c>. Writing there <em>is</em> the I/O.</li>
+                    <li>The GPIO hardware sees the store on the bus and responds within one clock cycle.</li>
+                </ul>
+                <caption>Memory map: flash at 0x0800 0000, RAM at 0x2000 0000, GPIO registers at 0x5000 0000.</caption>
+            </slide>
+
+            <slide xml:id="sl-day2-pushpull" ref="fig-gpio-output-circuit" stack="yes">
+                <ul>
+                    <li>Each output pin has a <term>push-pull</term> pair: a P-MOS to 3.3 V on top, an N-MOS to ground below.</li>
+                    <li>ODR bit = <c>1</c> → P-MOS on, pin driven HIGH (3.3 V). ODR bit = <c>0</c> → N-MOS on, pin driven LOW (0 V).</li>
+                    <li>Setting MODER to output (<c>01</c>) connects this driver to the pin; other modes disconnect it.</li>
+                    <li>The switch happens within nanoseconds of the CPU's store.</li>
+                </ul>
+                <caption>GPIO output stage (reference manual, annotated): ODR → control logic → P-MOS/N-MOS → the pin.</caption>
+            </slide>
         </subsection>
 
         <subsection xml:id="subsec-day2-delay-ms">
@@ -1361,6 +1390,41 @@ int main(void) {
     return 0;
 }
 ]]></code></program>
+
+            <slide xml:id="sl-day2-delay-why">
+                <ul>
+                    <li>The busy-wait <c>for</c> loop is an <em>imprecise</em> delay — its length depends on the compiler's optimization level and the clock speed.</li>
+                    <li>From today on, use the course's <c>delay_ms()</c>. Swap your include:</li>
+                </ul>
+                <program language="c"><code><![CDATA[
+// Day 1:
+#include "stm32C0xx.h"
+
+// Day 2 onward — use this instead:
+#include "ES28.h"   // brings in stm32C0xx.h AND delay_ms()
+]]></code></program>
+            </slide>
+
+            <slide xml:id="sl-day2-delay-code">
+                <p>Now delays read like what they mean:</p>
+                <program language="c"><code><![CDATA[
+#include "ES28.h"
+#define GPIOAEN  (1U << 0)
+#define LED_PIN  (1U << 5)
+
+int main(void) {
+    RCC->IOPENR  |= GPIOAEN;
+    GPIOA->MODER |= (1U << 10);
+    GPIOA->MODER &= ~(1U << 11);
+    while (1) {
+        GPIOA->ODR |=  LED_PIN;   // LED on
+        delay_ms(1000);           // wait 1 second
+        GPIOA->ODR &= ~LED_PIN;   // LED off
+        delay_ms(500);            // wait 0.5 second
+    }
+}
+]]></code></program>
+            </slide>
         </subsection>
 
         <subsection xml:id="subsec-day2-breadboard">
@@ -1526,6 +1590,41 @@ int main(void) {
                     </statement>
                 </task>
             </activity>
+
+            <slide xml:id="sl-day2-breadboard" ref="fig-nucleo-breadboard">
+                <ul>
+                    <li>Power the breadboard's rails from the Nucleo's <em>3.3 V</em> header pin.</li>
+                    <li>Tie all + rails together and all − rails together, so you can tap 3.3 V or GND anywhere.</li>
+                    <li>Leave these power jumpers in place for the whole term.</li>
+                </ul>
+                <caption>Nucleo 3.3 V / GND headers wired to the breadboard's power rails.</caption>
+            </slide>
+
+            <slide xml:id="sl-day2-led-circuit" ref="fig-external-led-circuit">
+                <ul>
+                    <li>Pick a red or green LED and a 220 Ω resistor.</li>
+                    <li>GPIO pin → LED anode (+, long lead); cathode (−, short lead) → resistor → ground rail.</li>
+                    <li>The 220 Ω resistor limits current to ~10–15 mA.</li>
+                </ul>
+                <caption>External LED driven from D13 (PA5). Current path: D13 → LED → 220 Ω → GND.</caption>
+            </slide>
+
+            <slide xml:id="sl-day2-dmm" ref="fig-dmm-photo">
+                <ul>
+                    <li>The DMM verifies your circuit — set the dial to <em>20 V DC</em> for 3.3 V circuits.</li>
+                    <li>Black probe in COM, red probe in VΩmA.</li>
+                    <li>Turn it OFF when done to save the battery.</li>
+                </ul>
+                <caption>Digital multimeter: 20 V DC range; black in COM, red in VΩmA.</caption>
+            </slide>
+
+            <slide xml:id="sl-day2-newpin-d4" ref="fig-blinky-d4">
+                <caption>Move only the LED's anode wire from D13 to D4 — a single jumper rerouted.</caption>
+            </slide>
+
+            <slide xml:id="sl-day2-pinout" ref="fig-nucleo-pinout">
+                <caption>Nucleo-64 pinout: each Arduino label with its STM32 port/bit. Use it to find which pin D4 is.</caption>
+            </slide>
         </subsection>
 
         <subsection xml:id="sec-lab1">
@@ -1621,6 +1720,24 @@ int main(void) {
                     All comments in submitted code must be in your own words.
                 </p>
             </aside>
+
+            <slide xml:id="sl-day2-lab1-circuit" ref="fig-three-leds">
+                <ul>
+                    <li>Three LEDs, each through its own 220 Ω resistor, to three separate GPIO output pins.</li>
+                    <li>Build incrementally: get LED 1 blinking before adding 2, and 2 before 3.</li>
+                    <li>Each part is a separate C file with a different blink pattern.</li>
+                </ul>
+                <caption>Lab 1 three-LED circuit — one resistor and one GPIO pin per LED.</caption>
+            </slide>
+
+            <slide xml:id="sl-day2-lab1-setup">
+                <ul>
+                    <li>New project: copy your TemplateProject, rename it <c>Lab1</c>.</li>
+                    <li>Download <c>template.c</c> from Canvas into <c>Src</c>; rename it to your first target filename.</li>
+                    <li>Fill in the header comment: name, assignment, a table of I/O pins, and a revision history — for every file you submit.</li>
+                    <li>Descriptive <c>#define</c>s for every pin and timing constant; keep notes in comments.</li>
+                </ul>
+            </slide>
         </subsection>
     </section>
 
