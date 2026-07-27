@@ -12,12 +12,11 @@
     <title>Analog-to-Digital Conversion</title>
     <introduction>
         <p>
-            Every sensor you will use in this course reports its measurement as a
+            Most of the sensors you will use in this course report their measurement as a
             voltage: a temperature, a light level, the angle of a knob.  The
             STM32C031C6 computes only with integers.  The
             <term>Analog-to-Digital Converter</term> (ADC) is the bridge between
-            the two, and it is the peripheral that turns this from a course about
-            blinking LEDs into a course about measuring the world.
+            the two, and it is the peripheral that turns continuous signals that measure the world into digital signals comprehensible to our processor.
         </p>
         <objectives>
             <ul>
@@ -43,7 +42,7 @@
                 number coming out of an ADC actually represents, how to get a
                 voltage you can vary by hand, and how the converter arrives at its
                 answer.  None of it needs your board — bring the understanding to
-                class and we will spend class doing the wiring and the registers.
+                class and we will spend class doing the wiring and working through the code and registers.
             </p>
         </introduction>
 
@@ -58,6 +57,19 @@
                 then measures the conditioned voltage and reports an integer, and
                 the MCU computes with that integer.
             </p>
+            <p>
+                How much of this chain lives inside the sensor varies, and it
+                changes what your code has to do.  Some sensors are just the bare
+                transducer: they hand you a small, raw voltage, and everything after
+                it is yours to build.  Others include the analog front end, so what
+                reaches your pin is already amplified and filtered.  And some
+                include the converter as well — they run the whole chain internally
+                and hand you a <em>digital</em> result, which the MCU collects over
+                a communication protocol rather than by converting anything itself.
+                We will meet that third kind, and the protocols they speak, later in
+                the course.  This chapter is about the case where the converting is
+                yours to do.
+            </p>
 
             <figure xml:id="fig-adc-signal-chain">
                 <caption>The sensor signal chain.  A sensor converts a physical
@@ -66,7 +78,7 @@
                 result into an integer; the MCU processes the integer.  Every
                 measurement you make in this course travels this path, and each
                 stage can limit the quality of the final number.</caption>
-                <image source="images/Day07-ADC/slide07_e215e61a.png" width="80%"/>
+                <image source="images/Day07-ADC/adc-signal-chain.svg" width="95%"/>
             </figure>
 
             <p>
@@ -80,6 +92,14 @@
         <subsection xml:id="subsec-adc-quantization">
             <title>Quantization: What the Number Means</title>
             <p>
+                The top of an ADC's input range is set by a <term>reference
+                voltage</term>, written <m>V_\text{ref}</m>.  On the Nucleo board
+                <m>V_\text{ref}</m> is wired to the 3.3 V supply, so an input of
+                0 V reads as count 0 and an input at <m>V_\text{ref}</m> reads at
+                the top of the scale.  Everything in this section is scaled and dependent on
+                that one number.
+            </p>
+            <p>
                 An ADC divides its input range into a finite number of equal steps
                 and reports which step the input falls into.  How many steps it has
                 is set by its <term>resolution</term>, expressed in bits.  A
@@ -90,19 +110,31 @@
 
             <figure xml:id="fig-adc-system-view">
                 <caption>The ADC as a system.  An analog voltage between 0 and
-                <m>V_\text{max}</m> enters at the pointed end; a bundle of
-                <m>B</m> wires carries the digital result out of the flat end, as
+                <m>V_\text{ref}</m> goes in on the left; a bundle of
+                <m>B</m> wires carries the digital result out on the right, as
                 an integer between 0 and <m>2^B - 1</m>.  On the STM32C031C6,
-                <m>V_\text{max}</m> is 3.3 V and <m>B</m> can be 6, 8, 10, or 12 —
-                we use 12.  The relationship written across the figure,
-                <m>D_\text{out} = \lfloor 4096 \cdot V_\text{in} / 3.3 \rfloor</m>,
-                is the whole conversion in one line.</caption>
+                <m>V_\text{ref}</m> is 3.3 V and <m>B</m> can be 6, 8, 10, or 12 —
+                we start with 12, and you will change it later.  The relationship written across the figure,
+                <m>D_\text{out} = \lfloor 4096 \cdot V_\text{in} / V_\text{ref} \rfloor</m>,
+                is the whole conversion in one line &#8212; and it holds everywhere
+                except at the very top of the range, where the result is limited to
+                the largest count the converter has, 4095.</caption>
                 <image source="images/Day07-ADC/adc-system-view.svg" width="80%"/>
             </figure>
 
+            <slide xml:id="sl-adc-system-view" ref="fig-adc-system-view">
+    <ul>
+        <li>Voltage in on the left (0 to V_ref); a <term>count</term> out on the right.</li>
+        <li>B wires out &#8594; 2^B possible values. B = 12 gives 4096 of them.</li>
+        <li>V_ref sets the top of the range. On our board it is the 3.3 V supply.</li>
+        <li>D_out = floor(4096 &#215; V_in / V_ref) &#8212; the whole conversion in one line.</li>
+    </ul>
+    <caption>4096 steps &#8212; but the top one is numbered 4095, so full scale reads 4095, not 4096.</caption>
+</slide>
+
             <p>
-                Our ADC has <m>B = 12</m>, giving 4096 steps across the 0–3.3 V
-                range.  One step — one <term>LSB</term>, for least significant bit
+                When we choose <m>B = 12</m> in our ADC this gives us 4096 steps across the 0–3.3 V
+                range.  One step — also called <term>LSB</term>, for least significant bit
                 — is therefore worth
                 <md number="no">
                     <mrow>1\text{ LSB} = \frac{V_\text{ref}}{2^B} = \frac{3.3\text{ V}}{4096} \approx 0.806\text{ mV}</mrow>
@@ -113,7 +145,7 @@
                 </md>
             </p>
             <p>
-                Work one through.  A count of 2048 corresponds to
+                Here is an example:  A count of 2048 corresponds to
                 <m>2048 \times 3.3/4096 = 1.65\text{ V}</m> — exactly half of
                 <m>V_\text{ref}</m>, which is what you would hope for the middle
                 count.  Going the other way, an input of 1.0 V should produce
@@ -124,14 +156,14 @@
                 reports the step the input fell into, so the result is always
                 rounded down to a multiple of one LSB.  The largest count, 4095,
                 corresponds to <m>4095 \times 3.3/4096 \approx 3.299\text{ V}</m>,
-                not 3.3 V — there are 4096 steps but the highest one is numbered
-                4095, and this off-by-one is the most common arithmetic mistake
-                with ADCs.
+                not 3.3 V — there are 4096 steps, but the highest one is numbered
+                4095.  Dividing by 4095 instead of 4096, or expecting the top count
+                to read exactly <m>V_\text{ref}</m>, is an easy slip to make.
             </p>
             <p>
                 More bits means smaller steps and less rounding error, at the cost
-                of a longer conversion.  This is a real trade-off, not a
-                formality, and Lab 4 will ask you to measure it.
+                of a slightly longer conversion — about two ADC clock cycles, some
+                167 ns, for every two bits you keep.
             </p>
         </subsection>
 
@@ -148,13 +180,27 @@
                 <term>wiper</term>, connects to a contact that slides along that
                 track as you turn the knob.  Connecting the outer terminals across
                 a supply makes the device an adjustable
-                <term>voltage divider</term>: the track is split into two
-                resistances, <m>R_1</m> above the wiper and <m>R_2</m> below it,
-                and the wiper sits at
+                <term>voltage divider</term>.  The wiper splits the track into two
+                resistances: call <m>R_2</m> the resistance between the wiper and
+                the terminal you have grounded, and <m>R_1</m> the resistance
+                between the wiper and the terminal at the supply.  The wiper then
+                sits at
                 <md number="no">
                     <mrow>V_\text{wiper} = V_\text{supply} \times \frac{R_2}{R_1 + R_2}</mrow>
                 </md>
             </p>
+            <figure xml:id="fig-adc-divider">
+                <caption>A potentiometer wired as an adjustable voltage divider.
+                The fixed resistive track runs between 3.3 V and GND; the wiper
+                taps it somewhere in between, splitting it into <m>R_1</m> above
+                and <m>R_2</m> below.  Turning the knob slides the wiper, moving
+                resistance from one side to the other while their sum stays fixed —
+                so the wiper voltage sweeps continuously between the two rails.  At
+                the halfway point <m>R_1 = R_2</m> and the wiper sits at half the
+                supply.</caption>
+                <image source="images/Day07-ADC/adc-divider.svg" width="82%"/>
+            </figure>
+
             <p>
                 Turning the knob shifts resistance from one side of the wiper to
                 the other while their sum stays fixed, so the wiper voltage sweeps
@@ -162,6 +208,18 @@
                 terminals on 3.3 V and GND, the wiper delivers anything from 0 V to
                 3.3 V.  At the midpoint <m>R_1 = R_2</m> and the wiper sits at half
                 the supply, 1.65 V.
+            </p>
+            <p>
+                Here is an example with real numbers.  On a 10 kΩ potentiometer with
+                the wiper a quarter of the way up from the grounded end,
+                <m>R_2 = 2.5\text{ k}\Omega</m> and <m>R_1 = 7.5\text{ k}\Omega</m>,
+                so <m>V_\text{wiper} = 3.3 \times 2500/(2500+7500) = 0.825\text{ V}</m>
+                — a quarter of the supply, as the geometry suggests.  We use 10 kΩ
+                mainly because it draws only a third of a milliamp across the
+                rails.  A sensor's own resistance can also limit how quickly the ADC
+                is able to measure it — see
+                <xref ref="subsec-adc-ref-impedance"/> once you have taken a reading
+                and the idea has something to attach to.
             </p>
             <p>
                 The wiper is a <em>source</em> of voltage, not a control signal:
@@ -176,10 +234,10 @@
                 Our ADC finds its answer by <term>successive approximation</term>,
                 which is a binary search carried out in hardware.  Rather than
                 comparing the input against all 4096 possible levels, it determines
-                the result one bit at a time, starting from the most significant.
+                the result one bit at a time, starting from the most significant bit.
             </p>
             <p>
-                Inside the converter are a <term>DAC</term> (digital-to-analog
+                Inside the ADC converter are a <term>DAC</term> (digital-to-analog
                 converter) and a comparator.  The converter keeps a register — the
                 <term>successive approximation register</term>, or SAR — holding
                 its answer so far.  At each step it sets the next bit of the SAR,
@@ -188,11 +246,19 @@
                 input is above, the bit stays set; if below, it is cleared.  After
                 <m>B</m> comparisons the SAR holds the result.
             </p>
+            <p>
+                One more part is needed: a <term>sample-and-hold</term>
+                circuit at the input captures the voltage at the instant the
+                conversion begins and holds it steady for the converter to work
+                against, even if the input voltage changes in the meantime.
+            </p>
 
             <figure xml:id="fig-adc-sar-block">
                 <caption>Inside a successive-approximation ADC.  The SAR holds the
-                answer under construction and drives the 12-bit DAC, which converts
-                that value into a test voltage using <m>V_\text{ref}</m>.  The
+                answer under construction and drives the DAC, which converts that
+                value into a test voltage using <m>V_\text{ref}</m>.  The diagram is
+                drawn for our 12-bit converter: the SAR holds bits <m>b_{11}</m>
+                down to <m>b_0</m>, so the search takes 12 comparisons.  The
                 comparator compares the held input against the test voltage and
                 feeds its verdict, <m>V_c</m>, back to the SAR, which keeps or
                 clears the bit it is currently testing and moves on to the next.
@@ -201,19 +267,20 @@
                 <image source="images/Day07-ADC/adc-sar-block.svg" width="85%"/>
             </figure>
 
+            <slide xml:id="sl-adc-sar-block" ref="fig-adc-sar-block">
+                <caption>You were the comparator. The number you were narrowing down is the SAR; the DAC is what turns that number into a test voltage to compare against.</caption>
+            </slide>
+
             <p>
-                That sample-and-hold matters.  A binary search only converges if
-                the thing being searched for stops moving, so the converter takes a
-                snapshot of the input voltage when the conversion begins and works
-                from the snapshot.  The voltage on the pin may change freely during
-                the conversion without corrupting the result.
+                That is why the voltage on the pin may change freely during a
+                conversion without corrupting the result: the converter is working
+                from its snapshot, not from the live input.
             </p>
             <p>
                 Because each bit costs one comparison, a conversion takes many
                 clock cycles rather than happening instantly.  Your code must
                 therefore <em>wait</em> for the converter to finish before reading
-                the result — the exact mechanism is one of the things you will
-                write in class.
+                the result — the exact mechanism is one of the things we'll explore in class.
             </p>
         </subsection>
 
@@ -262,7 +329,7 @@
                     <choice correct="yes">
                         <statement><p>About 1.00 V</p></statement>
                         <feedback><p>Correct:
-                        <m>1241 \times 3.3/4096 \approx 1.0000\text{ V}</m>.  This is
+                        <m>1241 \times 3.3/4096 \approx 0.9998\text{ V}</m>.  This is
                         the conversion you will do constantly — count times
                         <m>V_\text{ref}</m>, divided by 4096.</p></feedback>
                     </choice>
@@ -461,9 +528,18 @@
         <subsection xml:id="subsec-adc-day7-meaning">
             <title>Part 1: What the Number Means</title>
             <p>
-                The reading established the arithmetic; this is a warm-up to make
-                sure it is available when you need it.  Commit to an answer in
-                writing before we discuss it.
+                An ADC turns a continuously varying input voltage into an
+                integer — a <term>count</term>.  Today's first question is what that
+                count actually means: how to get from a voltage to a count, and back
+                again.  <xref ref="subsec-adc-quantization"/> works that relationship
+                out in full; this is a warm-up to make sure it is available when you
+                need it.  Commit to an answer in writing before we discuss it.
+            </p>
+            <p>
+                If it does not come back to you straight away, look back at
+                <xref ref="subsec-adc-quantization"/> — and if you would rather sort
+                it out properly after class, that is fine too: Part 2 starts from the
+                datasheet and does not depend on this.
             </p>
 
             <activity xml:id="act-adc-predict-count">
@@ -491,13 +567,20 @@
             </activity>
 
             <slide xml:id="sl-adc-meaning" room="yes">
-                <p>The count is a number of steps, not a voltage.</p>
-                <ul>
-                    <li>12 bits &#8594; 4096 steps across 0&#8211;3.3 V.</li>
-                    <li>One step (1 LSB) = 3.3 V / 4096 &#8776; 0.81 mV.</li>
-                    <li>V = count &#215; 3.3 / 4096.</li>
-                </ul>
-            </slide>
+    <p>The count is a number of <term>steps</term>, not a voltage.</p>
+    <program language="c"><code><![CDATA[
+one step  =  V_ref / 2^B  =  3.3 V / 4096  =  0.806 mV      <- "1 LSB"
+
+volts     =  count x 3.3 / 4096          count  =  floor(volts x 4096 / 3.3)
+
+  2048  ->  2048 x 3.3/4096  =  1.650 V        (exactly half of V_ref)
+  1.0 V ->  floor(1.0 x 4096/3.3)  =  1241 counts
+  4095  ->  3.299 V   <- full scale is NOT 3.3 V
+]]></code></program>
+    <ul>
+        <li>4096 steps, numbered 0 to 4095. Divide by <term>4096</term>, not 4095.</li>
+    </ul>
+</slide>
 
         </subsection>
 
@@ -519,16 +602,22 @@
             </p>
 
             <figure xml:id="fig-adc-datasheet-table12">
-                <caption>An extract from <em>Table 12, Pin assignment and
-                description</em>, in the STM32C031C6 datasheet.  The left columns
-                give the pin number in each package variant; the highlighted column
-                names the port pin; and the highlighted column on the right,
-                <em>Additional functions</em>, lists what the analog and special
-                peripherals can reach on that pin.  Where that column names
-                <c>ADC_INn</c>, the pin can be an analog input on channel
-                <m>n</m>.  Where it is empty, the pin cannot do analog at
-                all.</caption>
-                <image source="images/Day07-ADC/adc-datasheet-table12.svg" width="75%"/>
+                <caption>How to read <em>Table 12, Pin assignment and
+                description</em>, in the STM32C031C6 datasheet.  The header row
+                names the columns: the six on the left give the pin number in each
+                package variant (ours is the 48-pin LQFP), then the highlighted
+                <em>Pin name</em> column, and on the far right the highlighted
+                <em>Additional functions</em> column — the one that answers today's
+                question.  Read that column three ways.  Where it names
+                <c>ADC_INn</c>, as it does for <c>PA1</c>, <c>PA2</c> and
+                <c>PA3</c>, the pin can be an analog input on channel <m>n</m>.
+                Where it shows a dash, as for <c>PF3</c> and <c>VREF+</c>, the pin
+                has no additional functions at all.  And where it names something
+                that is not an <c>ADC_IN</c> — <c>PC14</c>'s <c>OSCX_IN</c>, or
+                <c>PF2-NRST</c>'s <c>NRST</c> — the pin does have an additional
+                function, just not an analog one.  Rows are skipped where marked,
+                and the row you actually need is not among those shown.</caption>
+                <image source="images/Day07-ADC/adc-datasheet-table12.svg" width="92%"/>
             </figure>
 
             <activity xml:id="act-adc-datasheet-lookup">
@@ -545,7 +634,7 @@
                         <p>
                             Find the row for <c>PA0</c>.  Read across to the
                             <em>Additional functions</em> column.  What does it say?
-                            Does PA0 support analog input, and on which channel?
+                            Does PA0 support analog input, and if so, on which channel?
                         </p>
                     </statement>
                 </task>
@@ -560,7 +649,7 @@
                 <task xml:id="act-adc-ds-t3">
                     <statement>
                         <p>
-                            The pin you will use today is labelled <c>A0</c> on the
+                            The pin you will use today is labeled <c>A0</c> on the
                             Nucleo's header silkscreen.  Write down all three names
                             for it: the Arduino label, the port pin, and the ADC
                             channel number.  Keep this — you will need the same
@@ -582,30 +671,34 @@
                 Which channel the converter actually samples is selected by the
                 <term>channel selection register</term>, <c>ADC_CHSELR</c>.  Each
                 bit enables one channel: set bit <m>n</m> to sample channel
-                <m>n</m>.
+                <m>n</m>.  (That plain reading holds because <c>CHSELRMOD</c> is 0,
+                its reset value; the register can also be put into a different
+                sequencing mode, which we do not use.)
             </p>
 
             <figure xml:id="fig-adc-chselr">
-                <caption>The ADC's input multiplexer, from RM0490 Figure 33, with
-                the port pin that reaches each channel labelled in green.  Channels
-                without a label are not brought out to a pin you can use: notice
-                <c>VSENSE</c> and <c>VREFINT</c>, which are internal signals — the
-                on-chip temperature sensor and the internal reference — that the
-                same ADC can measure without any external wiring.  Bit
+                <caption>The ADC's input multiplexer, from RM0490 Figure 33.  The
+                green labels mark the six port pins that the Nucleo brings out to
+                the Arduino analog header — most of the other numbered channels do
+                reach package pins too, and Table 12 is what tells you which.  Four
+                channels reach no pin at all: <c>VSENSE</c>, <c>VREFINT</c>,
+                <c>VDDA</c> and <c>VSSA</c> are internal signals — among them the
+                on-chip temperature sensor and the internal reference — that this
+                same ADC can measure with no external wiring whatsoever.  Bit
                 <m>n</m> of <c>ADC_CHSELR</c> selects channel <m>n</m>
                 (RM0490 §14.12.9).</caption>
                 <image source="images/Day07-ADC/adc-chselr.svg" width="60%"/>
             </figure>
 
             <slide xml:id="sl-adc-table12" ref="fig-adc-datasheet-table12">
-                <caption>Datasheet Table 12 &#8212; the Additional functions column is the answer: ADC_IN<em>n</em> means this pin reaches channel <em>n</em>. An empty cell means it cannot do analog at all.</caption>
+                <caption>Datasheet Table 12 &#8212; read the Additional functions column three ways. ADC_IN<em>n</em> (PA1, PA2, PA3) means analog on channel <em>n</em>; a dash (PF3, VREF+) means no additional function at all; anything else (OSCX_IN, NRST) means it has one, but not an analog one.</caption>
             </slide>
 
             <slide xml:id="sl-adc-three-names">
                 <ul>
-                    <li><clr c="orange">A0</clr> &#8212; the label silkscreened on the header.</li>
-                    <li><clr c="blue">PA0</clr> &#8212; the port pin, which is what <c>MODER</c> names.</li>
-                    <li><clr c="green">Channel 0</clr> &#8212; the ADC input, which is what <c>CHSELR</c> names.</li>
+                    <li><term>[header]</term> <clr c="orange">A0</clr> &#8212; the label silkscreened on the board.</li>
+                    <li><term>[port pin]</term> <clr c="blue">PA0</clr> &#8212; what <c>MODER</c> names.</li>
+                    <li><term>[channel]</term> <clr c="green">Channel 0</clr> &#8212; what <c>CHSELR</c> names.</li>
                     <li>They agree here. <em>They usually do not.</em></li>
                 </ul>
             </slide>
@@ -619,19 +712,24 @@
         <subsection xml:id="subsec-adc-day7-circuit">
             <title>Part 3: The Test Circuit</title>
             <p>
-                The potentiometer on your breadboard is already seated across the
-                centre channel.  You need three jumpers: the two outer terminals to
-                3.3 V and GND, and the wiper to the pin labelled <c>A0</c>.
+                You are about to build the test circuit you will measure for the
+                rest of the day: a potentiometer wired across the supply, with its
+                wiper feeding the pin you just looked up.  Turning the knob will
+                sweep that pin's voltage, which is what gives the ADC something
+                interesting to convert.
+            </p>
+            <p>
+                You may be able to push the potentiometer's pins (hard) straight
+                into the breadboard.  Otherwise, use three of the pin-to-clip
+                jumpers.  Either way the connections are the same: the two outer
+                terminals go to 3.3 V and GND, and the wiper — the middle terminal —
+                goes to the pin labeled <c>A0</c>.
             </p>
 
             <figure xml:id="fig-adc-pot-photo">
-                <caption>The potentiometer as wired on the breadboard, with the
-                three terminals labelled: GND and 3.3 V on the outer two, and the
-                wiper — the middle terminal — going to A0.  Wiring 3.3 V and GND to
-                the wiper and one outer terminal instead puts a near short across
-                the supply at one end of the knob's travel; the symptom is the board
-                dropping off the debugger, which looks nothing like a wiring
-                mistake.</caption>
+                <caption>The potentiometer itself, with the three terminals
+                identified beneath it: GND and 3.3 V go to the outer two, and the
+                wiper — the middle terminal — goes to A0. </caption>
                 <image source="images/Day07-ADC/adc-pot-photo.svg" width="45%"/>
             </figure>
 
@@ -657,15 +755,18 @@
                     <statement>
                         <p>
                             Predict the wiper voltage with the knob turned fully
-                            counter-clockwise, at its centre, and fully clockwise.
-                            Write down all three numbers before measuring anything.
+                            counter-clockwise, at its center, fully clockwise, and
+                            about a quarter of the way up from the counter-clockwise
+                            end.  Write down all four numbers before measuring
+                            anything — the quarter-turn one is the only one you
+                            cannot get by staring at the rails.
                         </p>
                     </statement>
                 </task>
                 <task xml:id="act-adc-wire-t2">
                     <statement>
                         <p>
-                            Now measure all three with the DMM.  Where do your
+                            Now measure all four with the DMM.  Where do your
                             predictions and measurements disagree, and by how much?
                         </p>
                     </statement>
@@ -673,7 +774,7 @@
                 <task xml:id="act-adc-wire-t3">
                     <statement>
                         <p>
-                            Convert each of your three measured voltages into the
+                            Convert each of your four measured voltages into the
                             count you expect the ADC to report.  Keep these numbers
                             — in a few minutes you will be able to check them
                             against the real thing.
@@ -682,40 +783,57 @@
                 </task>
             </activity>
 
-            <slide xml:id="sl-adc-pot" ref="fig-adc-pot-photo">
-                <ul>
-                    <li>Outer two terminals &#8594; 3.3 V and GND.</li>
-                    <li>Middle terminal (the wiper) &#8594; A0.</li>
-                    <li>The wiper is a <em>source</em>: turning the knob moves its voltage between the rails.</li>
-                </ul>
-                <caption>Watch the middle terminal &#8212; 3.3 V and GND on the wiper plus one outer leg is a near short at one end of travel.</caption>
-            </slide>
+            <slide xml:id="sl-adc-pot" ref="fig-adc-test-circuit">
+    <ul>
+        <li><term>Build this now.</term> The pot's track runs between 3.3 V and GND; the wiper taps off somewhere in between.</li>
+        <li>Outer two terminals &#8594; <clr c="red">3.3 V</clr> and <clr c="blue">GND</clr>.</li>
+        <li>Middle terminal (the <term>wiper</term>) &#8594; <clr c="green">A0</clr>.</li>
+        <li>Push the pins hard into the breadboard, or use three pin-to-clip jumpers.</li>
+        <li>Turning the knob sweeps the wiper voltage between the rails &#8212; that is what gives the ADC something to convert.</li>
+    </ul>
+    <caption>Watch the middle terminal: 3.3 V and GND on the wiper plus one outer leg is a near short at one end of travel.</caption>
+</slide>
 
         </subsection>
 
         <subsection xml:id="subsec-adc-day7-registers">
-            <title>Part 4a: The Four Registers</title>
+            <title>Part 4a: The Registers, One at a Time</title>
             <p>
-                Configuring the ADC means setting up four things: the pin, the ADC's
-                clock, the channel, and the converter itself.  We will look at each
-                one on its own before you write any of them.
+                If you have used an Arduino, <c>analogRead(A0)</c> did five things
+                for you invisibly: it set the pin's mode, enabled the ADC's clock,
+                selected the channel, started a conversion, and waited for it to
+                finish.  Today you do each one of these steps yourself — which is precisely what
+                lets you change any of them later, and what lets you see where a
+                measurement went wrong when it does.  We will look at each step on its own
+                before you write any of them.
             </p>
 
             <p>
                 <term>The pin.</term>  An analog input is a fourth GPIO mode,
                 alongside input, output, and alternate function.  Its <c>MODER</c>
-                encoding is <c>11</c>.  As always with a multi-bit field, clear it
-                before setting it — writing only the set would leave whatever was
-                there before ORed in.  For <c>PA4</c>, that would be:
+                encoding is <c>0b11</c>.  Like every peripheral, a GPIO port needs
+                its own clock enabled before its registers respond — and note that
+                this is the <em>port's</em> clock, in <c>RCC_IOPENR</c>, which is a
+                different register from the ADC's own clock enable that follows.  Then, as
+                always with a multi-bit field, clear it before setting it: writing
+                only the set would leave whatever was there before ORed in.  The
+                example below uses <c>PA4</c>, not the <c>PA0</c> you actually need,
+                so that you have to work out which parts change rather than copying
+                it across:
             </p>
             <program language="c"><code><![CDATA[
+RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;                     // clock to port A
 GPIOA->MODER &= ~GPIO_MODER_MODE4_Msk;                  // clear both mode bits
-GPIOA->MODER |=  (GPIO_ANALOG << GPIO_MODER_MODE4_Pos); // then set them to 11
+GPIOA->MODER |=  (GPIO_ANALOG << GPIO_MODER_MODE4_Pos);  // then set them to 0b11
 ]]></code></program>
             <p>
-                <c>GPIO_ANALOG</c> is defined in <c>ES28.h</c> as the value
-                <c>11</c>, and <c>GPIO_MODER_MODE4_Pos</c> is the CMSIS name for
-                where that field starts — using the named constants rather than
+                <c>GPIO_ANALOG</c> is the constant <c>3</c> that <c>ES28.h</c>
+                defines for this mode — the same list of mode constants you met on
+                Day 6 (<c>GPIO_INPUT</c> 0, <c>GPIO_OUTPUT</c> 1,
+                <c>GPIO_ALTERNATE</c> 2, <c>GPIO_ANALOG</c> 3) — and 3 is
+                <c>0b11</c> in binary, which is what the two <c>MODER</c> bits must
+                hold.  <c>GPIO_MODER_MODE4_Pos</c> is the CMSIS name for where that
+                two-bit field starts; using the named constants rather than
                 counting bit positions by hand is what keeps this readable.
             </p>
 
@@ -728,10 +846,11 @@ GPIOA->MODER |=  (GPIO_ANALOG << GPIO_MODER_MODE4_Pos); // then set them to 11
 RCC->APBENR2 |= RCC_APBENR2_ADCEN;   // enable the clock to the ADC
 ]]></code></program>
             <p>
-                The converter also has its own conversion clock, independent of the
-                CPU's.  We use its default asynchronous source, so there is nothing
-                further to configure today — but remember that this line is where
-                the ADC becomes reachable at all.
+                The converter also has its own conversion clock, asynchronous to
+                the APB bus clock that this line enables.  We leave it at its
+                default source and prescaler, so there is nothing further to
+                configure today — but remember that this line is where the ADC
+                becomes reachable at all.
             </p>
 
             <p>
@@ -749,8 +868,9 @@ ADC1->CHSELR |= ADC_CHSELR_CHSEL4;   // select channel 4
             </p>
 
             <p>
-                <term>The converter.</term>  Two registers govern the ADC itself.
-                <c>ADC_CR</c> is the control register: <c>ADEN</c> enables the ADC
+                <term>The converter.</term>  Two registers govern the ADC itself: <c>ADC_CR</c>
+                and <c>ADC_ISR</c>. Of these two,
+                <c>ADC_CR</c> is the control register. In this register, <c>ADEN</c> enables the ADC
                 and <c>ADSTART</c> begins a conversion.
             </p>
 
@@ -764,10 +884,19 @@ ADC1->CHSELR |= ADC_CHSELR_CHSEL4;   // select channel 4
             </figure>
 
             <p>
+                Enabling the ADC does not make it usable immediately — the analog
+                circuitry needs time to stabilize.  The three steps to help accomplish
+                this are: clear <c>ADRDY</c>, set <c>ADEN</c>, and then wait for
+                <c>ADRDY</c> to come back.  That flag is how the hardware tells you
+                the converter is ready to accept work.  Note that the first two
+                happen once, in our initilization routine <c>pa0_adc_init()</c>, while the wait lives in
+                <c>start_conversion()</c> — a procedure run to initialte a sample.
+            </p>
+            <p>
                 <c>ADC_ISR</c> is the interrupt and status register, where the
                 hardware reports what it has done.  Two of its bits matter today:
                 <c>ADRDY</c>, set when the converter has finished starting up and is
-                ready, and <c>EOC</c>, set when a conversion has finished and the
+                ready to begin a conversion, and <c>EOC</c>, set when a conversion has finished and the
                 result is available.
             </p>
 
@@ -788,9 +917,18 @@ ADC1->CHSELR |= ADC_CHSELR_CHSEL4;   // select channel 4
 while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {}   // Day 5: wait for the UART
 ]]></code></program>
             <p>
-                Waiting for the ADC is the same idiom against a different register
-                and a different bit.  Nothing new is being asked of you here — spot
-                the pattern and reuse it.
+                The ADC wait has the same shape: same <c>while</c>, same
+                <c>!(register &amp; bit)</c>, a different register and a different
+                bit.  Written out for the end-of-conversion flag, it is:
+            </p>
+            <program language="c"><code><![CDATA[
+while (!(ADC1->ISR & ADC_ISR_EOC)) {}    // wait until the conversion is done
+]]></code></program>
+            <p>
+                This is the first time in this book you have had to <em>write</em>
+                that idiom rather than read one, so it is worth saying its parts out
+                loud: keep looping for as long as it is <em>not</em> true that the
+                flag bit is set.
             </p>
 
             <p>
@@ -799,53 +937,117 @@ while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {}   // Day 5: wait for the UART
                 Reading <c>ADC_DR</c> also clears <c>EOC</c>, so each result is
                 collected exactly once.
             </p>
+            <p>
+                <c>ADC_DR</c> is a 32-bit register, but the result inside it is only
+                12 bits wide and sits at the bottom, so it fits comfortably in a
+                <c>uint16_t</c> — which is why <c>adc_read()</c> returns one rather
+                than a full <c>uint32_t</c>.  The cast <c>(uint16_t)</c> discards the
+                upper 16 bits of the register, and that is safe here precisely
+                because those bits are reserved and always read as zero.  Narrowing a
+                value you have not checked is a good way to lose data silently; this
+                one you have checked.
+            </p>
 
-            <slide xml:id="sl-adc-reg-pin">
-                <p>The pin: analog is a fourth GPIO mode, encoded <c>11</c>.</p>
-                <program language="c"><code><![CDATA[
-GPIOA->MODER &= ~GPIO_MODER_MODE4_Msk;                  // clear the field
-GPIOA->MODER |=  (GPIO_ANALOG << GPIO_MODER_MODE4_Pos); // then set it to 11
+            <slide xml:id="sl-adc-registers-intro">
+    <p>If you have used an Arduino, <c>analogRead(A0)</c> did <term>five</term> things invisibly:</p>
+    <ul>
+        <li>set the pin's mode &#8212; <c>GPIOA-&gt;MODER</c></li>
+        <li>enabled the ADC's clock &#8212; <c>RCC-&gt;APBENR2</c></li>
+        <li>selected the channel &#8212; <c>ADC1-&gt;CHSELR</c></li>
+        <li>started a conversion &#8212; <c>ADC1-&gt;CR</c></li>
+        <li>waited for it to finish &#8212; <c>ADC1-&gt;ISR</c></li>
+    </ul>
+    <p>Today you do each one yourself. That is what lets you <term>change</term> any of them
+    later &#8212; a different pin, a different resolution, a faster sample &#8212; and what lets
+    you see where a measurement went wrong when it does.</p>
+    <caption>Five registers, one at a time. Then you assemble them in Part 4b.</caption>
+</slide>
+
+<slide xml:id="sl-adc-reg-pin">
+    <p><term>1. Setting the pin to analog mode.</term></p>
+    <p><clr c="red">This example uses PA4 &#8212; not the pin you will be using.</clr>
+    Work out which parts change for PA0 rather than copying it across.</p>
+    <program language="c"><code><![CDATA[
+RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;                      // PA4 example
+GPIOA->MODER &= ~GPIO_MODER_MODE4_Msk;                   // clear both mode bits
+GPIOA->MODER |=  (GPIO_ANALOG << GPIO_MODER_MODE4_Pos);  // then set them to 0b11
 ]]></code></program>
-                <note>Clear-then-set, as always for a multi-bit field. This example is PA4 &#8212; theirs is PA0.</note>
-            </slide>
+    <ul>
+        <li>Each pin gets <term>two</term> MODER bits: 00 input, 01 output, 10 alternate, <clr c="green">11 analog</clr>.</li>
+        <li><c>GPIO_ANALOG</c> is the ES28.h constant for 3 &#8212; and 3 is <c>0b11</c>, the two bits we need.</li>
+        <li>Clear <em>then</em> set: a bare <c>|=</c> would leave whatever was already there ORed in.</li>
+        <li><c>RCC-&gt;IOPENR</c> is the <term>port's</term> clock, not the ADC's &#8212; a different register from the one on the next slide.</li>
+    </ul>
+</slide>
 
             <slide xml:id="sl-adc-reg-clock">
-                <p>The clock: the ADC is unreachable until this line runs.</p>
-                <program language="c"><code><![CDATA[
+    <p><term>2. The ADC's clock.</term> Like every peripheral, the ADC is unreachable until its clock is enabled.</p>
+    <program language="c"><code><![CDATA[
 RCC->APBENR2 |= RCC_APBENR2_ADCEN;   // enable the clock to the ADC
 ]]></code></program>
-            </slide>
+    <ul>
+        <li>Without this line every ADC register reads back as 0 and every write is ignored.</li>
+        <li>The converter also has its own conversion clock, asynchronous to this bus clock &#8212; we leave it at its default.</li>
+        <li>This is the one line that is the same whatever pin or channel you use.</li>
+    </ul>
+</slide>
 
             <slide xml:id="sl-adc-reg-channel">
-                <p>The channel: one bit per channel.</p>
-                <program language="c"><code><![CDATA[
-ADC1->CHSELR |= ADC_CHSELR_CHSEL4;   // select channel 4
+    <p><term>3. The channel: choosing which pin the ADC listens to.</term></p>
+    <p>We have only <term>one</term> ADC, but many pins could supply an analog signal.
+    A <term>multiplexer</term> sits in front of the converter and passes exactly one of
+    those pins through to it. <c>ADC_CHSELR</c> is how you tell the multiplexer which.</p>
+    <program language="c"><code><![CDATA[
+ADC1->CHSELR |= ADC_CHSELR_CHSEL4;   // channel 4 -- again, an EXAMPLE, not your channel
 ]]></code></program>
-                <note>Called ADC1 even though there is only one &#8212; other STM32 parts have several.</note>
-            </slide>
+    <ul>
+        <li>One bit per channel: set bit <em>n</em> to select channel <em>n</em>.</li>
+        <li>The channel number is <em>not</em> the pin number and <em>not</em> the header label &#8212; Table 12 connects them.</li>
+        <li>Our chip's ADC is called <c>ADC1</c>, even though it is the only one; other STM32 parts have several, and the name keeps code portable.</li>
+    </ul>
+</slide>
 
             <slide xml:id="sl-adc-cr" ref="fig-adc-cr">
-                <caption>ADEN enables the converter; ADSTART begins one conversion and the hardware clears it when that conversion finishes.</caption>
-            </slide>
+    <p><term>4. ADC_CR &#8212; the control register</term></p>
+    <ul>
+        <li>A <term>control register</term> is how software tells the peripheral what to do. Two bits matter today.</li>
+        <li><clr c="green">ADEN</clr> (bit 0) enables the ADC. Once, in init.</li>
+        <li><clr c="orange">ADSTART</clr> (bit 2) starts one conversion. Every sample.</li>
+        <li>Both are <c>rs</c>: you can read them and <term>set</term> them, but you cannot clear them &#8212; the hardware does that.</li>
+        <li>So ADSTART reading 1 means the converter is still busy; hardware clears it at the end.</li>
+    </ul>
+</slide>
 
             <slide xml:id="sl-adc-isr" ref="fig-adc-isr">
-                <caption>The hardware sets these: ADRDY when the converter is ready, EOC when a result is waiting. Your code&apos;s job is to wait for them.</caption>
-            </slide>
+    <p><term>5. ADC_ISR &#8212; the interrupt and status register</term></p>
+    <ul>
+        <li>A <term>status register</term> is the other direction: how the hardware keeps <em>you</em> updated on what is happening.</li>
+        <li><clr c="green">ADRDY</clr> (bit 0): the converter has started up and will accept work.</li>
+        <li><clr c="orange">EOC</clr> (bit 2): a conversion finished; the result is waiting in <c>ADC_DR</c>.</li>
+        <li>Both are <c>rc_w1</c> &#8212; read, cleared by writing 1. Remember that; we come back to it.</li>
+        <li>Your code never sets these. It <term>waits</term> for them.</li>
+    </ul>
+</slide>
 
             <slide xml:id="sl-adc-polling">
-                <p>You already know how to wait for a status bit.</p>
-                <program language="c"><code><![CDATA[
-while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {}   // Day 5: the UART
+    <p>You already know how to wait for a status bit &#8212; you did it on Day 5.</p>
+    <program language="c"><code><![CDATA[
+while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {}   // Day 5: wait for the UART
 
-while (!(ADC1->ISR   & ADC_ISR_EOC))         {}   // today: the ADC
+while (!(  PERIPH->ISR &  FLAG           )) {}    // the shape
 ]]></code></program>
-                <note>Same idiom, different register and bit. Nothing new is being asked here.</note>
-            </slide>
+    <ul>
+        <li>Read it aloud: keep looping <term>while it is not true</term> that the flag bit is set.</li>
+        <li>The loop body is empty. All the work is the condition.</li>
+        <li>TODOs 4 and 5 both use this shape &#8212; the register is <c>ADC1-&gt;ISR</c>, and the two bit names are on the previous slide.</li>
+    </ul>
+    <note>Do NOT fill these in &#8212; combining this slide with the ADC_ISR slide is the transfer.</note>
+</slide>
 
         </subsection>
 
         <subsection xml:id="subsec-adc-day7-code">
-            <title>Part 4b: Writing ADCpot.c</title>
+            <title>Part 4b: Writing ADCPot.c</title>
             <p>
                 Now put the four registers together.  The program has three parts:
                 a one-time initialization, a function that starts a conversion, and
@@ -858,7 +1060,7 @@ while (!(ADC1->ISR   & ADC_ISR_EOC))         {}   // today: the ADC
             </p>
 
             <program language="c"><code><![CDATA[
-/* ADCpot.c -- read a potentiometer on PA0 with the ADC
+/* ADCPot.c -- read a potentiometer on PA0 with the ADC
  * ENGS 28
  */
 #include <stdio.h>
@@ -953,17 +1155,23 @@ uint16_t adc_read(void) {
                 </li>
                 <li>
                     <term>Output appears but never changes.</term>  The wiper is
-                    probably not connected to A0, or the pin is not in analog mode —
-                    check TODO 1.
+                    probably not connected to A0.  Failing that, check that TODO 1
+                    set the mode bits to <c>0b11</c> and not to something else. Note 
+                    that the reset value for <c>MODER</c> for most GPIO pins is 3 (analog mode)
+                    so if you forgot this step entirely it's not the cause for this error.
                 </li>
                 <li>
-                    <term>The value is always 0.</term>  The ADC is not enabled or
-                    not started; check TODOs 2, 3, and 4.
+                    <term>The value is always 0.</term>  The pin really is sitting at
+                    0 V.  Check that the wiper jumper shares a breadboard row with
+                    the pot's <em>middle</em> leg, and that the two outer legs go to
+                    3.3 V and GND — not both to GND.
                 </li>
                 <li>
                     <term>The program hangs with no output after the greeting.</term>
                     One of the <c>while</c> loops is waiting for a bit that will
-                    never be set — most likely the channel or the enable is missing.
+                    never be set.  All three likely causes look identical from
+                    outside: the ADC clock (TODO 2), the channel (TODO 3), or the
+                    ready wait (TODO 4).  Check them in that order.
                 </li>
             </ol>
 
@@ -974,8 +1182,13 @@ uint16_t adc_read(void) {
             </p>
 
             <slide xml:id="sl-adc-skeleton">
-                <p>Five blanks. Everything you need is on the last six slides.</p>
-                <program language="c"><code><![CDATA[
+    <p><term>Before you write anything:</term></p>
+    <ul>
+        <li>Copy your TemplateProject and name the copy <c>ADCPot</c>.</li>
+        <li>Download the <c>ADCPot.c</c> skeleton from Canvas into the project's <c>Src</c> folder.</li>
+        <li>Then fill in the five blanks. Everything you need is on the previous six slides.</li>
+    </ul>
+    <program language="c"><code><![CDATA[
 void pa0_adc_init(void) {
     // TODO 1 -- PA0 as analog input (GPIOA clock, then clear+set the mode bits)
     // TODO 2 -- enable the clock to the ADC
@@ -995,7 +1208,7 @@ uint16_t adc_read(void) {
     return (uint16_t) ADC1->DR;  // reading DR also clears EOC
 }
 ]]></code></program>
-            </slide>
+</slide>
 
             <slide xml:id="sl-adc-diagnostics">
                 <p>Nothing printed? Work down the list.</p>
@@ -1028,12 +1241,12 @@ void pa0_adc_init(void) {
 }
 
 void start_conversion(void) {
-    while ((ADC1->ISR & ADC_ISR_ADRDY) == 0) {}
+    while (!(ADC1->ISR & ADC_ISR_ADRDY)) {}
     ADC1->CR |= ADC_CR_ADSTART;
 }
 
 uint16_t adc_read(void) {
-    while ((ADC1->ISR & ADC_ISR_EOC) == 0) {}   // blocking
+    while (!(ADC1->ISR & ADC_ISR_EOC)) {}      // blocking
     return (uint16_t) ADC1->DR;
 }
 ]]></code></program>
@@ -1093,9 +1306,18 @@ GPIOA->ODR &= ~LED_PIN;   // clear bit 5 -- LED off
                 the copy, and write all 32 bits back.  That write puts a
                 <c>1</c> into every status bit that happened to be set when the read
                 occurred — and on this register, writing a 1 means <em>clear</em>.
-                Every other flag the hardware had raised would be wiped out,
-                including any that the hardware set in the moment between the read
-                and the write.  You would lose events you never knew had happened.
+                So every other flag that was already raised at the moment of the
+                read would be wiped out, including one you had not looked at yet and
+                were about to handle.  You would lose events you never knew had
+                happened.
+            </p>
+            <p>
+                And it would not even do the job you asked for.  The point of the
+                operation was to clear <c>ADRDY</c>, so the read-modify-write puts a
+                <c>0</c> into that bit position — and writing a 0 to an
+                <c>rc_w1</c> bit does nothing at all.  <c>ADRDY</c> would still be
+                set.  The line manages to destroy the flags you cared about while
+                leaving the one flag you meant to clear exactly as it was.
             </p>
             <p>
                 This is why status registers are built this way.  A flag register
@@ -1106,13 +1328,30 @@ GPIOA->ODR &= ~LED_PIN;   // clear bit 5 -- LED off
                 about the others.
             </p>
 
+            <figure xml:id="fig-adc-rmw-damage">
+                <caption>Why the read-modify-write is wrong twice over.  Start with
+                three flags set.  A plain assignment writes a 1 into ADRDY and a 0
+                into everything else, so ADRDY clears and the others are untouched.
+                The <c>&amp;= ~</c> version reads all 32 bits, clears ADRDY in its
+                copy, and writes the lot back — which sends a 1 to every flag that
+                was already set, clearing OVR and EOC, while sending a 0 to ADRDY,
+                which does nothing.  The flags you needed are gone and the one you
+                meant to clear is still set.</caption>
+                <image source="images/Day07-ADC/adc-rmw-damage.svg" width="70%"/>
+            </figure>
+
             <insight xml:id="insight-adc-rc-w1">
                 <title>Reading the access type</title>
                 <p>
                     The reference manual labels every register field with how it may
                     be accessed: <c>rw</c> for ordinary read-write bits,
-                    <c>r</c> for read-only, and <c>rc_w1</c> for read, cleared by
-                    writing 1.  That label is a contract, and it tells you which
+                    <c>r</c> for read-only, <c>rs</c> for bits you can
+                    set but not clear (writing 0 does nothing — <c>ADEN</c> and
+                    <c>ADSTART</c> are both <c>rs</c>), <c>rc_w1</c> for read,
+                    cleared by writing 1, and <c>rc_w0</c> for the opposite
+                    convention, cleared by writing 0.  The digit in the name tells
+                    you which value does the clearing, so it is worth reading rather
+                    than assuming.  That label is a contract, and it tells you which
                     idiom to use.  When you meet a new status register, check the
                     access type before you decide how to clear a flag — the habit
                     costs seconds and saves hours.
@@ -1133,24 +1372,23 @@ GPIOA->ODR &= ~LED_PIN;      // clear bit 5
             </slide>
 
             <slide xml:id="sl-adc-rc-w1">
-                <p><term>rc_w1</term> &#8212; read, cleared by writing 1.</p>
-                <ul>
-                    <li>Writing a <clr c="green">1</clr> clears the bit.</li>
-                    <li>Writing a <clr c="blue">0</clr> does nothing at all.</li>
-                    <li>So the assignment clears bit 0 and leaves every other bit alone.</li>
-                </ul>
-                <caption>The register isn&apos;t overwritten &#8212; it is sent one instruction per bit.</caption>
-            </slide>
+    <p><term>rc_w1</term> &#8212; read, cleared by writing 1.</p>
+    <ul>
+        <li>Write a <clr c="green">1</clr> to the bit &#8594; it <term>clears</term>.</li>
+        <li>Write a <clr c="blue">0</clr> to the bit &#8594; <term>nothing happens</term>. It keeps its value.</li>
+    </ul>
+    <p>So <c>ADC1-&gt;ISR = ADC_ISR_ADRDY;</c> sends a 1 to bit 0 and a 0 to all the rest:
+    bit 0 clears, every other bit is left exactly as it was.</p>
+    <caption>The register is not being overwritten. It is being sent one instruction per bit.</caption>
+</slide>
 
-            <slide xml:id="sl-adc-why-not-rmw">
-                <p>Why <c>&amp;= ~</c> would be a bug here:</p>
-                <ul>
-                    <li>It reads all 32 bits, modifies a copy, writes all 32 back.</li>
-                    <li>That write puts a <clr c="red">1</clr> into every flag that was set &#8212; and here, 1 means <em>clear</em>.</li>
-                    <li>Every other flag the hardware raised is wiped out, including any set between the read and the write.</li>
-                </ul>
-                <caption>A flag register has two writers: the hardware sets, your code clears. Write-1-to-clear is what lets them share it.</caption>
-            </slide>
+            <slide xml:id="sl-adc-why-not-rmw" ref="fig-adc-rmw-damage" stack="yes">
+    <ul>
+        <li><c>&amp;= ~</c> is a <term>read</term>, a modify, and a <term>write-back of all 32 bits</term>.</li>
+        <li>That write-back sends a <clr c="red">1</clr> to every flag that was already set &#8212; and here 1 means <em>clear</em>. Those events are lost.</li>
+        <li>And it sends a <clr c="orange">0</clr> to ADRDY, the bit you were trying to clear &#8212; which does nothing at all.</li>
+    </ul>
+</slide>
 
         </subsection>
 
@@ -1175,7 +1413,8 @@ GPIOA->ODR &= ~LED_PIN;      // clear bit 5
                     <statement>
                         <p>
                             Answer only yes or no to each question.  Starting with
-                            <c>SAR = 0b1000</c> (8): is your number greater than or
+                            <c>SAR = 0b1000</c> (8), so testing the highest bit, namely
+                            bit 3: is your number greater than or
                             equal to 8?  If yes, the bit stays; if no, it is cleared.
                             Then test bit 2, then bit 1, then bit 0 the same way.
                         </p>
@@ -1195,24 +1434,27 @@ GPIOA->ODR &= ~LED_PIN;      // clear bit 5
             <p>
                 Four bits took four questions; twelve bits take twelve comparisons,
                 plus a little overhead for sampling — about 14 ADC clock cycles in
-                total.  That is why a conversion is not instantaneous, and why your
+                total (<xref ref="fig-adc-timing"/>).  That is why a conversion is not instantaneous, and why your
                 code has to wait for <c>EOC</c> rather than reading <c>ADC_DR</c>
                 straight away.  One comparison per bit is the whole story.
             </p>
 
-            <slide xml:id="sl-adc-sar-game" room="yes">
-                <p>Think of a number from 0 to 15. Yes or no only.</p>
-                <program language="c"><code><![CDATA[
+            <slide xml:id="sl-adc-sar-game">
+    <p>Think of a number from 0 to 15. Yes or no only.</p>
+    <program language="c"><code><![CDATA[
 SAR = 0b1000  ->  is it >= 8 ?     no   ->  clear   0b0000
 SAR = 0b0100  ->  is it >= 4 ?     yes  ->  keep    0b0100
 SAR = 0b0110  ->  is it >= 6 ?     yes  ->  keep    0b0110
 SAR = 0b0111  ->  is it >= 7 ?     yes  ->  keep    0b0111  = 7
 ]]></code></program>
-                <ul>
-                    <li>Four bits, four questions. Twelve bits, twelve comparisons.</li>
-                    <li>&#8776; 14 ADC clocks &#8212; which is why you must wait for EOC.</li>
-                </ul>
-            </slide>
+    <ul>
+        <li>4 bits took 4 questions. 12 bits takes <term>12 comparisons</term> &#8212; one per bit, always.</li>
+        <li>Before it can compare anything it must <term>sample</term>: charge the internal capacitor to the input voltage. That costs 1.5 clocks.</li>
+        <li>The 12 comparisons cost 12.5 clocks &#8212; the extra half cycle is the converter's own overhead, latching the finished result into <c>ADC_DR</c>.</li>
+        <li><clr c="green">1.5 + 12.5 = 14</clr> ADC clocks for one 12-bit conversion.</li>
+        <li>At 12 MHz that is about 1.17 microseconds &#8212; and it is why your code must wait for EOC.</li>
+    </ul>
+</slide>
 
         </subsection>
 
@@ -1230,10 +1472,14 @@ SAR = 0b0111  ->  is it >= 7 ?     yes  ->  keep    0b0111  = 7
                     <statement>
                         <p>
                             <term>Move the pot to A3.</term>  Rewire the wiper to the
-                            header pin labelled <c>A3</c> and make the program work
+                            header pin labeled <c>A3</c> and make the program work
                             again.  You will need to find out which port pin
-                            <c>A3</c> is, and then which ADC channel that port pin
-                            reaches.  Do not assume any of the three numbers match —
+                            <c>A3</c> is — the
+                            <url href="external/nucleo_pinout.pdf">Nucleo pinout</url>
+                            has that — and then which ADC channel that port pin
+                            reaches, which is
+                            <url href="external/stm32c031_datasheet.pdf">datasheet</url>
+                            Table 12 again.  Do not assume any of the three numbers match —
                             work each translation out from the pinout and the
                             datasheet, and write down the chain you followed.
                         </p>
@@ -1249,11 +1495,14 @@ SAR = 0b0111  ->  is it >= 7 ?     yes  ->  keep    0b0111  = 7
                         <p>
                             <term>Change the resolution.</term>  Set your pot so the
                             DMM reads as close to 1.000 V as you can manage, and
-                            record the count.  Then find the <c>RES</c> field in
+                            record the count the ADC returns.  Then find the <c>RES</c> field in
                             <c>ADC_CFGR1</c> in the reference manual and switch the
-                            converter to 10-bit.  <em>Predict the new count before
-                            you run it</em>, then check.  Explain the factor you
-                            see.
+                            converter to 10-bit.  Read the field's access rules while
+                            you are there: RM0490 §14.12.4 allows software to program
+                            <c>ADC_CFGR1</c> only while <c>ADEN</c> is cleared, so
+                            <em>where</em> you put this line matters as much as what
+                            it says.  Predict the new count before you run it, then
+                            check.  Explain the factor you see.
                         </p>
                     </statement>
                 </task>
@@ -1270,6 +1519,25 @@ SAR = 0b0111  ->  is it >= 7 ?     yes  ->  keep    0b0111  = 7
                     </statement>
                 </task>
             </activity>
+
+            <slide xml:id="sl-adc-hw-solution">
+                <p>Solution &#8212; the A3 chain, and the 10-bit prediction</p>
+                <ul>
+                    <li><term>[port pin]</term> A3 &#8594; <clr c="orange">PB1</clr> (Nucleo pinout), then <term>[channel]</term> &#8594; <clr c="green">ADC_IN18</clr> (Datasheet Table 12). <em>Not</em> channel 3.</li>
+                    <li>Different <em>port</em>, so the port clock changes too.</li>
+                    <li>10-bit: the same 1.000 V gives about 1241 / 4 &#8776; <term>310</term> counts.</li>
+                </ul>
+                <program language="c"><code><![CDATA[
+RCC->IOPENR  |= RCC_IOPENR_GPIOBEN;                     // port B, not port A
+GPIOB->MODER &= ~GPIO_MODER_MODE1_Msk;                  // PB1, so MODE1
+GPIOB->MODER |= (GPIO_ANALOG << GPIO_MODER_MODE1_Pos);
+
+ADC1->CHSELR  = ADC_CHSELR_CHSEL18;                     // channel 18 -- plain '='
+                                                        // so channel 0 is deselected
+]]></code></program>
+                <note>Three things change, not one &#8212; that is the point of the exercise. Note the plain <c>=</c>: a <c>|=</c> would leave channel 0 selected as well and the ADC would scan a two-channel sequence. Verify <c>ADC_CHSELR_CHSEL18</c> exists in the project's CMSIS header before class &#8212; some STM32 headers stop at CHSEL17.</note>
+            </slide>
+
         </subsection>
     </section>
 
@@ -1288,24 +1556,56 @@ SAR = 0b0111  ->  is it >= 7 ?     yes  ->  keep    0b0111  = 7
 
         <subsection xml:id="subsec-adc-ref-hardware">
             <title>Inside the Converter</title>
-            <figure xml:id="fig-adc-core-hw">
-                <caption>The three pieces of the ADC core: the reference voltage
-                (wired to VDD on the Nucleo board), the analog input multiplexer
-                that selects one channel, and the successive-approximation
-                converter itself with its 12-bit DAC.  The reference voltage sets
-                the top of the measurable range, which is why the count-to-voltage
-                arithmetic depends on it.</caption>
-                <image source="images/Day07-ADC/adc-core-hw.svg" width="70%"/>
-            </figure>
+            
 
             <figure xml:id="fig-adc-timing">
-                <caption>Conversion timing.  Setting <c>ADSTART</c> begins the
-                conversion; the hardware clears <c>ADSTART</c> and samples the
-                input.  Roughly 14 ADC clock cycles later the <c>EOC</c> flag is
-                set and the result is available in <c>ADC_DR</c>.  At the default
-                12 MHz ADC clock that is about 1.2 µs.</caption>
+                <caption>Conversion timing (RM0490, <em>Analog to digital
+                conversion time</em>).  Setting <c>ADSTART</c> starts sampling;
+                sampling takes 1.5 ADC clock cycles and the successive
+                approximation itself 12.5 (the 1.5 is the reset value of
+                <c>SMP1[2:0]</c> in <c>ADC_SMPR</c>, which this chapter leaves alone), so a 12-bit
+                conversion is 14 cycles in all — about 1.17 µs at the default 12 MHz ADC clock.  <c>EOC</c> is
+                then set and the result is in <c>ADC_DR</c>.  <c>ADSTART</c> stays
+                set for the whole conversion and is cleared by hardware at the
+                <em>end</em> — while it reads 1, the converter is busy.</caption>
                 <image source="images/Day07-ADC/adc-timing.svg" width="85%"/>
             </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-adc-ref-impedance">
+            <title>Source Resistance and Sampling Time</title>
+            <p>
+                The ADC does not measure a voltage without drawing anything from it.
+                Inside the converter is a small capacitor that must be charged up to
+                the input voltage before the successive approximation can begin, and
+                it charges <em>through</em> whatever source you have connected —
+                through the potentiometer's track, or through a sensor's own output
+                resistance.
+            </p>
+            <p>
+                That charging happens inside a fixed window: the sampling time, set
+                by <c>SMP1[2:0]</c> in <c>ADC_SMPR</c> and left at its shortest
+                setting throughout this chapter.  Note what this does <em>not</em>
+                depend on — how often you take a reading.  Sampling once a second
+                rather than a thousand times a second gives the capacitor no extra
+                time on any individual conversion, because each conversion gets the
+                same window.  If the source cannot charge the capacitor within that
+                window, every reading comes back low by an amount that does not
+                average away.
+            </p>
+            <p>
+                The datasheet's <em>Maximum ADC RAIN</em> table is the lookup: it
+                gives the largest source resistance the converter tolerates for a
+                given sampling time and resolution.  Read it carefully — the table is
+                indexed at a 35 MHz ADC clock, so a given number of sampling cycles
+                buys you nearly three times as long at the 12 MHz clock this course
+                runs.  A 10 kΩ potentiometer presents its worst case at mid-travel,
+                where the two halves of the track sit in parallel: about 2.5 kΩ.
+                That is enough to cost a few counts, which is invisible on a knob you
+                are turning by hand and very visible on a sensor you are trying to
+                trust.  The fix is to lengthen the sampling time, not to sample less
+                often.
+            </p>
         </subsection>
 
         <subsection xml:id="subsec-adc-ref-registers">
@@ -1342,7 +1642,7 @@ SAR = 0b0111  ->  is it >= 7 ?     yes  ->  keep    0b0111  = 7
                     </row>
                     <row>
                         <cell><c>ADC_ISR</c></cell><cell><c>EOC</c></cell>
-                        <cell>Conversion complete (cleared by reading <c>ADC_DR</c>)</cell>
+                        <cell>Conversion complete (cleared by reading <c>ADC_DR</c>, or by writing 1)</cell>
                     </row>
                     <row>
                         <cell><c>ADC_DR</c></cell><cell>—</cell>

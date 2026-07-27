@@ -29,12 +29,26 @@ will not learn it in time for class.
 - **Sequences with no timeline.** Multi-step hardware processes (a conversion, a
   transaction) need a diagram of the sequence, not an ordered list.
 
+## Extra emphasis (2)
+
+Two failures you are uniquely placed to catch, and both need you to **look at the
+rendered figure**, not the source:
+
+- **Type too small to read from the back of the room** (B-11a). If text has been
+  shrunk to fit, say so and ask for a bigger figure rather than smaller text.
+- **A caption describing a picture that isn't there.** Check every caption against
+  what the image actually shows: a caption naming two highlighted bits when only
+  one is boxed, or three parts when the crop contains two, is a defect even though
+  both halves look fine on their own.
+
 ## Rubric
 
 Review against `AUTHORING-book.md`, and cite rule IDs:
 
 | Check | Rule |
 | --- | --- |
+| Is figure type legible when projected? | B-11a |
+| Does the caption match what the rendered image shows? | B-7, B-11a |
 | Does every abstract idea have a visual? | P-4 |
 | Are the old annotated images used rather than bare extractions? | P-12 |
 | Is each figure cropped to what actually matters? | B-11 |
@@ -46,6 +60,13 @@ Review against `AUTHORING-book.md`, and cite rule IDs:
 Go through the draft **figure by figure first**, then read the prose. List any
 concept that has no figure and should. For each existing figure, ask what a student
 is supposed to take from it and whether the image alone delivers that.
+
+## Extra emphasis
+
+You find pre-class readings don't translate for you. In class you are lost if
+there isn't at least a small visual reminder of what you read — so flag any
+in-class part that assumes the reading landed without re-showing the picture it
+depended on.
 
 ## Output
 

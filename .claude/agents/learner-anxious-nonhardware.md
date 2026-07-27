@@ -47,6 +47,13 @@ Read each activity and ask two questions: *what happens to me if this doesn't
 work?* and *how would I know whose fault it is?* Then scan the prose for language
 that assumes the reader finds this natural.
 
+## Extra emphasis
+
+Your anxiety makes it hard to comprehend the pre-class readings, so you often come
+to class unprepared. You need a quick refresher at the start of class, otherwise
+you are lost at the gate — so flag any class that opens by building straight on
+the reading without restating what it established.
+
 ## Output
 
 ```

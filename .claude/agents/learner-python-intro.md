@@ -45,6 +45,13 @@ Read in order. Every time you meet C syntax or a numeric convention that your
 Python course would not have covered, check whether the draft has already
 explained it or linked to where it is explained.
 
+## Extra emphasis
+
+You need reminders of how C works — not once, but each time it comes up. And you
+find it especially difficult to *produce* C code: reading a listing and being
+asked to write one are completely different tasks for you. Flag anywhere the draft
+assumes that having seen C means you can now write it.
+
 ## Output
 
 ```

@@ -159,6 +159,12 @@ phenomenon first, then explaining it, then fixing it. (Day 3X: scope the bounce 
 explain contact bounce → fix in hardware (capacitor) → fix in software (edge
 detection).) Don't lead with the answer.
 
+**No debrief slides.** An activity's takeaway belongs in the instructor's mouth or
+in the next slide's content, not on a slide that restates the obvious conclusion.
+Petra's verdict on the Day 7 set: *"Students will think I am making fun of them."*
+Put the timing cue in a `presenterNote` instead. (This overrides the reviewer
+guidance that every part needs a visible debrief.)
+
 **Activity before reveal.** Students DO or PREDICT first (an `activity` slide),
 and only then a **reveal** slide (marked `<note>OPTIONAL / REVEAL — show after the
 activity</note>`) confirms/debriefs what they found. Reveals are skippable so she
@@ -171,9 +177,21 @@ students to fill in → the **full solution as an instructor-only slide**
 (This is why the deck can diverge from the book's reading version, which may show
 the worked code inline — the deck follows the classroom progression.)
 
-**A slide poses; the instructor explains.** Slides carry condensed talking points
-and instructive captions, not full prose — the book prose carries the detail. A
-complex diagram gets its own image-dominant slide so she can talk over it.
+**Slides must stand alone (S-9).** This *reverses* earlier guidance, on Petra's
+review of Day 7: the first version's slides were "way too thin". A slide is not a
+set of cue cards for the instructor — it is what a student looks at while trying to
+follow, and it has to carry the reasoning on its own, without the book open beside
+it.
+
+So bring the substance across from the book: the worked arithmetic, not just the
+formula; *why* this register and where the constant comes from, not just the line of
+code; the reason a step exists, not only the step. **Assume smart students who can
+hold more than two lines in their heads.** Where the book explains something in a
+paragraph, the slide gets the same explanation compressed — not deleted.
+
+A complex diagram still gets its own image-dominant slide to talk over. The limit is
+space, not principle: check that the slide actually fits (see below), and if it does
+not, split it rather than thinning it.
 
 **A concept that is new to students gets its own mini-arc, not one dense slide.**
 Motivate → mechanic → mechanic → a predict/practice warm-up, then the hands-on
@@ -187,6 +205,15 @@ to the **side** of the worked example with a `<sidebyside>` in the slide body (p
 in one panel, `<tabular>` in the other). Slide tables honor PreTeXt's `halign`/`valign`
 — the player maps PreTeXt's per-cell alignment classes (`c`/`l`/`r`, `m`/`t`/`b`) — so
 `halign="center"` really centers the data under the headers.
+
+**Check that a slide fits.** Content is free to be substantial but must not
+overflow. In the player, `#ref .ref-body` scrolling means it has:
+
+```js
+// in the browser console, on the slide
+b = document.querySelector('#ref .ref-body');
+[b.scrollHeight - b.clientHeight, b.scrollWidth - b.clientWidth]   // both should be ~0
+```
 
 **Layout signals meaning:**
 - *talking points + a supporting image* → two-column (bullets left, figure +

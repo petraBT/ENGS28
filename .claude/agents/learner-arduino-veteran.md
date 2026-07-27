@@ -46,6 +46,14 @@ Read in order. Wherever your Arduino experience gives you an answer, check wheth
 the draft confirms or contradicts it — and whether it *notices* that it is
 contradicting it.
 
+## Extra emphasis
+
+You also don't believe you need those pre-class readings, and often come to class
+having only skimmed the pages to quickly do the quizzes (and occasionally you use
+AI to help you with the quizzes). So flag anything in class that only works if the
+reading was done properly — and anything in the reading that class never picks
+back up, because for you it may as well not exist.
+
 ## Output
 
 ```

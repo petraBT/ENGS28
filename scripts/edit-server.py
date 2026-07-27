@@ -22,6 +22,7 @@ import argparse
 import difflib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -39,6 +40,59 @@ MATCH_THRESHOLD = 0.75
 REFUSAL = ("That edit would change text inside inline markup (<c>, <em>, ...), "
            "which can't be done safely from here. Alt-click instead to open it "
            "in your editor.")
+
+# Elements whose displayed text is generated when the book is built, and so has
+# no counterpart in the source: math is LaTeX in the file and rendered glyphs in
+# the browser, and <xref> and the character entities produce text that simply
+# isn't written anywhere. A block containing one can never round-trip, so the
+# mismatch it causes is not evidence that the file changed underneath the author
+# — which is what the generic message unhelpfully implies. Longest alternatives
+# first so <mrow> isn't matched as <m>.
+GENERATED = re.compile(
+    rb"<(mrow|xref|ellipsis|fillin|today|nbsp|ndash|mdash|sim|md|me|m)[\s/>]")
+
+
+# A <p> holding display math does not render as one block: PreTeXt emits the
+# text before the first <md> as its own .para div, the math as a sibling, and
+# the text after it as another .para. So the block a reader clicks carries a
+# *fragment* of the source paragraph, and comparing whole texts is the wrong
+# question — the length prefilter in locate() throws the real element out before
+# it is ever scored. Asking instead "is nearly all of what they clicked present,
+# in order, in this element?" identifies the block. Only ever used to point an
+# editor at the right line; writing still demands the exact match in apply_edit.
+FRAGMENT_COVERAGE = 0.90
+
+# Math is LaTeX in the source and rendered glyphs in the browser, so it can
+# never match either way — set it aside before comparing. Longest first so
+# <mrow> is not matched as <m>.
+MATH_SUBTREE = re.compile(
+    rb"<(mrow|md|me|m)(\s[^>]*)?>.*?</\1>|<(mrow|md|me|m)(\s[^>]*)?/>", re.S)
+ANY_TAG = re.compile(rb"<[^>]+>")
+
+
+def text_without_math(element):
+    """The element's text with math subtrees removed, normalized for matching."""
+    try:
+        with open(element.path, "rb") as handle:
+            handle.seek(element.inner_start)
+            raw = handle.read(max(element.inner_end - element.inner_start, 0))
+    except OSError:
+        return ""
+    raw = MATH_SUBTREE.sub(b" ", raw)
+    raw = ANY_TAG.sub(b" ", raw)
+    return normalize(raw.decode("utf-8", "replace"))
+
+
+def generated_markup(element):
+    """Tag of the first build-time-generated element in this block, or None."""
+    try:
+        with open(element.path, "rb") as handle:
+            handle.seek(element.inner_start)
+            raw = handle.read(max(element.inner_end - element.inner_start, 0))
+    except OSError:
+        return None
+    hit = GENERATED.search(raw)
+    return hit.group(1).decode() if hit else None
 
 
 class Locator:
@@ -108,6 +162,28 @@ class Locator:
 
         if best is not None and best_score >= MATCH_THRESHOLD:
             return best, best_score
+
+        # Nothing matched as a whole. Before giving up, try the fragment case
+        # (see FRAGMENT_COVERAGE): a paragraph broken up by display math.
+        if len(needle) >= 20:
+            best, best_cov = None, 0.0
+            for element in candidates:
+                haystack = text_without_math(element)
+                if len(haystack) < 20:
+                    continue
+                matcher = difflib.SequenceMatcher(None, haystack, needle)
+                covered = sum(b.size for b in matcher.get_matching_blocks())
+                coverage = covered / len(needle)
+                # Prefer the tightest element when two cover equally well; a
+                # parent wrapping the clicked block covers it just as fully.
+                span = element.inner_end - element.inner_start
+                if coverage > best_cov or (
+                    coverage == best_cov and best is not None
+                    and span < best.inner_end - best.inner_start
+                ):
+                    best, best_cov = element, coverage
+            if best is not None and best_cov >= FRAGMENT_COVERAGE:
+                return best, best_cov
         return None
 
     def in_project(self, path: str) -> bool:
@@ -160,6 +236,12 @@ def apply_edit(element, old_text: str, new_text: str):
     """
     flat, starts, ends, owned = element.flatten()
     if flat != normalize(old_text):
+        tag = generated_markup(element)
+        if tag:
+            return None, (f"This block contains <{tag}>, whose displayed text is "
+                          "generated when the book is built and has no counterpart "
+                          "in the source, so it can't be edited in place. "
+                          "Alt-click to open it in your editor instead.")
         return None, ("The source no longer matches what the preview showed - "
                       "it may have changed since this page was built.")
 

@@ -36,6 +36,14 @@ RULES = [
      "say 'prototype', not 'forward declaration'", "error"),
     ("L-5", r"\bthe target MCU\b|\bthe microcontroller chip\b(?! on our)|\bour MCU\b",
      "vague hardware name — say STM32C031C6", "warn"),
+    # L-7: American spelling. Deliberately a curated list rather than a general
+    # -ise/-our rule, because the general form fires on "programmer", "our", and
+    # every URL that happens to contain them.
+    ("L-7", r"\b(colour|behaviour|favour|labour|centre|metre|litre|analyse|organise|"
+            r"recognise|normalise|stabilise|initialise|minimise|maximise|utilise|"
+            r"whilst|programme|defence|offence|travelling|modelling|labelled|"
+            r"cancelled|practise|licence|grey|greyed)\b",
+     "British spelling — this book uses American spelling", "error"),
 ]
 
 # Bit/register names that must keep reference-manual casing.

@@ -51,7 +51,45 @@ expert-class-logistics, learner-firstgen-novice, learner-arduino-veteran,
 learner-anxious-nonhardware
 ```
 
-**Gate 2 — the full draft:** everyone, then the synthesizer.
+**Gate 2 — the full draft.** Running all 17 costs a lot and produces redundant
+findings. Based on two full Gate 2 passes on the ADC pilot, run a **standing core**
+every time and add rotators when the chapter's character calls for them.
+
+**Standing core (7 + synthesizer)** — these earned their place by finding defects
+nothing else caught:
+
+```
+checker-technical-accuracy      wrong code, wrong registers, invented facts
+expert-continuity-auditor       forward refs, deferred topics, downstream fit
+expert-class-logistics          whether the hour actually works
+expert-cognitive-load           reading -> class handoff, load per part
+learner-visual                  figures, captions vs. rendered image, legibility
+learner-firstgen-novice         unexplained jargon, unreachable crucial step
+learner-anxious-nonhardware     no diagnostic path, no way back in
+```
+
+**Rotators — add when the chapter has that character:**
+
+| Add | When the chapter… |
+| --- | --- |
+| `expert-rigor-hawk` | has real quantities, timing, or tolerances to get right |
+| `expert-embedded-industry` | teaches a habit that transfers (datasheets, register contracts) |
+| `expert-ai-era-readiness` | has activities an AI could complete outright |
+| `expert-active-learning` | has a new activity structure (**not** for routine passes — see below) |
+| `learner-arduino-veteran` | replaces something an Arduino library did invisibly |
+| `learner-python-intro` | introduces new C syntax or integer-width reasoning |
+| `learner-weak-circuits` | asks students to wire or measure something new |
+| `learner-c-fluent` | risks boring the fast students, or the stretch is thin |
+| `learner-text-first` | leans heavily on figures |
+| `learner-ai-reliant` | has a codeable deliverable |
+
+**A caution about `expert-active-learning`.** It is the one reviewer whose advice
+has been *wrong*: it demanded a visible debrief for every part, those became slides,
+and Petra rejected them as condescending (now **S-10**). It is corrected, but weigh
+its structural recommendations against her taste rather than applying them straight.
+
+Petra's own review remains the last word; the committee exists to make her pass
+short, not to replace it.
 
 Give every reviewer the same brief: the file(s) under review, the lesson plan, the
 relevant old deck, and a pointer to `AUTHORING-book.md`. Run them in parallel —

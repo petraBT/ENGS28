@@ -25,20 +25,25 @@ By the end of class a student can:
 ## The CRUCIAL step
 
 > **Every student leaves class with a potentiometer on PA0 and their own
-> `ADCpot.c` printing a count that changes as they turn the knob — and can say
+> `ADCPot.c` printing a count that changes as they turn the knob — and can say
 > what that count means in volts.**
 
 Scaffolding to guarantee it (P-2):
 
-- Every register the skeleton needs is worked **before** Part 4, one at a time,
-  each on a *different* pin or channel than the skeleton needs — so filling the
-  blanks is transfer, not transcription.
+- Every register the skeleton needs is worked **before** Part 4, one at a time.
+  TODOs 1 and 3 are shown on a *different* pin and channel, so those are genuine
+  transfer. TODOs 4 and 5 are shown only as a shape (`while (!(PERIPH->ISR &
+  FLAG)) {}`), with the bit names on a separate slide, so the student combines two
+  slides. TODO 2 is one invariant line and is deliberate consolidation, not
+  transfer — do not claim otherwise.
 - Five labelled `// TODO` clusters, not four: pin mode, ADC clock, channel,
   enable, **and the read path**.
 - The read path is explicitly framed as the Day 5 UART polling idiom reused
   (`while (!(USART2->ISR & ...)) {}` → `while (!(ADC1->ISR & ADC_ISR_EOC)) {}`),
   so it is a continuation, not a sixth new concept.
-- Wiring is a photograph, and pots come **pre-seated** on the breadboards.
+- Wiring is a photograph. Pots are **not** pre-seated: students push the pins
+  hard into the breadboard or use three pin-to-clip jumpers (this was an
+  invented detail in revision 2 — corrected from the original slides).
 - A "nothing printed?" diagnostic ladder stays **persistently on screen** for the
   whole of Part 4 (and as a half-sheet handout), so a stuck student self-rescues.
 
@@ -70,30 +75,37 @@ running it. Explain the factor of 4.
 | Part | Content | Mode | Min |
 | --- | --- | --- | --- |
 | — | Settling: laptops, boards, USB, IDE open | — | 3 |
-| 0 | Announcements; the `malloc()` aside | tell | 3 |
+| 0 | Announcements; the `malloc()` aside (trimmed to 90 s) | tell | 2 |
 | 1 | Signal chain; predict the count for 1.65 V *(reading already did the math)* | predict | 5 |
 | 2 | **Datasheet Table 12**: does PA0 do analog, and which channel? | do | 9 |
-| 3 | Wire the pot (pre-seated); predict three wiper voltages, then measure | predict→do | 10 |
-| 4a | The four registers, worked one at a time, on other pins/channels | explain | 6 |
+| 3 | Wire the pot; predict four wiper voltages, then measure | predict→do | 10 |
+| 4a | The registers, one at a time, on other pins/channels | explain | 6 |
 | 4b | **Skeleton → fill five clusters → run → see it change** | do | 20 |
 | 5 | "Wait: WHAT?" `ADC1->ISR = ADC_ISR_ADRDY;` → write-1-to-clear | observe→explain | 7 |
 | 6 | Successive approximation: the guessing game | do | 4 |
 | 7 | Recap; homework → Lab 4 | tell | 2 |
 
 **Compressible material is now early.** Part 1 is 5 minutes because the pre-class
-reading already establishes counts↔volts; if the room is quick it can be 3.
+reading already establishes counts↔volts. Do **not** treat it as the automatic
+first cut: it is the only refresher a student who bounced off the reading gets. If
+more than a few hands are empty after the prediction, spend the full 5 and work
+1.65 V out loud.
 
 **If running long, cut in this order:** Part 6's guessing game runs to 2 min as a
-whole-class call-and-response; then Part 1 to 3 min; then Part 5 **whole** —
+whole-class call-and-response (keep its block-diagram debrief); then Part 5
+**whole** —
 never truncate it, because an unanswered "how did that clear the bit?" is worse
 than never raising it. Never cut Part 4.
 
-The SAR **block diagram and the 14-cycle timing move to the chapter's Reference
-section** (B-10) rather than being taught in class — the reading already gives the
-mechanism, so re-showing the block diagram in class is duplication (B-8).
+The 14-cycle timing lives in the chapter's Reference section (B-10). The SAR
+**block diagram is shown in class after the guessing game** as its debrief — the
+reading introduces the mechanism, and resurfacing it at the moment students have
+just enacted it is not duplication (this was a Gate 2 finding: the mechanism was
+previously explained once, in the reading, and never again). Budget ~90 s, taken
+from the `malloc()` aside.
 
-**Equipment:** 10 kΩ breadboard-mount trim pot, **pre-seated on the breadboard
-before class** — this is the single highest-leverage time saving in the day.
+**Equipment:** 10 kΩ pot, plus pin-to-clip jumpers for students who cannot push
+the pins into the breadboard. Part 3 is the likeliest overrun in the day.
 One DMM per student (confirm 30 are simultaneously available; if they are shared
 per bench, Part 3 doubles). Note the failure mode: a pot wired with 3.3 V and GND
 on the wiper plus one outer leg is a near-short at one end of travel, and the
@@ -149,8 +161,8 @@ Every part lands on one sentence:
 ## Writing room (S-2)
 
 Three moments require a committed answer before the reveal: Part 1's predicted
-count, Part 3's three predicted wiper voltages, and the resolution stretch's
-predicted 10-bit count. All get `room="yes"`. These are also the day's P-14 hook —
+count, Part 3's four predicted wiper voltages, and the resolution stretch's
+predicted 10-bit count — the last now carried by `room` on the homework slide. All get `room="yes"`. These are also the day's P-14 hook —
 an AI hands over "2048" instantly, but it cannot supply the student's own DMM
 reading beside their own written prediction.
 
@@ -192,8 +204,8 @@ Two structural obligations, though:
   printouts).
 - The `malloc()` aside is ES 20 continuity, not ADC content. Keep it short.
 - **Naming discrepancy to confirm with Petra:** the old deck's code slide titles the
-  program `ADCpot.c`; its homework slide writes `ADC_pot.c`; Lab 4 uses `ADCPot.c`.
-  This plan and the chapter use **`ADCpot.c`** throughout.
+  program `ADCPot.c`; its homework slide writes `ADC_pot.c`; Lab 4 uses `ADCPot.c`.
+  This plan and the chapter use **`ADCPot.c`** throughout.
 
 ## What Gate 1 changed
 
@@ -210,10 +222,46 @@ three counts:
    pins/channels so the fill-in is transfer.
 3. **Timing was 77 minutes in a 65-minute class with no setup time**, and the cut
    list sat entirely behind the bottleneck so it could never fire. Rebudgeted to 65
-   with settling; compressible material moved early; pots pre-seated.
+   with settling; compressible material moved early.
 
 Also corrected: "change to channel 3" stated an answer that is both wrong (A3 is
 PB1 → channel 18) and the point of the exercise; the potentiometer was assumed
 taught since Day 2 when it appears nowhere in Days 1–6; Part 5 was about to spend
 BSRR's reserved motivation and forward-reference interrupts; Lab 4's calibration
 insert point imposes a constraint on the in-class init.
+
+
+## What Gate 2 (second pass) changed
+
+Reviewed by the retuned committee: the four learner personas now carrying a
+reading→class emphasis, `expert-active-learning` (UDL, 4/5), `expert-rigor-hawk`
+(4/5), `expert-cognitive-load` (readings introduce only), and
+`checker-technical-accuracy` (5/5, hardware parity). Reports in
+`reviews/day7-gate2.md`; synthesis applied.
+
+The theme this panel found, which the first pass had not: **the reading→class
+handoff was asserted rather than performed.** Part 1 opened by claiming "the
+reading established the arithmetic" with no way back into it; the SAR mechanism was
+explained once in the reading and never again; the picture the reading built the
+arithmetic around never reappeared in class. All three are now resurfaced.
+
+Also fixed: the deck **inverted** Part 1, showing the formula before asking for the
+prediction; three of the five TODO blanks were literally printed on earlier slides;
+Part 4b — the crucial step — had no debrief; and colour was the sole carrier of
+meaning on four slides.
+
+Two figure defects were serious enough to be publication risks. `fig-adc-core-hw`
+was an **Atmel/AVR** block diagram with its "10-BIT DAC" whited out and overprinted
+"12 BIT DAC" — the overprint came from the source deck's own shape layer, and the
+figure has been deleted rather than re-cropped. `fig-adc-signal-chain` promised a
+four-stage chain and showed a single ADC box; it has been redrawn.
+
+**Still open for Petra** — see the escalations at the end of the synthesis:
+
+1. ~~Bench-check `pa0_adc_init()`~~ — **RESOLVED 2026-07-27.** Petra ran the init exactly as written, with no `ADVREGEN` and no calibration, and it works. The chapter's three-step enable sequence stands. Do not re-raise.
+2. ~~`ADC_CHSELR_CHSEL18`~~ — **RESOLVED.** Confirmed in the CMSIS header; ADC_IN18 = PB1.
+3. **Reading scope is a spec question.** The retuned cognitive-load brief
+   ("readings introduce and motivate only") contradicts **B-2** ("the reading
+   builds the concepts; class applies them"). Day 7 was resolved within B-2 by
+   resurfacing rather than re-teaching. If the retuning reflects policy you
+   actually want, B-2 needs rewriting and every chapter needs re-scoping.

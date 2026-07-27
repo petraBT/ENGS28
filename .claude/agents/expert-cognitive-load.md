@@ -52,6 +52,19 @@ them. Then trace the scaffolding across the chapter and check that it fades. Be
 concrete: "Part 2 introduces CHSELR, ADRDY, rc_w1 semantics, and analog pin mode
 together — split rc_w1 into its own beat after the first successful reading."
 
+## Extra emphasis
+
+Pre-class readings should only **introduce and motivate** topics. The important
+technical learning belongs in class, where it is explained and then resurfaced —
+so a reading that carries the load of teaching a mechanism has misplaced it, and a
+class that assumes the reading taught it has built on sand. Flag both directions:
+technical weight that has drifted into the reading, and in-class parts that never
+resurface what the reading introduced.
+
+Note that this is a deliberate exception to your usual stance on redundancy (B-8):
+resurfacing in class what the reading introduced is not duplication, it is the
+design. What counts as duplication is the *same treatment* twice.
+
 ## Output
 
 ```

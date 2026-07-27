@@ -231,6 +231,36 @@ steps", count the subsections — this drifts every time content is added or mer
 Lookup material that students will return to (bit twiddling, register tables) lives in
 a `Reference:` section at the end of the chapter, not inline in the teaching flow.
 
+### B-11a Figures must be legible when projected
+
+Type in a figure is read from the back of a room, not from a laptop. Size it
+generously, and when text does not fit, **make the figure bigger rather than the
+text smaller** — a diagram that has been shrunk to fit a column has usually been
+shrunk past the point of being readable. Check by looking at the rendered figure,
+not the source.
+
+### B-11b Every subsection must stand on its own
+
+Each subsection chunks to its **own page**, and a student can arrive there
+directly from search, a link, or the table of contents. So a subsection may not
+open by referring to context the reader is assumed to be carrying — "this
+arithmetic", "the relationship above", "as we saw". Name the subject in the first
+sentence, then `<xref>` to wherever it was developed.
+
+### B-11c Never invent physical or classroom facts
+
+The rule against inventing code (B-6) extends to everything the author cannot
+observe: what is on the bench, how a component mounts, what students already have
+wired, how long something takes. These read as authoritative and are impossible
+for a reader to challenge. Take them from the old deck, from the lab handout, or
+ask — never reconstruct them from plausibility.
+
+### B-11d No unsupported claims about what is common
+
+"The most frequent mistake", "students usually", "this always trips people up" —
+these are empirical claims presented as fact, and a chapter has no evidence for
+them. Say what is true instead: *why* the slip is easy to make, or what it costs.
+
 ### B-11 Every image path resolves; crop to what matters
 
 Verify `<image source="..."/>` against disk. Never drop a whole slide into a section
@@ -260,6 +290,14 @@ These are the quality rules.
   `presenterNote`.
 - **S-6 No `<m>` math on slides** — the player has no MathJax. Plain text (`V_IL`).
 - **S-7 One idea per slide.** See P-7.
+- **S-9 Slides stand alone.** A slide must carry its reasoning without the book
+  open beside it — the worked arithmetic, not just the formula; why a register and
+  where its constant comes from, not just the line of code. Assume students who can
+  hold more than two lines in their heads. If it will not fit, split the slide;
+  do not thin it. (Reverses the earlier "a slide poses, the instructor explains".)
+- **S-10 No debrief slides.** A slide that restates an activity's obvious
+  conclusion reads as condescending. Put the takeaway in a `presenterNote`, or
+  build it into the next slide's content.
 - **S-8 The deck arc.** Title → brief review / where we're headed → agenda → timed
   `Part N` sections → recap or looking ahead.
 
@@ -275,8 +313,9 @@ These are the quality rules.
 | **L-4** | "Prototypes", never "forward declarations". |
 | **L-5** | Specific hardware names. "STM32C031C6", not "the target MCU". |
 | **L-6** | Register, bit, and peripheral names match the reference manual exactly, including case. |
+| **L-7** | American spelling throughout — "stabilize", "center", "labeled", "gray". |
 
-`scripts/check_rules.py` enforces L-1 … L-6, image paths, and step counts. Run it
+`scripts/check_rules.py` enforces L-1 … L-7, image paths, and step counts. Run it
 before every committee review.
 
 ---

@@ -145,10 +145,46 @@ Plus: every deck `ref` resolves; every coded activity has an instructor solution
 
 Fix everything here — the committee's time should go to teaching, not typos.
 
+**Look at every rebuilt figure.** `pptx_annotate.py` will happily composite the
+wrong picture: a slide often carries several, and the largest is not always the one
+the caption describes. Render each and check it shows what you claimed:
+
+```bash
+qlmanage -t -s 900 -o /tmp assets/images/DayNN-Name/fig.svg
+```
+
+### Step 5b — Cross-check every book fix against the slides
+
+**Any change to book prose or a caption must be checked against the `<slide>`
+blocks that condense it.** They are separate text: fixing "enters at the pointed
+end" in a figure caption does not fix the slide caption that says the same thing,
+and the build will not tell you. Petra found exactly this on Day 7.
+
+```bash
+# every slide block, next to the prose it condenses
+grep -n '<slide xml:id=' source/ch-NAME.ptx
+```
+
+For each fix you made in Step 3 or after review, ask: does a slide repeat this
+wording, this number, or this claim? If so, fix it there too, then rebuild.
+
 ### Gate 2 — the committee
 
-Full panel (see `.claude/agents/`), then the synthesizer, which returns a
-**prioritized, actionable change list** with rule IDs. Apply it.
+Run the **standing core of 7** plus any rotators the chapter calls for (the roster
+and the selection table are in `.claude/agents/README.md`), then the synthesizer,
+which returns a **prioritized, actionable change list** with rule IDs. Apply it.
+
+Running all 17 is only worth it for a chapter unlike anything done before.
+
+**Write every reviewer's report to `reviews/dayNN-gateN.md` before running the
+synthesizer.** The synthesizer reads that file; it cannot consolidate reports that
+exist only in a chat transcript, and it will (correctly) refuse to invent them. The
+reports are also the evidence for which reviewers earn their keep.
+
+**Give the visual reviewer the rendered figures, not just their paths.** The single
+biggest defect class the pilot found was *wrong or mislabelled figures* — captions
+promising what the image does not show. That is invisible in the source and obvious
+on sight.
 
 ### Step 6 — Sign-off
 
@@ -232,3 +268,46 @@ A chapter is done when all of these are true.
 "Rough" means: assembled from raw slide extraction, with duplicated concepts,
 unannotated images, invented code, and no in-class structure. Assume nothing in a
 rough chapter is correct until checked against Step 0 ground truth.
+
+---
+
+## What the ADC pilot taught us
+
+The process was validated end-to-end on `ch-adc.ptx` (Day 7). What it exposed:
+
+**Gate 1 paid for itself immediately.** Revision 1 of the lesson plan was a BLOCKER
+on three counts, the worst of which was that **the read path was missing entirely** —
+`ADSTART`, `EOC` and `ADC_DR` appeared nowhere, so a student completing every
+scaffolded blank would have printed nothing. The crucial step was unreachable by
+construction. Three reviewers found it independently, at a cost of one page of
+rewriting. Found at Gate 2 it would have cost the chapter.
+
+**The old deck is the driver ground truth.** The complete, real `ADCpot.c` was
+recoverable as text from the deck's code slides — no need to ask Petra for files,
+which had been the process's biggest bottleneck. The chapter that existed before the
+pilot contained *invented* code that was plausible and wrong in five places.
+
+**Reviewers verify claims the author cannot.** The continuity auditor caught that the
+homework's "change to channel 3" was both wrong (A3 is PB1 → `ADC_IN18`, a different
+*port*) and self-defeating, since discovering that is the exercise. The
+technical-accuracy checker confirmed the code matched the driver exactly and every
+number was right, while finding six wrong hardware claims — `ADSTART`'s clearing
+time, the ADC clock's independence, a source-impedance justification the datasheet
+contradicts, and a diagnostic step that cannot produce the symptom it claims.
+
+**Figures are the highest-risk artifact.** Two figures were composited from the wrong
+picture on their slide, one caption made a flatly false claim about the hardware, and
+one figure had no annotations where the original had six. None of this is visible in
+the source. Render and look at every one.
+
+**A "done" chapter is not necessarily clean.** Running the new linter across the book
+found standing-rule violations in `ch-intro-blinky.ptx` and `ch-uart.ptx`, both marked
+done. It also needed a suppression mechanism (`<!-- check-rules: allow L-2 -->`) on
+its first run, for the paragraph that deliberately teaches that `%f` is unsupported.
+
+**Where the panel earned its keep.** Highest yield: `checker-technical-accuracy`,
+`expert-continuity-auditor`, `learner-visual`, `expert-class-logistics`. The learner
+personas overlapped less than expected — each failed at a genuinely different point,
+and four of them independently caught the same `GPIO_ANALOG` error from four
+different directions. Recommend keeping the full panel for now and re-assessing after
+a second chapter.
