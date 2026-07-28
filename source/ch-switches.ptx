@@ -743,7 +743,8 @@ int main(void) {
 #define GPIOBEN    (1U << 1)   // IOPENR bit 1 -> GPIOB clock
 #define BUTTON_PIN (1U << 4)   // PB4 = D5
 RCC->IOPENR |= GPIOBEN;        // 1. enable GPIOB clock
-// 2. MODER [9:8] = 00 by default -> input (no write needed)
+GPIOB->MODER &= ~(1U << 8) & ~(1U << 9); // 2. MODER [9:8] = 00 -> input
+                               //    (pins reset to 11, analog — clear both bits)
 GPIOB->PUPDR |=  (1U << 8);    // 3. PUPDR [9:8] = 01 -> pull-up
 GPIOB->PUPDR &= ~(1U << 9);
 ]]></code></program>
@@ -923,8 +924,11 @@ while (1) {
             The register fields involved in input configuration are:
         </p>
         <p>
-            <c>GPIOx→MODER</c> — two bits per pin.  Writing <c>00</c> selects input mode
-            (the power-on default).  For most input pins no MODER write is needed.
+            <c>GPIOx→MODER</c> — two bits per pin.  Writing <c>00</c> selects input mode.
+            Do not assume the bits are already <c>00</c>: pins reset to <c>11</c>,
+            analog mode (RM0490 §6.4.1 — reset value 0xEBFF FFFF for port A,
+            0xFFFF FFFF for the other ports), so clear both bits explicitly for
+            every input pin.
         </p>
         <p>
             <c>GPIOx→PUPDR</c> — two bits per pin.  Writing <c>01</c> enables the internal
@@ -962,8 +966,9 @@ while (1) {
 // 1. Enable GPIOB clock
 RCC->IOPENR |= GPIOBEN;
 
-// 2. MODER bits [9:8] for PB4 are 00 by default (input mode)
-//    No MODER write needed.
+// 2. Configure PB4 as input: MODER bits [9:8] = 00
+//    Pins reset to analog (11), so clear both bits explicitly
+GPIOB->MODER &= ~(1U << 8) & ~(1U << 9);
 
 // 3. Enable internal pull-up on PB4
 //    PUPDR bits [9:8]: 01 = pull-up
@@ -1601,7 +1606,7 @@ int main(void) {
     RCC->IOPENR |= (1U << 0) | (1U << 1);  // enable GPIOA and GPIOB clocks
     GPIOA->MODER &= ~(3U << 10);            // PA5 input (clear)
     GPIOA->MODER |=  (1U << 10);            // PA5 output
-    // PB4: MODER = 00 (input, default); enable pull-up
+    GPIOB->MODER &= ~(3U << 8);             // PB4 input (pins reset to analog)
     GPIOB->PUPDR |=  (1U << 8);             // PB4 pull-up bit [9:8] = 01
     GPIOB->PUPDR &= ~(1U << 9);
 
