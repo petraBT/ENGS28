@@ -165,11 +165,27 @@ The book is the single source of truth for both the pre-class reading and the
 in-class slides. In-class sections carry `<slide>` blocks beside the prose they
 condense.
 
-### B-2 Pre-class reading stands alone
+### B-2 Pre-class material motivates and introduces — it does not build the machinery
 
-The "Before Class" section must be readable and answerable **without hardware, without
-the IDE, and without having been to class**. It builds the concepts; class applies
-them. It should not contain in-class activities.
+The "Before Class" reading must be readable and answerable **without hardware,
+without the IDE, and without having been to class** — and its job is to
+**motivate** the day and introduce the **ideas**, not to construct the full
+mechanism. Students cannot absorb implementation — register maps, datapaths,
+multi-stage mechanism figures — from prose alone (Petra, Day 8). A reading
+section that needs a reveal-sequence figure has outgrown the reading.
+
+Mechanism is first *encountered* in a **pre-class video** (scripted from the
+book — `plans/dayNN-video-script.md` — and recorded over a deck of the book's
+own slide blocks, so video and book cannot drift) or in class, and the full
+written version lives in the chapter's **Reference** section for revisiting.
+Reading questions may cover video content when a video is part of the
+pre-class package. The reading contains no in-class activities.
+
+*(Rewritten after Day 8. The original rule — "the reading builds the concepts;
+class applies them" — produced a Before-Class section Petra rejected as
+overload. This also settles the Day 7 Gate 2 escalation about reading scope:
+the cognitive-load reviewer's "readings introduce and motivate only" brief is
+now the rule.)*
 
 ### B-3 Reading questions are grounded in real behavior
 

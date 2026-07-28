@@ -52,13 +52,18 @@
         <title>Before Class: Timers and Interrupts</title>
         <introduction>
             <p>
-                This reading builds two ideas.  The first is a piece of hardware:
-                a counter that runs entirely on its own, which you configure once
-                and then leave alone.  The second is a mechanism: how a piece of
-                hardware can make the CPU drop what it is doing, run a function
-                you wrote, and then resume as if nothing happened.  In class you
-                will put the two together and blink the on-board LED without a
-                single call to <c>delay_ms()</c>.
+                This reading introduces two ideas.  The first is a piece of
+                hardware: a counter that runs entirely on its own, which you
+                configure once and then leave alone.  The second is the idea
+                of an <term>interrupt</term>: hardware that can tap the CPU on
+                the shoulder.  The reading stays at the level of ideas on
+                purpose — the machinery behind them is the
+                <term>pre-class video</term>, which walks the moving pictures
+                a page of prose cannot, and the full written detail waits in
+                this chapter's Reference section for whenever you want to
+                revisit it.  Read this, watch the video, answer the questions
+                (they cover both), and in class you will build the real
+                thing: Blinky without a single call to <c>delay_ms()</c>.
             </p>
         </introduction>
 
@@ -67,9 +72,7 @@
             <p>
                 Waiting has been built into every program in this course so far.
                 On Day 1 the delay was a <term>busy-wait loop</term> — a
-                <c>for</c> loop that burned processor cycles doing nothing;
-                you will also see this called a <em>spin loop</em>, which is
-                the same thing, and this book says busy-wait throughout —
+                <c>for</c> loop that burned processor cycles doing nothing
                 and on Day 2 you replaced it with the course's
                 <c>delay_ms()</c>, which fixed the busy-wait's imprecision
                 (<xref ref="subsec-day2-delay-ms"/>).  What <c>delay_ms()</c>
@@ -106,7 +109,8 @@
                 increments it; on each tick of its input clock, the stored count
                 is replaced by the count plus one.  Once started, it counts
                 whether the CPU is computing, sitting in a delay, or doing
-                nothing at all.  It needs no attention to keep running.
+                nothing at all.  The timer (also called counter) needs no attention to keep running:
+                it runs entirely in hardware.
             </p>
             <figure xml:id="fig-counter-block">
                 <caption>The core of a counter: a register holds the current
@@ -127,27 +131,18 @@
                 chapters.
             </p>
             <p>
-                Two registers turn a bare counter into a programmable timer
-                (<xref ref="fig-tim14-block"/>).  The <term>prescaler</term>
-                (PSC) divides the timer's input clock down to a chosen counting
-                rate.  The <term>auto-reload register</term> (ARR) holds the
-                count at which the timer wraps: the counter (CNT) runs
-                0, 1, 2, <ellipsis/> up to the auto-reload value, then resets
-                to 0 and signals that a period has elapsed.  That signal is
-                called the <term>update event</term>.
+                Two registers turn a bare counter into a programmable timer.
+                The <term>prescaler</term> (PSC) divides the timer's input
+                clock down to a chosen counting rate.  The
+                <term>auto-reload register</term> (ARR) holds the count at
+                which the timer wraps: the counter (CNT) runs 0, 1, 2,
+                <ellipsis/> up to the auto-reload value, then resets to 0 and
+                signals that a period has elapsed.  That signal is called the
+                <term>update event</term>.  Rate, range, wrap — that is the
+                whole machine.  (The chip's full block diagram, with much
+                more bolted around this core, is in
+                <xref ref="subsec-timers-ref-block"/> when you want it.)
             </p>
-            <figure xml:id="fig-tim14-block">
-                <caption>TIM14's full block diagram (RM0490 Figure 165) with
-                the timing core highlighted: the clock path into the
-                prescaler (CK_INT through the trigger controller to CK_PSC,
-                blue); the <em>prescaled</em> counter clock CK_CNT coming out
-                of the prescaler (red); the 16-bit counter CNT (green); and
-                the auto-reload register that sets the counter's upper limit
-                (orange).  The dimmed capture/compare machinery is real and
-                returns in the motor chapters — today only the highlighted
-                path matters.</caption>
-                <image source="images/Day08-Interrupts/tim14_block_annotated.svg" width="90%"/>
-            </figure>
             <p>
                 The update event leaves a footprint your code can see: the
                 hardware sets the <term>update interrupt flag</term> (UIF), a
@@ -181,9 +176,7 @@
                 is <m>12{,}000{,}000</m> cycles — and there is the problem: the
                 counter and the auto-reload register are 16 bits wide, so each
                 holds <m>2^{16} = 65{,}536</m> distinct values, numbered 0
-                through 65,535 — the same counting-from-zero rule as the ADC's
-                12-bit range, 0 through 4095
-                (<xref ref="subsec-adc-quantization"/>).  Twelve million does
+                through 65,535.  Twelve million does
                 not fit.
             </p>
             <p>
@@ -199,7 +192,8 @@
             </p>
             <p>
                 One convention will trip you if you are not warned: <em>both</em>
-                registers are written as the desired value minus one.  The
+                registers are written as the desired value minus one since both 
+                start counting from zero (the prescaler works by counting also).  The
                 prescaler divides by <m>\text{PSC} + 1</m>, and the counter
                 counts from 0 to ARR <em>inclusive</em> — 0 through 499 is 500
                 ticks.  So a divide-by-12,000 prescale is written as
@@ -217,30 +211,18 @@
                 at 47.92 to 48.40 MHz over temperature, so the arithmetic is
                 exact and the second itself is good to about one percent.
             </p>
-            <figure xml:id="fig-prescaler-timing">
-                <caption>The prescaler at work, from RM0490's timing diagram
-                for TIM14, with the course's annotations.  CK_PSC is the input
-                clock; once CEN (counter enable) is set, the divided clock
-                CK_CNT drives the counter register.  When the counter reaches
-                the auto-reload value it wraps to 0 and the update event (UEV)
-                fires.  A new prescaler value written mid-period is buffered
-                and takes effect only at the next update event — here the
-                division changes from 1 to 4, visible in the slower CK_CNT
-                afterward.</caption>
-                <image source="images/Day08-Interrupts/tim14_prescaler_timing.svg" width="95%"/>
-            </figure>
             <p>
-                Notice from <xref ref="fig-prescaler-timing"/> that the
-                prescaler gives you freedom: many (prescale, count) pairs
-                produce the same period, as long as the product is right and
-                both values fit in 16 bits.  In class you will choose among
-                such pairs for a different period, so bring the arithmetic —
-                not just the answer.
+                One more thing to bring: the prescaler gives you freedom.
+                Many (prescale, count) pairs produce the same period, as long
+                as the product is right and both values fit in 16 bits.  In
+                class you will choose among such pairs for a different
+                period — and walk the hardware's own timing diagram step by
+                step — so bring the arithmetic, not just the answer.
             </p>
         </subsection>
 
-        <subsection xml:id="subsec-interrupt-mechanism">
-            <title>Interrupts: How the CPU Finds Out</title>
+        <subsection xml:id="subsec-interrupt-idea">
+            <title>The Idea of an Interrupt</title>
             <p>
                 A timer counting on its own solves half the problem.  The other
                 half is delivery: how does the CPU learn that the period has
@@ -254,215 +236,45 @@
                 whole point is what it lets you do the rest of the time.
             </p>
             <p>
-                To see how hardware can deliver such a ping, start with what
-                the CPU does normally (<xref ref="fig-normal-execution"/>): the
-                program counter (PC) points at the next instruction in flash;
-                the instruction is fetched, decoded, and executed; the PC
-                advances; repeat.  You met this machinery — the register file,
-                SP, LR, and PC — in <xref ref="subsec-processor-arch"/>.
+                Here is the idea — and for now, only the idea.  An
+                <term>interrupt</term> is a signal from a piece of hardware —
+                a timer, a button's pin, the UART — that makes the CPU pause
+                what it is doing, run a function you wrote, and then resume
+                exactly where it left off, as if nothing had happened.  The
+                function has a name of its own: an <term>Interrupt Service
+                Routine</term>, or ISR.  The interruption can land between
+                any two instructions — even in the middle of
+                <c>delay_ms()</c> — and that is precisely what makes it
+                powerful: your main program no longer has to watch for
+                anything.  The hardware watches; your ISR responds;
+                <c>main()</c> works.
             </p>
-            <figure xml:id="fig-normal-execution">
-                <caption>Normal program execution.  The program counter steps
-                through instructions in flash memory; each is fetched into the
-                instruction register, decoded, and executed by the
-                datapath.</caption>
-                <image source="images/Day08-Interrupts/slide30_458cd4b0.png" width="70%"/>
-            </figure>
-            <p>
-                A function call interrupts that straight line deliberately
-                (<xref ref="fig-function-call"/>).  Compiler-generated code at
-                the top of the function saves whichever registers that
-                function will disturb, the PC is loaded with the function's
-                start address, and the function runs.  On return, the saved
-                registers are restored and execution continues at the
-                instruction after the call.  What gets saved is the
-                <em>compiler's</em> decision, made when the code was built —
-                and the stack is what makes the round trip safe: everything
-                needed to pick up where the program left off was saved before
-                leaving.
-            </p>
-            <figure xml:id="fig-function-call">
-                <caption>What a function call does.  Call: compiler-generated
-                code at the function's entry saves the registers this function
-                will disturb onto the stack, and the function's address goes
-                into the PC.  Return: the saved registers are restored and
-                execution resumes at the next instruction.</caption>
-                <image source="images/Day08-Interrupts/slide31_ff36fa00.png" width="70%"/>
-            </figure>
-            <p>
-                An <term>interrupt</term> is a function call that hardware
-                makes (<xref ref="fig-interrupt-execution"/>).  When a
-                peripheral raises its interrupt signal, the CPU finishes the
-                instruction it is on, pushes the machine state onto the stack
-                exactly as a call would, and then — this is the only new part —
-                looks up where to jump in a <term>vector table</term>: a table
-                in flash, at a fixed location, holding the starting address of
-                one handler function per interrupt source.  The CPU loads that
-                address into the PC and runs the function, called an
-                <term>Interrupt Service Routine</term>.  When it returns, the
-                saved state is popped and the interrupted program resumes,
-                unaware anything happened.  An interrupt can arrive at
-                <em>any</em> instruction — even in the middle of
-                <c>delay_ms()</c> — and the stack machinery makes the detour
-                invisible to the interrupted code.
-            </p>
-
-            <slide xml:id="sl-day8-mechanism" ref="fig-interrupt-execution">
-    <ul>
-        <li>An interrupt is a function call <term>hardware</term> makes: finish the current instruction, push the machine state, vector to the handler, pop, resume.</li>
-        <li>It can land between <em>any</em> two instructions &#8212; even inside <c>delay_ms()</c> &#8212; and the interrupted code never knows.</li>
-        <li>Vocabulary guard: this ISR is a Service <term>Routine</term> &#8212; a function you write &#8212; not the status <term>register</term> ISR of <c>USART2-&gt;ISR</c> / <c>ADC1-&gt;ISR</c>. Same letters, different thing.</li>
-        <li>Arduino veterans: there is no <c>attachInterrupt()</c> here. You now do its three hidden jobs yourself: turn on the source, allow it through the NVIC, and supply the handler under the table's exact name.</li>
-    </ul>
-    <caption>From the reading — ninety seconds, then we program it.</caption>
-</slide>
-
-            <figure xml:id="fig-interrupt-execution">
-                <caption>What an interrupt does.  Hardware pushes the machine
-                state onto the stack; the interrupt controller loads the ISR's
-                address from the vector table into the PC; the ISR runs; on
-                return the state is popped and the next instruction of the
-                interrupted program executes.</caption>
-                <image source="images/Day08-Interrupts/slide32_a320de49.png" width="70%"/>
-            </figure>
             <p>
                 One caution about that acronym before it bites.  Since Day 5
                 you have used <q>ISR</q> for a peripheral's <em>interrupt and
                 status register</em> — <c>USART2-&gt;ISR</c>,
-                <c>ADC1-&gt;ISR</c>.  The Interrupt <em>Service Routine</em> is
-                a different thing wearing the same letters: not a register but
-                a function you write.  This book spells out which is meant
-                wherever context does not; in class you will also hear
+                <c>ADC1-&gt;ISR</c>.  The Interrupt <em>Service Routine</em>
+                is a different thing wearing the same letters: not a register
+                but a function you write.  In class you will also hear
                 <q>handler</q> for the function, which is unambiguous.
             </p>
             <p>
-                Between the peripherals and the CPU sits a referee: the
-                <term>Nested Vectored Interrupt Controller</term> (NVIC), shown
-                in <xref ref="fig-nvic-block"/>.  Every interrupt request
-                (IRQ) — from timers, UARTs, GPIO pins, the ADC — arrives at
-                the NVIC, which decides whether and when the CPU sees it.  Two
-                of its jobs matter to us now.  First, enabling: each interrupt
-                source has an enable switch in the NVIC, off by default, so no
-                peripheral can interrupt until you allow it.  Second, ordering:
-                if two interrupts arrive together, the NVIC services the higher
-                priority one first.  The Cortex-M0+ provides four priority
-                levels; this course leaves every source at its reset default of
-                priority 0, so simultaneous interrupts are resolved by IRQ
-                number, not priority.
+                Two habits follow from the idea, and class makes them
+                concrete.  Because an ISR borrows the CPU from your main
+                program, it must be quick — do the minimum and get out.  And
+                because the hardware, not your code, is the caller, hooking
+                an ISR up means telling the hardware about it — which is most
+                of what Day 8's class hour builds.  <em>How</em> the
+                machinery works — what the CPU saves, how it finds your
+                function, and why shared variables need a keyword called
+                <c>volatile</c> — is the <term>pre-class video</term>; the
+                written version lives in
+                <xref ref="subsec-timers-ref-mechanism"/> and
+                <xref ref="subsec-timers-ref-isr"/> for revisiting.
             </p>
-            <figure xml:id="fig-nvic-block">
-                <caption>The NVIC sits between interrupt sources and the
-                processor core.  Peripheral interrupt requests (IRQs), GPIO
-                lines routed through the EXTI controller, and the core's own
-                exceptions all arrive at the NVIC, which forwards them to the
-                CPU in priority order.</caption>
-                <image source="images/Day08-Interrupts/nvic_block_diagram.png" width="80%"/>
-            </figure>
         </subsection>
 
-        <subsection xml:id="subsec-isr-rules">
-            <title>Writing an ISR: Names, Rules, and <c>volatile</c></title>
-            <p>
-                An Interrupt Service Routine looks like an ordinary C function,
-                but three rules set it apart, and each comes straight from the
-                mechanism above.
-            </p>
-            <p>
-                <em>Rule 1: the name is fixed, and it must be exact.</em>  You
-                never call an ISR — hardware does, through the vector table —
-                so the toolchain must know which of your functions to wire into
-                which table slot.  It does this by <em>name</em>: each
-                interrupt source has one official handler name, and defining a
-                function with exactly that name places it in the table.  Get
-                one character wrong and nothing complains — your function is
-                simply never wired in.  In class you will look up where these
-                names come from rather than taking them on faith.  Notice what
-                is <em>absent</em> here: there is no
-                <c>register_handler(my_function)</c> call anywhere, and
-                nothing to pass a function to at run time — the linkage
-                happens once, at build time, when the linker matches your
-                function's name to the table slot.  For the
-                same reason, an ISR takes no arguments and returns nothing:
-                hardware, not your code, is the caller, and it has nothing to
-                pass and nowhere to put a result.
-            </p>
-            <p>
-                <em>Rule 2: get in and out fast, and never block.</em>  While
-                your ISR runs, the interrupted program is stopped, and other
-                interrupts may be kept waiting.  An ISR that loops, waits on a
-                flag, or calls something slow — <c>printf()</c>,
-                <c>delay_ms()</c> — holds up everything below it.  The
-                standard pattern: do the minimum the event requires (clear the
-                flag, record a value, set a marker) and let <c>main()</c> do
-                the real work at its leisure.
-            </p>
-            <p>
-                <em>Rule 3: shared variables must be <c>volatile</c>.</em>
-                The minimal-work pattern of Rule 2 usually means the ISR sets
-                a global flag variable that <c>main()</c> checks:
-            </p>
-            <program language="c"><code><![CDATA[
-volatile int timerElapsed;   // shared between the ISR and main
-
-int main(void) {
-    timerElapsed = 0;
-    while (1) {
-        if (timerElapsed) {
-            timerElapsed = 0;     // consume the flag ...
-            // ... then do the work the event calls for
-        } else {
-            // free to do something else
-        }
-    }
-}
-]]></code></program>
-            <p>
-                The keyword <c>volatile</c> is what makes this work — and to
-                see why it is needed, you need one fact about how C is built,
-                a fact no interpreted language prepares you for.  C is not
-                executed line by line as written: the compiler is free to rewrite your code into
-                anything that behaves identically <em>for everything it can
-                see</em>, including deleting a read, or a whole branch, that
-                it can prove makes no difference.  Now apply that to the loop
-                above (<xref ref="fig-compiler-view"/>): inside
-                <c>main()</c>, nothing ever sets <c>timerElapsed</c>, so an
-                optimizing compiler is entitled to conclude the flag is
-                always 0, read it once (or never), and quietly turn
-                <c>if (timerElapsed)</c> into <c>if (0)</c>.  The ISR's write
-                happens outside the compiler's view of that loop.  Declaring
-                the variable <c>volatile</c> tells the compiler: this value
-                can change at any time, by means you cannot see — fetch it
-                fresh from memory at every use.  Every variable an ISR shares
-                with the rest of the program gets <c>volatile</c>, always.
-            </p>
-            <figure xml:id="fig-compiler-view">
-                <caption>Why the flag must be <c>volatile</c>.  When the
-                compiler builds <c>main()</c>, its view (dashed boundary)
-                contains no write to <c>timerElapsed</c>, so it may legally
-                assume the flag never changes.  The ISR's write arrives from
-                outside that view, at a moment hardware chooses.
-                <c>volatile</c> forbids the assumption and forces a fresh
-                read at every use.</caption>
-                <image source="images/Day08-Interrupts/compiler_view_volatile.svg" width="85%"/>
-            </figure>
-
-            <slide xml:id="sl-day8-flag" ref="fig-compiler-view">
-    <p><term>Step 3 of 3: how the ISR talks to main — the flag, resurfaced.</term></p>
-    <program language="c"><code><![CDATA[
-volatile int timerElapsed;    // volatile: "fetch it fresh, at every use"
-
-// the ISR:   timerElapsed = 1;                       <- ALL the work it does
-// the loop:  if (timerElapsed) { timerElapsed = 0;  ...do the real work... }
-]]></code></program>
-    <ul>
-        <li>Why <c>volatile</c>: inside the loop, nothing ever sets the flag &#8212; so the optimizer may read it once and turn <c>if (timerElapsed)</c> into <c>if (0)</c>. The ISR's write happens outside the compiler's view.</li>
-        <li>Without it: no error, no warning &#8212; the blink just never happens.</li>
-        <li>ISR rules, one line each: get in, set the flag, get out. Never <c>printf()</c>, never <c>delay_ms()</c>.</li>
-    </ul>
-</slide>
-        </subsection>
-
-        <reading-questions xml:id="rq-timers-interrupts">
+                <reading-questions xml:id="rq-timers-interrupts">
             <exercise xml:id="rq-busywait-clock">
                 <statement><p>On Day 1 you produced a delay with a busy-wait
                 loop, tuned so that it takes approximately 10 ms with the
@@ -797,6 +609,60 @@ count to 1000        ->  1000 ticks = 1 s        check: 12,000 x 1000 = 12,000,0
         <li>Today's target is 500 ms &#8212; 6,000,000 cycles. Your turn.</li>
     </ul>
     <caption>The reading's example. Today's period is different — the method is not.</caption>
+</slide>
+
+            <p>
+                Before choosing values, watch the machine run.  The reference
+                manual's own timing diagram for the prescaler tells the whole
+                story, one stage at a time: the clock arrives and the counter
+                starts; the counter reaches the auto-reload value, wraps to
+                0, and the update event fires; a new prescaler value written
+                mid-period waits in a buffer; and at the next update event it
+                takes effect and the counter clock slows.
+            </p>
+            <figure xml:id="fig-prescaler-r1">
+                <caption>The prescaler's timing diagram (RM0490 Figure 167),
+                first stage: the input clock CK_PSC runs; when CEN (counter
+                enable) is set, the counter clock CK_CNT starts.</caption>
+                <image source="images/Day08-Interrupts/prescaler_reveal1.png" width="90%"/>
+            </figure>
+            <figure xml:id="fig-prescaler-r2">
+                <caption>Second stage: the counter register climbs (F7, F8,
+                <ellipsis/> FC here), reaches the auto-reload value, wraps to
+                00 — and at that instant the update event (UEV) pulse
+                fires.</caption>
+                <image source="images/Day08-Interrupts/prescaler_reveal2.png" width="90%"/>
+            </figure>
+            <figure xml:id="fig-prescaler-r3">
+                <caption>Third stage: software writes a new value into
+                TIMx_PSC mid-period.  The prescaler control register shows
+                the write immediately, but the working copy — the prescaler
+                buffer — holds the old value until the next update
+                event.</caption>
+                <image source="images/Day08-Interrupts/prescaler_reveal3.png" width="90%"/>
+            </figure>
+            <figure xml:id="fig-prescaler-timing">
+                <caption>The complete diagram.  At the update event the
+                buffered prescaler value takes effect: the prescaler counter
+                begins cycling 0<ndash/>3 and CK_CNT visibly slows — the
+                division has changed from 1 to 4.  A new prescaler value
+                never tears a period in half; it waits for the
+                boundary.</caption>
+                <image source="images/Day08-Interrupts/tim14_prescaler_timing.svg" width="95%"/>
+            </figure>
+
+            <slide xml:id="sl-day8-psc-r1" ref="fig-prescaler-r1">
+    <caption>Clock in, enable on — the counter clock starts.</caption>
+    <note>REVEAL sequence, four slides — advance as you narrate. Compressible: jump straight to the final stage if Part 2 is running long.</note>
+</slide>
+            <slide xml:id="sl-day8-psc-r2" ref="fig-prescaler-r2">
+    <caption>The counter wraps at the auto-reload value — that pulse is the update event.</caption>
+</slide>
+            <slide xml:id="sl-day8-psc-r3" ref="fig-prescaler-r3">
+    <caption>A mid-period write to PSC lands in a buffer — nothing changes yet.</caption>
+</slide>
+            <slide xml:id="sl-day8-psc-full" ref="fig-prescaler-timing">
+    <caption>At the update event the new prescale takes effect — CK_CNT slows by 4. Periods never tear.</caption>
 </slide>
 
             <activity xml:id="act-timer-design">
@@ -1256,11 +1122,12 @@ ADC1->ISR = ADC_ISR_ADRDY;    // rc_w1: 1 at my flag, harmless 0s everywhere els
             <title>Part 6: Programming an Interrupt</title>
             <p>
                 Polling the flag freed the loop from blocking, but the loop
-                still spends every iteration asking.  The reading's answer is
-                the interrupt: let the update event <em>call a function</em> —
-                push the machine state, vector to your handler, pop, resume
+                still spends every iteration asking.  The pre-class video's
+                answer is the interrupt: let the update event <em>call a
+                function</em> — push the machine state, vector to your
+                handler, pop, resume
                 (<xref ref="fig-interrupt-execution"/>).  Two reminders from
-                the reading before the mechanics, because both collide with
+                the video before the mechanics, because both collide with
                 habits.  First, the ISR we are about to write is an Interrupt
                 <em>Service Routine</em> — a function — not an interrupt and
                 status <em>register</em> like <c>ADC1-&gt;ISR</c>; same
@@ -1368,7 +1235,8 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
                  CubeIDE normally emits startup_stm32c031c6tx.s. -->
             <p>
                 <term>Give the ISR a way to talk to main.</term>  The
-                reading's flag pattern (<xref ref="subsec-isr-rules"/>) is
+                video's flag pattern (written version:
+                <xref ref="subsec-timers-ref-isr"/>) is
                 exactly what today's ISR needs, so bring it back to mind: a
                 global flag, declared <c>volatile</c> because the compiler
                 cannot see the ISR's write from inside <c>main()</c>'s loop;
@@ -2172,10 +2040,193 @@ void EXTI4_15_IRQHandler(void) {
             </p>
         </subsection>
 
+        <subsection xml:id="subsec-timers-ref-block">
+            <title>The Full TIM14 Block Diagram</title>
+            <p>
+                The reading reduces TIM14 to rate, range, wrap
+                (<xref ref="subsec-timer-hardware"/>).  The chip's own
+                picture of the peripheral shows how much more is bolted
+                around that core — input filtering, capture/compare, output
+                control — all of it dimmed here and all of it returning in
+                the motor chapters.
+            </p>
+            <figure xml:id="fig-tim14-block">
+                <caption>TIM14's full block diagram (RM0490 Figure 165) with
+                the timing core highlighted: the clock path into the
+                prescaler (CK_INT through the trigger controller to CK_PSC,
+                blue); the <em>prescaled</em> counter clock CK_CNT coming out
+                of the prescaler (red); the 16-bit counter CNT (green); and
+                the auto-reload register that sets the counter's upper limit
+                (orange).  The dimmed capture/compare machinery is real and
+                returns in the motor chapters — for periodic timing only the
+                highlighted path matters.</caption>
+                <image source="images/Day08-Interrupts/tim14_block_annotated.svg" width="90%"/>
+            </figure>
+
+            <slide xml:id="sl-day8v-timer" ref="fig-tim14-block">
+    <ul>
+        <li>A hardware timer is a circuit that counts clock pulses &#8212; separate from the CPU, running whether the CPU is busy or not.</li>
+        <li>Three parts do today's work: the <clr c="blue">clock path</clr> in, the <clr c="red">prescaler's output</clr> &#8212; the divided-down counting rate &#8212; and the <clr c="green">counter</clr> itself.</li>
+        <li>The <clr c="orange">auto-reload register</clr> sets the upper limit: count up to it, wrap to 0, and announce an <term>update event</term>.</li>
+        <li>Rate &#215; count = period. Everything else in the picture is dimmed because it belongs to later chapters.</li>
+    </ul>
+    <caption>Video slide — the timer core on the chip's own diagram.</caption>
+</slide>
+        </subsection>
+
+        <subsection xml:id="subsec-timers-ref-mechanism">
+            <title>The Interrupt Mechanism, in Full</title>
+            <p>
+                The pre-class video walks this machinery in motion; this is
+                the written version.  Start with what the CPU does normally
+                (<xref ref="fig-normal-execution"/>): the program counter
+                (PC) points at the next instruction in flash; the instruction
+                is fetched, decoded, and executed; the PC advances; repeat.
+                You met this machinery — the register file, SP, LR, and PC —
+                in <xref ref="subsec-processor-arch"/>.
+            </p>
+            <figure xml:id="fig-normal-execution">
+                <caption>Normal program execution.  The program counter steps
+                through instructions in flash memory; each is fetched into the
+                instruction register, decoded, and executed by the
+                datapath.</caption>
+                <image source="images/Day08-Interrupts/slide30_458cd4b0.png" width="70%"/>
+            </figure>
+            <p>
+                A function call interrupts that straight line deliberately
+                (<xref ref="fig-function-call"/>).  Compiler-generated code at
+                the top of the function saves whichever registers that
+                function will disturb, the PC is loaded with the function's
+                start address, and the function runs.  On return, the saved
+                registers are restored and execution continues at the
+                instruction after the call.  What gets saved is the
+                <em>compiler's</em> decision, made when the code was built —
+                and the stack is what makes the round trip safe: everything
+                needed to pick up where the program left off was saved before
+                leaving.
+            </p>
+            <figure xml:id="fig-function-call">
+                <caption>What a function call does.  Call: compiler-generated
+                code at the function's entry saves the registers this function
+                will disturb onto the stack, and the function's address goes
+                into the PC.  Return: the saved registers are restored and
+                execution resumes at the next instruction.</caption>
+                <image source="images/Day08-Interrupts/slide31_ff36fa00.png" width="70%"/>
+            </figure>
+
+            <slide xml:id="sl-day8v-callstack" ref="fig-function-call">
+    <ul>
+        <li>Normal execution: the program counter walks instruction to instruction through flash.</li>
+        <li>A function call is a planned detour: save what you'll disturb onto the <term>stack</term>, jump, run, restore, resume at the next instruction.</li>
+        <li>The stack is what makes the round trip safe &#8212; everything needed to pick up where you left off was saved before leaving.</li>
+        <li>Hold that thought: an interrupt is this exact trick, played by hardware.</li>
+    </ul>
+    <caption>Video slide — the function call, the trick the interrupt borrows.</caption>
+</slide>
+            <p>
+                An <term>interrupt</term> is a function call that hardware
+                makes (<xref ref="fig-interrupt-execution"/>).  When a
+                peripheral raises its interrupt signal, the CPU finishes the
+                instruction it is on, pushes the machine state onto the stack
+                exactly as a call would, and then — this is the only new part —
+                looks up where to jump in a <term>vector table</term>: a table
+                in flash, at a fixed location, holding the starting address of
+                one handler function per interrupt source.  The CPU loads that
+                address into the PC and runs the function, called an
+                <term>Interrupt Service Routine</term>.  When it returns, the
+                saved state is popped and the interrupted program resumes,
+                unaware anything happened.  An interrupt can arrive at
+                <em>any</em> instruction — even in the middle of
+                <c>delay_ms()</c> — and the stack machinery makes the detour
+                invisible to the interrupted code.
+            </p>
+
+            <slide xml:id="sl-day8-mechanism" ref="fig-interrupt-execution">
+    <ul>
+        <li>An interrupt is a function call <term>hardware</term> makes: finish the current instruction, push the machine state, vector to the handler, pop, resume.</li>
+        <li>It can land between <em>any</em> two instructions &#8212; even inside <c>delay_ms()</c> &#8212; and the interrupted code never knows.</li>
+        <li>Vocabulary guard: this ISR is a Service <term>Routine</term> &#8212; a function you write &#8212; not the status <term>register</term> ISR of <c>USART2-&gt;ISR</c> / <c>ADC1-&gt;ISR</c>. Same letters, different thing.</li>
+        <li>Arduino veterans: there is no <c>attachInterrupt()</c> here. You now do its three hidden jobs yourself: turn on the source, allow it through the NVIC, and supply the handler under the table's exact name.</li>
+    </ul>
+    <caption>From the pre-class video — ninety seconds, then we program it.</caption>
+</slide>
+
+            <figure xml:id="fig-interrupt-execution">
+                <caption>What an interrupt does.  Hardware pushes the machine
+                state onto the stack; the interrupt controller loads the ISR's
+                address from the vector table into the PC; the ISR runs; on
+                return the state is popped and the next instruction of the
+                interrupted program executes.</caption>
+                <image source="images/Day08-Interrupts/slide32_a320de49.png" width="70%"/>
+            </figure>
+
+            <slide xml:id="sl-day8v-interrupt" ref="fig-interrupt-execution">
+    <ul>
+        <li>An interrupt is a function call <term>hardware</term> makes: finish the current instruction, push the machine state, jump, run, pop, resume.</li>
+        <li>The one new part: where to jump comes from the <term>vector table</term> &#8212; a table in flash holding one handler address per interrupt source.</li>
+        <li>The function it lands in is your <term>Interrupt Service Routine</term> &#8212; and it can land between <em>any</em> two instructions, even inside <c>delay_ms()</c>.</li>
+        <li>The interrupted code never knows. That is the entire magic: main works; hardware watches.</li>
+    </ul>
+    <caption>Video slide — the interrupt is a hardware-invoked function call.</caption>
+</slide>
+            <p>
+                <em>Rule 1: the name is fixed, and it must be exact.</em>  You
+                never call an ISR — hardware does, through the vector table —
+                so the toolchain must know which of your functions to wire into
+                which table slot.  It does this by <em>name</em>: each
+                interrupt source has one official handler name, and defining a
+                function with exactly that name places it in the table.  Get
+                one character wrong and nothing complains — your function is
+                simply never wired in.  In class you will look up where these
+                names come from rather than taking them on faith.  Notice what
+                is <em>absent</em> here: there is no
+                <c>register_handler(my_function)</c> call anywhere, and
+                nothing to pass a function to at run time — the linkage
+                happens once, at build time, when the linker matches your
+                function's name to the table slot.  For the
+                same reason, an ISR takes no arguments and returns nothing:
+                hardware, not your code, is the caller, and it has nothing to
+                pass and nowhere to put a result.
+            </p>
+            <p>
+                Between the peripherals and the CPU sits a referee: the
+                <term>Nested Vectored Interrupt Controller</term> (NVIC), shown
+                in <xref ref="fig-nvic-block"/>.  Every interrupt request
+                (IRQ) — from timers, UARTs, GPIO pins, the ADC — arrives at
+                the NVIC, which decides whether and when the CPU sees it.  Two
+                of its jobs matter to us now.  First, enabling: each interrupt
+                source has an enable switch in the NVIC, off by default, so no
+                peripheral can interrupt until you allow it.  Second, ordering:
+                if two interrupts arrive together, the NVIC services the higher
+                priority one first.  The Cortex-M0+ provides four priority
+                levels; this course leaves every source at its reset default of
+                priority 0, so simultaneous interrupts are resolved by IRQ
+                number, not priority.
+            </p>
+            <figure xml:id="fig-nvic-block">
+                <caption>The NVIC sits between interrupt sources and the
+                processor core.  Peripheral interrupt requests (IRQs), GPIO
+                lines routed through the EXTI controller, and the core's own
+                exceptions all arrive at the NVIC, which forwards them to the
+                CPU in priority order.</caption>
+                <image source="images/Day08-Interrupts/nvic_block_diagram.png" width="80%"/>
+            </figure>
+
+            <slide xml:id="sl-day8v-nvic" ref="fig-nvic-block">
+    <ul>
+        <li>Between every interrupt source and the CPU sits a referee: the <term>NVIC</term> &#8212; Nested Vectored Interrupt Controller.</li>
+        <li>Job one, enabling: every source has a switch in the NVIC, <term>off by default</term>. Nothing interrupts until you allow it.</li>
+        <li>Job two, ordering: two requests at once are served by priority &#8212; and this course leaves every source at the same default.</li>
+        <li>So on Day 8 you will flip exactly two switches: one in the timer, one in the NVIC.</li>
+    </ul>
+    <caption>Video slide — the NVIC referees every interrupt on the chip.</caption>
+</slide>
+        </subsection>
+
         <subsection xml:id="subsec-timers-ref-stacked">
             <title>What Gets Stacked</title>
             <p>
-                The reading describes interrupt entry as hardware saving
+                The pre-class video describes interrupt entry as hardware saving
                 <q>the machine state.</q>  The exact contents, for readers who
                 want them: on the Cortex-M0+, exception entry pushes a fixed
                 eight-word frame — R0<ndash/>R3, R12, LR, PC, and xPSR, 32
@@ -2189,6 +2240,112 @@ void EXTI4_15_IRQHandler(void) {
                 saved by the ISR's own compiler-generated code, exactly as in
                 any function.
             </p>
+        </subsection>
+
+        <subsection xml:id="subsec-timers-ref-isr">
+            <title>Writing an ISR: The Rules, and <c>volatile</c></title>
+            <p>
+                An Interrupt Service Routine looks like an ordinary C
+                function, but three rules set it apart, each a consequence of
+                the mechanism in <xref ref="subsec-timers-ref-mechanism"/>.
+                Rule 1 — the fixed, exact name, and no arguments or return
+                value — is covered there.  The other two:
+            </p>
+                        <slide xml:id="sl-day8v-isr-rules">
+    <p><term>Three rules for the function the hardware calls.</term></p>
+    <ul>
+        <li><term>1 &#8212; The name is fixed, and must be exact.</term> Hardware finds your ISR through the vector table, wired by name at build time. There is no <c>register_handler(my_function)</c> call &#8212; and no arguments, no return value, because hardware is the caller.</li>
+        <li><term>2 &#8212; Get in, get out.</term> While your ISR runs, main is suspended and other interrupts can be kept waiting. Never <c>printf()</c>, never <c>delay_ms()</c> inside.</li>
+        <li><term>3 &#8212; Do the minimum:</term> record what happened &#8212; usually by setting a flag &#8212; and let <c>main()</c> do the real work at its leisure.</li>
+        <li>Rule 3's flag has a catch, and it is the next slide.</li>
+    </ul>
+    <caption>Video slide — the ISR rules.</caption>
+</slide>
+
+<p>
+                <em>Rule 2: get in and out fast, and never block.</em>  While
+                your ISR runs, the interrupted program is stopped, and other
+                interrupts may be kept waiting.  An ISR that loops, waits on a
+                flag, or calls something slow — <c>printf()</c>,
+                <c>delay_ms()</c> — holds up everything below it.  The
+                standard pattern: do the minimum the event requires (clear the
+                flag, record a value, set a marker) and let <c>main()</c> do
+                the real work at its leisure.
+            </p>
+            <p>
+                <em>Rule 3: shared variables must be <c>volatile</c>.</em>
+                The minimal-work pattern of Rule 2 usually means the ISR sets
+                a global flag variable that <c>main()</c> checks:
+            </p>
+            <program language="c"><code><![CDATA[
+volatile int timerElapsed;   // shared between the ISR and main
+
+int main(void) {
+    timerElapsed = 0;
+    while (1) {
+        if (timerElapsed) {
+            timerElapsed = 0;     // consume the flag ...
+            // ... then do the work the event calls for
+        } else {
+            // free to do something else
+        }
+    }
+}
+]]></code></program>
+            <p>
+                The keyword <c>volatile</c> is what makes this work — and to
+                see why it is needed, you need one fact about how C is built,
+                a fact no interpreted language prepares you for.  C is not
+                executed line by line as written: the compiler is free to rewrite your code into
+                anything that behaves identically <em>for everything it can
+                see</em>, including deleting a read, or a whole branch, that
+                it can prove makes no difference.  Now apply that to the loop
+                above (<xref ref="fig-compiler-view"/>): inside
+                <c>main()</c>, nothing ever sets <c>timerElapsed</c>, so an
+                optimizing compiler is entitled to conclude the flag is
+                always 0, read it once (or never), and quietly turn
+                <c>if (timerElapsed)</c> into <c>if (0)</c>.  The ISR's write
+                happens outside the compiler's view of that loop.  Declaring
+                the variable <c>volatile</c> tells the compiler: this value
+                can change at any time, by means you cannot see — fetch it
+                fresh from memory at every use.  Every variable an ISR shares
+                with the rest of the program gets <c>volatile</c>, always.
+            </p>
+            <figure xml:id="fig-compiler-view">
+                <caption>Why the flag must be <c>volatile</c>.  When the
+                compiler builds <c>main()</c>, its view (dashed boundary)
+                contains no write to <c>timerElapsed</c>, so it may legally
+                assume the flag never changes.  The ISR's write arrives from
+                outside that view, at a moment hardware chooses.
+                <c>volatile</c> forbids the assumption and forces a fresh
+                read at every use.</caption>
+                <image source="images/Day08-Interrupts/compiler_view_volatile.svg" width="85%"/>
+            </figure>
+
+            <slide xml:id="sl-day8-flag" ref="fig-compiler-view">
+    <p><term>Step 3 of 3: how the ISR talks to main — the flag, resurfaced.</term></p>
+    <program language="c"><code><![CDATA[
+volatile int timerElapsed;    // volatile: "fetch it fresh, at every use"
+
+// the ISR:   timerElapsed = 1;                       <- ALL the work it does
+// the loop:  if (timerElapsed) { timerElapsed = 0;  ...do the real work... }
+]]></code></program>
+    <ul>
+        <li>Why <c>volatile</c>: inside the loop, nothing ever sets the flag &#8212; so the optimizer may read it once and turn <c>if (timerElapsed)</c> into <c>if (0)</c>. The ISR's write happens outside the compiler's view.</li>
+        <li>Without it: no error, no warning &#8212; the blink just never happens.</li>
+        <li>ISR rules, one line each: get in, set the flag, get out. Never <c>printf()</c>, never <c>delay_ms()</c>.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day8v-volatile" ref="fig-compiler-view">
+    <ul>
+        <li>C is compiled, not read line-by-line: the compiler may legally rewrite your code into anything that behaves the same <em>for everything it can see</em>.</li>
+        <li>Inside <c>main()</c>'s loop, nothing ever sets the flag &#8212; so the optimizer may read it once and decide it is 0 forever. The ISR's write happens <term>outside the compiler's view</term>.</li>
+        <li>The keyword <c>volatile</c> on the declaration forbids that assumption: fetch it fresh from memory, every use.</li>
+        <li><term>Every variable an ISR shares with the rest of the program is volatile. Always.</term></li>
+    </ul>
+    <caption>Video slide — why the shared flag must be volatile.</caption>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-timers-ref-family">

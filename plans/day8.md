@@ -88,7 +88,7 @@ nothing to submit."
 | — | Settling: laptops, boards, IDE open | — | 3 |
 | 0 | Announcements | tell | 2 |
 | 1 | Why a background timer: `delay_ms()` holds the CPU captive for the whole wait (the Lab 2 button-race false-start window was exactly this); a hardware timer counts in parallel and frees the CPU — sampling, timestamps, and next week, motors | tell | 4 |
-| 2 | Design the 500 ms timer: 90-second refresher of the reading's period formula and its worked 1 s example, then **predict which of four candidate (PSC, ARR) pairs work** (`room="yes"`), then reveal | predict→reveal | 8 |
+| 2 | Design the 500 ms timer: 90-second refresher, then the **four-slide timing-diagram reveal** (Petra's one-after-the-other build; compressible to the final stage), then **predict which of four candidate (PSC, ARR) pairs work** (`room="yes"`), then reveal | reveal→predict | 8 |
 | 3 | The five init lines, one register at a time (APBENR2 → PSC → ARR → CNT → CR1), against the register map | explain | 6 |
 | 4 | **Run `blinkyTimerPolled.c`** (given): Canvas download, click-path slide, first build of the day. Note the `if`, not `while` — the loop never blocks. **Ends with the checkpoint** | do | 9 |
 | 5 | "Wait — is `&= ~` okay here?" The polled code cleared UIF with `&= ~mask` and it worked; Day 7 called that a bug on the ADC. **Look up the access type in RM0490** → rc_w0 vs rc_w1 moral | observe→explain | 8 |
@@ -208,22 +208,27 @@ committed wrong guess meeting the reveal.
 
 ## Hand-offs
 
-**Pre-class reading must establish:** what a hardware timer is (counter + PSC +
-ARR + update event, with the block diagram and the RM's prescaler timing
-figure); the counting arithmetic with a worked example at a *different* period
-(1 s: PSC = 12 000, ARR = 1000, so Part 2's 500 ms is transfer, not recall);
-that UIF is set by hardware and must be cleared by you (**not** how the clear
-works, and no rc_w0/rc_w1 — see above); the interrupt mechanism (the
-function-call stack save/restore from Day 1's reference material, then the
-interrupt as a hardware-invoked call, vector table, NVIC); the ISR rules
-(short, no blocking, no args/return); and `volatile` — what the compiler
-assumes without it and why the flag pattern needs it. Gloss the vocabulary
-once: Blinky's delay was named a **busy-wait loop** in Days 1–2 — "spin loop"
-is the same thing; use busy-wait consistently. Reading questions: the ARR
-off-by-one (ARR = 499 → 500 µs), busy-wait clock-dependence, why ISRs stay
-short, and the not-`volatile` failure mode. **The misnamed-ISR reading
-question's feedback must not assert a symptom until the default-handler
-behavior is verified** (flag 1 below).
+**The pre-class package is READING + VIDEO** (B-2 as rewritten after Petra's
+Day 8 review — the reading motivates and introduces; it does not build the
+machinery).
+
+*The reading establishes (ideas only):* the cost of waiting (`delay_ms()`
+captivity, busy-wait gloss); what a timer is at the rate-range-wrap level
+(simple counter figure only — no full block diagram, no timing diagram); the
+counting arithmetic with the worked 1 s example (so Part 2's 500 ms is
+transfer); that UIF is set by hardware and cleared by you (**not** how, and
+no rc_w0/rc_w1); and the *idea* of an interrupt — the email analogy, "a
+function call hardware makes," the ISR-acronym guard — with no implementation.
+
+*The video (~7 min, script `plans/day8-video-script.md`, deck
+`day8video.json`) carries the machinery:* the timer core on the block
+diagram; function call → interrupt (stack, vector table); the NVIC; the three
+ISR rules; `volatile`. The written version of all of it lives in the
+Reference section, not the reading.
+
+Reading questions cover both (Q on ISR rules and `volatile` are video
+content). **The misnamed-ISR reading question's feedback must not assert a
+symptom until the default-handler behavior is verified** (flag 1 below).
 
 **Class deepens, does not repeat** (B-8): the reading carries the interrupt
 mechanism; class resurfaces its figure for ninety seconds inside Part 6a and
@@ -322,6 +327,35 @@ Reviewed by `expert-active-learning`, `expert-cognitive-load`,
    rough chapter's `fig-timer-sr` caption names rc_w0/rc_w1 and makes the
    comparison. Step 3 must neutralize it; the constraint is now written into
    Hand-offs.
+
+## What Petra's review changed (2026-07-28)
+
+The Before-Class reading was overload: mechanism a student cannot take up
+from prose alone. Her correction, now **B-2 rewritten** in AUTHORING-book.md
+(and settling the Day 7 escalation on reading scope): pre-class material
+motivates and introduces; the machinery moves to a **pre-class video** and
+the Reference section; reveal-sequence figures are presented as reveals *in
+class*. Applied:
+
+- Reading slimmed to ideas: 8.1.1 kept; 8.1.2 trimmed (full block diagram →
+  Reference); 8.1.3 kept minus the timing figure; the interrupt
+  implementation and ISR/volatile sections replaced by one idea-level
+  section ("The Idea of an Interrupt") with a video pointer.
+- The prescaler timing diagram became a **four-stage in-class reveal** in
+  Part 2 (new figures prescaler_reveal1-3 + the full diagram; four
+  image-dominant slides), matching her original slide 11.
+- New **pre-class video**: script `plans/day8-video-script.md` (~7 min,
+  per-slide narration) + recording deck `assets/decks/day8video.json` built
+  from the book's own slide blocks, so video and book cannot drift.
+- Reference gained the moved depth: full TIM14 block diagram, "The Interrupt
+  Mechanism, in Full," and "Writing an ISR: The Rules, and volatile."
+- Class Part 6 resurfaces *the video* (wording updated); deck pages updated.
+- Figure 8.1.2's reversed arrows fixed (a pptx flip-handling bug, also fixed
+  at the source in `scripts/pptx_annotate.py`).
+
+Gate 2's committee reviewed under B-2 as then written ("the reading builds
+the concepts"), which is why the overload passed; the Day 7 synthesis had
+escalated exactly this policy question. The rule now encodes her answer.
 
 ## What Gate 2 changed
 

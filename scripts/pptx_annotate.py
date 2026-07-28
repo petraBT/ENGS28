@@ -248,13 +248,26 @@ def svg_shape(kind, box, sp, ox, oy, s, max_text):
     if kind == "cxn" or prst in ("line", "straightConnector1", "bentConnector2",
                                  "bentConnector3", "curvedConnector3"):
         if stroke:
+            # flipH/flipV (and the equivalent rot=180) swap which end the
+            # arrowhead sits on -- honor them instead of emitting a transform.
+            xfrm = sp.find(".//a:xfrm", NS)
+            fh = xfrm is not None and xfrm.get("flipH") == "1"
+            fv = xfrm is not None and xfrm.get("flipV") == "1"
+            if abs(box.rot - 180.0) < 0.01:
+                fh, fv = not fh, not fv
+                xf = ""
             head, tail = line_ends(sp)
             m = ""
             if tail:
                 m += ' marker-end="url(#arrow)"'
             if head:
                 m += ' marker-start="url(#arrow)"'
-            out.append(f'<line x1="{x:.1f}" y1="{y:.1f}" x2="{x + w:.1f}" y2="{y + h:.1f}" '
+            x1, y1, x2, y2 = x, y, x + w, y + h
+            if fh:
+                x1, x2 = x2, x1
+            if fv:
+                y1, y2 = y2, y1
+            out.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
                        f'stroke="{stroke}" stroke-width="{swpx:.1f}"{m}{xf}/>')
     elif prst in ("ellipse", "circle"):
         out.append(f'<ellipse cx="{x + w / 2:.1f}" cy="{y + h / 2:.1f}" '
