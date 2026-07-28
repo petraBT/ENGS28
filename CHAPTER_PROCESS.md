@@ -242,8 +242,11 @@ A chapter is done when all of these are true.
   the problem before BSRR makes sense. Hook: "you're now writing ISRs that share GPIO
   pins with the main loop — here's why that matters and here's the one-line fix."
   CMSIS: `GPIO_BSRR_BS5` to set, `GPIO_BSRR_BR5` to clear.
-- **Missing image** `assets/images/Day08-Interrupts/slide11_c3ead6b8.png`
-  (`ch-timers-interrupts.ptx`) — Petra to supply.
+- ~~Missing image `slide11_c3ead6b8.png`~~ — **RESOLVED (Day 8 authoring,
+  2026-07-27).** The hash belonged to slide 16, not 11; the prescaler-timing
+  figure was rebuilt from the deck as
+  `assets/images/Day08-Interrupts/tim14_prescaler_timing.svg`. Nothing is
+  missing.
 
 ## Chapter status
 
@@ -256,7 +259,7 @@ A chapter is done when all of these are true.
 | ch-transistors.ptx | Day06 | **done** (Day 6) |
 | ch-adc.ptx | Day07 | pilot |
 | ch-debugging.ptx | Day07x | rough |
-| ch-timers-interrupts.ptx | Day08, Day09 | rough |
+| ch-timers-interrupts.ptx | Day08, Day09 | Day 8 through Gate 2 (Petra pending); Day 9 rough |
 | ch-i2c.ptx | Day09X, Day10, Day13 | rough |
 | ch-motors.ptx | Day11, Day11x, Day12 | rough |
 | ch-accelerometers.ptx | Day13x, Day14 | rough |
