@@ -255,6 +255,39 @@
       #title { color: #f2f2f2; font-weight: 600; }
       #instr-badge { display: none; margin-left: 12px; color: #d9a441; font-weight: 600; }
       #bar.instr #instr-badge { display: inline; }
+
+      /* --- pen annotation + laser ---------------------------------------- */
+      /* Both canvases sit over the whole stage, under #bar (which follows them
+         in the DOM, so the bar wins both paint and hit-testing). Neither
+         intercepts input — pen strokes are picked up on #stage itself, so the
+         slide underneath stays fully interactive — except when ✎ Draw arms the
+         ink canvas so a mouse can draw; only then does it cover the slide.
+         width/height are not redundant with inset: a canvas is a replaced
+         element, so inset:0 alone leaves width:auto resolving to the intrinsic
+         backing-store size (stage x dpr) and every stroke lands off-stage. */
+      #ink, #laser {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        pointer-events: none;
+      }
+      #ink.armed { pointer-events: auto; touch-action: none; cursor: crosshair; }
+      #ink.armed.erasing { cursor: cell; }
+      #stage.laser-on { cursor: none; }
+      #stage.laser-on #bar { cursor: auto; }
+      /* Undo/Clear need existing ink (bar.inking); the pen tools — swatches and
+         the eraser — show once drawing is plausible: a stylus has been seen,
+         mouse drawing is armed, or the slide already has ink (bar.inkable). */
+      #bar .ink-pen, #bar .ink-tool { display: none; }
+      #bar.inkable .ink-pen { display: inline-block; }
+      #bar.inking .ink-tool { display: inline-block; }
+      #bar #swatches { white-space: nowrap; }
+      #bar .swatch {
+        width: 15px; height: 15px; padding: 0; margin: 0 1px; border-radius: 50%;
+        border: 1px solid #6a6a66; vertical-align: middle; cursor: pointer;
+      }
+      #bar .swatch.active { box-shadow: 0 0 0 2px #0d0d0d, 0 0 0 3px #d9d9d9; }
+      #bar button.active { background: #e7e5df; color: #1a1a19; border-color: #cbc9c0; }
+      #note { color: #86847c; }
+      #note.warn { color: #ffab91; }
     </style>
   </head>
   <body>
@@ -269,10 +302,24 @@
           </div>
         </div>
         <div id="err" class="slide"></div>
+        <canvas id="ink"></canvas>
+        <canvas id="laser"></canvas>
         <div id="bar">
           <span id="title"></span>
           <span id="instr-badge">✎ instructor only — hidden from students</span>
           <span class="spacer"></span>
+          <span id="note"></span>
+          <span id="swatches" class="ink-pen">
+            <button type="button" class="swatch" data-color="#d92b2b" style="background:#d92b2b" title="Red"></button>
+            <button type="button" class="swatch" data-color="#1a1a19" style="background:#1a1a19" title="Black"></button>
+            <button type="button" class="swatch" data-color="#2158a8" style="background:#2158a8" title="Blue"></button>
+            <button type="button" class="swatch" data-color="#1a7f37" style="background:#1a7f37" title="Green"></button>
+          </span>
+          <button id="erase" class="ink-pen" type="button" title="Eraser — drag over a mark to remove it (E)">Erase</button>
+          <button id="undo" class="ink-tool" type="button" title="Undo last stroke">Undo</button>
+          <button id="clear" class="ink-tool" type="button" title="Erase this slide's ink">Clear</button>
+          <button id="draw" type="button" title="Draw with the mouse — a stylus always draws (D)">✎ Draw</button>
+          <button id="laser-btn" type="button" title="Laser pointer (L)"><span style="color:#e5484d">●</span> Laser</button>
           <span id="pos"></span>
           <button id="prev" type="button">&larr;</button>
           <button id="next" type="button">&rarr;</button>
@@ -561,19 +608,557 @@
           // Flag instructor-only slides in the instructor view so it's obvious
           // which ones the student version drops.
           document.getElementById('bar').classList.toggle('instr', !studentView && !!slide && !!slide.instructor)
+          syncInk()
           if (!slide) return
           if (slide.type === 'ref') renderRef(slide)
           else renderGlue(slide)
+        }
+
+        /* --- pen annotation ------------------------------------------------
+           Ported from the ENGS 20 player (C-Programming assets/class.html).
+           Every slide here is inkable: this player extracts ref slides inline
+           rather than iframing book pages, so there is no frame for the canvas
+           to sit over. The one exception is an embedded <sim> iframe, which
+           pen events cannot reach (they land in the sim's own document) — arm
+           ✎ Draw to write over a sim.
+
+           Annotations are the viewer's OWN. localStorage is per-browser, so a
+           student's ink never leaves their machine and the instructor's is
+           never shown to anyone — the static player has no channel it could
+           travel by, and that is the requirement, not a limitation.
+
+           Strokes are points normalized 0-1 against #stage, never pixels or
+           images: the same slide is a different pixel size on a phone, a
+           laptop and the projector, and normalized points redraw correctly on
+           all of them. That holds because slide type is sized against the
+           stage too (the cqmin units above) — normalized coordinates survive
+           rescaling, but nothing survives text reflowing underneath. It also
+           keeps the stored form small against the ~5MB origin quota.
+
+           Input model ("hybrid"): a stylus ALWAYS draws. The ink canvas never
+           captures input (pointer-events:none); pen events land on the slide
+           content, bubble up to #stage, and are drawn from there — so mouse
+           and finger always interact normally (scroll a long code slide,
+           click, drive a sim). The ✎ Draw button arms the canvas so the
+           podium MOUSE can draw too; arming necessarily covers the slide, so
+           it is a mode you toggle back out of (D or Esc). */
+
+        // THE assumption this rests on: iPadOS Safari reports an Apple Pencil
+        // as pointerType 'pen'. Confirmed on hardware for ENGS 20 (2026-07-20:
+        // writing works, finger and palm correctly do not draw). Isolated here
+        // so a different answer is a one-line change.
+        var PEN_POINTER_TYPES = { pen: true }
+        // Dev escape hatch for a machine with no stylus: ?ink=all lets mouse
+        // and finger draw without arming. Not for classroom use — it costs the
+        // palm rejection that filtering to 'pen' gives for free.
+        if (params.get('ink') === 'all') PEN_POINTER_TYPES = { pen: true, mouse: true, touch: true }
+        function isPen(e) { return PEN_POINTER_TYPES[e.pointerType] === true }
+
+        var stage = document.getElementById('stage')
+        // getBoundingClientRect forces a layout flush, and drawing wants one
+        // per sampled point, at the rate a Pencil samples. The stage only
+        // changes size with the window (a fixed 16:9 box in a page that does
+        // not scroll), so measure once and invalidate on resize / rotation.
+        var stageRect = null
+        function rect() {
+          // Never cache a zero-size measurement (a not-yet-laid-out page):
+          // normalizing against it turns every coordinate into Infinity, and
+          // nothing would invalidate it until the next window resize.
+          if (!stageRect || !stageRect.width) stageRect = stage.getBoundingClientRect()
+          return stageRect
+        }
+        var ink = document.getElementById('ink')
+        var inkCtx = ink.getContext('2d')
+        var bar = document.getElementById('bar')
+        var strokes = {}          // runtime slide number -> array of strokes (cache)
+        var live = null           // stroke in progress
+
+        /* Persistence: localStorage, keyed by deck + the slide's position in
+           the FULL deck (`_ink`, assigned at load BEFORE the ?student filter
+           drops instructor-only slides) — so ink never walks between the
+           instructor and the student view of the same deck, this player's
+           version of ENGS 20's announcement-shift trap. The in-memory cache
+           keys by runtime index, which is stable within one load. */
+        var INK_NS = 'deck:ink:'
+        function inkKey(n) {
+          var s = deck && deck.slides[n - 1]
+          if (!s || s._ink == null) return null
+          return INK_NS + deckId + ':' + s._ink
+        }
+
+        function loadInk(n) {
+          if (strokes[n]) return strokes[n]
+          var list = []
+          var key = inkKey(n)
+          if (key) {
+            try {
+              var raw = localStorage.getItem(key)
+              if (raw) { var p = JSON.parse(raw); if (Array.isArray(p)) list = p }
+            } catch (e) { /* private mode, disabled storage, corrupt JSON */ }
+          }
+          strokes[n] = list
+          return list
+        }
+
+        // Set when a write has been refused for want of room. Annotations keep
+        // working in memory — losing the current stroke because the quota is
+        // full would be worse than losing it at the end of the session.
+        var inkFull = false
+
+        function saveInk(n) {
+          if (savePending === n) { savePending = null; clearTimeout(saveTimer); saveTimer = null }
+          var key = inkKey(n)
+          if (!key) { updateNote(); return }
+          var list = strokes[n] || []
+          try {
+            if (!list.length) localStorage.removeItem(key)
+            else localStorage.setItem(key, JSON.stringify(list))
+            inkFull = false
+          } catch (e) {
+            inkFull = true
+          }
+          updateNote()
+        }
+
+        /* Saving is debounced (learned the hard way in ENGS 20): localStorage
+           is synchronous, and stringifying the whole slide's ink on pen-lift
+           runs at the exact moment the next letter starts — handwriting became
+           "pause between symbols", worse as the slide filled up. So coalesce
+           the writes and flush on the way out: pagehide is the reliable event
+           on iOS Safari (unload is not), visibilitychange covers
+           app-switching, which is how an iPad usually leaves a page. */
+        var saveTimer = null
+        var savePending = null
+
+        function saveInkSoon(n) {
+          // Changing slide with a write still pending would otherwise cancel
+          // it and save the new slide instead, losing the old slide's ink.
+          if (savePending != null && savePending !== n) flushInk()
+          savePending = n
+          clearTimeout(saveTimer)
+          saveTimer = setTimeout(flushInk, 500)
+        }
+
+        function flushInk() {
+          clearTimeout(saveTimer)
+          saveTimer = null
+          if (savePending == null) return
+          var n = savePending
+          savePending = null
+          saveInk(n)
+        }
+
+        window.addEventListener('pagehide', flushInk)
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'hidden') flushInk()
+        })
+
+        // Stroke width is normalized too (a fraction of stage height), so a
+        // line drawn on an iPad is the same visual weight on the projector.
+        var PEN_WIDTH = 0.004
+        var PEN_COLOR = '#d92b2b'
+        // The active pen colour (each stroke stores its own, so changing this
+        // never recolours what is already drawn) and the mode flags.
+        var inkColor = PEN_COLOR
+        var eraseMode = false
+        var erasing = false      // an eraser drag is in progress
+        var eraseDirty = false   // that drag has removed at least one stroke
+        var mouseDraw = false    // ✎ Draw armed: the mouse may draw
+        // Once a stylus has touched the page, show the pen tools in the bar —
+        // the hybrid model has no draw toggle for the pen, so this is how the
+        // swatches and eraser become discoverable on an iPad.
+        var penSeen = params.get('ink') === 'all'
+
+        function inkEnabled() {
+          return !!deck && !!deck.slides[currentIndex() - 1]
+        }
+        // May THIS event draw? A pen always may; a mouse only when armed.
+        function canDraw(e) { return isPen(e) || (mouseDraw && e.pointerType === 'mouse') }
+
+        function sizeCanvas(c, ctx) {
+          var r = rect()
+          var dpr = window.devicePixelRatio || 1
+          var w = Math.max(1, Math.round(r.width * dpr))
+          var h = Math.max(1, Math.round(r.height * dpr))
+          if (c.width !== w || c.height !== h) { c.width = w; c.height = h }
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+          ctx.lineCap = ctx.lineJoin = 'round'
+        }
+
+        // Paint one complete stroke at the given stage size.
+        function paintStroke(s, r) {
+          var col = s.color || PEN_COLOR
+          if (s.pts.length < 2) {
+            // A tap with no movement: draw a dot, or it vanishes.
+            inkCtx.beginPath()
+            inkCtx.arc(s.pts[0][0] * r.width, s.pts[0][1] * r.height, (s.w * r.height) / 2, 0, Math.PI * 2)
+            inkCtx.fillStyle = col
+            inkCtx.fill()
+            return
+          }
+          inkCtx.strokeStyle = col
+          inkCtx.lineWidth = s.w * r.height
+          inkCtx.beginPath()
+          inkCtx.moveTo(s.pts[0][0] * r.width, s.pts[0][1] * r.height)
+          for (var i = 1; i < s.pts.length; i++) {
+            inkCtx.lineTo(s.pts[i][0] * r.width, s.pts[i][1] * r.height)
+          }
+          inkCtx.stroke()
+        }
+
+        /* A full repaint: only for what genuinely invalidates everything —
+           changing slide, resizing, undo, clear. Explicitly NOT for drawing:
+           the backing store is stage x dpr, and clearing and repainting
+           millions of pixels per sampled point is most of why handwriting
+           once needed a pause between symbols. A live stroke only ever adds
+           to the canvas, so it just draws the new segment. */
+        function redrawInk() {
+          sizeCanvas(ink, inkCtx)
+          var r = rect()
+          inkCtx.clearRect(0, 0, r.width, r.height)
+          loadInk(currentIndex()).forEach(function (s) { paintStroke(s, r) })
+        }
+
+        // Extend the stroke in progress by the points just added, drawing only
+        // the new segments. `from` is the last point already on the canvas.
+        function drawLiveSegment(s, from, r) {
+          if (s.pts.length < 2) return
+          inkCtx.strokeStyle = s.color || PEN_COLOR
+          inkCtx.lineWidth = s.w * r.height
+          inkCtx.beginPath()
+          inkCtx.moveTo(s.pts[from][0] * r.width, s.pts[from][1] * r.height)
+          for (var i = from + 1; i < s.pts.length; i++) {
+            inkCtx.lineTo(s.pts[i][0] * r.width, s.pts[i][1] * r.height)
+          }
+          inkCtx.stroke()
+        }
+
+        function syncInk() {
+          var on = inkEnabled()
+          var n = currentIndex()
+          bar.classList.toggle('inkable', on && (penSeen || mouseDraw || loadInk(n).length > 0))
+          bar.classList.toggle('inking', on && loadInk(n).length > 0)
+          if (on) redrawInk()
+          // A laser streak from the previous slide would be stale on this one.
+          laserTrail.length = 0
+          laserPos = null
+          updateNote()
+        }
+
+        function updateNote() {
+          var noteEl = document.getElementById('note')
+          if (inkFull) {
+            noteEl.textContent = 'Out of storage — new marks are not being saved.'
+            noteEl.className = 'warn'
+          } else if (inkEnabled() && loadInk(currentIndex()).length) {
+            noteEl.textContent = 'Saved in this browser only.'
+            noteEl.className = ''
+          } else {
+            noteEl.textContent = ''
+            noteEl.className = ''
+          }
+        }
+
+        // 4 decimal places is ~0.16px on a 1600px-wide stage — far finer than
+        // anyone can see, and roughly half the JSON of full float precision.
+        function r4(v) { return Math.round(v * 1e4) / 1e4 }
+        function pointIn(e, r) {
+          return [r4((e.clientX - r.left) / r.width), r4((e.clientY - r.top) / r.height)]
+        }
+        function point(e) { return pointIn(e, rect()) }
+        // Pens sample far faster than the ink needs to be described. Dropping
+        // points closer together than this loses nothing visible.
+        var MIN_STEP = 0.0015
+        function farEnough(a, b) {
+          return Math.abs(a[0] - b[0]) > MIN_STEP || Math.abs(a[1] - b[1]) > MIN_STEP
+        }
+
+        /* The eraser removes whole strokes it touches, not pixels. A stroke is
+           "touched" if the pen passes within the radius of any of its
+           SEGMENTS, not just its stored points — a straight stroke stores only
+           its endpoints, so a vertex-only test would miss the long span
+           between them. Distances are in stage pixels so the radius is round
+           rather than squashed by the 16:9 aspect. */
+        var ERASE_R = 0.03   // radius as a fraction of stage height
+        function distToSeg(qx, qy, ax, ay, bx, by) {
+          var dx = bx - ax, dy = by - ay
+          var len2 = dx * dx + dy * dy
+          var t = len2 ? ((qx - ax) * dx + (qy - ay) * dy) / len2 : 0
+          t = t < 0 ? 0 : t > 1 ? 1 : t
+          var cx = ax + t * dx, cy = ay + t * dy
+          return Math.sqrt((qx - cx) * (qx - cx) + (qy - cy) * (qy - cy))
+        }
+        function strokeNear(s, px, py, r) {
+          var R = ERASE_R * r.height
+          var qx = px * r.width, qy = py * r.height
+          var pts = s.pts
+          if (pts.length === 1) {
+            var dx = pts[0][0] * r.width - qx, dy = pts[0][1] * r.height - qy
+            return Math.sqrt(dx * dx + dy * dy) <= R
+          }
+          for (var i = 1; i < pts.length; i++) {
+            if (distToSeg(qx, qy,
+                  pts[i - 1][0] * r.width, pts[i - 1][1] * r.height,
+                  pts[i][0] * r.width, pts[i][1] * r.height) <= R) return true
+          }
+          return false
+        }
+        function eraseAt(e) {
+          var r = rect()
+          var list = loadInk(currentIndex())
+          if (!list.length) return
+          var p = pointIn(e, r)
+          var kept = [], removed = false
+          list.forEach(function (s) {
+            if (strokeNear(s, p[0], p[1], r)) removed = true
+            else kept.push(s)
+          })
+          if (removed) { strokes[currentIndex()] = kept; eraseDirty = true; redrawInk() }
+        }
+
+        /* Strokes are picked up on #stage, not the canvas — that is what lets
+           the canvas stay pointer-events:none so the slide underneath keeps
+           working (the hybrid model above). Events that start on the bar are
+           the bar's own. */
+        stage.addEventListener('pointerdown', function (e) {
+          if (e.pointerType === 'pen' && !penSeen) { penSeen = true; syncInk() }
+          if (laserOn) return                      // pointing, not writing
+          if (!inkEnabled() || !canDraw(e)) return
+          if (bar.contains(e.target)) return       // the bar's buttons stay buttons
+          e.preventDefault()
+          // Capture keeps the stroke coming to us if the pen strays; captured
+          // events retarget to #stage, where these listeners live. Not fatal
+          // if it fails, so don't let it throw away the stroke.
+          try { stage.setPointerCapture(e.pointerId) } catch (err) {}
+          if (eraseMode) { erasing = true; eraseDirty = false; eraseAt(e); return }
+          live = { w: PEN_WIDTH, color: inkColor, pts: [point(e)] }
+          loadInk(currentIndex()).push(live)
+          bar.classList.add('inking')
+        })
+
+        stage.addEventListener('pointermove', function (e) {
+          if (laserOn) { laserTrack(e); return }
+          if (eraseMode) {
+            if (!erasing || !canDraw(e)) return
+            e.preventDefault()
+            eraseAt(e)
+            return
+          }
+          if (!live || !canDraw(e)) return
+          e.preventDefault()
+          // Safari coalesces pointermove at the Pencil's higher sample rate;
+          // taking the coalesced events keeps fast strokes smooth instead of
+          // polygonal. Older engines just give back the one event.
+          var evs = (typeof e.getCoalescedEvents === 'function' && e.getCoalescedEvents().length)
+                    ? e.getCoalescedEvents() : [e]
+          // One rect for the whole batch: getBoundingClientRect forces layout,
+          // and a coalesced batch can hold a dozen points.
+          var r = rect()
+          var drawnTo = live.pts.length - 1
+          for (var i = 0; i < evs.length; i++) {
+            var p = pointIn(evs[i], r)
+            if (farEnough(p, live.pts[live.pts.length - 1])) live.pts.push(p)
+          }
+          drawLiveSegment(live, drawnTo, r)
+        })
+
+        function endStroke(e) {
+          if (erasing) {
+            erasing = false
+            if (eraseDirty) { saveInk(currentIndex()); eraseDirty = false }
+            syncInk()   // all ink erased? drop the Undo/Clear tools
+            if (e && e.pointerId != null && stage.hasPointerCapture(e.pointerId)) stage.releasePointerCapture(e.pointerId)
+            return
+          }
+          if (!live) return
+          // A stroke that never moved left nothing on the canvas, because
+          // drawLiveSegment only draws segments. Paint its dot now.
+          if (live.pts.length < 2) paintStroke(live, rect())
+          live = null
+          saveInkSoon(currentIndex())
+          if (e && e.pointerId != null && stage.hasPointerCapture(e.pointerId)) {
+            stage.releasePointerCapture(e.pointerId)
+          }
+        }
+
+        /* The Scribble workaround, carried from ENGS 20 (diagnosed on real
+           hardware): iPadOS 14+ Scribble swallows whole Pencil pointer
+           sequences on web pages while writing fast — the contact reaches the
+           glass and produces no pointer event and no touch event at all. A
+           non-passive touchmove listener that preventDefaults opts the element
+           out of the gesture path Scribble hooks; passive:false is
+           load-bearing (a passive listener may not preventDefault, and does
+           nothing, silently). Refined for this player: preventDefault only for
+           STYLUS contacts (touchType is iOS's) or while a stroke is live, so a
+           finger can still scroll a long code slide. It also keeps a Pencil
+           drag from scroll-panning that slide instead of writing on it. */
+        stage.addEventListener('touchmove', function (e) {
+          var stylus = false
+          for (var i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].touchType === 'stylus') { stylus = true; break }
+          }
+          if (stylus || live || erasing) e.preventDefault()
+        }, { passive: false })
+
+        stage.addEventListener('pointerup', endStroke)
+        stage.addEventListener('pointercancel', endStroke)
+        // A stroke dragged off the stage should end there, not resume when the
+        // pen comes back.
+        stage.addEventListener('pointerleave', function (e) {
+          laserPos = null   // the laser dot leaves with the pointer
+          endStroke(e)
+        })
+
+        document.getElementById('undo').addEventListener('click', function () {
+          var n = currentIndex()
+          var list = loadInk(n)
+          if (list.length) list.pop()
+          saveInk(n)
+          syncInk()
+        })
+        document.getElementById('clear').addEventListener('click', function () {
+          var n = currentIndex()
+          if (!loadInk(n).length) return
+          // Ink outlives the tab, so clearing destroys saved work — ask first.
+          if (!confirm('Erase everything you have written on this slide?')) return
+          strokes[n] = []
+          saveInk(n)
+          syncInk()
+        })
+
+        // Colour swatches and the eraser toggle. Each stroke stores its own
+        // colour, so switching never recolours existing ink. Picking a colour
+        // also leaves erase mode — you reached for a colour to draw.
+        var swatchWrap = document.getElementById('swatches')
+        function setErase(on) {
+          eraseMode = on
+          document.getElementById('erase').classList.toggle('active', on)
+          ink.classList.toggle('erasing', on)
+        }
+        function setColor(c) {
+          inkColor = c
+          ;[].forEach.call(swatchWrap.querySelectorAll('.swatch'), function (b) {
+            b.classList.toggle('active', b.getAttribute('data-color') === c)
+          })
+          if (eraseMode) setErase(false)
+        }
+        swatchWrap.addEventListener('click', function (e) {
+          var b = e.target.closest && e.target.closest('.swatch')
+          if (b) setColor(b.getAttribute('data-color'))
+        })
+        document.getElementById('erase').addEventListener('click', function () { setErase(!eraseMode) })
+        setColor(PEN_COLOR)   // mark the default swatch active
+
+        // ✎ Draw: arm the canvas so the podium mouse can draw. Arming covers
+        // the slide (that is what makes mouse drawing possible at all), so it
+        // and the laser are mutually exclusive modes you toggle out of.
+        var drawBtn = document.getElementById('draw')
+        function setArmed(on) {
+          mouseDraw = on
+          if (on) setLaser(false)
+          drawBtn.classList.toggle('active', on)
+          ink.classList.toggle('armed', on)
+          syncInk()
+        }
+        drawBtn.addEventListener('click', function () { setArmed(!mouseDraw) })
+
+        window.addEventListener('resize', function () {
+          stageRect = null            // the cached measurement is now stale
+          if (inkEnabled()) redrawInk()
+        })
+        // Rotating an iPad fires resize, but Safari can report the old size if
+        // asked too early, so drop the cache again on the orientation event.
+        window.addEventListener('orientationchange', function () { stageRect = null })
+
+        /* --- laser pointer -------------------------------------------------
+           A glowing dot with a short comet tail that fades, for pointing at
+           things during class. Purely local and ephemeral: the player is
+           static (nothing to sync), and the projector is the shared surface —
+           the room sees the dot because the room sees the screen. Follows any
+           pointer: the podium mouse, a Pencil, a finger. Toggle with the bar
+           button or L; Esc leaves. Never persisted. */
+        var laser = document.getElementById('laser')
+        var laserCtx = laser.getContext('2d')
+        var laserBtn = document.getElementById('laser-btn')
+        var laserOn = false
+        var laserTrail = []       // {x, y, t} normalized, newest last
+        var laserPos = null       // where the dot is right now (null: pointer left)
+        var laserRAF = null
+        var LASER_FADE = 450      // tail lifetime, ms
+
+        function setLaser(on) {
+          laserOn = on
+          if (on) setArmed(false)
+          laserBtn.classList.toggle('active', on)
+          stage.classList.toggle('laser-on', on)
+          laserTrail.length = 0
+          laserPos = null
+          ensureLaserLoop()       // runs at least once, to clear the canvas
+        }
+        laserBtn.addEventListener('click', function () { setLaser(!laserOn) })
+
+        function laserTrack(e) {
+          var p = point(e)
+          laserPos = p
+          var last = laserTrail[laserTrail.length - 1]
+          if (!last || farEnough(p, [last.x, last.y])) {
+            laserTrail.push({ x: p[0], y: p[1], t: performance.now() })
+            if (laserTrail.length > 80) laserTrail.shift()
+          }
+          ensureLaserLoop()
+        }
+
+        function ensureLaserLoop() {
+          if (laserRAF == null) laserRAF = requestAnimationFrame(laserLoop)
+        }
+        function laserLoop() {
+          laserRAF = null
+          sizeCanvas(laser, laserCtx)
+          var r = rect()
+          var now = performance.now()
+          laserCtx.clearRect(0, 0, r.width, r.height)
+          while (laserTrail.length && now - laserTrail[0].t > LASER_FADE) laserTrail.shift()
+          // The tail: each segment fades and thins with age.
+          for (var i = 1; i < laserTrail.length; i++) {
+            var a = laserTrail[i - 1], b = laserTrail[i]
+            var age = Math.max(0, (now - b.t) / LASER_FADE)
+            laserCtx.strokeStyle = 'rgba(255,60,50,' + (0.38 * (1 - age)).toFixed(3) + ')'
+            laserCtx.lineWidth = r.height * 0.008 * (1 - 0.6 * age)
+            laserCtx.beginPath()
+            laserCtx.moveTo(a.x * r.width, a.y * r.height)
+            laserCtx.lineTo(b.x * r.width, b.y * r.height)
+            laserCtx.stroke()
+          }
+          // The dot: a soft glow around a hard core, like the real thing.
+          if (laserOn && laserPos) {
+            var x = laserPos[0] * r.width, y = laserPos[1] * r.height
+            var R = r.height * 0.011
+            var g = laserCtx.createRadialGradient(x, y, 0, x, y, R * 3)
+            g.addColorStop(0, 'rgba(255,80,60,.5)')
+            g.addColorStop(1, 'rgba(255,80,60,0)')
+            laserCtx.fillStyle = g
+            laserCtx.beginPath(); laserCtx.arc(x, y, R * 3, 0, Math.PI * 2); laserCtx.fill()
+            laserCtx.fillStyle = '#ff2d1e'
+            laserCtx.beginPath(); laserCtx.arc(x, y, R, 0, Math.PI * 2); laserCtx.fill()
+            laserCtx.fillStyle = 'rgba(255,205,195,.9)'
+            laserCtx.beginPath(); laserCtx.arc(x, y, R * 0.42, 0, Math.PI * 2); laserCtx.fill()
+          }
+          if (laserOn || laserTrail.length) ensureLaserLoop()
         }
 
         window.addEventListener('hashchange', render)
         document.getElementById('prev').addEventListener('click', function () { go(currentIndex() - 1) })
         document.getElementById('next').addEventListener('click', function () { go(currentIndex() + 1) })
         document.addEventListener('keydown', function (e) {
+          if (e.metaKey || e.ctrlKey || e.altKey) return
           if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(currentIndex() + 1) }
           else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(currentIndex() - 1) }
           else if (e.key === 'Home') { e.preventDefault(); go(1) }
           else if (e.key === 'End') { e.preventDefault(); go(deck ? deck.slides.length : 1) }
+          else if (e.key === 'd' || e.key === 'D') { setArmed(!mouseDraw) }
+          else if (e.key === 'l' || e.key === 'L') { setLaser(!laserOn) }
+          else if (e.key === 'e' || e.key === 'E') { setErase(!eraseMode) }
+          else if (e.key === 'Escape') { setArmed(false); setLaser(false); setErase(false) }
         })
 
         if (!deckId) { fail('No deck specified. Open with ?deck=<id>.'); return }
@@ -582,6 +1167,9 @@
           .then(function (d) {
             deck = d
             if (!deck.slides || !deck.slides.length) throw new Error('deck has no slides')
+            // Annotation keys by the slide's position in the FULL deck,
+            // assigned before the student filter below — see inkKey().
+            deck.slides.forEach(function (s, i) { s._ink = i + 1 })
             // Student view drops instructor-only slides. NOTE: this hides them
             // from the VIEW only — the content still lives in the built book page
             // source. A truly solutions-free student build must strip them at
