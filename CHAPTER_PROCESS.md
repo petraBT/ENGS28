@@ -258,7 +258,7 @@ A chapter is done when all of these are true.
 | ch-io-datasheets.ptx | Day05X | **done** (Day 5x) |
 | ch-transistors.ptx | Day06 | **done** (Day 6) |
 | ch-adc.ptx | Day07 | pilot |
-| ch-debugging.ptx | Day07x | rough |
+| ch-debugging.ptx | Day07x | Day 7x through Gate 2 (Petra pending) |
 | ch-timers-interrupts.ptx | Day08, Day09 | Day 8 through Gate 2 (Petra pending); Day 9 rough |
 | ch-i2c.ptx | Day09X, Day10, Day13 | rough |
 | ch-motors.ptx | Day11, Day11x, Day12 | rough |
