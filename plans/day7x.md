@@ -94,7 +94,7 @@ also where Part 4's variable-watching becomes hands-on: watch `count` (or
 | 3b | SFRs tab → RCC → IOPENR: **write the predicted bit-0 value after line 1** → step → GPIOAEN 0→1 | predict → do | 5 |
 | 3c | **The MODER moment**: it reads 0xEBFFFFFF, not 0 — why? RM §6.4.1 crop on the slide: reset is analog; the two exceptions are PA13/PA14 = SWD, the debugger's own pins | observe → explain | 4 |
 | 3d | Breakpoints (bridge: "stepping every line is slow — set a destination instead"): two breakpoints on the ODR lines, resume-hop, LED matches OD5; do NOT step into the delay loop | do | 7 |
-| 4 | Watch a variable change — **student-driven front demo** on the Day 5 counter: class writes the predicted decimal for `key` before the volunteer presses `u` → 117 in Variables, 0x75 in USART_RDR | predict → demo | 5 |
+| 4 | Watch a variable change — **all-hands** on the Day 5 counter: write the predicted decimal for `key` (anchor: 'a' = 97), then press `u` in CoolTerm → 117 in Variables, 0x75 in USART_RDR. Petra may switch to a front demo if pressed for time (instructor reminder slide) | predict → do | 5 |
 | 5 | Which tool when (one slide, incl. the hardware-checklist pointer); stretch + re-entry announced; rest of hour = Lab 4 with the debugger open | tell | 3 |
 
 Total 50. Part 3 = 24 min with an internal checkpoint at minute 32.
@@ -102,7 +102,7 @@ Total 50. Part 3 = 24 min with an internal checkpoint at minute 32.
 **Cut order if running long (lecture compresses before hands-on demotes):**
 1. Part 1's write-and-share → show of hands only (–2).
 2. Part 2b's predict → told reveal (–3).
-3. Part 4's demo → 90 seconds, still student-driven (–3).
+3. Part 4 → demo mode from the front (instructor slide), down to 90 s (–3).
 4. Part 3 degrades only via its own checkpoint; **never cut Part 3.**
 
 **Part 3 is still the likeliest overrun.** Thirty simultaneous launches will
@@ -184,9 +184,10 @@ in Part 3c, not only by stretch-reachers.
    `.cproject`. Before the x-hour: upload `blinky.c` to Canvas, and ideally
    export the Day 1 CubeIDE project as a zip alongside it. The rung degrades
    gracefully ("hand up, watch with a neighbor") if the zip never exists.
-2. **Stage the podium machine before class** (Part 4): counter project built,
-   board wired, CoolTerm connected on the right port, no old debug session
-   running. Part 4 has no fallback if this is not ready at minute 42.
+2. **If you might switch Part 4 to demo mode: stage the podium machine
+   before class** — counter project built, board wired, CoolTerm connected
+   on the right port, no old debug session running. (Default is all-hands,
+   per your review.)
 3. **Standing rule L-2 is factually stale** and was NOT edited (a parallel
    session holds AUTHORING-book.md dirty). Lab 4 Appendix A documents the
    project setting that enables float printf, and Deliverable 4 requires
@@ -203,8 +204,10 @@ in Part 3c, not only by stretch-reachers.
 5. **Does a TA attend the x-hour?** The plan assumes instructor-only.
 6. The anxious-learner reviewer suggests a standing **damage-safety rule ID**
    in AUTHORING-book.md — general spec change, your call.
-7. Re-entry venue is phrased as "at any bench before next class" — name open
-   lab hours explicitly if that is the intended venue.
+7. ~~Re-entry venue "at any bench"~~ — **RESOLVED by Petra's review
+   (2026-07-28):** there are no benches; each student carries a portable
+   equipment kit and works on their own laptop. Wording fixed in chapter,
+   deck, and AUTHORING-book.md (B-11c standing fact).
 
 ## Notes from the old deck worth keeping
 

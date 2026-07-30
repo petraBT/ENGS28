@@ -266,10 +266,16 @@ sentence, then `<xref>` to wherever it was developed.
 ### B-11c Never invent physical or classroom facts
 
 The rule against inventing code (B-6) extends to everything the author cannot
-observe: what is on the bench, how a component mounts, what students already have
-wired, how long something takes. These read as authoritative and are impossible
-for a reader to challenge. Take them from the old deck, from the lab handout, or
-ask — never reconstruct them from plausibility.
+observe: what equipment students have in front of them, how a component mounts,
+what they already have wired, how long something takes. These read as
+authoritative and are impossible for a reader to challenge. Take them from the
+old deck, from the lab handout, or ask — never reconstruct them from
+plausibility.
+
+Standing classroom facts (from Petra, Day 7x review): **there are no lab
+benches** — each student carries a portable equipment kit (a <q>suitcase</q>)
+and works on their own laptop. Never write "bench", "at your bench", or "lab
+station".
 
 ### B-11d No unsupported claims about what is common
 
