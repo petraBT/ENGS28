@@ -330,7 +330,7 @@ These are the quality rules.
 | ID | Rule |
 | --- | --- |
 | **L-1** | Never write "working in pairs", "work individually", or "before you leave". Grouping is given verbally. |
-| **L-2** | No `%f` in printf examples — the course printf has no floating point. Scale to integers and print with `%d`. |
+| **L-2** | No `%f` in printf examples — float printing is off by default and the STM32C031C6 has no floating-point hardware (Lab 4 Appendix A shows the setting that enables it). Scale to integers and print with `%d`. Where the caveat itself is being taught, mark the element `check-rules: allow L-2`. |
 | **L-3** | No "gate" language for clocks. "Enable the clock", "until its clock is enabled" — not "open the gate". |
 | **L-4** | "Prototypes", never "forward declarations". |
 | **L-5** | Specific hardware names. "STM32C031C6", not "the target MCU". |

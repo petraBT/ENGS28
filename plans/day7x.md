@@ -188,14 +188,11 @@ in Part 3c, not only by stretch-reachers.
    before class** — counter project built, board wired, CoolTerm connected
    on the right port, no old debug session running. (Default is all-hands,
    per your review.)
-3. **Standing rule L-2 is factually stale** and was NOT edited (a parallel
-   session holds AUTHORING-book.md dirty). Lab 4 Appendix A documents the
-   project setting that enables float printf, and Deliverable 4 requires
-   `%f`. Suggested replacement when the file frees up: "No %f in printf
-   examples — float printing is off by default and the STM32C031C6 has no
-   FPU. Scale to integers and print %d. Where the caveat itself is being
-   taught, mark the element check-rules: allow L-2." The chapter already
-   teaches the corrected fact.
+3. ~~Standing rule L-2 is factually stale~~ — **RESOLVED 2026-07-28:**
+   AUTHORING-book.md freed up after the parallel session committed; L-2 now
+   reads "float printing is off by default and the STM32C031C6 has no
+   floating-point hardware (Lab 4 Appendix A shows the setting that enables
+   it)". The chapter taught the corrected fact already.
 4. **Confirm the NRST no-damage sentence with your own eyes.** Adjacency and
    the connect-failure symptom are sourced (UM2953 Table 11; the Day 7
    ladder); "does not damage anything" is defensible but was the one physical
