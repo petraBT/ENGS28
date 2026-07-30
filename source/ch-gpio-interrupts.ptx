@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--   This file is part of the Embedded Systems textbook.    -->
+<!--                                                          -->
+<!--      ENGS 28: Embedded Systems                           -->
+<!--      Thayer School of Engineering, Dartmouth College     -->
+<!--                                                          -->
+<!-- Copyright (C) 2026  Petra Bonfert-Taylor                 -->
+<!-- See the file COPYING for copying conditions.             -->
+
+<chapter xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="ch-gpio-interrupts">
+    <title>GPIO Interrupts</title>
+    <introduction>
+        <p>
+            Day 8 used an interrupt whose source was a timer.  This chapter
+            extends the same machinery to a source you can press: a GPIO pin,
+            routed through the EXTI controller, so a button generates an
+            interrupt instead of being polled.
+        </p>
+        <objectives>
+            <ul>
+                <li>Configure an external (GPIO) interrupt from a pushbutton
+                    through the EXTI controller.</li>
+                <li>Write an ISR that shares state with the main loop
+                    safely.</li>
+            </ul>
+        </objectives>
+    </introduction>
+
+    <!-- ============================================================ -->
+    <!-- ROUGH: everything below is Day 9 material that has NOT yet    -->
+    <!-- been authored through the chapter process (CHAPTER_PROCESS.md).-->
+    <!-- Assume nothing is correct until checked against Day 9 ground  -->
+    <!-- truth.  BSRR's reserved motivation (deferred topics) lands    -->
+    <!-- HERE when Day 9 is authored.                                  -->
+    <!-- ============================================================ -->
+    <section xml:id="sec-gpio-interrupts">
+        <title>External (GPIO) Interrupts</title>
+        <introduction>
+            <p>
+                A button press can also trigger an interrupt, letting the program respond
+                immediately rather than polling.  The STM32 routes GPIO pins through an
+                <term>EXTI</term> (External Interrupt) multiplexer before reaching the NVIC.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-exti-mux">
+            <title>The EXTI Multiplexer</title>
+            <p>
+                Each GPIO port has pins numbered 0–15.  The EXTI block has 16 lines (EXTI0–15).
+                Pin <m>n</m> of any port maps to line EXTIn — but only one port can be
+                connected to each EXTI line at a time.  The <c>EXTI_EXTICRx</c> registers
+                select which port drives each line.
+            </p>
+            <figure xml:id="fig-exti-mux">
+                <caption>EXTI GPIO multiplexer.  Each EXTI line (0–15) can be connected
+                to pin <m>n</m> of Port A, B, C, D, or F via the EXTICR registers.
+                Only one port per line at a time.  EXTI4 would be connected to PB4 by
+                writing the Port B code into EXTI_EXTICR2 bits [7:0].</caption>
+                <image source="images/Day09-Interrupts(2)/slide20_f495384e.png" width="48%"/>
+                <image source="images/Day09-Interrupts(2)/slide20_1407f444.png" width="48%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-exti-config">
+            <title>Configuring a GPIO Interrupt on PB4</title>
+            <p>
+                Setting up an external interrupt for the button on PB4 (falling edge,
+                active-low with pull-up) requires five steps.
+            </p>
+
+            <figure xml:id="fig-exti-button">
+                <caption>Button on PB4 with pull-up and debounce capacitor.  The falling
+                edge occurs when the button is pressed (pin goes from HIGH to LOW).
+                We configure EXTI to trigger on the falling edge.</caption>
+                <image source="images/Day09-Interrupts(2)/slide21_b404af41.png" width="55%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-ftsr">
+                <caption>EXTI Falling-Trigger Selection Register (FTSR1).  Setting bit 4
+                enables falling-edge detection on EXTI4.  A separate rising-trigger register
+                (RTSR1) handles rising edges; both can be set simultaneously for any-edge
+                detection.</caption>
+                <image source="images/Day09-Interrupts(2)/slide29_1668932b.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-imr">
+                <caption>EXTI Interrupt Mask Register (IMR1).  Setting bit 4 unmasks EXTI4,
+                allowing it to generate an interrupt request to the NVIC.  A masked line
+                is ignored even if an edge occurs.</caption>
+                <image source="images/Day09-Interrupts(2)/slide31_873b01af.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-nvic">
+                <caption>NVIC enable for EXTI lines 4–15.  On the STM32C031, EXTI lines
+                4–15 share a single NVIC interrupt line, <c>EXTI4_15_IRQn</c>.  The ISR
+                must check the EXTI_FPR1 register to determine which line triggered.</caption>
+                <image source="images/Day09-Interrupts(2)/slide33_8d3f7a34.png" width="70%"/>
+            </figure>
+
+            <program language="c"><code><![CDATA[
+void pb4_exti_init(void) {
+    __disable_irq();
+
+    // 1. Configure PB4 as input with pull-up
+    RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
+    GPIOB->PUPDR &= ~(3U << 8);
+    GPIOB->PUPDR |=  (1U << 8);   // pull-up
+
+    // 2. Connect EXTI4 to Port B
+    EXTI->EXTICR[1] &= ~EXTI_EXTICR2_EXTI4_Msk;
+    EXTI->EXTICR[1] |=  (EXTI_EXTICR2_EXTI4_PB);
+
+    // 3. Enable falling-edge detection on EXTI4
+    EXTI->FTSR1 |= EXTI_FTSR1_FT4;
+
+    // 4. Unmask EXTI4
+    EXTI->IMR1 |= EXTI_IMR1_IM4;
+
+    // 5. Enable NVIC for EXTI4_15
+    NVIC_EnableIRQ(EXTI4_15_IRQn);
+
+    __enable_irq();
+}
+
+volatile uint8_t buttonPushed = 0;
+
+void EXTI4_15_IRQHandler(void) {
+    __disable_irq();
+    if (EXTI->FPR1 & EXTI_FPR1_FPIF4) {
+        EXTI->FPR1 = EXTI_FPR1_FPIF4;  // clear pending flag (write-1-to-clear)
+        buttonPushed = 1;
+    }
+    __enable_irq();
+}
+]]></code></program>
+
+            <figure xml:id="fig-exti-exticr">
+                <caption>EXTI_EXTICR2 register showing Port B selected for EXTI4.  The
+                four-bit field [7:0] holds a port code: 0x01 = Port B.  Bits [15:8],
+                [23:16], [31:24] configure EXTI5, EXTI6, EXTI7 respectively.</caption>
+                <image source="images/Day09-Interrupts(2)/slide24_3eaa0750.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-isr">
+                <caption>EXTI ISR checking and clearing the pending flag.  The Falling
+                Pending Register (FPR1) has one bit per EXTI line; it is set by hardware
+                on a falling edge and cleared by writing 1 to it.  The ISR must clear
+                FPR1 before returning or the interrupt will re-fire immediately.</caption>
+                <image source="images/Day09-Interrupts(2)/slide38_8b444d34.png" width="75%"/>
+            </figure>
+
+            <figure xml:id="fig-exti-int-flow">
+                <caption>The complete interrupt flow for a GPIO falling edge.  After the
+                EXTI detects the edge it sets the pending bit and signals the NVIC.  The
+                NVIC saves CPU state and vectors to the ISR.  After the ISR returns, the
+                CPU restores state and resumes the main loop exactly where it left off.</caption>
+                <image source="images/Day09-Interrupts(2)/slide35_a320de49.png" width="75%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-interrupt-pitfalls">
+            <title>Common Interrupt Pitfalls</title>
+            <p>
+                Modifying shared data inside an ISR can cause subtle bugs.  If the ISR
+                increments a multi-byte counter while main is reading it, the read may
+                see a partially-updated value.  The safest pattern: use the ISR only to
+                set a single-byte <c>volatile</c> flag; let main do all the work when
+                it sees that flag set.
+            </p>
+        </subsection>
+    </section>
+
+</chapter>

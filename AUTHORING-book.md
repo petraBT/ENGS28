@@ -288,6 +288,29 @@ them. Say what is true instead: *why* the slip is easy to make, or what it costs
 Verify `<image source="..."/>` against disk. Never drop a whole slide into a section
 when one diagram matters — crop it, or the book reads like pasted PowerPoint.
 
+### B-12 Write for adults — no cute framing
+
+Students are adults; the prose is direct, technical, and plain (Petra, Day 8).
+A relaxed instructor voice — "we'll", a light aside, a rhetorical question —
+is fine; ornamental drama is not. Banned patterns, with the corrections Petra
+made:
+
+- Dramatized stakes: ~~"before it bites"~~, ~~"the case against captivity"~~,
+  ~~"holds the CPU hostage"~~, ~~"Blinky sheds its last delay"~~.
+- Strained metaphor and idiom: ~~"wearing the same letters"~~ → "using the
+  same acronym"; ~~"belt-and-suspenders"~~; ~~"folklore"~~; ~~"the safety
+  rope"~~; ~~"with its heart moved"~~ → "with its core moved"; ~~"never tears
+  a period in half"~~ → "never changes the counting rate mid-period".
+- Narrative hand-holding: ~~"Hold that thought"~~, ~~"the same trick played
+  by hardware"~~, ~~"that is the entire magic"~~.
+- Reassurance theater: ~~"nobody sits with a dark board alone"~~, ~~"that is
+  a clock problem, not a bug"~~. State the rescue plainly; do not perform it.
+
+The test: would the sentence survive in a well-written datasheet
+introduction or a colleague's explanation? Precision-adding rewrites are
+always welcome ("the period follows" → "the time period follows"; "That
+switch is the UIE bit" → "This new behavior is enabled via the UIE bit").
+
 ---
 
 ## S — Slides

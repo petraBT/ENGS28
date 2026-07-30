@@ -91,7 +91,7 @@ nothing to submit."
 | 2 | Design the 500 ms timer: 90-second refresher, then the **four-slide timing-diagram reveal** (Petra's one-after-the-other build; compressible to the final stage), then **predict which of four candidate (PSC, ARR) pairs work** (`room="yes"`), then reveal | reveal→predict | 8 |
 | 3 | The five init lines, one register at a time (APBENR2 → PSC → ARR → CNT → CR1), against the register map | explain | 6 |
 | 4 | **Run `blinkyTimerPolled.c`** (given): Canvas download, click-path slide, first build of the day. Note the `if`, not `while` — the loop never blocks. **Ends with the checkpoint** | do | 9 |
-| 5 | "Wait — is `&= ~` okay here?" The polled code cleared UIF with `&= ~mask` and it worked; Day 7 called that a bug on the ADC. **Look up the access type in RM0490** → rc_w0 vs rc_w1 moral | observe→explain | 8 |
+| 5 | Two clears, opposite masks: Day 7 cleared with a 1 at the flag, today with a 0 — both correct. Commit an explanation, **look up the access type in RM0490** → rc_w0 vs rc_w1 → postscript: what `&= ~` would have done | observe→explain | 8 |
 | 6 | Programming an interrupt, three beats: (a) 90-s mechanism resurfacing + naming what changed from Arduino; (b) DIER → NVIC → the vector-table lookup (predict, then verify) and the three names; (c) the flag pattern + `volatile`, resurfaced | explain/do | 8 |
 | 7 | **`blinkyTimerInt.c` skeleton → fill four TODO clusters → build-swap → run** | do | 15 |
 | 8 | One-sentence recap; homework slide is fully self-serve | tell | 2 |
@@ -113,8 +113,8 @@ it); Part 2's refresher to a show of hands if the prediction lands; Part 6a to
 30 s if the reading landed (check hands). **Entering Part 7 with fewer than 12
 minutes:** do TODOs 1–2 on the projector — they are two lines — and let
 students fill TODOs 3–4, which are the day's heart. Never cut Part 5 short of
-its moral — an unanswered "so was the polled code wrong?" is worse than not
-raising it. Never cut Part 7.
+its moral — an unanswered "so why are the two masks opposite?" is worse than
+not raising it. Never cut Part 7.
 
 **Equipment:** none beyond the Nucleo — the on-board LED (PA5) only. No
 breadboard, no wiring.
@@ -144,31 +144,25 @@ Two, both load-bearing:
 
 Part 5 is the day's set-piece, and it is the **payoff of a plant from Day 7**
 (`ch-adc.ptx`, the ADC_ISR slide: "Both are `rc_w1` — read, cleared by writing
-1. Remember that; we come back to it."). Sequence: the polled code everyone
-just ran (projected, so this works even for a student whose board didn't
-cooperate) clears UIF with `TIM14->SR &= ~TIM_SR_UIF;` — and on Day 7 students
-were told, emphatically, that `&=` on the ADC's status register is a bug.
-Commit to an answer before the reveal: *was the code you just ran wrong — yes
-or no?* Then the RM lookup: UIF is `rc_w0`, ADRDY is `rc_w1`. Writing 1 to an
-rc_w0 bit does nothing, so the read-modify-write is harmless to the *other*
-flags here — it works, but only by the grace of the access type. The moral
-(old-deck slide 23): status registers are cleared by **writing a mask with a
-plain assignment** — `TIM14->SR = ~TIM_SR_UIF;` for rc_w0,
-`ADC1->ISR = ADC_ISR_ADRDY;` for rc_w1 — and the access type in the RM is how
-you know which. The interrupt version's ISR uses the correct idiom.
+1. Remember that; we come back to it."). **Redesigned 2026-07-30 per Petra:**
+the polled program clears properly from the start with
+`TIM14->SR = ~TIM_SR_UIF;`. The puzzle is the *opposite masks*: Day 7's clear
+put a 1 at the flag; today's puts a 0 at the flag and 1s everywhere else —
+both correct. Commit an explanation → RM lookup (UIF is `rc_w0`, ADRDY
+`rc_w1`) → the mask logic: clearing value at your flag, no-effect value
+everywhere else. Postscript: `&= ~` would have mostly worked here (writing 1s
+does nothing on rc_w0) — unlike Day 7's rc_w1 disaster — but a flag raised
+between the read and the write-back is silently lost; one sentence, Day 9
+preview, BSRR stays unspent.
 
-**Ground truth settling the `&=`:** the mined deck's slide 25 ("The whole
-thing") is the real `blinkyTimerPolled.c` pasted as text, and it uses
-`&= ~TIM_SR_UIF`; slide 18 teaches `=` and asks whether `&=` is "also okay";
-the ISR in `blinkyTimerInt.c` (slides 42/47) uses `=`. So the polled driver
-ships with `&=` **verbatim** (B-6), and the set-piece asks about it.
+**Ground truth note:** the old deck's own `blinkyTimerPolled.c` (slide 25)
+used `&= ~`; its moral slide (23) taught `=`. Petra resolved the
+inconsistency for the course: the shipped polled program clears with `= ~`,
+and `&=` appears only in the Part 5 postscript.
 
 **Nothing before Part 5 may explain rc_w0 or compare the two clears.** This
 binds the *reading* too: the reading says only "UIF is set by hardware; your
-job is to clear it." The rough chapter's `fig-timer-sr` caption currently
-names both access types and makes the comparison — **that caption must be
-neutralized in Step 3** or the puzzle is pre-empted for every student who did
-the reading.
+job is to clear it." 
 
 **Bound the explanation:** the race-condition tail of the argument ("an
 interrupt could land mid-read-modify-write") gets *one sentence* as a preview
@@ -281,8 +275,9 @@ is deliberately race-free and plants the situation Day 9 detonates.
    (startup file's folder circled, `fig-exclude-from-build` house style) +
    a crop showing the `TIM14_IRQHandler` line, for the pending
    `fig-startup-file`.
-2. **[FILES]** Supply `assets/starters/blinkyTimerPolled.c` (complete, with
-   `&= ~TIM_SR_UIF` verbatim — the set-piece depends on it) and
+2. **[FILES]** Supply `assets/starters/blinkyTimerPolled.c` (complete,
+   clearing UIF with `TIM14->SR = ~TIM_SR_UIF;` per the 2026-07-30 Part 5
+   redesign) and
    `assets/starters/blinkyTimerInt.c` (the four-TODO skeleton). Day 7 set
    the precedent with ADCPot.c. `ES28.h` alongside would close the last
    unverifiable items (TIM14_IRQn value; delay_ms implementation).
@@ -327,6 +322,46 @@ Reviewed by `expert-active-learning`, `expert-cognitive-load`,
    rough chapter's `fig-timer-sr` caption names rc_w0/rc_w1 and makes the
    comparison. Step 3 must neutralize it; the constraint is now written into
    Hand-offs.
+
+## What Petra's second review changed (2026-07-30)
+
+Her direct edits are commit `ee7e8b6`; this session carried them through the
+slides and the rest of her list. The generalizable correction is now rule
+**B-12** (write for adults — no cute framing) in AUTHORING-book.md.
+
+- **Part 5 redesigned per her direction:** the polled program now clears
+  properly with `TIM14->SR = ~TIM_SR_UIF;` from the start. The set-piece is
+  the *opposite masks* puzzle (Day 7 wrote a 1 at the flag; today a 0) →
+  commit → RM lookup → rc_w0/rc_w1 → postscript: `&= ~` would have mostly
+  worked here (unlike rc_w1's disaster) but can still lose a flag raised
+  mid-read-modify-write. New Part title: "Two Clears, Opposite Masks."
+  **Supersedes the earlier "&= as observe artifact" design and the starter
+  requirement — `blinkyTimerPolled.c` ships with `= ~`.**
+- `__disable_irq()` in the ISR: framed as "no interrupt is serviced while
+  another is being serviced"; the processor's nesting capability is named
+  and explicitly not used in this course. This is the course-wide practice,
+  not a habit to unlearn. (The earlier same-or-lower-priority-pending claim
+  is removed.)
+- Startup filename **confirmed: `startup_stm32c031c6tx.s`** — applied
+  everywhere; only the bench-run symptom and the screenshot remain from
+  flag 1.
+- Figures: the timer block diagram is redrawn from scratch
+  (`tim14_core.svg`, replacing the hard-to-read annotated RM Figure 165
+  render); the interrupt-flow diagram is redrawn (`adc_blinky_flow.svg`)
+  with contained text, anchored arrows, and a dashed second interrupt path;
+  Figure 8.1.2's reversed arrows had already been fixed and the figure now
+  lives in Reference.
+- All timers can do PWM — TIM14 included — corrected in the reading and the
+  Reference family section (differences are channel count and extras).
+- The counter figure caption no longer emphasizes down-counting.
+- volatile is explained via the absent call site (her fix), carried into
+  the caption, both slides, the figure labels, and the video script.
+- Video: a plain normal-execution slide now precedes the function-call
+  slide; script retimed (~7 min) and de-cuted.
+- Day 9's EXTI material is split out into a new chapter,
+  `ch-gpio-interrupts.ptx` ("GPIO Interrupts"), included in main.ptx after
+  this one; BSRR's reserved motivation moves with it (CHAPTER_PROCESS
+  updated). Day 9 gets its own reading/in-class/reference when authored.
 
 ## What Petra's review changed (2026-07-28)
 

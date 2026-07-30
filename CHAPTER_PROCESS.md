@@ -236,7 +236,7 @@ A chapter is done when all of these are true.
 
 ## Deferred topics — do not forget
 
-- **BSRR register** — introduce in `ch-timers-interrupts.ptx`, not before. The
+- **BSRR register** — introduce in `ch-gpio-interrupts.ptx` (Day 9), not before. The
   motivation is that ISRs sharing GPIO state with the main loop create a race on the
   ODR read-modify-write; BSRR's atomic set/clear is the fix. Students need to have hit
   the problem before BSRR makes sense. Hook: "you're now writing ISRs that share GPIO
@@ -259,7 +259,8 @@ A chapter is done when all of these are true.
 | ch-transistors.ptx | Day06 | **done** (Day 6) |
 | ch-adc.ptx | Day07 | pilot |
 | ch-debugging.ptx | Day07x | Day 7x through Gate 2 (Petra pending) |
-| ch-timers-interrupts.ptx | Day08, Day09 | Day 8 through Gate 2 (Petra pending); Day 9 rough |
+| ch-timers-interrupts.ptx | Day08 | Day 8 through Gate 2 + Petra's review rounds |
+| ch-gpio-interrupts.ptx | Day09 | rough (split out of ch-timers-interrupts at Petra's direction) |
 | ch-i2c.ptx | Day09X, Day10, Day13 | rough |
 | ch-motors.ptx | Day11, Day11x, Day12 | rough |
 | ch-accelerometers.ptx | Day13x, Day14 | rough |
