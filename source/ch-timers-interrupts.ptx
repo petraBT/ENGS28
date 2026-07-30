@@ -166,27 +166,28 @@
                 Configuring a timer means answering two questions: how fast
                 should it count, and how far?  You do not program the timer
                 with an amount of time — you program it with a counting rate
-                (the prescaler) and a count (the auto-reload value), and the
-                period follows from the arithmetic.
+                (via the prescaler) and how far to count (via the auto-reload value), and the
+                time period follows from the arithmetic.
             </p>
             <p>
-                Start from the clock.  The STM32C031C6 runs at 12 MHz, so a
-                desired period converts to clock cycles as
+                Start from the clock.  The STM32C031C6 runs at <m>f_{clock} = 12</m> MHz, so a
+                desired waiting period <m>t</m> converts to a number of clock cycles you
+                need to count through to get that wait as
                 <m>\text{cycles} = f_{clock} \times t</m>.  A one-second period
                 is <m>12{,}000{,}000</m> cycles — and there is the problem: the
                 counter and the auto-reload register are 16 bits wide, so each
                 holds <m>2^{16} = 65{,}536</m> distinct values, numbered 0
                 through 65,535.  Twelve million does
-                not fit.
+                not fit into a 16-bit register.
             </p>
             <p>
                 The prescaler is the fix.  It sits between the clock and the
                 counter and divides the clock rate by any integer from 1 to
                 65,536, so the counter can count <em>slower</em> instead of
-                <em>farther</em>.  With the prescaler dividing by 12,000, the
+                <em>farther</em>.  For example, with the prescaler dividing by 12,000, the
                 counter ticks at <m>12{,}000{,}000 / 12{,}000 = 1000</m> ticks
                 per second — one tick per millisecond — and one second is a
-                count of just 1000, which fits easily.  The period comes from
+                count of just 1000, which fits easily.  The waiting period comes from
                 the product: <m>\text{period} = (\text{prescale factor} \times
                 \text{count}) / f_{clock}</m>.
             </p>
@@ -197,7 +198,7 @@
                 prescaler divides by <m>\text{PSC} + 1</m>, and the counter
                 counts from 0 to ARR <em>inclusive</em> — 0 through 499 is 500
                 ticks.  So a divide-by-12,000 prescale is written as
-                <c>11999</c>, and a count of 1000 is written as <c>999</c>.
+                <c>PSC=11999</c>, and a count of 1000 is written as <c>ARR=999</c>.
                 The worked example, in full:
             </p>
             <p>
@@ -236,7 +237,7 @@
                 whole point is what it lets you do the rest of the time.
             </p>
             <p>
-                Here is the idea — and for now, only the idea.  An
+                Here is the idea.  An
                 <term>interrupt</term> is a signal from a piece of hardware —
                 a timer, a button's pin, the UART — that makes the CPU pause
                 what it is doing, run a function you wrote, and then resume
@@ -537,7 +538,8 @@
         <title>Day 8 In-Class: Blinky Without Waiting</title>
         <introduction>
             <p>
-                Today Blinky sheds its last delay.  You will configure TIM14 to
+                Today we'll write Blinky entirely without any delay functions.  
+                You will configure TIM14 to
                 mark off 500 ms periods entirely in hardware, first checking
                 its flag from the main loop, then — the day's goal — letting
                 the timer interrupt the CPU so that not even the checking
@@ -545,8 +547,8 @@
                 you wrote, and your main loop is free.
             </p>
             <p>
-                One reassurance up front: nothing you can do today damages the
-                board.  There is no wiring — the only hardware is the on-board
+                Today's class lives entirely in code. 
+                There is no wiring — the only hardware is the on-board
                 LED — and the worst outcome of any mistake is a program that
                 freezes or an LED that stays dark.  Both are cured by fixing
                 the code and re-flashing.
@@ -564,7 +566,7 @@
                 the relationship around: timekeeping costs the CPU nothing,
                 and the CPU's whole attention is available for work — sampling
                 a sensor at fixed intervals, timestamping events, running a
-                control loop at a steady rate.  Next week the same timers will
+                control loop at a steady rate.  In two weeks the same timers will
                 hold output pins high for precisely controlled durations —
                 that is how motors get their speed commands — and measure how
                 long input pulses last.  Today builds the foundation all of
@@ -577,7 +579,7 @@
         <li>While <c>delay_ms(1000)</c> runs, the CPU does nothing else for a full second: no sensor reads, no button checks, no printing.</li>
         <li>You felt this in the Lab 2 race game: presses during the countdown delays could slip past unwatched.</li>
         <li>The fix is separation: <term>hardware counts the time; the CPU does the work</term>. Configure TIM14 once and it counts on its own.</li>
-        <li>Same machinery next week: timers will hold pins high for exact durations (motor speed) and measure pulse widths (the tachometer).</li>
+        <li>We'll revisit this from a different angle in two weeks: timers will hold pins high for exact durations (motor speed) and measure pulse widths (the tachometer).</li>
     </ul>
     <caption>Timekeeping moves to hardware; the CPU's attention comes back.</caption>
 </slide>
@@ -588,8 +590,10 @@
             <p>
                 The reading worked the arithmetic for a one-second period:
                 cycles needed <m>= f_{clock} \times t</m>, split into a
-                prescale factor and a count whose product hits the target,
-                both minus-one when written (<xref ref="subsec-timer-arithmetic"/>).
+                prescale factor and a count whose product hits the target. Remember
+                that counters start counting at 0, so when writing these values to 
+                their registers we subtract one from them
+                (<xref ref="subsec-timer-arithmetic"/>).
                 Today's timer toggles the LED every 500 ms, which at 12 MHz is
                 <m>6{,}000{,}000</m> cycles.  Before any code, decide what to
                 put in the two registers.
@@ -646,8 +650,8 @@ count to 1000        ->  1000 ticks = 1 s        check: 12,000 x 1000 = 12,000,0
                 buffered prescaler value takes effect: the prescaler counter
                 begins cycling 0<ndash/>3 and CK_CNT visibly slows — the
                 division has changed from 1 to 4.  A new prescaler value
-                never tears a period in half; it waits for the
-                boundary.</caption>
+                never changes the counting rate mid-period; it waits for the
+                boundary to take effect.</caption>
                 <image source="images/Day08-Interrupts/tim14_prescaler_timing.svg" width="95%"/>
             </figure>
 
@@ -697,7 +701,7 @@ count to 1000        ->  1000 ticks = 1 s        check: 12,000 x 1000 = 12,000,0
                 <m>6000 \times 1000</m> are both exactly 6,000,000, and every
                 value fits.  The third fails because 100,000 does not fit in a
                 16-bit counter; the fourth fails because a counter cannot
-                count to a fraction.  The course code uses a third working
+                count to a fraction.  The code we'll work with later uses a third good
                 pair: prescale by 12,000 and count to 500.  It earns its place
                 by making the counter tick at exactly 1 kHz — <em>one tick per
                 millisecond</em> — so the count <em>is</em> the period in
@@ -734,7 +738,7 @@ count to 1000        ->  1000 ticks = 1 s        check: 12,000 x 1000 = 12,000,0
                 on the APB bus.  TIM1, TIM14, TIM16, and TIM17 are enabled in
                 <c>RCC_APBENR2</c> — the same register where you enabled the
                 ADC's clock on Day 7; TIM3's enable bit is one register over,
-                in <c>RCC_APBENR1</c>:
+                in <c>RCC_APBENR1</c>.
             </p>
             <program language="c"><code><![CDATA[
 RCC->APBENR2 |= RCC_APBENR2_TIM14EN;   // enable clock access to TIM14
@@ -751,7 +755,7 @@ RCC->APBENR2 |= RCC_APBENR2_TIM14EN;   // enable clock access to TIM14
             <p>
                 <term>The rate and the range.</term>  The prescaler and
                 auto-reload values from Part 2 go into <c>PSC</c> and
-                <c>ARR</c>, each written as its value minus one:
+                <c>ARR</c>, each written to the register as value minus one:
             </p>
             <program language="c"><code><![CDATA[
 #define PSC_FACTOR 12000   // 12 MHz / 12000 = 1 kHz: one tick per ms
@@ -876,8 +880,8 @@ if (TIM14->SR & TIM_SR_UIF) { ... }     // today: check once, keep moving
             <p>
                 The <c>while</c> wait plants the program at the flag until it
                 rises.  Today's <c>if</c> glances at the flag once per trip
-                around the loop and moves on either way — which is the whole
-                point: the rest of the loop is free for other work.  The
+                around the outer main loop and moves on either way — which is the whole
+                point: the rest of the main loop is free for other work.  The
                 program below is on Canvas, complete; your job is to run it.
             </p>
 
@@ -1142,17 +1146,16 @@ ADC1->ISR = ADC_ISR_ADRDY;    // rc_w1: 1 at my flag, harmless 0s everywhere els
             <p>
                 <term>Enable the interrupt in the timer.</term>  The timer
                 must be told to <em>raise</em> an interrupt at each update
-                event, not just set the flag.  That switch is the UIE bit
+                event, not just set the flag.  This new behavior is enabled via the UIE bit
                 (update interrupt enable) in <c>TIM14_DIER</c>:
             </p>
             <program language="c"><code><![CDATA[
 TIM14->DIER |= TIM_DIER_UIE;   // update event now raises an interrupt request
 ]]></code></program>
             <p>
-                Two bit names one letter apart are about to share the stage,
-                so say it now: UIE (in DIER) <em>enables</em> the request;
-                UIF (in SR) <em>reports</em> that the event happened.  Do not
-                swap them.
+                To repeat: UIE (in DIER) <em>enables</em> the request, meaning the hardware
+                will now request to interrupt the processor when an update event happens;
+                UIF (in SR) <em>reports</em> that the event happened.  
             </p>
             <figure xml:id="fig-tim14-regmap-interrupt">
                 <caption>The register map again, with today's addition: UIE in
@@ -1162,8 +1165,9 @@ TIM14->DIER |= TIM_DIER_UIE;   // update event now raises an interrupt request
                 <image source="images/Day08-Interrupts/tim14_regmap_interrupt.svg" width="95%"/>
             </figure>
             <p>
-                <term>Enable the interrupt in the NVIC.</term>  The request
-                now reaches the NVIC — which, remember, ignores every source
+                <term>Enable the interrupt in the NVIC.</term>  When an update event happens
+                the timer hardware now issues a request to interrupt the processor. This request
+                first goes to the NVIC — which, remember, ignores every source
                 until told otherwise.  CMSIS provides the function, and the
                 device header provides a named constant for each interrupt
                 line:
@@ -1212,12 +1216,12 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
                 The third name is the one you must get exactly right.  The
                 handler function is <c>TIM14_IRQHandler</c>, and that name is
                 not yours to invent — it is listed in the project's
-                <term>startup file</term>, <c>startup_stm32c031ctx.s</c>: an
+                <term>startup file</term>, <c>startup_stm32c031c6tx.s</c>: an
                 assembly file, generated with your project, that runs before
                 <c>main()</c> and wires each official handler name into its
                 vector-table slot.  It sits in your project tree alongside
                 <c>Src</c>.  You will read that file, never edit it: find the
-                name, select it, copy it.  A name that is even one character
+                table with the IRQ handler names, select the one you need, copy it.  A name that is even one character
                 off still compiles and still links — the linker simply never
                 places your function in the table, and the slot keeps the
                 default handler the startup file installed there.  Your ISR
@@ -1239,10 +1243,12 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
                 <xref ref="subsec-timers-ref-isr"/>) is
                 exactly what today's ISR needs, so bring it back to mind: a
                 global flag, declared <c>volatile</c> because the compiler
-                cannot see the ISR's write from inside <c>main()</c>'s loop;
-                the ISR sets it; the loop checks it, clears it, and does the
-                work.  Without <c>volatile</c> the optimizer may read the
-                flag once and never again — the blink simply stops happening,
+                cannot see the ISR ever being called from your code.
+                The ISR sets this variable as a signal to your main code; 
+                the loop checks it, clears it, and does the
+                work.  Without <c>volatile</c> the optimizer (part of the compiler)
+                may decide the flag never changes from its initial value and optimize
+                it away — as a result the blink simply doesn't happen,
                 with no error anywhere.
             </p>
             <p>
@@ -1312,7 +1318,7 @@ NVIC_EnableIRQ(TIM14_IRQn);   // CMSIS function, device-header constant
             <p>
                 Now assemble <c>blinkyTimerInt.c</c>.  The skeleton below is
                 the polled program from <xref ref="subsec-day8-polled"/>
-                with its heart moved: the five init lines you already ran are
+                with its core moved: the five init lines you already ran are
                 given, and the four <c>// TODO</c> clusters are the interrupt
                 machinery from Part 6.  Note what is <em>gone</em>: the main
                 loop no longer touches the timer at all.
@@ -1419,8 +1425,8 @@ void tim14_500ms_interrupt_init() {
                 </task>
                 <task xml:id="act-timer-int-t6">
                     <statement><p>Build, run, and watch the LED blink at the
-                    same steady rate as before — now with an empty-handed main
-                    loop.  Done early?  Make it toggle every 250 ms without
+                    same steady rate as before — now with the main
+                    loop only checking your volatile flag.  Done early?  Make it toggle every 250 ms without
                     touching PSC; then go back to 500 ms and make it toggle
                     every 250 ms without touching ARR.  Now check both against
                     a 48 MHz clock: <em>neither</em> survives — why not, and
@@ -1454,11 +1460,11 @@ void tim14_500ms_interrupt_init() {
                     alone produces silence.</li>
             </ol>
             <p>
-                Out of time before the four blanks are filled?  That is a
-                clock problem, not a bug.  The complete file goes up on the
-                screen at the end of the part, and on Canvas after class —
+                Out of time before the four blanks are filled? The complete file will be shown
+                at the end of this part:
                 copy it and move on to <xref ref="subsec-day8-homework"/>
-                with a working reference.
+                with a working reference. Be sure to compare your (not working) version to
+                the working one to understand where you went wrong. Document how to fix your code.
             </p>
 
             <slide xml:id="sl-day8-skeleton">
@@ -2070,7 +2076,7 @@ void EXTI4_15_IRQHandler(void) {
         <li>The <clr c="orange">auto-reload register</clr> sets the upper limit: count up to it, wrap to 0, and announce an <term>update event</term>.</li>
         <li>Rate &#215; count = period. Everything else in the picture is dimmed because it belongs to later chapters.</li>
     </ul>
-    <caption>Video slide — the timer core on the chip's own diagram.</caption>
+    <caption>The timer core on the chip's own diagram.</caption>
 </slide>
         </subsection>
 
@@ -2128,7 +2134,7 @@ void EXTI4_15_IRQHandler(void) {
                 makes (<xref ref="fig-interrupt-execution"/>).  When a
                 peripheral raises its interrupt signal, the CPU finishes the
                 instruction it is on, pushes the machine state onto the stack
-                exactly as a call would, and then — this is the only new part —
+                exactly as a regular function call would, and then — this is the only new part —
                 looks up where to jump in a <term>vector table</term>: a table
                 in flash, at a fixed location, holding the starting address of
                 one handler function per interrupt source.  The CPU loads that
@@ -2198,10 +2204,9 @@ void EXTI4_15_IRQHandler(void) {
                 source has an enable switch in the NVIC, off by default, so no
                 peripheral can interrupt until you allow it.  Second, ordering:
                 if two interrupts arrive together, the NVIC services the higher
-                priority one first.  The Cortex-M0+ provides four priority
-                levels; this course leaves every source at its reset default of
-                priority 0, so simultaneous interrupts are resolved by IRQ
-                number, not priority.
+                priority one first.  The Cortex-M0+ allows you to change an IRQ's
+                priority level; in this course we will leave every source at its reset default 
+                priority.
             </p>
             <figure xml:id="fig-nvic-block">
                 <caption>The NVIC sits between interrupt sources and the
@@ -2353,7 +2358,7 @@ volatile int timerElapsed;    // volatile: "fetch it fresh, at every use"
             <p>
                 The STM32C031C6's five timers — TIM1, TIM3, TIM14, TIM16,
                 TIM17 — share the counter/prescaler/auto-reload core this
-                chapter taught, and differ in what is bolted around it.  TIM14
+                chapter taught, and differ in their additional capabilities.  TIM14
                 is the simplest.  TIM16 and TIM17 add more capable
                 compare/capture machinery, TIM3 adds four independent channels,
                 and TIM1 adds motor-control features.  Two abilities the
