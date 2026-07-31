@@ -365,7 +365,7 @@ These are the quality rules.
 | **L-3** | No "gate" language for clocks. "Enable the clock", "until its clock is enabled" — not "open the gate". |
 | **L-4** | "Prototypes", never "forward declarations". |
 | **L-5** | Specific hardware names. "STM32C031C6", not "the target MCU". |
-| **L-6** | Register, bit, and peripheral names match the reference manual exactly, including case. |
+| **L-6** | Register, bit, and peripheral names match the reference manual exactly, including case. CMSIS device headers are all lowercase — `stm32c0xx.h`, `stm32c031xx.h` — even though the part is `STM32C031C6`. |
 | **L-7** | American spelling throughout — "stabilize", "center", "labeled", "gray". |
 
 `scripts/check_rules.py` enforces L-1 … L-7, image paths, and step counts. Run it

@@ -53,6 +53,13 @@ CASE_TRAPS = [
     (r"\bAdrdy\b", "ADRDY"), (r"\bAdstart\b", "ADSTART"),
 ]
 
+# CMSIS device headers are all lowercase (stm32c0xx.h, stm32c031xx.h) even
+# though the PART is written STM32C031C6 (L-5).  An uppercase C in the
+# *filename* spread through six chapters and the simulator's starter code
+# before Petra caught it.  Requiring the ".h" is what keeps this rule off the
+# part name; anything not already lowercase is flagged.
+HEADER_CASE = re.compile(r"\bstm32c0\w*\.h\b", re.I)
+
 
 def strip_comments(text):
     """Blank out XML comments so authoring notes don't trip the linter."""
@@ -119,6 +126,14 @@ def check_file(path, quiet=False):
             if m.group(0) != correct and m.group(0).lower() != correct.lower() + "->":
                 problems.append(("warn", line_of(text, m.start()), "L-6",
                                  f"register/bit casing: {m.group(0)!r} should be {correct!r}"))
+
+    for m in re.finditer(HEADER_CASE, text):
+        got = m.group(0)
+        if got != got.lower():
+            problems.append(("error", line_of(text, m.start()), "L-6",
+                             f"device header casing: {got!r} should be "
+                             f"{got.lower()!r} (the filename is all lowercase; "
+                             f"the part is STM32C031C6)"))
 
     # Images resolve on disk.
     for m in re.finditer(r'<image\s+source="([^"]+)"', text):

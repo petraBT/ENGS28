@@ -25,7 +25,7 @@
  * Drag the divider to widen this editor.
  */
 
-#include "stm32C0xx.h"          // all register definitions live here
+#include "stm32c0xx.h"          // all register definitions live here
 #define GPIOAEN  (1U << 0)      // RCC->IOPENR bit 0: clock for GPIOA
 #define LED_PIN  (1U << 5)      // GPIOA bit 5: the on-board LED
 

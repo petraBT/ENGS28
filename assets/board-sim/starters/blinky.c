@@ -1,4 +1,4 @@
-#include "stm32C0xx.h"
+#include "stm32c0xx.h"
 
 #define GPIOAEN   (1U << 0)
 #define LED_PIN   (1U << 5)     // PA5, on-board LED
