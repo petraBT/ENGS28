@@ -5,28 +5,53 @@
    the classroom-deck rules; the web-deck target loads both.)
 
    ---------------------------------------------------------------------------
-   Table width
+   Tables stay inside the text column
    ---------------------------------------------------------------------------
-   PreTeXt puts every table in a .tabular-box that may grow to the full width
-   of the main column and scroll sideways, so a table with one wordy column
-   renders far wider than the ~600px text block and hangs into both margins.
-   For a reference table the reader is comparing against the prose, that reads
-   as a different document.
+   By default PreTeXt lets a table grow to the full width of the main column
+   and pulls it leftwards with a negative margin, so a table with one wordy
+   column renders far wider than the ~600px text block and hangs into both
+   margins.  For a reference table the reader is comparing against the prose
+   beside it, that reads as a different document.
 
-   These rules keep a named table inside the text block and let its wordy
-   column wrap instead.  The percentages mirror the <col width="..."/> values
-   in the PreTeXt source, which do the same job for the print target -- PreTeXt
-   honors <col> in LaTeX but drops it from HTML, so the two must be kept in
-   step.  Add a table here by id when it needs the same treatment. */
+   Book-wide default: a table is as wide as the text, and a wordy cell wraps.
+   The selector mirrors the theme's own so it wins on equal specificity by
+   loading later.
 
-#table-tim14-registers > .tabular-box,
-#table-access-types > .tabular-box {
+   Deliberately NOT set here: table-layout.  Left on `auto`, the browser sizes
+   each column from its content -- a narrow table stays narrow, and a wide one
+   shrinks and wraps where the text is longest.  Forcing `fixed` globally would
+   give every column an equal share, which is wrong for most of these tables.
+   A table that needs specific proportions opts in below.
+
+   overflow-x stays `auto`, so anything that genuinely cannot compress (a wide
+   register bit-map, say) scrolls within the text column instead of breaking
+   the page. */
+
+:is(.chapter, .section, .subsection, .subsubsection) > .tabular-box,
+:is(.chapter, .section, .subsection, .subsubsection) > .table > .tabular-box {
     width: 100%;
     max-width: 100%;
     min-width: 0;
     margin-left: 0;
-    overflow-x: visible;
 }
+
+table.tabular {
+    max-width: 100%;
+}
+
+table.tabular :is(th, td) {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+/* ---------------------------------------------------------------------------
+   Per-table column proportions
+   ---------------------------------------------------------------------------
+   These two Day 8 reference tables have one wordy column and four narrow ones,
+   which auto-layout splits more evenly than reads well.  The percentages
+   mirror the <col width="..."/> values in the PreTeXt source, which do the
+   same job for the print target -- PreTeXt honors <col> in LaTeX but drops it
+   from HTML, so the two must be kept in step. */
 
 #table-tim14-registers table.tabular,
 #table-access-types table.tabular {
@@ -34,14 +59,6 @@
     table-layout: fixed;
 }
 
-/* Wrap rather than overflow, including the inline code in these cells. */
-#table-tim14-registers table.tabular :is(th, td),
-#table-access-types table.tabular :is(th, td) {
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-}
-
-/* Column widths: mirror the <col width> values in the source. */
 #table-tim14-registers table.tabular :is(th, td):nth-child(1) { width: 18%; }
 #table-tim14-registers table.tabular :is(th, td):nth-child(2) { width: 12%; }
 #table-tim14-registers table.tabular :is(th, td):nth-child(3) { width: 17%; }
