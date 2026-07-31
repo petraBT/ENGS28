@@ -275,12 +275,13 @@ is deliberately race-free and plants the situation Day 9 detonates.
    (startup file's folder circled, `fig-exclude-from-build` house style) +
    a crop showing the `TIM14_IRQHandler` line, for the pending
    `fig-startup-file`.
-2. **[FILES]** Supply `assets/starters/blinkyTimerPolled.c` (complete,
-   clearing UIF with `TIM14->SR = ~TIM_SR_UIF;` per the 2026-07-30 Part 5
-   redesign) and
-   `assets/starters/blinkyTimerInt.c` (the four-TODO skeleton). Day 7 set
-   the precedent with ADCPot.c. `ES28.h` alongside would close the last
-   unverifiable items (TIM14_IRQn value; delay_ms implementation).
+2. ~~**[FILES]** Supply the two starter files~~ — **DONE 2026-07-31.**
+   `assets/starters/blinkyTimerPolled.c` (complete, clearing UIF with
+   `TIM14->SR = ~TIM_SR_UIF;`) and `assets/starters/blinkyTimerInt.c` (the
+   four-TODO skeleton) are in the repo and verified identical to the
+   chapter's listings; upload both to Canvas. Still useful: `ES28.h` in the
+   repo would close the last unverifiable items (the `TIM14_IRQn` value and
+   the `delay_ms()` implementation).
 3. **[YOUR CALL]** ch-adc's Day 7 insight box already defines `rc_w0`
    generically, which softens Day 8's Part 5 surprise for careful readers.
    Committee recommendation: leave Day 7 alone — the commit moment ("was
