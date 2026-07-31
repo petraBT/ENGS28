@@ -137,11 +137,18 @@ show worked code that the deck presents as a fill-in-the-blank skeleton.
 
 ```bash
 python3 scripts/check_rules.py source/ch-NAME.ptx    # L-1..L-6, image paths, step counts
+python3 scripts/check_starters.py                    # handout code == book code
 pretext build web-deck                               # must build clean
 ```
 
 Plus: every deck `ref` resolves; every coded activity has an instructor solution
 (P-10); code matches the driver (B-6).
+
+**The handout and the book are different documents (B-13).** A starter `.c`
+carries fuller commentary than the book's listing of the same program — the
+student who opens only the file should not need the book. `check_starters.py`
+strips comments from both and compares the code, so the commentary can grow
+while the program cannot drift. Register a new pair in its `STARTERS` list.
 
 Fix everything here — the committee's time should go to teaching, not typos.
 

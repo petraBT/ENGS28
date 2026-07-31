@@ -288,6 +288,20 @@ them. Say what is true instead: *why* the slip is easy to make, or what it costs
 Verify `<image source="..."/>` against disk. Never drop a whole slide into a section
 when one diagram matters — crop it, or the book reads like pasted PowerPoint.
 
+### B-13 The handout is more verbose than the book
+
+A starter `.c` file students download is read **alone**, with no chapter beside
+it, so it carries the fuller commentary: the reason behind each constant, a
+label on every step, and the header block (name, assignment, collaborators,
+I/O pins, circuit, revision history) that `ADCPot.c` established. The book's
+listing of the same program stays compressed — it has the surrounding prose to
+lean on, and it has to condense onto a slide.
+
+The **code** must be identical in both, line for line: a student comparing the
+download against the book should find the same program. Comments may differ
+freely. `scripts/check_starters.py` enforces exactly that split, and is part of
+Step 5.
+
 ### B-12 Write for adults — no cute framing
 
 Students are adults; the prose is direct, technical, and plain (Petra, Day 8).

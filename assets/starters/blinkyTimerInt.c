@@ -48,7 +48,11 @@
 
 #include <stdio.h>
 #include "ES28.h"
-#define LED (1U<<5)        // on-board LED
+
+#define LED (1U<<5)        // blinking the on-board LED
+
+/* Clock runs at 12 MHz */
+/* Need to prescale by 12000 to have counting to 500 take 0.5 second */
 #define PSC_FACTOR 12000   // 12 MHz / 12000 = 1 kHz
 #define ARR_FACTOR 500     // 1 kHz / 500 = 2 Hz
 
@@ -59,14 +63,18 @@ void tim14_500ms_interrupt_init();
 
 
 int main(void) {
+    // Enable clock access to GPIOA
     RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
+
+    // Set PA5 as output pin and initialize the LED
     GPIOA->MODER &= ~GPIO_MODER_MODE5_Msk;
     GPIOA->MODER |= (GPIO_OUTPUT << GPIO_MODER_MODE5_Pos);
-    GPIOA->ODR &= ~(LED);          // LED starts off
+
+    GPIOA->ODR &= ~(LED);          // LED is off
 
     // TODO 4b -- initialize the flag ...
 
-    tim14_500ms_interrupt_init();
+    tim14_500ms_interrupt_init();  // Initialize the 500 ms timer interrupt
 
     while (1) {
         // TODO 4c -- when the flag is set: clear it, toggle the LED.
@@ -76,10 +84,19 @@ int main(void) {
 }
 
 void tim14_500ms_interrupt_init() {
-    __disable_irq();               // given: no interrupts during setup
+    // Disable global interrupts while the timer is half-configured
+    __disable_irq();               // given
+
+    // enable clock access to timer 14 (on APB bus)
     RCC->APBENR2 |= RCC_APBENR2_TIM14EN;
-    TIM14->PSC = PSC_FACTOR - 1;
-    TIM14->ARR = ARR_FACTOR - 1;
+
+    // Set prescaler value
+    TIM14->PSC = PSC_FACTOR - 1;   // starts counting at 0
+
+    // Set auto-reload value
+    TIM14->ARR = ARR_FACTOR - 1;   // counts 0 .. ARR inclusive
+
+    // Clear counter (don't start a period from a leftover value)
     TIM14->CNT = 0;
 
     // TODO 1 -- enable the update interrupt in the timer itself
@@ -88,8 +105,11 @@ void tim14_500ms_interrupt_init() {
     // TODO 2 -- enable TIM14's line in the NVIC
 
 
+    // Enable timer -- from here on it counts with no help from the CPU
     TIM14->CR1 |= TIM_CR1_CEN;
-    __enable_irq();                // given: setup done, interrupts on
+
+    // Setup done: allow interrupts again
+    __enable_irq();                // given
 }
 
 // TODO 3 -- write the ISR.  Its name must be EXACTLY the handler name from
