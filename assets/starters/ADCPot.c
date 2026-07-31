@@ -58,6 +58,7 @@ int main(void) {
         printf("Sensor value: %d\r\n", sensor_value);
         delay_ms(1000);
     }
+    return 1;
 }
 
 /* Run once, before any sampling. */

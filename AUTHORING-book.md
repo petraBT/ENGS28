@@ -288,6 +288,18 @@ them. Say what is true instead: *why* the slip is easy to make, or what it costs
 Verify `<image source="..."/>` against disk. Never drop a whole slide into a section
 when one diagram matters — crop it, or the book reads like pasted PowerPoint.
 
+### B-14 `int main()` returns
+
+Every `main()` declared `int` ends with a `return` — this course uses
+`return 1;`, matching the drivers. It is unreachable after a `while (1)`, and
+it is still written: students copy these listings into their own programs, and
+a function with a declared return type that falls off its end is wrong C.
+Declare `main` `void` instead and the return is not needed — but the course
+does not.
+
+Checked by `scripts/check_rules.py` (brace-matched, comment-blind, so a
+`return` in a comment or in a later function does not satisfy it).
+
 ### B-13 The handout is more verbose than the book
 
 A starter `.c` file students download is read **alone**, with no chapter beside

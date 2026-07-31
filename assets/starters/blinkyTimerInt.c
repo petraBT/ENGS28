@@ -81,6 +81,7 @@ int main(void) {
         //            The timer registers appear NOWHERE in this loop.
 
     }
+    return 1;
 }
 
 void tim14_500ms_interrupt_init() {

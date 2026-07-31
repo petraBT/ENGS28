@@ -61,6 +61,35 @@ CASE_TRAPS = [
 HEADER_CASE = re.compile(r"\bstm32c0\w*\.h\b", re.I)
 
 
+def strip_c_comments(code):
+    """Drop C comments so keywords inside them don't count as code."""
+    code = re.sub(r"/\*.*?\*/", "", code, flags=re.S)
+    return re.sub(r"//[^\n]*", "", code)
+
+
+def main_body(code):
+    """The body of an `int main(...)` in a listing, or None (B-14).
+
+    Brace-matched, and blind to comments, so a `return` mentioned in prose or
+    belonging to a later function is not mistaken for main's own.
+    """
+    blank = re.sub(r"/\*.*?\*/", lambda m: " " * len(m.group(0)), code, flags=re.S)
+    blank = re.sub(r"//[^\n]*", lambda m: " " * len(m.group(0)), blank)
+    m = re.search(r"\bint\s+main\s*\([^)]*\)\s*\{", blank)
+    if not m:
+        return None
+    i, depth = m.end(), 1
+    while i < len(blank):
+        if blank[i] == "{":
+            depth += 1
+        elif blank[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return code[m.end():i]
+        i += 1
+    return None
+
+
 def strip_comments(text):
     """Blank out XML comments so authoring notes don't trip the linter."""
     return re.sub(r"<!--.*?-->", lambda m: re.sub(r"[^\n]", " ", m.group(0)),
@@ -134,6 +163,19 @@ def check_file(path, quiet=False):
                              f"device header casing: {got!r} should be "
                              f"{got.lower()!r} (the filename is all lowercase; "
                              f"the part is STM32C031C6)"))
+
+    # B-14: an int main() ends with a return, in every listing students copy.
+    for m in re.finditer(
+            r"<program language=\"c\"><code><!\[CDATA\[(.*?)\]\]></code></program>",
+            raw, flags=re.S):
+        span = main_body(m.group(1))
+        if span is None:
+            continue
+        body = strip_c_comments(span)
+        if not re.search(r"\breturn\b", body):
+            problems.append(("error", line_of(raw, m.start()), "B-14",
+                             "int main() with no return statement — say "
+                             "'return 1;' (or declare main void)"))
 
     # Images resolve on disk.
     for m in re.finditer(r'<image\s+source="([^"]+)"', text):
