@@ -311,6 +311,14 @@ introduction or a colleague's explanation? Precision-adding rewrites are
 always welcome ("the period follows" → "the time period follows"; "That
 switch is the UIE bit" → "This new behavior is enabled via the UIE bit").
 
+**Not violations.** Established technical terms keep their names even when
+they sound figurative — *magic numbers*, *handshake*, *heartbeat* (as a blink
+pattern), *daisy chain*, *race condition*. A physical claim is not
+condescension ("3.3 V through 10 kΩ easily exceeds that"); only telling the
+*student* a task is easy is. A brief instructor aside or rhetorical question
+is fine — "imagine keeping track of that" earns its place; "Hold that
+thought" does not.
+
 ---
 
 ## S — Slides

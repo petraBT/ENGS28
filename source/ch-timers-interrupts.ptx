@@ -70,12 +70,13 @@
             <p>
                 Waiting has been built into every program in this course so far.
                 On Day 1 the delay was a <term>busy-wait loop</term> — a
-                <c>for</c> loop that burned processor cycles doing nothing
+                <c>for</c> loop that burned processor cycles doing nothing —
                 and on Day 2 you replaced it with the course's
                 <c>delay_ms()</c>, which fixed the busy-wait's imprecision
                 (<xref ref="subsec-day2-delay-ms"/>).  What <c>delay_ms()</c>
-                did <em>not</em> fix is the captivity: while it runs, the CPU
-                belongs to the delay.  A program that calls
+                did <em>not</em> fix is that the CPU can do nothing else while
+                it runs: the processor is committed to the delay for its whole
+                duration.  A program that calls
                 <c>delay_ms(1000)</c> is unresponsive for one full second.
             </p>
             <p>
@@ -671,13 +672,11 @@ count to 1000        ->  1000 ticks = 1 s        check: 12,000 x 1000 = 12,000,0
                 <title>Pick the Pair</title>
                 <introduction>
                     <p>
-                        Four candidate (prescale factor, count) pairs for
-                        6,000,000 cycles.  For each, decide: does it work?
-                        Commit an answer for all four before we discuss.
-                        Remember what must be true: the product must be
-                        6,000,000, the count must be a whole number, and both
-                        written values must fit in 16 bits (at most 65,536 as
-                        a factor, written as 65,535).
+                        Here are four candidate (prescale factor, count) pairs
+                        for the 500 ms period.  For each one, decide whether
+                        TIM14 can actually be configured that way, and be
+                        ready to say why.  Commit an answer for all four
+                        before we discuss.
                     </p>
                 </introduction>
                 <task xml:id="act-timer-design-t1">
@@ -714,7 +713,7 @@ count to 1000        ->  1000 ticks = 1 s        check: 12,000 x 1000 = 12,000,0
         <li>6000 &#215; 1000 = 6,000,000 &#8212; <clr c="green">works</clr></li>
         <li>60 &#215; 100,000 &#8212; <clr c="red">fails</clr>: 100,000 does not fit in a 16-bit counter (65,535 max)</li>
         <li>65,536 &#215; 91.55&#8230; &#8212; <clr c="red">fails</clr>: a counter cannot count to a fraction</li>
-        <li>The course code uses a third working pair, <term>12,000 &#215; 500</term>: the counter ticks exactly once per millisecond, so <term>the count is the period in ms</term> &#8212; change the blink rate later by changing one readable number.</li>
+        <li>The code we'll work with later uses a third good pair, <term>12,000 &#215; 500</term>: the counter ticks exactly once per millisecond, so <term>the count is the period in ms</term> &#8212; change the blink rate later by changing one readable number.</li>
     </ul>
     <caption>Many pairs work; choose the one that keeps the arithmetic readable.</caption>
     <note>OPTIONAL / REVEAL — show after the activity.</note>
@@ -1104,7 +1103,7 @@ TIM14->SR &= ~TIM_SR_UIF;    // read-modify-write: mostly harmless on rc_w0 ...
 ]]></code></program>
     <ul>
         <li>The write-back sends 1s to set flags (no effect on <c>rc_w0</c>) and 0s to clear ones (already clear) &#8212; so here, no damage.</li>
-        <li>But on <c>rc_w1</c> it is destructive &#8212; that was Day 7's disaster.</li>
+        <li>But on <c>rc_w1</c> it is destructive &#8212; that was the Day 7 case.</li>
         <li>And if hardware raises another flag between the read and the write-back, the 0 written over it clears it &#8212; the event is lost. Starting Day 9, that stops being hypothetical.</li>
         <li><term>Clear status flags by assigning a mask.</term> The ISR you write next does exactly that.</li>
     </ul>
@@ -1642,7 +1641,7 @@ void tim14_third_s_interrupt_init(void);
 int main(void) {
     uint16_t sensor_value;
     uart2_init();
-    printf("\n\rADCPot with heartbeat\r\n");
+    printf("\n\rADCPot with timer blink\r\n");
 
     RCC->IOPENR |= RCC_IOPENR_GPIOAEN;         // LED pin
     GPIOA->MODER &= ~GPIO_MODER_MODE5_Msk;
