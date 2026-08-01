@@ -108,8 +108,40 @@
     return error.message
   }
 
-  function beginEdit (block) {
+  /* Ask the server whether this block can be rewritten in place BEFORE opening
+     it for editing. Roughly one book paragraph in twelve is a dead end — it
+     holds math, an <xref> or a character entity, whose displayed text is
+     generated at build time and has no counterpart in the source, so no edit
+     to it could ever be saved. Finding that out after typing (which is what
+     used to happen) means losing the work, so the check moved to the front:
+     a block that can't be line-edited opens in your editor instead, and says
+     why. */
+  function requestEdit (block) {
     if (editing) return
+    editing = block   // claim it now, so a second alt-shift-click can't race
+    var url = SERVER + '/locate' +
+      '?text=' + encodeURIComponent(textFor(block)) +
+      '&id=' + encodeURIComponent(idFor(block))
+    fetch(url)
+      .then(function (response) { return response.json().then(function (body) {
+        if (!response.ok) throw new Error(body.error || 'lookup failed')
+        return body
+      }) })
+      .then(function (body) {
+        if (body.editable) { beginEdit(block); return }
+        // Not editable: hand the author to the file rather than to a dead end.
+        editing = null
+        toast('Can’t edit here — ' + body.blocked + '. Opening ' +
+              body.file + ':' + body.line + ' in your editor.', 'info')
+        fetch(url + '&open=1').catch(function () {})
+      })
+      .catch(function (error) {
+        editing = null
+        toast(describe(error), 'error')
+      })
+  }
+
+  function beginEdit (block) {
     var original = textFor(block)
     editing = block
     // Take the permalink widget out for the duration - inside a contenteditable
@@ -122,10 +154,25 @@
     var originalHTML = block.innerHTML
     block.classList.add('ptx-edit-active')
     block.setAttribute('contenteditable', 'plaintext-only')
+
+    /* Inline markup is off limits, and the browser can enforce that instead of
+       the server refusing it afterwards. The rule maps exactly onto the DOM:
+       the server may rewrite a block's OWN character data, and anything inside
+       a nested element (<c>, <em>, <term>, <clr>) belongs to that element — so
+       making each child element a non-editable island is the same rule, moved
+       to where the typing happens. Editing the prose around <c>GPIOA</c> still
+       works; the words inside it simply can't be typed into. Applied after the
+       snapshot above, so reverting restores clean markup. */
+    var islands = [].slice.call(block.children)
+    islands.forEach(function (node) { node.setAttribute('contenteditable', 'false') })
     block.focus()
 
     function revert () {
       block.innerHTML = originalHTML
+    }
+    // Only needed on the paths that keep the edited DOM; revert() replaces it.
+    function dropIslands () {
+      islands.forEach(function (node) { node.removeAttribute('contenteditable') })
     }
     function restoreChrome () {
       permalinks.forEach(function (node) { block.appendChild(node) })
@@ -155,15 +202,22 @@
           return body
         }) })
         .then(function (body) {
+          dropIslands()
           restoreChrome()
           toast('Saved to ' + body.file + ':' + body.line, 'ok')
         })
         .catch(function (error) {
           // The source is the truth; if the write didn't land, don't leave the
-          // page showing an edit that only exists in this tab.
+          // page showing an edit that only exists in this tab. The pre-flight
+          // means this is now rare (a whole markup island deleted, or the file
+          // changed underneath) - but rare is not never, so don't just drop the
+          // author here: put them in the file, at the line, to redo it there.
           revert()
           restoreChrome()
-          toast(describe(error), 'error')
+          toast(describe(error) + ' Opening it in your editor.', 'error')
+          fetch(SERVER + '/locate?open=1' +
+                '&text=' + encodeURIComponent(original) +
+                '&id=' + encodeURIComponent(idFor(block))).catch(function () {})
         })
     }
 
@@ -182,7 +236,11 @@
 
     block.addEventListener('keydown', onKey)
     block.addEventListener('blur', onBlur)
-    toast('Editing - ⌘⏎ to save, esc to cancel', 'info')
+    // Say up front that the marked-up words are locked, so their not accepting
+    // the caret reads as intended rather than as the editor misbehaving.
+    toast(islands.length
+      ? 'Editing - click out or ⌘⏎ to save, esc to cancel. Code and emphasis are locked.'
+      : 'Editing - click out or ⌘⏎ to save, esc to cancel', 'info')
   }
 
   document.addEventListener('click', function (event) {
@@ -195,7 +253,7 @@
     if (!block) return
     event.preventDefault()
     event.stopPropagation()
-    if (event.shiftKey) beginEdit(block)
+    if (event.shiftKey) requestEdit(block)
     else openInEditor(block)
   }, true)
 

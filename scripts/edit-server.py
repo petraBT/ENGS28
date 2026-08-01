@@ -56,8 +56,13 @@ REFUSAL = ("That edit would change text inside inline markup (<c>, <em>, ...), "
 # mismatch it causes is not evidence that the file changed underneath the author
 # — which is what the generic message unhelpfully implies. Longest alternatives
 # first so <mrow> isn't matched as <m>.
+#
+# <q> belongs here for the same reason, though it is easy to miss: the source
+# says <q>Hello, World</q> and the page shows “Hello, World” — PreTeXt supplies
+# the curly quotes, so the displayed text has two characters the source does
+# not, and the round-trip fails. 41 blocks in this book are that case.
 GENERATED = re.compile(
-    rb"<(mrow|xref|ellipsis|fillin|today|nbsp|ndash|mdash|sim|md|me|m)[\s/>]")
+    rb"<(mrow|xref|ellipsis|fillin|today|nbsp|ndash|mdash|sim|md|me|m|q)[\s/>]")
 
 
 # A <p> holding display math does not render as one block: PreTeXt emits the
@@ -101,6 +106,61 @@ def generated_markup(element):
         return None
     hit = GENERATED.search(raw)
     return hit.group(1).decode() if hit else None
+
+
+# Why a block can't be line-edited, in the words the author should see. The key
+# is the offending tag; the value completes "This … can't be edited in place".
+BLOCKED_BY = {
+    "m": "paragraph contains math",
+    "md": "paragraph contains display math",
+    "me": "paragraph contains display math",
+    "mrow": "paragraph contains display math",
+    "xref": "paragraph contains a cross-reference",
+    "ellipsis": "paragraph contains an ellipsis",
+    "fillin": "paragraph contains a fill-in blank",
+    "today": "paragraph contains a generated date",
+    "nbsp": "paragraph contains a special character",
+    "ndash": "paragraph contains a special character",
+    "mdash": "paragraph contains a special character",
+    "sim": "slide contains the board simulator",
+    "q": "paragraph contains quoted text (the quote marks are generated)",
+}
+
+
+def edit_status(element, shown_text=None):
+    """Can this block be rewritten in place? (editable, reason) — decided BEFORE
+    the author types, so nobody is invited to edit text that cannot be saved.
+
+    Two things make a block a dead end no matter what is typed:
+
+      * it contains markup whose displayed text is GENERATED at build time
+        (math, an xref, a character entity). That text has no counterpart in
+        the source, so the block can never round-trip and every save would be
+        refused as a mismatch.
+      * none of its text is its own — every character belongs to nested inline
+        markup, so there is nothing here this can safely rewrite.
+
+    A block that is only PARTLY owned is editable: the write is refused per
+    changed span, so editing the prose around <c>GPIOA</c> lands cleanly. The
+    browser half stops the marked-up words being typed into at all.
+
+    The last test is the catch-all, and the reason this takes `shown_text`:
+    apply_edit demands that what the page displayed matches the source EXACTLY
+    before it will write, so anything that renders differently from its source
+    is a dead end no matter how it got that way. The named cases above give a
+    better message; this catches the rest — most usefully a page built before
+    the source last changed, which no list of tags could anticipate.
+    """
+    tag = generated_markup(element)
+    if tag:
+        return False, BLOCKED_BY.get(tag, "paragraph contains generated <%s>" % tag)
+    flat, _starts, _ends, owned = element.flatten()
+    if not any(owned):
+        return False, "every word here belongs to inline markup"
+    if shown_text is not None and flat != normalize(shown_text):
+        return False, ("this page doesn't match the source exactly "
+                       "(it may have been built before the last edit)")
+    return True, None
 
 
 class Locator:
@@ -656,6 +716,10 @@ def make_handler(locator: Locator):
 
             element, score = found
             relative = os.path.relpath(element.path, locator.project_dir)
+            editable, reason = edit_status(element, query.get("text", [""])[0])
+            # ?open=1 opens the editor. The browser also sends it when a block
+            # turns out not to be line-editable, so a refusal hands the author
+            # straight to the file instead of stopping at a message.
             if query.get("open", ["0"])[0] == "1":
                 editor = open_in_editor(element.path, element.start_line)
                 print(f"  -> {relative}:{element.start_line} ({editor})")
@@ -666,6 +730,9 @@ def make_handler(locator: Locator):
                 "tag": element.tag,
                 "score": round(score, 3),
                 "text": element.text(),
+                # Asked BEFORE the author starts typing (see edit_status).
+                "editable": editable,
+                "blocked": reason,
             })
 
         # Content fields a slide form may set, across every glue type: title

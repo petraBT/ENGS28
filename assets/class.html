@@ -1434,9 +1434,29 @@
             openSlideBlock(slide.slide, 'slide block')
           }
 
-          // --- Alt-shift-click: edit in place -----------------------------
-          function beginEdit (block, hintId) {
+          /* --- Alt-shift-click: edit in place -----------------------------
+             Ask the server whether this block can be rewritten BEFORE opening
+             it, so nobody is invited to type into text that could never be
+             saved (a slide holding math, an <xref>, or a <sim>). Same check
+             the book editing uses — see edit_status in scripts/edit-server.py. */
+          function requestEdit (block, hintId) {
             if (editing) return
+            editing = block   // claim it now, so a second click can't race
+            var url = EDIT_SERVER + '/locate' +
+              '?text=' + encodeURIComponent(textFor(block)) +
+              '&id=' + encodeURIComponent(hintId)
+            fetch(url).then(asJson)
+              .then(function (b) {
+                if (b.editable) { beginEdit(block, hintId); return }
+                editing = null
+                toast('Can’t edit here — ' + b.blocked + '. Opening ' +
+                      b.file + ':' + b.line + ' in your editor.', 'info')
+                fetch(url + '&open=1').catch(function () {})
+              })
+              .catch(function (e) { editing = null; toast(describe(e), 'error') })
+          }
+
+          function beginEdit (block, hintId) {
             var original = textFor(block)
             var originalHTML = block.innerHTML
             // Captured now: the save resolves later, by which time the author
@@ -1445,6 +1465,12 @@
             editing = block
             block.classList.add('deck-edit-active')
             block.setAttribute('contenteditable', 'plaintext-only')
+            // Inline markup (<c>, <em>, <clr>) is the server's to refuse, so
+            // make each child element a non-editable island and the words
+            // inside it simply can't be typed into. Same rule, enforced where
+            // the typing happens. After the snapshot, so revert stays clean.
+            var islands = [].slice.call(block.children)
+            islands.forEach(function (n) { n.setAttribute('contenteditable', 'false') })
             block.focus()
 
             function finish (save) {
@@ -1464,6 +1490,7 @@
               })
                 .then(asJson)
                 .then(function (b) {
+                  islands.forEach(function (n) { n.removeAttribute('contenteditable') })
                   // The built page this slide was extracted from is now stale.
                   // Drop it so navigating back re-reads the rebuilt copy
                   // instead of silently showing the pre-edit text again.
@@ -1472,9 +1499,14 @@
                 })
                 .catch(function (error) {
                   // The source is the truth; if the write didn't land, don't
-                  // leave the slide showing an edit that only exists here.
+                  // leave the slide showing an edit that only exists here. The
+                  // pre-flight makes this rare, but don't strand the author:
+                  // put them in the file, at the line, to redo it there.
                   block.innerHTML = originalHTML
-                  toast(describe(error), 'error')
+                  toast(describe(error) + ' Opening it in your editor.', 'error')
+                  fetch(EDIT_SERVER + '/locate?open=1' +
+                        '&text=' + encodeURIComponent(original) +
+                        '&id=' + encodeURIComponent(hintId)).catch(function () {})
                 })
             }
             function onKey (event) {
@@ -1490,7 +1522,11 @@
             function onBlur () { finish(true) }
             block.addEventListener('keydown', onKey)
             block.addEventListener('blur', onBlur)
-            toast('Editing — ⌘⏎ saves, esc cancels', 'info')
+            // Say up front that the marked-up words are locked, so their not
+            // taking the caret reads as intended, not as a broken editor.
+            toast(islands.length
+              ? 'Editing — click out or ⌘⏎ saves, esc cancels. Code and colour spans are locked.'
+              : 'Editing — click out or ⌘⏎ saves, esc cancels', 'info')
           }
           function editHere (target, slide) {
             if (slide.type !== 'ref' || target.closest('.deck-title')) {
@@ -1510,7 +1546,7 @@
                     'or the title bar.', 'info')
               return
             }
-            beginEdit(block, origin ? origin.getAttribute('data-edit-id') : slide.slide)
+            requestEdit(block, origin ? origin.getAttribute('data-edit-id') : slide.slide)
           }
 
           // --- the glue form (alt-shift-click a glue slide) ----------------
