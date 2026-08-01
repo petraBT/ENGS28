@@ -634,7 +634,14 @@ def apply_edit(element, old_text: str, new_text: str):
         # should already have caught it.
         if b"<" in data[start:end]:
             return None, REFUSAL
-        edits.append((start, end, new_flat[j1:j2].encode("utf-8")))
+        # Escape on the way in. The author is typing prose, not XML, so an "&"
+        # or "<" they type is a literal one — written raw it would produce a
+        # file that no longer parses, which is the same failure as the stray
+        # "212;" this pair of fixes is about, just louder.
+        inserted = (new_flat[j1:j2]
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;"))
+        edits.append((start, end, inserted.encode("utf-8")))
 
     # Apply back to front so earlier offsets stay valid.
     for start, end, replacement in sorted(edits, reverse=True):
