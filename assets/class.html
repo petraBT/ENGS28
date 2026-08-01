@@ -1577,6 +1577,18 @@
               .catch(function (e) { editing = null; toast(describe(e), 'error') })
           }
 
+          // Hand back text a failed save would otherwise discard. The clipboard
+          // needs permission and can refuse, so the console is the fallback
+          // that always works; the caller is told which happened.
+          function keepText (text, done) {
+            console.log('[deck] unsaved text:\n' + text)
+            try {
+              navigator.clipboard.writeText(text)
+                .then(function () { done(true) })
+                .catch(function () { done(false) })
+            } catch (e) { done(false) }
+          }
+
           function beginEdit (block, hintId) {
             var original = textFor(block)
             var originalHTML = block.innerHTML
@@ -1586,12 +1598,11 @@
             editing = block
             block.classList.add('deck-edit-active')
             block.setAttribute('contenteditable', 'plaintext-only')
-            // Inline markup (<c>, <em>, <clr>) is the server's to refuse, so
-            // make each child element a non-editable island and the words
-            // inside it simply can't be typed into. Same rule, enforced where
-            // the typing happens. After the snapshot, so revert stays clean.
-            var islands = [].slice.call(block.children)
-            islands.forEach(function (n) { n.setAttribute('contenteditable', 'false') })
+            // Nothing opened here contains inline markup — the server refuses
+            // those up front and sends you to the file. An earlier version
+            // opened them with the <clr>/<c> spans set contenteditable=false,
+            // but retyping a selection deletes those spans outright, so the
+            // guard failed exactly when a whole bullet had been reworded.
             block.focus()
 
             function finish (save) {
@@ -1611,7 +1622,6 @@
               })
                 .then(asJson)
                 .then(function (b) {
-                  islands.forEach(function (n) { n.removeAttribute('contenteditable') })
                   // The built page this slide was extracted from is now stale.
                   // Drop it so navigating back re-reads the rebuilt copy
                   // instead of silently showing the pre-edit text again.
@@ -1619,15 +1629,19 @@
                   toast('Saved to ' + b.file + ':' + b.line, 'ok')
                 })
                 .catch(function (error) {
-                  // The source is the truth; if the write didn't land, don't
-                  // leave the slide showing an edit that only exists here. The
-                  // pre-flight makes this rare, but don't strand the author:
-                  // put them in the file, at the line, to redo it there.
-                  block.innerHTML = originalHTML
-                  toast(describe(error) + ' Opening it in your editor.', 'error')
-                  fetch(EDIT_SERVER + '/locate?open=1' +
-                        '&text=' + encodeURIComponent(original) +
-                        '&id=' + encodeURIComponent(hintId)).catch(function () {})
+                  // The source is the truth, so the slide must go back. The
+                  // wording someone just spent minutes on is not the source's
+                  // to throw away though: copy it out BEFORE reverting, and
+                  // open the file, so the work survives as a paste.
+                  keepText(updated, function (kept) {
+                    block.innerHTML = originalHTML
+                    toast(describe(error) +
+                          (kept ? ' Your text is on the clipboard.' : ' Your text is in the console.') +
+                          ' Opening the file.', 'error')
+                    fetch(EDIT_SERVER + '/locate?open=1' +
+                          '&text=' + encodeURIComponent(original) +
+                          '&id=' + encodeURIComponent(hintId)).catch(function () {})
+                  })
                 })
             }
             function onKey (event) {
@@ -1643,11 +1657,7 @@
             function onBlur () { finish(true) }
             block.addEventListener('keydown', onKey)
             block.addEventListener('blur', onBlur)
-            // Say up front that the marked-up words are locked, so their not
-            // taking the caret reads as intended, not as a broken editor.
-            toast(islands.length
-              ? 'Editing — click out or ⌘⏎ saves, esc cancels. Code and colour spans are locked.'
-              : 'Editing — click out or ⌘⏎ saves, esc cancels', 'info')
+            toast('Editing — click out or ⌘⏎ saves, esc cancels', 'info')
           }
           function editHere (target, slide) {
             if (slide.type !== 'ref' || target.closest('.deck-title')) {

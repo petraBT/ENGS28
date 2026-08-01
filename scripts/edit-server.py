@@ -140,9 +140,18 @@ def edit_status(element, shown_text=None):
       * none of its text is its own — every character belongs to nested inline
         markup, so there is nothing here this can safely rewrite.
 
-    A block that is only PARTLY owned is editable: the write is refused per
-    changed span, so editing the prose around <c>GPIOA</c> lands cleanly. The
-    browser half stops the marked-up words being typed into at all.
+    A block holding ANY inline markup is a dead end too, and this is the case
+    that cost real work before it was one. The write is refused per changed
+    span, so editing the prose *around* <c>GPIOA</c> does land — which made
+    partial editing look supportable, and the browser marked the marked-up
+    words contenteditable=false so they could not be typed into.
+
+    That protection does not hold. Selecting a block and retyping it deletes
+    the non-editable spans outright: the selection reads as just the owned
+    text, so the edit looks safe right up until the replacement removes the
+    markup from the DOM and the save is refused — after the rewording is done.
+    Since the guard cannot be trusted, the offer is withdrawn: a block with
+    markup opens in the editor, where every kind of edit to it actually works.
 
     The last test is the catch-all, and the reason this takes `shown_text`:
     apply_edit demands that what the page displayed matches the source EXACTLY
@@ -157,6 +166,9 @@ def edit_status(element, shown_text=None):
     flat, _starts, _ends, owned = element.flatten()
     if not any(owned):
         return False, "every word here belongs to inline markup"
+    if not all(owned):
+        return False, ("this has inline markup in it "
+                       "(code, emphasis, a term or a colour span)")
     if shown_text is not None and flat != normalize(shown_text):
         return False, ("this page doesn't match the source exactly "
                        "(it may have been built before the last edit)")

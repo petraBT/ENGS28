@@ -141,6 +141,19 @@
       })
   }
 
+  /* Hand back text a failed save would otherwise discard. The clipboard needs
+     permission and a recent gesture and can simply refuse, so the console is
+     the fallback that always works - and the caller is told which happened, so
+     the message never promises a clipboard that isn't there. */
+  function keepText (text, done) {
+    console.log('[ptx-edit] unsaved text:\n' + text)
+    try {
+      navigator.clipboard.writeText(text)
+        .then(function () { done(true) })
+        .catch(function () { done(false) })
+    } catch (e) { done(false) }
+  }
+
   function beginEdit (block) {
     var original = textFor(block)
     editing = block
@@ -155,24 +168,16 @@
     block.classList.add('ptx-edit-active')
     block.setAttribute('contenteditable', 'plaintext-only')
 
-    /* Inline markup is off limits, and the browser can enforce that instead of
-       the server refusing it afterwards. The rule maps exactly onto the DOM:
-       the server may rewrite a block's OWN character data, and anything inside
-       a nested element (<c>, <em>, <term>, <clr>) belongs to that element — so
-       making each child element a non-editable island is the same rule, moved
-       to where the typing happens. Editing the prose around <c>GPIOA</c> still
-       works; the words inside it simply can't be typed into. Applied after the
-       snapshot above, so reverting restores clean markup. */
-    var islands = [].slice.call(block.children)
-    islands.forEach(function (node) { node.setAttribute('contenteditable', 'false') })
+    /* Nothing opened here contains inline markup: the server refuses those up
+       front (see edit_status) and sends you to the file instead. An earlier
+       version did open them, with the marked-up spans set
+       contenteditable=false — but selecting the block and retyping deletes
+       those spans outright, so the guard silently failed exactly when someone
+       had reworded a whole sentence. Don't reintroduce it. */
     block.focus()
 
     function revert () {
       block.innerHTML = originalHTML
-    }
-    // Only needed on the paths that keep the edited DOM; revert() replaces it.
-    function dropIslands () {
-      islands.forEach(function (node) { node.removeAttribute('contenteditable') })
     }
     function restoreChrome () {
       permalinks.forEach(function (node) { block.appendChild(node) })
@@ -202,22 +207,25 @@
           return body
         }) })
         .then(function (body) {
-          dropIslands()
           restoreChrome()
           toast('Saved to ' + body.file + ':' + body.line, 'ok')
         })
         .catch(function (error) {
-          // The source is the truth; if the write didn't land, don't leave the
-          // page showing an edit that only exists in this tab. The pre-flight
-          // means this is now rare (a whole markup island deleted, or the file
-          // changed underneath) - but rare is not never, so don't just drop the
-          // author here: put them in the file, at the line, to redo it there.
-          revert()
-          restoreChrome()
-          toast(describe(error) + ' Opening it in your editor.', 'error')
-          fetch(SERVER + '/locate?open=1' +
-                '&text=' + encodeURIComponent(original) +
-                '&id=' + encodeURIComponent(idFor(block))).catch(function () {})
+          // The source is the truth, so a write that didn't land must not leave
+          // the page showing an edit that exists only in this tab. But the
+          // wording someone just spent minutes on is not the source's to throw
+          // away: copy it out BEFORE reverting, and open the file, so the work
+          // survives as a paste even though the page goes back.
+          keepText(updated, function (kept) {
+            revert()
+            restoreChrome()
+            toast(describe(error) +
+                  (kept ? ' Your text is on the clipboard.' : ' Your text is in the console.') +
+                  ' Opening the file.', 'error')
+            fetch(SERVER + '/locate?open=1' +
+                  '&text=' + encodeURIComponent(original) +
+                  '&id=' + encodeURIComponent(idFor(block))).catch(function () {})
+          })
         })
     }
 
@@ -236,11 +244,7 @@
 
     block.addEventListener('keydown', onKey)
     block.addEventListener('blur', onBlur)
-    // Say up front that the marked-up words are locked, so their not accepting
-    // the caret reads as intended rather than as the editor misbehaving.
-    toast(islands.length
-      ? 'Editing - click out or ⌘⏎ to save, esc to cancel. Code and emphasis are locked.'
-      : 'Editing - click out or ⌘⏎ to save, esc to cancel', 'info')
+    toast('Editing - click out or ⌘⏎ to save, esc to cancel', 'info')
   }
 
   document.addEventListener('click', function (event) {
