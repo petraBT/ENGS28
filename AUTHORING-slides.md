@@ -29,8 +29,14 @@ cd output/web-deck && python3 -m http.server 8351
 - `web`, `web-edit`, `print` **strip** `<slide>` blocks entirely (the reading
   book shows full prose, never the condensed form or instructor notes).
 - **Cache gotcha:** the player fetches the deck JSON only on a full page load;
-  a hash-only change (`#12`) does not re-fetch. After editing a deck, reload with
-  a throwaway query param (`?deck=day3&r=2`) to bust the cache.
+  a hash-only change (`#12`) does not re-fetch, so reload after editing a deck.
+  (Served from `localhost` the player now fetches decks and book pages with
+  `cache: 'no-store'`, so a plain reload is enough — the old trick of adding a
+  throwaway `&r=2` is no longer needed. A deployed deck still caches normally.)
+
+To author *from* the slides — Alt-click a bullet or caption and edit it in
+place — use `./preview-slides.sh` instead, and see "Editing from the player"
+below.
 
 ## Authoring `<slide>` blocks
 
@@ -69,8 +75,10 @@ caption** — slide captions are a one-line "what to notice," not the textbook
 caption. See the educational patterns below.
 
 **Presenter note** (instructor-only, never projected): add a `<note>…</note>`
-child to any `<slide>`. It reaches you via the (planned) handout / `?notes` view,
-not the projector.
+child to any `<slide>`. Add **`?notes`** to the player URL to see them (and a
+glue slide's `presenterNote`); they are hidden otherwise and never shown in the
+`?student` view. That view is also the only place they can be clicked, so it is
+how you edit them.
 
 **Coloured text**: `<clr c="orange">Channel 1</clr>` (`orange | blue | red |
 green`) — for bullets that mirror a colour in the figure beside them.
@@ -235,10 +243,51 @@ width is overridden), so you don't size them per slide.
 **Solutions and instructor reminders are never student-facing.** Solution
 listings are `"instructor": true`; how-to-solve-it hints are `<note>`s.
 
+## Editing from the player
+
+`./preview-slides.sh` serves the deck player with the authoring tools attached
+(and a watcher that rebuilds on save). Hold **Alt** and everything a click could
+reach outlines itself, in two colours that say where the write would land:
+
+| Outline | What it is | Alt-click | Alt-shift-click |
+|---|---|---|---|
+| **green** | slide-owned text — a `<li>`, `<p>`, `<caption>` or `<note>` in a `<slide>` block | opens the block in your editor | edits it in place (⌘⏎ saves, Esc cancels) |
+| **green** | a glue slide, or a `ref` slide's **title bar** (both are deck JSON) | opens `decks/<id>.json` at that entry | opens a form for its fields |
+| **amber dashed** | real book content — an `<activity>`/`<task>` a deck refs by its own `xml:id` | opens it in your editor | **refused**, with a note saying why |
+
+The amber case is the one to understand. A `ref` resolves either to a `<slide>`
+block written for the projector, or **straight to book content**. Editing the
+second would change the reading students do that night, not just the slide — so
+the player refuses it rather than letting a slide tweak quietly rewrite the
+chapter. Alt-click still opens it, and you can make the change deliberately in
+your editor. (Currently 50 slides across the decks are this kind: 45 `act-*`
+and 5 `task-*`.)
+
+**Inline markup is protected.** Text inside `<c>`, `<em>`, `<term>` or `<clr>`
+cannot be rewritten from the player: the write is refused per changed span, so
+editing the prose *around* `<clr c="orange">A0</clr>` works and lands cleanly,
+while editing "A0" itself is refused rather than guessed at. Colour spans and
+code spans therefore can't be broken by accident.
+
+**What a form can't reach.** A slide's `type`, `page`, `slide`, `instructor` and
+`room` fields are deliberately not editable from the browser — the server's
+allow-list drops them — so a form save can never retype a slide, repoint a ref,
+or silently clear an instructor-only flag. Alt-click into the JSON for those.
+
+**None of this exists in a deployed deck.** `assets/class.html` is one file
+serving both, so the authoring layer gates itself twice at runtime: it returns
+immediately unless the hostname is `localhost`/`127.0.0.1`, and even then wires
+up nothing until the edit server at `:8927` answers a probe. On gh-pages both
+gates fail, so there is no edit UI and no write endpoint to reach.
+
 ## Where things live
 
 - `xsl/engs28-html.xsl` — the `<slide>` and `<clr>` elements (+ `deck.slides`
   strip/render param); `xsl/engs28-latex.xsl` strips `<slide>` from print.
 - `assets/deck.css` — hides `.deck-slide` in the reading view.
-- `assets/class.html` — the player.
+- `assets/class.html` — the player, and the authoring layer at the end of it.
 - `assets/decks/*.json` — the decks.
+- `preview-slides.sh` — the authoring preview (player + edit server + watcher).
+- `scripts/edit-server.py` — finds and rewrites the source behind a click:
+  `/locate` + `/patch` for `<slide>` text, `/open-slide` for a block by
+  `xml:id`, `/open-deck` + `/patch-deck` for the deck JSON.
