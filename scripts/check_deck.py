@@ -10,7 +10,7 @@ xml:ids all exist, and the slide simply renders blank in class.
 
     python3 scripts/check_deck.py assets/decks/day7.json
 """
-import json, os, re, sys
+import json, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILD = os.path.join(REPO, "output", "web-deck")
@@ -21,6 +21,15 @@ def main():
         sys.exit("usage: check_deck.py <deck.json> [more.json ...]")
     bad = 0
     for deck_path in sys.argv[1:]:
+        # index.json is the contents page's deck list, not a deck. It is in this
+        # directory (and so in a *.json glob), but has no slides to check —
+        # instead, check that it still agrees with the decks beside it.
+        if os.path.basename(deck_path) == "index.json":
+            if subprocess.call([sys.executable,
+                                os.path.join(REPO, "scripts", "make_deck_index.py"),
+                                "--check"]) != 0:
+                bad += 1
+            continue
         deck = json.load(open(deck_path, encoding="utf-8"))
         refs = [s for s in deck["slides"] if s.get("type") == "ref"]
         print(f"\n{os.path.basename(deck_path)} — {len(deck['slides'])} slides, {len(refs)} refs")

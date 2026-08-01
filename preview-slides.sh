@@ -52,6 +52,11 @@ for arg in "$@"; do
   esac
 done
 
+# The contents page (class.html with no ?deck) reads this; a static host can't
+# list a directory, so the deck list has to be a file. Regenerated before the
+# build so a deck added since last time shows up without being asked for.
+python3 scripts/make_deck_index.py
+
 # Same macOS permission workaround as build.sh: shutil.copy2 preserves source
 # permissions, which can leave the copies read-only and break the next build.
 rm -rf output/web-deck/external/

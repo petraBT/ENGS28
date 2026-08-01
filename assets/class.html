@@ -289,6 +289,52 @@
       #note { color: #86847c; }
       #note.warn { color: #ffab91; }
 
+      /* --- contents (class.html with no ?deck) ---------------------------- */
+      /* A menu, not a slide: it escapes the 16:9 stage and scrolls like an
+         ordinary page, because a list of thirteen decks letterboxed into a
+         projector box would be unreadable and unscrollable. */
+      body.contents { overflow: auto; background: #f4f3ef; }
+      body.contents #stage-wrap, body.contents #bar { display: none; }
+      #contents { display: none; max-width: 54em; margin: 0 auto; padding: 4vh 5vw 8vh; }
+      body.contents #contents { display: block; }
+      #contents h1 {
+        margin: 0 0 .15em 0; font-size: 1.9rem; font-weight: 700; color: #1a1a19;
+        letter-spacing: -.01em;
+      }
+      #contents .lede { margin: 0 0 2em 0; color: #6b6a67; font-size: .95rem; line-height: 1.5; }
+      #contents ol { list-style: none; margin: 0; padding: 0; }
+      #contents li { margin-bottom: .5em; }
+      /* The whole row is the link — a bigger target than the title alone, which
+         matters when this is opened one-handed at the podium. */
+      #contents a.deck {
+        display: flex; align-items: baseline; gap: .9em;
+        padding: .8em 1.1em; border: 1px solid #e0ded7; border-radius: 8px;
+        background: #fff; text-decoration: none; color: inherit;
+        transition: border-color .12s, box-shadow .12s;
+      }
+      #contents a.deck:hover { border-color: #2a78d6; box-shadow: 0 1px 6px rgba(42,120,214,.14); }
+      #contents .day {
+        flex: none; min-width: 5.2em; font-weight: 700; color: #256abf;
+        font-size: .95rem; text-transform: uppercase; letter-spacing: .03em;
+      }
+      #contents .name { flex: 1; font-size: 1.05rem; line-height: 1.35; color: #1a1a19; }
+      #contents .count { flex: none; color: #86847c; font-size: .82rem; white-space: nowrap; }
+      #contents .badge {
+        flex: none; font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+        text-transform: uppercase; padding: .2em .5em; border-radius: 4px;
+        background: #efe6d3; color: #7a6220;
+      }
+      /* A video deck is watched at home, so it reads as a sub-entry of its day
+         rather than as another lecture. */
+      #contents li.video { margin-left: 2.2em; }
+      #contents li.video a.deck { background: #faf9f6; }
+      #contents a.swap {
+        margin-left: .5em; color: #2a78d6; text-decoration: none;
+        border-bottom: 1px solid rgba(42,120,214,.35);
+      }
+      #contents a.swap:hover { border-bottom-color: #2a78d6; }
+      #contents .foot { margin-top: 2.5em; font-size: .82rem; color: #86847c; line-height: 1.6; }
+
       /* --- presenter notes (?notes) --------------------------------------- */
       /* A <slide>'s <note> is instructor-only and never projected, so it is
          hidden unless the URL asks for it — and never in the student view.
@@ -376,6 +422,8 @@
     </style>
   </head>
   <body>
+    <!-- Table of contents, shown when class.html is opened with no ?deck. -->
+    <div id="contents"></div>
     <div id="stage-wrap">
       <div id="stage">
         <div id="glue" class="slide"></div>
@@ -1316,7 +1364,80 @@
           else if (e.key === 'Escape') { setArmed(false); setLaser(false); setErase(false) }
         })
 
-        if (!deckId) { fail('No deck specified. Open with ?deck=<id>.'); return }
+        /* --- contents ------------------------------------------------------
+           Opened with no ?deck, the player lists the decks instead of showing
+           an error. The list comes from decks/index.json (written by
+           scripts/make_deck_index.py) because a static host — which is what
+           this is, deployed — cannot list a directory.
+
+           Every link inherits the flags THIS page was opened with, so
+           class.html?student is one bookmark that leads only to student views,
+           and ?notes likewise. That is also why the links are built from the
+           current params rather than hard-coded. */
+        function showContents() {
+          document.body.classList.add('contents')
+          var el = document.getElementById('contents')
+          document.title = 'ENGS 28 — Class decks'
+
+          var carry = []
+          if (studentView) carry.push('student')
+          if (params.has('notes')) carry.push('notes')
+          var suffix = carry.length ? '&' + carry.join('&') : ''
+
+          fetch('decks/index.json', FETCH_OPTS)
+            .then(function (r) { if (!r.ok) throw new Error('no decks/index.json (' + r.status + ')'); return r.json() })
+            .then(function (index) {
+              var parts = ['<h1>ENGS 28 — Class decks</h1>']
+              // One audience switch for the whole page, rather than a link per
+              // row: thirteen of those fragmented the list and made the decks
+              // themselves harder to scan, which is the one thing this page is
+              // for. Switching re-renders every link below.
+              parts.push('<p class="lede">' +
+                (studentView
+                  ? 'Student view — instructor-only slides are dropped.'
+                  : 'Instructor view — every slide, including instructor-only ones.') +
+                // Keep ?notes across the switch: losing it silently would look
+                // like the notes flag had stopped working.
+                ' <a class="swap" href="class.html' +
+                (studentView
+                  ? (params.has('notes') ? '?notes' : '')
+                  : '?student' + (params.has('notes') ? '&notes' : '')) + '">' +
+                (studentView ? 'Switch to instructor view' : 'Switch to student view') +
+                '</a></p><ol>')
+              index.decks.forEach(function (d) {
+                var href = 'class.html?deck=' + encodeURIComponent(d.id) + suffix
+                parts.push('<li class="' + d.kind + '">')
+                parts.push('<a class="deck" href="' + href + '">')
+                if (d.label) parts.push('<span class="day">' + esc(d.label) + '</span>')
+                parts.push('<span class="name">' + esc(d.name) + '</span>')
+                if (d.kind === 'video') parts.push('<span class="badge">video</span>')
+                parts.push('<span class="count">' + d.slides + ' slides</span>')
+                parts.push('</a></li>')
+              })
+              parts.push('</ol>')
+              parts.push('<p class="foot">' + (studentView
+                ? 'Arrow keys or space to move through a deck.'
+                : 'Arrow keys or space to move; <b>L</b> laser, <b>D</b> draw with the mouse, ' +
+                  '<b>E</b> erase. Add <code>&amp;notes</code> to any deck for presenter notes.') +
+                '</p>')
+              el.innerHTML = parts.join('')
+            })
+            .catch(function (e) {
+              // The fix differs by where this is running, and the wrong advice
+              // wastes real time: locally the index just needs generating,
+              // deployed it needs to be built and shipped.
+              el.innerHTML = '<h1>ENGS 28 — Class decks</h1><p class="lede">' +
+                'Could not load the deck list (' + esc(e.message) + '). ' +
+                (LOCAL
+                  ? 'Generate it with <code>python3 scripts/make_deck_index.py</code>, ' +
+                    'or open a deck directly with <code>?deck=day1</code>.'
+                  : 'This site may predate the contents page — it appears after the ' +
+                    'next deploy. A deck still opens directly with <code>?deck=day1</code>.') +
+                '</p>'
+            })
+        }
+
+        if (!deckId) { showContents(); return }
         fetch('decks/' + encodeURIComponent(deckId) + '.json', FETCH_OPTS)
           .then(function (r) { if (!r.ok) throw new Error('no deck "' + deckId + '" (' + r.status + ')'); return r.json() })
           .then(function (d) {

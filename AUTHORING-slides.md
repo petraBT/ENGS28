@@ -38,6 +38,24 @@ To author *from* the slides — Alt-click a bullet or caption and edit it in
 place — use `./preview-slides.sh` instead, and see "Editing from the player"
 below.
 
+**Contents page.** Open `class.html` with **no `?deck=`** and the player lists
+every deck in teaching order, with its title — a day's X session under its day,
+its pre-class video under that. One switch at the top flips the whole page
+between the instructor and student links, and `?notes` carries through.
+
+The list comes from `assets/decks/index.json`, because a deployed deck is a
+static site and cannot list a directory. Regenerate it after adding or renaming
+a deck:
+
+```bash
+python3 scripts/make_deck_index.py
+```
+
+`preview-slides.sh` runs it on every start, and `check_deck.py` fails if the
+committed index is out of date — so the usual way to find out is to be told.
+Deck titles are the source: `"title": "Day 8 — Timers and Interrupts"` splits on
+the em dash into the label and the name, so keep that form.
+
 ## Authoring `<slide>` blocks
 
 Put the block next to the content it condenses. Give every block an `xml:id`
