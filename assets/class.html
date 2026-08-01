@@ -288,6 +288,91 @@
       #bar button.active { background: #e7e5df; color: #1a1a19; border-color: #cbc9c0; }
       #note { color: #86847c; }
       #note.warn { color: #ffab91; }
+
+      /* --- presenter notes (?notes) --------------------------------------- */
+      /* A <slide>'s <note> is instructor-only and never projected, so it is
+         hidden unless the URL asks for it — and never in the student view.
+         This is the surface the authoring guide calls the "?notes view"; it is
+         also what makes a note clickable, and so editable, at all. */
+      #ref .deck-slide-note, #glue .presenter-note { display: none; }
+      body.notes-on #ref .deck-slide-note, body.notes-on #glue .presenter-note {
+        display: block; flex: none;
+        margin: .8em 0 0 0; padding: .5em .9em;
+        border-left: 3px solid #d9a441; background: #fdf8ee;
+        font-size: 2vmin; font-size: 2.1cqmin; line-height: 1.45; color: #6b5a33;
+      }
+      body.notes-on #ref .deck-slide-note p, body.notes-on #glue .presenter-note p { margin: 0; font-size: inherit; }
+
+      /* --- authoring affordance (localhost + edit-server only) ------------- */
+      /* Everything below is inert unless the edit-server answers: the script at
+         the end of this file wires up nothing otherwise, so a student, the
+         deployed deck on gh-pages, and a plain preview all see none of it.
+
+         Holding Alt outlines what a click would reach, in two colours that
+         encode where the write would LAND:
+           green solid  — slide-owned text; editing writes the slide only
+           amber dashed — real book content behind a direct ref; Alt-click
+                          opens its source, but editing it here is refused,
+                          because it would change the reading too. */
+      .deck-edit-armed [data-edit-origin="slide"] > *,
+      .deck-edit-armed [data-edit-origin="caption"],
+      .deck-edit-armed #glue.on,
+      .deck-edit-armed #ref.on .deck-title {
+        outline: 2px solid rgba(43, 138, 62, .55); outline-offset: 3px; cursor: pointer;
+      }
+      .deck-edit-armed [data-edit-origin="book"],
+      .deck-edit-armed [data-edit-origin="book-direct"] {
+        outline: 2px dashed rgba(217, 164, 65, .8); outline-offset: 3px; cursor: alias;
+      }
+      /* A nested book ref must not also wear the green of the slide body it
+         sits inside (a table/activity ref is appended into .ref-body). */
+      .deck-edit-armed [data-edit-origin="slide"] > [data-edit-origin] { outline-color: rgba(217, 164, 65, .8); }
+      .deck-edit-active {
+        outline: 2px solid #2b8a3e !important; outline-offset: 3px;
+        background: #f2fbf4; border-radius: 3px;
+      }
+      .deck-edit-toast {
+        position: fixed; left: 50%; bottom: 52px; transform: translateX(-50%);
+        z-index: 30; max-width: 60ch; padding: .55em 1em; border-radius: 6px;
+        font-size: 13px; line-height: 1.45; color: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.3);
+      }
+      .deck-edit-toast-ok { background: #2b8a3e; }
+      .deck-edit-toast-error { background: #c92a2a; }
+      .deck-edit-toast-info { background: #343a40; }
+
+      /* Per-slide form editor (alt-shift-click a glue slide, or a ref slide's
+         title bar). Covers the stage while open. */
+      #slideedit {
+        position: absolute; inset: 0; z-index: 20; display: none;
+        background: #fff; padding: 4% 6%; overflow: auto;
+      }
+      #slideedit.on { display: block; }
+      #slideedit h2 { margin: 0 0 .1em 0; font-size: 3.2cqmin; font-weight: 600; color: #256abf; }
+      #slideedit .sub { margin: 0 0 1em 0; font-size: 2cqmin; color: #52514e; }
+      #slideedit .se-field { margin-bottom: 1.1cqmin; }
+      #slideedit label {
+        display: block; font-size: 1.9cqmin; font-weight: 600; color: #52514e;
+        margin-bottom: .25em; text-transform: uppercase; letter-spacing: .04em;
+      }
+      #slideedit input, #slideedit textarea {
+        width: 100%; font: inherit; font-size: 2.1cqmin; line-height: 1.5;
+        padding: .45em .6em; border: 1px solid #cbc9c0; border-radius: 5px;
+        background: #fdfdfc; color: #1a1a19; resize: vertical;
+      }
+      /* Tall enough that a five-bullet agenda — the common case — is visible
+         without scrolling the field. */
+      #slideedit textarea { min-height: 15cqmin; }
+      #slideedit input:focus, #slideedit textarea:focus { outline: 2px solid #256abf; outline-offset: -1px; border-color: #256abf; }
+      #slideedit .ed-foot { display: flex; align-items: center; gap: .8em; margin-top: 1.4cqmin; }
+      #slideedit button {
+        font: inherit; font-size: 2cqmin; padding: .4em 1.1em; cursor: pointer;
+        border: 1px solid #cbc9c0; border-radius: 5px; background: #f2f1ed; color: #1a1a19;
+      }
+      #slideedit #se-save { background: #256abf; border-color: #256abf; color: #fff; font-weight: 600; }
+      #slideedit button:hover { filter: brightness(.97); }
+      #slideedit #se-status { font-size: 1.9cqmin; }
+      #slideedit #se-status.ok { color: #2b8a3e; }
+      #slideedit #se-status.err { color: #c92a2a; }
     </style>
   </head>
   <body>
@@ -302,6 +387,18 @@
           </div>
         </div>
         <div id="err" class="slide"></div>
+        <!-- Authoring only. Inert markup on the deployed deck: nothing reveals
+             it unless the edit-server answers (see the script at the end). -->
+        <div id="slideedit">
+          <h2>Edit slide — <span id="se-type"></span></h2>
+          <p class="sub">Writes the deck's JSON entry. ⌘⏎ saves, Esc cancels.</p>
+          <div id="se-fields"></div>
+          <div class="ed-foot">
+            <button id="se-save" type="button">Save</button>
+            <button id="se-cancel" type="button">Cancel</button>
+            <span id="se-status"></span>
+          </div>
+        </div>
         <canvas id="ink"></canvas>
         <canvas id="laser"></canvas>
         <div id="bar">
@@ -336,6 +433,11 @@
         // (solutions, reveals) are dropped. The plain URL is the in-class /
         // instructor version and shows everything.
         var studentView = params.has('student') || params.get('audience') === 'student'
+        // ?notes shows each slide's instructor-only <note> / presenterNote.
+        // Never in the student view, and never on the projector unless asked
+        // for — but it is also what makes a note clickable, and so editable.
+        var notesOn = params.has('notes') && !studentView
+        if (notesOn) document.body.classList.add('notes-on')
 
         var glueEl = document.getElementById('glue')
         var refEl = document.getElementById('ref')
@@ -427,12 +529,20 @@
           return out
         }
 
+        /* Served from localhost, the book and the decks are being rebuilt
+           underneath this page, so a cached copy is a stale copy — that is the
+           authoring guide's "cache gotcha", where an edit appears not to have
+           landed because the browser answered from its own store. Bypass it
+           locally; a deployed deck is static and wants normal caching. */
+        var LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+        var FETCH_OPTS = LOCAL ? { cache: 'no-store' } : undefined
+
         // Book pages, fetched once and cached (several slides can share a page).
         var pageCache = {}
         function fetchPage(page) {
           if (pageCache[page]) return pageCache[page]
           var url = new URL('../' + page, location.href).href
-          pageCache[page] = fetch(url)
+          pageCache[page] = fetch(url, FETCH_OPTS)
             .then(function (r) { return r.ok ? r.text() : null })
             .then(function (t) { return t == null ? null : { doc: new DOMParser().parseFromString(t, 'text/html'), url: url } })
             .catch(function () { return null })
@@ -507,6 +617,23 @@
             // Practice slides leave writing room after each item (set via the slide's
             // room="yes" attribute, or "room": true on the deck ref).
             if (slide.room || block.getAttribute('data-deck-room')) refBody.classList.add('roomy')
+
+            /* Where did this markup come from? A deck ref resolves EITHER to a
+               <slide> block authored for the projector, OR straight to real
+               book content (an <activity> / <task> by its own xml:id) — and the
+               difference decides whether an edit here would also change what
+               students read tonight. Only a <slide> block renders as
+               .deck-slide, so that class is the test, and the answer is stamped
+               onto the DOM as it is cloned in: one rendered slide can mix
+               slide-owned and book-owned markup (a table ref lands INSIDE the
+               body it is framed by), so provenance has to travel with the
+               nodes rather than be guessed from the container afterwards.
+               The authoring layer at the end of this file reads these; they are
+               inert otherwise. */
+            var isSlideBlock = block.classList.contains('deck-slide')
+            refBody.setAttribute('data-edit-origin', isSlideBlock ? 'slide' : 'book-direct')
+            refBody.setAttribute('data-edit-id', slide.slide)
+
             var body = block.querySelector('.deck-slide-body') || block
             var bodyClone = body.cloneNode(true)
             strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone); demath(bodyClone)
@@ -534,6 +661,11 @@
               if (target) {
                 var mediaClone = target.cloneNode(true)
                 strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone)
+                // Resolved from the BOOK (a figure, a table): its source is the
+                // reading, not this slide. Tagged so the authoring layer opens
+                // it read-only rather than offering to rewrite it.
+                mediaClone.setAttribute('data-edit-origin', 'book')
+                mediaClone.setAttribute('data-edit-id', refId)
                 if (mediaClone.querySelector('img')) {
                   // A figure. Drop its book caption — slides carry their own
                   // instructive one. Bullets → two-column; none → image-dominant.
@@ -545,6 +677,8 @@
                     var capClone = capBlock.cloneNode(true)
                     strip(capClone); absolutize(capClone, res.url)
                     capClone.className = 'slide-caption'
+                    capClone.setAttribute('data-edit-origin', 'caption')
+                    capClone.setAttribute('data-edit-id', slide.slide)
                     refMedia.appendChild(capClone)
                   }
                   if (refBody.textContent.trim() === '') {
@@ -565,10 +699,25 @@
                     var capCloneB = capBlock.cloneNode(true)
                     strip(capCloneB); absolutize(capCloneB, res.url)
                     capCloneB.className = 'slide-caption'
+                    capCloneB.setAttribute('data-edit-origin', 'caption')
+                    capCloneB.setAttribute('data-edit-id', slide.slide)
                     refBody.appendChild(capCloneB)
                   }
                 }
               }
+            }
+
+            /* The presenter <note>, last of all (?notes only). Deliberately
+               after the layout decisions above: it is not slide content, and
+               appending it earlier would make a bullet-free figure slide look
+               like it has a body and cost it its image-dominant layout. It
+               inherits .ref-body's slide-owned provenance, so it edits in place
+               like any other slide text. */
+            var noteBlock = notesOn && block.querySelector('.deck-slide-note')
+            if (noteBlock) {
+              var noteClone = noteBlock.cloneNode(true)
+              strip(noteClone); absolutize(noteClone, res.url); demath(noteClone)
+              refBody.appendChild(noteClone)
             }
           })
         }
@@ -597,6 +746,12 @@
               parts.push('</ul>')
             }
             if (slide.note) parts.push('<p class="note">' + html(slide.note) + '</p>')
+          }
+          // The instructor-only timing/cue line (?notes). Unlike a prompt's
+          // `note`, which is deliberately visible sub-text, this is never
+          // projected — same rule as a <slide>'s <note>.
+          if (notesOn && slide.presenterNote) {
+            parts.push('<div class="presenter-note">' + html(slide.presenterNote) + '</div>')
           }
           glueEl.innerHTML = parts.join('')
         }
@@ -1162,7 +1317,7 @@
         })
 
         if (!deckId) { fail('No deck specified. Open with ?deck=<id>.'); return }
-        fetch('decks/' + encodeURIComponent(deckId) + '.json')
+        fetch('decks/' + encodeURIComponent(deckId) + '.json', FETCH_OPTS)
           .then(function (r) { if (!r.ok) throw new Error('no deck "' + deckId + '" (' + r.status + ')'); return r.json() })
           .then(function (d) {
             deck = d
@@ -1181,6 +1336,348 @@
             render()
           })
           .catch(function (e) { fail('Could not load this deck. ' + e.message) })
+
+        /* --- authoring: alt-click a slide to reach its source --------------
+           Ported from the ENGS 20 deck player, but the mechanism had to change.
+           There, a 'ref' slide is an IFRAME of the book page, so ptx-edit.js
+           loads inside it and handles the book half for free. Here the player
+           EXTRACTS and clones the markup inline (renderRef above), so there is
+           no frame for ptx-edit.js to live in — which is why renderRef stamps
+           data-edit-origin onto the nodes as it clones them, and why this layer
+           reads that stamp to decide where a write would land:
+
+             glue slide          -> the deck's JSON entry
+             <slide> block text  -> source/*.ptx, via the same /locate + /patch
+                                    the book uses, scoped to the slide's xml:id
+             direct book ref     -> REFUSED for editing (it would change the
+                                    reading too); Alt-click still opens it
+
+           Local-only and self-effacing, exactly like the book's version: it
+           wires nothing up unless the edit-server (127.0.0.1:8927, started by
+           ./preview-slides.sh) actually answers, so it never appears for a
+           student, on the deployed deck, or in a plain non-authoring preview. */
+        ;(function () {
+          if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return
+          var EDIT_SERVER = 'http://127.0.0.1:8927'
+
+          // Blocks holding prose worth editing. A click bubbles up until it
+          // reaches one. .slide-caption and .deck-slide-note are divs of bare
+          // text (the XSL emits no <p> inside them), so they are listed in
+          // their own right rather than being found via a paragraph.
+          var BLOCKS = '.slide-caption, .deck-slide-note, .para, li, p, figcaption, td, th'
+
+          var editing = null
+
+          function toast (message, kind) {
+            var existing = document.getElementById('deck-edit-toast')
+            if (existing) existing.remove()
+            var node = document.createElement('div')
+            node.id = 'deck-edit-toast'
+            node.className = 'deck-edit-toast deck-edit-toast-' + (kind || 'info')
+            node.textContent = message
+            document.body.appendChild(node)
+            setTimeout(function () { if (node.parentNode) node.remove() },
+                       kind === 'error' ? 6000 : 2800)
+          }
+
+          function describe (error) {
+            return (error instanceof TypeError)
+              ? 'Edit server not running — start it with ./preview-slides.sh'
+              : error.message
+          }
+          function asJson (response) {
+            return response.json().then(function (body) {
+              if (!response.ok) throw new Error(body.error || 'request failed')
+              return body
+            })
+          }
+
+          function currentSlide () {
+            return deck && deck.slides ? deck.slides[currentIndex() - 1] : null
+          }
+          // The slide's index in the deck FILE. Assigned before the ?student
+          // filter drops instructor-only slides, so it stays correct in either
+          // view — the runtime index does not.
+          function jsonIndex (slide) { return slide._ink }
+
+          function textFor (block) {
+            return (block.innerText || block.textContent || '').replace(/\s+/g, ' ').trim()
+          }
+
+          // --- Alt-click: open the right source ---------------------------
+          function openDeckEntry (slide) {
+            fetch(EDIT_SERVER + '/open-deck?deck=' + encodeURIComponent(deckId) +
+                  '&slide=' + jsonIndex(slide))
+              .then(asJson)
+              .then(function (b) { toast('Opened ' + b.file + ':' + b.line, 'ok') })
+              .catch(function (e) { toast(describe(e), 'error') })
+          }
+          function openSlideBlock (xmlId, what) {
+            fetch(EDIT_SERVER + '/open-slide?id=' + encodeURIComponent(xmlId))
+              .then(asJson)
+              .then(function (b) { toast('Opened ' + (what || b.tag) + ' — ' + b.file + ':' + b.line, 'ok') })
+              .catch(function (e) { toast(describe(e), 'error') })
+          }
+
+          function openSource (target, slide) {
+            // A ref slide's TITLE is deck glue, not book content: it is the
+            // one bit of a ref slide written in the JSON.
+            if (slide.type !== 'ref' || target.closest('.deck-title')) {
+              return openDeckEntry(slide)
+            }
+            var origin = target.closest('[data-edit-origin]')
+            var kind = origin && origin.getAttribute('data-edit-origin')
+            if (kind === 'book' || kind === 'book-direct') {
+              // Opening is always safe — it only points an editor at a file.
+              return openSlideBlock(origin.getAttribute('data-edit-id'), 'book content')
+            }
+            openSlideBlock(slide.slide, 'slide block')
+          }
+
+          // --- Alt-shift-click: edit in place -----------------------------
+          function beginEdit (block, hintId) {
+            if (editing) return
+            var original = textFor(block)
+            var originalHTML = block.innerHTML
+            // Captured now: the save resolves later, by which time the author
+            // may have paged on to a slide from a different book page.
+            var fromPage = (currentSlide() || {}).page
+            editing = block
+            block.classList.add('deck-edit-active')
+            block.setAttribute('contenteditable', 'plaintext-only')
+            block.focus()
+
+            function finish (save) {
+              if (editing !== block) return
+              editing = null
+              block.removeAttribute('contenteditable')
+              block.classList.remove('deck-edit-active')
+              block.removeEventListener('keydown', onKey)
+              block.removeEventListener('blur', onBlur)
+
+              var updated = textFor(block)
+              if (!save || updated === original) { block.innerHTML = originalHTML; return }
+              fetch(EDIT_SERVER + '/patch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: original, newText: updated, id: hintId })
+              })
+                .then(asJson)
+                .then(function (b) {
+                  // The built page this slide was extracted from is now stale.
+                  // Drop it so navigating back re-reads the rebuilt copy
+                  // instead of silently showing the pre-edit text again.
+                  delete pageCache[fromPage]
+                  toast('Saved to ' + b.file + ':' + b.line, 'ok')
+                })
+                .catch(function (error) {
+                  // The source is the truth; if the write didn't land, don't
+                  // leave the slide showing an edit that only exists here.
+                  block.innerHTML = originalHTML
+                  toast(describe(error), 'error')
+                })
+            }
+            function onKey (event) {
+              if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finish(false) }
+              else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault(); event.stopPropagation(); finish(true)
+              } else if (event.key === 'Enter') {
+                event.preventDefault()   // one block is one paragraph
+              } else {
+                event.stopPropagation()  // don't let typing drive the deck
+              }
+            }
+            function onBlur () { finish(true) }
+            block.addEventListener('keydown', onKey)
+            block.addEventListener('blur', onBlur)
+            toast('Editing — ⌘⏎ saves, esc cancels', 'info')
+          }
+          function editHere (target, slide) {
+            if (slide.type !== 'ref' || target.closest('.deck-title')) {
+              return openSlideForm(slide)
+            }
+            var origin = target.closest('[data-edit-origin]')
+            var kind = origin && origin.getAttribute('data-edit-origin')
+            if (kind === 'book' || kind === 'book-direct') {
+              toast('This is book content (' + origin.getAttribute('data-edit-id') +
+                    '), not slide-only text — editing it here would change the ' +
+                    'reading too. Alt-click to open it in your editor.', 'error')
+              return
+            }
+            var block = target.closest(BLOCKS)
+            if (!block || !refEl.contains(block)) {
+              toast('Nothing editable there. Alt-shift-click a bullet, a caption, ' +
+                    'or the title bar.', 'info')
+              return
+            }
+            beginEdit(block, origin ? origin.getAttribute('data-edit-id') : slide.slide)
+          }
+
+          // --- the glue form (alt-shift-click a glue slide) ----------------
+          // Display order per type; [key, label, kind] where kind is how the
+          // field reads and writes: text = one line, area = multi-line string,
+          // lines = textarea <-> array of strings.
+          var NOTE_FIELD = ['presenterNote', 'Presenter note (never projected)', 'area']
+          var BULLETS = ['items', 'Bullets (one per line)', 'lines']
+          var FORM = {
+            title:   [['title', 'Title', 'text'], ['subtitle', 'Subtitle', 'text'], NOTE_FIELD],
+            section: [['kicker', 'Kicker (e.g. "Part 1")', 'text'], ['title', 'Title', 'text'], NOTE_FIELD],
+            agenda:  [['title', 'Title', 'text'], BULLETS, NOTE_FIELD],
+            recap:   [['title', 'Title', 'text'], BULLETS, NOTE_FIELD],
+            notice:  [['title', 'Title', 'text'], BULLETS, NOTE_FIELD],
+            prompt:  [['title', 'Title', 'text'], ['body', 'Body', 'area'],
+                      ['note', 'Note (shown on the slide)', 'area'], NOTE_FIELD],
+            // A ref slide's own JSON fields. Its CONTENT lives in the book and
+            // is edited in place, so it is deliberately not offered here.
+            ref:     [['title', 'Slide title (deck JSON)', 'text'], NOTE_FIELD]
+          }
+          var slideeditEl = document.getElementById('slideedit')
+          var seFields = document.getElementById('se-fields')
+          var seType = document.getElementById('se-type')
+          var seStatusEl = document.getElementById('se-status')
+          var curForm = null
+
+          function seStatus (message, kind) {
+            seStatusEl.textContent = message || ''
+            seStatusEl.className = kind || ''
+          }
+          function splitLines (v) {
+            return v.split('\n').map(function (s) { return s.trim() })
+                    .filter(function (s) { return s.length })
+          }
+
+          function openSlideForm (slide) {
+            var spec = FORM[slide.type]
+            if (!spec) { toast('This slide type has no form.', 'info'); return }
+            curForm = { type: slide.type, src: slide }
+            seType.textContent = slide.type
+            seFields.innerHTML = ''
+            spec.forEach(function (field) {
+              var key = field[0], value = slide[key], kind = field[2]
+              var wrap = document.createElement('div')
+              wrap.className = 'se-field'
+              var label = document.createElement('label')
+              label.textContent = field[1]
+              wrap.appendChild(label)
+              var input = document.createElement(kind === 'text' ? 'input' : 'textarea')
+              if (kind === 'text') input.type = 'text'
+              input.dataset.key = key
+              input.dataset.kind = kind
+              // Setting .value (never innerHTML) keeps any markup in the string
+              // as literal text, so a bullet's <c>…</c> round-trips untouched.
+              input.value = (kind === 'lines')
+                ? [].concat(value == null ? [] : value).join('\n')
+                : (value == null ? '' : String(value))
+              wrap.appendChild(input)
+              seFields.appendChild(wrap)
+            })
+            seStatus('')
+            ink.classList.remove('armed')   // keep the canvas off the form
+            slideeditEl.classList.add('on')
+            var first = seFields.querySelector('input, textarea')
+            if (first) first.focus()
+          }
+
+          function readSlideForm () {
+            var fields = {}
+            ;[].forEach.call(seFields.querySelectorAll('[data-key]'), function (el) {
+              var key = el.dataset.key
+              if (el.dataset.kind !== 'lines') { fields[key] = el.value; return }
+              // Keep the value's original shape: items is always a list.
+              var arr = splitLines(el.value)
+              var wasArray = key === 'items' || Array.isArray(curForm.src[key])
+              fields[key] = (wasArray || arr.length > 1) ? arr : (arr[0] || '')
+            })
+            return fields
+          }
+
+          function saveSlideForm () {
+            if (!curForm) return
+            var fields = readSlideForm()
+            seStatus('Saving…')
+            fetch(EDIT_SERVER + '/patch-deck', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                deck: deckId,
+                slide: jsonIndex(curForm.src),
+                // Sent so the server can refuse if the deck changed on disk
+                // and this position now holds a different slide.
+                type: curForm.type,
+                fields: fields
+              })
+            })
+              .then(asJson)
+              .then(function (b) {
+                // Mirror into the in-memory deck so the slide shows the edit
+                // at once, without waiting on a rebuild.
+                Object.keys(fields).forEach(function (k) {
+                  var v = fields[k]
+                  if (v === '' || v === null || (Array.isArray(v) && !v.length)) delete curForm.src[k]
+                  else curForm.src[k] = v
+                })
+                seStatus('Saved to ' + b.file + ':' + b.line, 'ok')
+                render()
+                setTimeout(closeSlideForm, 700)
+              })
+              .catch(function (e) { seStatus(describe(e), 'err') })
+          }
+
+          function closeSlideForm () {
+            slideeditEl.classList.remove('on')
+            curForm = null
+            syncInk()
+          }
+          document.getElementById('se-save').addEventListener('click', saveSlideForm)
+          document.getElementById('se-cancel').addEventListener('click', closeSlideForm)
+
+          /* Probe first: only wire up the affordance once the edit-server has
+             answered, so nothing shows when authoring isn't actually running (a
+             plain in-browser preview on localhost, say). A bare GET is a simple
+             cross-origin request — no CORS preflight — and the 404 it returns
+             still RESOLVES the promise; only a real network error (nothing
+             listening at all) rejects and leaves us inert. */
+          fetch(EDIT_SERVER + '/open-slide').then(function () {
+            document.addEventListener('keydown', function (e) {
+              if (e.key === 'Alt') document.body.classList.add('deck-edit-armed')
+            })
+            document.addEventListener('keyup', function (e) {
+              if (e.key === 'Alt') document.body.classList.remove('deck-edit-armed')
+            })
+            window.addEventListener('blur', function () {
+              document.body.classList.remove('deck-edit-armed')
+            })
+
+            // Capture phase, so an alt-click is claimed for editing before any
+            // control treats it as an ordinary click. (The pen layer only draws
+            // for pen input, so a mouse alt-click never leaves a stroke.)
+            document.addEventListener('click', function (e) {
+              if (!e.altKey || editing) return
+              if (e.target.closest('#bar, #slideedit, .deck-edit-toast')) return
+              var slide = currentSlide()
+              if (!slide) return
+              e.preventDefault()
+              e.stopPropagation()
+              if (e.shiftKey) editHere(e.target, slide)
+              else openSource(e.target, slide)
+            }, true)
+
+            // While the form is open it owns the keyboard, ahead of the deck's
+            // own navigation handler.
+            document.addEventListener('keydown', function (e) {
+              if (!slideeditEl.classList.contains('on')) return
+              if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSlideForm() }
+              else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault(); e.stopPropagation(); saveSlideForm()
+              } else {
+                e.stopPropagation()   // typing must not page the deck
+              }
+            }, true)
+
+            console.log('[deck] authoring enabled: alt-click opens source, ' +
+                        'alt-shift-click edits. Local only.')
+          }).catch(function () { /* edit-server not running: stay inert */ })
+        })()
       })()
     </script>
   </body>

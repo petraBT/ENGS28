@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """
-Authoring helper: jump from the rendered book back to its PreTeXt source.
+Authoring helper: jump from the rendered book - or a projected slide - back to
+its source.
 
 Run this alongside a local preview build, then in the book:
 
   * alt-click any paragraph  -> opens that spot in your text editor  (option A)
   * alt-shift-click          -> edit the text in place, save, done   (option C)
+
+and in the deck player (assets/class.html, served from a web-deck build):
+
+  * alt-click a slide        -> opens its source: the <slide> block in
+                                source/*.ptx, or the deck's JSON entry
+  * alt-shift-click          -> edit a bullet / caption in place, or open a
+                                form for a glue slide's fields
 
     python3 scripts/edit-server.py                    # this project
     python3 scripts/edit-server.py --project ../ENGS28
@@ -190,6 +198,21 @@ class Locator:
         source = os.path.join(self.project_dir, "source")
         return os.path.abspath(path).startswith(source + os.sep)
 
+    def deck_path(self, deck: str):
+        """Resolve a deck name to assets/decks/<deck>.json, or None.
+
+        The name comes straight off a URL, so it is checked against a strict
+        allow-list (letters, digits, _ and -) before being joined - a crafted
+        "../.." must not be able to reach a file outside the decks directory.
+        """
+        if not deck or not all(c.isalnum() or c in "_-" for c in deck):
+            return None
+        decks = os.path.realpath(os.path.join(self.project_dir, "assets", "decks"))
+        path = os.path.realpath(os.path.join(decks, deck + ".json"))
+        if not path.startswith(decks + os.sep):
+            return None
+        return path if os.path.isfile(path) else None
+
 
 def open_in_editor(path: str, line: int) -> str:
     """Launch the user's editor at a file and line. Returns what it used."""
@@ -216,6 +239,266 @@ def open_in_editor(path: str, line: int) -> str:
     # Last resort: hand it to macOS, which at least opens the right file.
     subprocess.Popen(["open", path])
     return "open"
+
+
+# ----------------------------------------------------------------------------
+# The deck half: assets/decks/<id>.json.
+#
+# A deck is a thin playlist. Its "ref" slides carry no content - they name a
+# <slide> block in source/*.ptx, which the /locate and /patch endpoints above
+# already handle. What lives HERE is the in-class glue written in the JSON
+# itself (title, section, agenda, recap, notice, prompt), which the deck
+# player's slide form edits.
+#
+# These walk the raw JSON text rather than round-tripping through json.dump,
+# for two reasons: json.load discards the line numbers an editor needs, and a
+# reserialize would reflow the whole deck on every one-field edit, turning a
+# caption fix into a hundred-line diff. Ported from the ENGS 20 book.
+# ----------------------------------------------------------------------------
+
+
+def deck_slide_line(text: str, index: int) -> int:
+    """1-based line of the Nth (1-based) object in the top-level "slides" array.
+
+    Track string state so braces inside strings don't count, and only count
+    elements at the array's own top level (a slide's own nested objects and
+    arrays - an items list - must not be miscounted as slides). Falls back to
+    line 1 if the structure isn't found: opening the file at the top is still
+    more useful than refusing.
+    """
+    key = text.find('"slides"')
+    if key == -1:
+        return 1
+    i = text.find("[", key)
+    if i == -1:
+        return 1
+    i += 1  # step past the opening [ so depth 0 means "directly in the array"
+    depth = count = 0
+    in_str = esc = False
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c in "{[":
+            if depth == 0:
+                count += 1
+                if count == index:
+                    return text.count("\n", 0, i) + 1
+            depth += 1
+        elif c in "}]":
+            if depth == 0:
+                break  # the slides array's own closing bracket
+            depth -= 1
+        i += 1
+    return 1
+
+
+def array_element_span(text: str, key: str, position: int):
+    """(start, end) char offsets of the position-th (1-based) top-level element
+    of the "<key>": [...] array, end just past its closing brace; or None.
+
+    Same raw-text walk as deck_slide_line, but returning the element's whole
+    span so a single object can be replaced without reformatting the rest of
+    the file.
+    """
+    k = text.find('"%s"' % key)
+    if k == -1:
+        return None
+    i = text.find("[", k)
+    if i == -1:
+        return None
+    i += 1
+    depth = count = 0
+    in_str = esc = False
+    start = None
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c in "{[":
+            if depth == 0:
+                count += 1
+                if count == position:
+                    start = i
+            depth += 1
+        elif c in "}]":
+            if depth == 0:
+                break  # the array's own closing bracket
+            depth -= 1
+            if depth == 0 and start is not None:
+                return (start, i + 1)
+        i += 1
+    return None
+
+
+def _scan_string(s: str, i: int) -> int:
+    """Index just past the JSON string starting at s[i] == '"'."""
+    i += 1
+    while i < len(s):
+        if s[i] == "\\":
+            i += 2
+            continue
+        if s[i] == '"':
+            return i + 1
+        i += 1
+    return i
+
+
+def _scan_value(s: str, i: int) -> int:
+    """Index just past the JSON value starting at s[i]."""
+    c = s[i]
+    if c == '"':
+        return _scan_string(s, i)
+    if c in "{[":
+        depth = 0
+        while i < len(s):
+            ch = s[i]
+            if ch == '"':
+                i = _scan_string(s, i)
+                continue
+            if ch in "{[":
+                depth += 1
+            elif ch in "}]":
+                depth -= 1
+                if depth == 0:
+                    return i + 1
+            i += 1
+        return i
+    while i < len(s) and s[i] not in ",}] \t\r\n":  # number / true / false / null
+        i += 1
+    return i
+
+
+def _top_level_fields(text: str, obj_start: int, obj_end: int):
+    """(name, key_start, value_start, value_end) for each field directly in the
+    object spanning [obj_start, obj_end) (obj_start at '{', obj_end past '}')."""
+    fields = []
+    i = obj_start + 1
+    while i < obj_end:
+        while i < obj_end and text[i] in " \t\r\n":
+            i += 1
+        if i >= obj_end or text[i] != '"':
+            break
+        key_start = i
+        key_end = _scan_string(text, i)
+        name = json.loads(text[key_start:key_end])
+        j = key_end
+        while j < obj_end and text[j] in " \t\r\n":
+            j += 1
+        if j >= obj_end or text[j] != ":":
+            break
+        j += 1
+        while j < obj_end and text[j] in " \t\r\n":
+            j += 1
+        value_end = _scan_value(text, j)
+        fields.append((name, key_start, j, value_end))
+        k = value_end
+        while k < obj_end and text[k] in " \t\r\n":
+            k += 1
+        if k < obj_end and text[k] == ",":
+            k += 1
+        i = k
+    return fields
+
+
+def _dump_value(value, field_indent: str) -> str:
+    """Serialize a field value in the deck's house style: a top-level array
+    (an agenda's items) one entry per line, everything else on one line."""
+    if isinstance(value, list):
+        return json.dumps(value, ensure_ascii=False, indent=2).replace("\n", "\n" + field_indent)
+    return json.dumps(value, ensure_ascii=False)
+
+
+def patch_object_fields(text: str, span, updates) -> str:
+    """Apply field updates to the object at span, touching ONLY the changed
+    fields' text. Untouched fields are left byte-for-byte, so editing one field
+    never reflows the rest of the slide. A value of None / "" / [] removes the
+    field."""
+    obj_start, obj_end = span
+    multiline = "\n" in text[obj_start:obj_end]
+    fields = _top_level_fields(text, obj_start, obj_end)
+    by_name = {f[0]: f for f in fields}
+
+    field_indent = ""
+    if fields and multiline:
+        nl = text.rfind("\n", obj_start, fields[0][1])
+        if nl != -1:
+            field_indent = text[nl + 1:fields[0][1]]
+        else:
+            # No newline before the first field: this book's decks open a slide
+            # with several fields on the brace's own line —
+            #     { "type": "agenda", "title": "Today", "items": [
+            # — so there is no existing field indent to copy. Fall back to the
+            # indentation of the line the object starts on, which is what its
+            # own continuation lines (the items, the closing bracket) already
+            # line up against. Without this a re-dumped array lands at column 0.
+            line_start = text.rfind("\n", 0, obj_start) + 1
+            lead = text[line_start:obj_start]
+            field_indent = lead[:len(lead) - len(lead.lstrip())]
+
+    edits = []  # (start, end, replacement), applied back to front
+    for name, value in updates.items():
+        removing = value is None or value == "" or value == []
+        if name in by_name:
+            _, key_start, value_start, value_end = by_name[name]
+            if not removing:
+                edits.append((value_start, value_end, _dump_value(value, field_indent)))
+                continue
+            # Drop the whole "key": value pair, plus one comma, leaving no gap.
+            after = value_end
+            while after < obj_end and text[after] in " \t\r\n":
+                after += 1
+            if after < obj_end and text[after] == ",":
+                # not the last field: remove from this line's newline to the comma
+                line_nl = text.rfind("\n", obj_start, key_start)
+                edits.append((line_nl if line_nl != -1 else key_start, after + 1, ""))
+            else:
+                # last field: remove the preceding comma through this value
+                p = key_start - 1
+                while p > obj_start and text[p] in " \t\r\n":
+                    p -= 1
+                edits.append((p if text[p] == "," else key_start, value_end, ""))
+        elif not removing:
+            # Add as the last field.
+            insert_at = fields[-1][3] if fields else obj_start + 1
+            body = '"%s": %s' % (name, _dump_value(value, field_indent))
+            edits.append((insert_at, insert_at,
+                          (",\n" + field_indent + body) if multiline else (", " + body)))
+
+    for start, end, replacement in sorted(edits, key=lambda e: e[0], reverse=True):
+        text = text[:start] + replacement + text[end:]
+    return text
+
+
+def mirror_to_served(project_dir: str, deck: str, text: str):
+    """Authoring convenience: the preview serves a BUILD, not the source, so
+    refresh the served copy too - otherwise a reload would show the pre-edit
+    deck until the next build. web-deck is the one the player runs from;
+    web-edit is mirrored too so the two previews never disagree. Best-effort
+    and silent if a target isn't built."""
+    for target in ("web-deck", "web-edit"):
+        served = os.path.join(project_dir, "output", target,
+                              "external", "decks", deck + ".json")
+        try:
+            if os.path.isfile(served):
+                with open(served, "w", encoding="utf-8") as handle:
+                    handle.write(text)
+        except OSError:
+            pass
 
 
 def apply_edit(element, old_text: str, new_text: str):
@@ -310,8 +593,57 @@ def make_handler(locator: Locator):
         def do_OPTIONS(self):
             self._send({})
 
+        def _open_deck(self, query):
+            """Open assets/decks/<deck>.json at the Nth slide in the editor.
+
+            This is the deck player's plain Alt-click on a glue slide, and the
+            escape hatch for anything the slide form can't express: it puts the
+            author in the raw JSON at the right entry.
+            """
+            deck = query.get("deck", [""])[0]
+            path = locator.deck_path(deck)
+            if path is None:
+                return self._send({"error": "No such deck."}, 404)
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+            try:
+                slide = int(query.get("slide", ["0"])[0])
+            except ValueError:
+                slide = 0
+            line = deck_slide_line(text, slide) if slide > 0 else 1
+            editor = open_in_editor(path, line)
+            relative = os.path.relpath(path, locator.project_dir)
+            print(f"  -> {relative}:{line} ({editor})")
+            return self._send({"file": relative, "line": line})
+
+        def _open_slide(self, query):
+            """Open a <slide> block in source/*.ptx by its xml:id.
+
+            The player's ref slides are extracted from a built page, so the
+            author clicking one wants the BLOCK, not whichever paragraph the
+            pointer happened to be over. Looked up by id rather than by text,
+            so it works on a slide whose body is a figure, a <sim>, or a table
+            with no clickable prose at all.
+            """
+            locator.index.refresh()
+            element = locator.index.by_xml_id(query.get("id", [""])[0])
+            if element is None:
+                return self._send({"error": "No such slide block."}, 404)
+            if not locator.in_project(element.path):
+                return self._send({"error": "refusing to open outside source/"}, 403)
+            editor = open_in_editor(element.path, element.start_line)
+            relative = os.path.relpath(element.path, locator.project_dir)
+            print(f"  -> {relative}:{element.start_line} ({editor})")
+            return self._send({
+                "file": relative, "line": element.start_line, "tag": element.tag,
+            })
+
         def do_GET(self):
             url = urlparse(self.path)
+            if url.path == "/open-deck":
+                return self._open_deck(parse_qs(url.query))
+            if url.path == "/open-slide":
+                return self._open_slide(parse_qs(url.query))
             if url.path != "/locate":
                 return self._send({"error": "not found"}, 404)
 
@@ -336,8 +668,92 @@ def make_handler(locator: Locator):
                 "text": element.text(),
             })
 
+        # Content fields a slide form may set, across every glue type: title
+        # (all), subtitle (title), kicker (section), items (agenda / recap /
+        # notice), body + note (prompt), presenterNote (any).
+        #
+        # This allow-list is the guard the design rests on. "type", "page",
+        # "slide", "instructor" and "room" are deliberately absent, so a form
+        # save can never rewrite which book element a ref resolves to, retype a
+        # slide, or quietly drop an instructor-only flag - the fields that
+        # decide what students see are not reachable from the browser.
+        DECK_FIELDS = {"title", "subtitle", "kicker", "body", "items",
+                       "note", "presenterNote"}
+
+        def _patch_deck(self):
+            length = int(self.headers.get("Content-Length", 0))
+            try:
+                payload = json.loads(self.rfile.read(length) or b"{}")
+            except json.JSONDecodeError:
+                return self._send({"error": "bad request"}, 400)
+
+            path = locator.deck_path(payload.get("deck", ""))
+            if path is None:
+                return self._send({"error": "No such deck."}, 404)
+
+            # Validate up front: strings (or null to clear), and items a list of
+            # strings. Anything off-shape is refused whole rather than written
+            # partly.
+            updates = {}
+            for name, value in (payload.get("fields") or {}).items():
+                if name not in self.DECK_FIELDS:
+                    continue
+                if name == "items" or isinstance(value, list):
+                    if not isinstance(value, list) or any(not isinstance(x, str) for x in value):
+                        return self._send({"error": "%s must be a list of strings" % name}, 400)
+                    updates[name] = value
+                elif value is None or isinstance(value, str):
+                    updates[name] = value
+                else:
+                    return self._send({"error": "bad type for %s" % name}, 400)
+
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+            data = json.loads(text)
+
+            try:
+                position = int(payload.get("slide", 0))
+            except (TypeError, ValueError):
+                position = 0
+            if not 1 <= position <= len(data.get("slides", [])):
+                return self._send({"error": "slide not found"}, 404)
+
+            # Refuse to patch a slide the player thinks is a different one than
+            # the file does. The player sends the type it rendered; if the deck
+            # changed underneath (the parallel authoring session, a git pull),
+            # writing by position would land the edit on the wrong slide.
+            expected = payload.get("type")
+            actual = data["slides"][position - 1].get("type")
+            if expected and expected != actual:
+                return self._send({
+                    "error": "This deck changed on disk (slide %d is now a "
+                             "'%s', not a '%s'). Reload the deck and try again."
+                             % (position, actual, expected)}, 409)
+
+            span = array_element_span(text, "slides", position)
+            if span is None:
+                return self._send({"error": "could not locate slide in file"}, 500)
+
+            new_text = patch_object_fields(text, span, updates)
+            # The source is the truth; never leave it unparseable.
+            try:
+                json.loads(new_text)
+            except json.JSONDecodeError:
+                return self._send({"error": "internal: refusing to write invalid JSON"}, 500)
+
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(new_text)
+            mirror_to_served(locator.project_dir, payload.get("deck", ""), new_text)
+
+            relative = os.path.relpath(path, locator.project_dir)
+            line = text.count("\n", 0, span[0]) + 1
+            print(f"  patched {relative}:{line}")
+            return self._send({"file": relative, "line": line})
+
         def do_POST(self):
             url = urlparse(self.path)
+            if url.path == "/patch-deck":
+                return self._patch_deck()
             if url.path != "/patch":
                 return self._send({"error": "not found"}, 404)
 
@@ -393,6 +809,8 @@ def main():
     print(f"  indexed {len(locator.index.elements)} elements")
     print("  alt-click a paragraph in the book to open it here; "
           "alt-shift-click to edit in place")
+    print("  the deck player uses the same keys on slides "
+          "(bullets and captions in source, glue text in decks/*.json)")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

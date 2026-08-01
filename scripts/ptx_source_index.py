@@ -26,6 +26,10 @@ from dataclasses import dataclass, field
 TEXT_ELEMENTS = {
     "p", "li", "title", "cell", "term", "q", "blockquote", "caption",
     "pre", "line", "attribution", "em", "alert", "insert", "delete", "stale",
+    # A <slide>'s presenter <note>: instructor-only text that is never
+    # projected, so it is edited through the deck player's slide form rather
+    # than by clicking it. It still has to be indexed to be found and written.
+    "note",
 }
 
 # Elements whose text is in the source but renders nowhere in the running prose
