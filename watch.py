@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """
-watch.py — auto-rebuild PreTeXt whenever a .ptx source file is saved.
+watch.py — auto-rebuild PreTeXt whenever a source file is saved.
+
+Watches source/ for .ptx and assets/decks/ for .json. The decks are watched
+because a deck is source too: hand-edit one and nothing rebuilt, so the served
+copy stayed stale and the player's own slide editor went on showing — and
+offering to overwrite — the version from before the edit.
 
 Run once from the project root:
     python3 watch.py                            # builds the "web" target
@@ -32,6 +37,13 @@ except ImportError:
     from watchdog.events import FileSystemEventHandler
 
 
+# What counts as source, and where it lives. A directory that doesn't exist in
+# this book is skipped rather than being an error, so the file stays identical
+# between the two books even when only one of them has decks.
+WATCH_SUFFIXES = (".ptx", ".json")
+WATCH_DIRS = ("source", "assets/decks")
+
+
 class PTXHandler(FileSystemEventHandler):
     def __init__(self, command):
         self.command = command
@@ -48,7 +60,7 @@ class PTXHandler(FileSystemEventHandler):
     def _trigger(self, event):
         if event.is_directory:
             return
-        if not event.src_path.endswith(".ptx"):
+        if not event.src_path.endswith(WATCH_SUFFIXES):
             return
         with self._lock:
             if self._pending:
@@ -94,12 +106,16 @@ if __name__ == "__main__":
         target = sys.argv[1] if len(sys.argv) > 1 else "web"
         command = ["pretext", "build", target]
 
-    print(f"Watching source/ — will run '{' '.join(command)}' on every .ptx save.")
-    print("Press Ctrl+C to stop.\n")
-
     handler = PTXHandler(command)
     observer = Observer()
-    observer.schedule(handler, "source", recursive=True)
+    watched = []
+    for directory in WATCH_DIRS:
+        if Path(directory).is_dir():
+            observer.schedule(handler, directory, recursive=True)
+            watched.append(directory + "/")
+
+    print(f"Watching {', '.join(watched)} — will run '{' '.join(command)}' on every save.")
+    print("Press Ctrl+C to stop.\n")
     observer.start()
 
     try:

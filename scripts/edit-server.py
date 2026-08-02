@@ -28,6 +28,7 @@ files on disk in response to an HTTP request.
 
 import argparse
 import difflib
+import hashlib
 import json
 import os
 import re
@@ -556,6 +557,16 @@ def patch_object_fields(text: str, span, updates) -> str:
     return text
 
 
+def slide_fingerprint(text: str, span) -> str:
+    """A short hash of one slide's exact text in the deck file.
+
+    Handed out when a form is opened and checked when it saves, so an edit made
+    to the deck in between — by hand in the editor, by a git pull — is caught
+    instead of being silently overwritten by a form that never saw it.
+    """
+    return hashlib.sha1(text[span[0]:span[1]].encode("utf-8")).hexdigest()[:12]
+
+
 def mirror_to_served(project_dir: str, deck: str, text: str):
     """Authoring convenience: the preview serves a BUILD, not the source, so
     refresh the served copy too - otherwise a reload would show the pre-edit
@@ -717,8 +728,40 @@ def make_handler(locator: Locator):
                 "file": relative, "line": element.start_line, "tag": element.tag,
             })
 
+        def _deck_slide(self, query):
+            """The current text of one slide in a deck, straight from the file.
+
+            The player's copy of a deck is whatever it loaded at page load, and
+            a deck hand-edited since then makes that a stale copy — the slide
+            form would open showing the old values and, on save, write them back
+            over the newer file. So the form populates from here instead, and
+            carries the fingerprint below back to the save.
+            """
+            deck = query.get("deck", [""])[0]
+            path = locator.deck_path(deck)
+            if path is None:
+                return self._send({"error": "No such deck."}, 404)
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+            data = json.loads(text)
+            try:
+                position = int(query.get("slide", ["0"])[0])
+            except ValueError:
+                position = 0
+            if not 1 <= position <= len(data.get("slides", [])):
+                return self._send({"error": "slide not found"}, 404)
+            span = array_element_span(text, "slides", position)
+            if span is None:
+                return self._send({"error": "could not locate slide in file"}, 500)
+            return self._send({
+                "slide": data["slides"][position - 1],
+                "fingerprint": slide_fingerprint(text, span),
+            })
+
         def do_GET(self):
             url = urlparse(self.path)
+            if url.path == "/deck-slide":
+                return self._deck_slide(parse_qs(url.query))
             if url.path == "/open-deck":
                 return self._open_deck(parse_qs(url.query))
             if url.path == "/open-slide":
@@ -819,6 +862,23 @@ def make_handler(locator: Locator):
             span = array_element_span(text, "slides", position)
             if span is None:
                 return self._send({"error": "could not locate slide in file"}, 500)
+
+            # Refuse to write over a change this form never saw (see
+            # slide_fingerprint). The type check above catches a slide that
+            # became a different KIND of slide; this catches any edit at all.
+            #
+            # Required, not optional: treating a missing or empty fingerprint as
+            # "no check needed" would mean the one bug that silently disables
+            # this guard is also the easiest one to write.
+            sent = payload.get("fingerprint")
+            if not sent:
+                return self._send({"error": "fingerprint required — reopen the form"}, 400)
+            if sent != slide_fingerprint(text, span):
+                return self._send({
+                    "error": "This slide changed on disk since the form was "
+                             "opened — reload the deck so you're editing the "
+                             "current version, or your edit would overwrite it."
+                }, 409)
 
             new_text = patch_object_fields(text, span, updates)
             # The source is the truth; never leave it unparseable.

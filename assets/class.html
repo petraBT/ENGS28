@@ -1716,11 +1716,37 @@
           function openSlideForm (slide) {
             var spec = FORM[slide.type]
             if (!spec) { toast('This slide type has no form.', 'info'); return }
-            curForm = { type: slide.type, src: slide }
+            /* Populate from the FILE, not from the deck this page loaded. They
+               diverge the moment a deck is hand-edited in the editor — the
+               player only reads a deck once, at page load — and a form filled
+               from the stale copy would quietly write those old values back
+               over the newer file when saved. The fingerprint that comes with
+               it is checked on save, so even a change made while the form is
+               open is caught rather than overwritten. */
+            fetch(EDIT_SERVER + '/deck-slide?deck=' + encodeURIComponent(deckId) +
+                  '&slide=' + jsonIndex(slide))
+              .then(asJson)
+              .then(function (b) { fillSlideForm(slide, spec, b.slide, b.fingerprint) })
+              .catch(function (e) { toast(describe(e), 'error') })
+          }
+
+          function fillSlideForm (slide, spec, current, fingerprint) {
+            curForm = { type: slide.type, src: slide, fingerprint: fingerprint }
             seType.textContent = slide.type
             seFields.innerHTML = ''
+            // If the file disagrees with what is on screen, say so before any
+            // typing happens — the slide behind the form is the old one.
+            var drifted = spec.some(function (field) {
+              return JSON.stringify(current[field[0]] == null ? '' : current[field[0]]) !==
+                     JSON.stringify(slide[field[0]] == null ? '' : slide[field[0]])
+            })
+            if (drifted) {
+              toast('This deck changed on disk since the page loaded — the form ' +
+                    'shows the current file, which is not what the slide behind ' +
+                    'it shows. Reload to bring them back together.', 'info')
+            }
             spec.forEach(function (field) {
-              var key = field[0], value = slide[key], kind = field[2]
+              var key = field[0], value = current[key], kind = field[2]
               var wrap = document.createElement('div')
               wrap.className = 'se-field'
               var label = document.createElement('label')
@@ -1768,9 +1794,11 @@
               body: JSON.stringify({
                 deck: deckId,
                 slide: jsonIndex(curForm.src),
-                // Sent so the server can refuse if the deck changed on disk
-                // and this position now holds a different slide.
+                // Both are refusals-not-overwrites: `type` catches this
+                // position becoming a different KIND of slide, `fingerprint`
+                // catches any edit to it since the form was opened.
                 type: curForm.type,
+                fingerprint: curForm.fingerprint,
                 fields: fields
               })
             })
@@ -1787,7 +1815,12 @@
                 render()
                 setTimeout(closeSlideForm, 700)
               })
-              .catch(function (e) { seStatus(describe(e), 'err') })
+              .catch(function (e) {
+                // The form stays open with the typing intact — this is the
+                // recoverable case, and closing it would throw away the very
+                // words the refusal was protecting.
+                seStatus(describe(e), 'err')
+              })
           }
 
           function closeSlideForm () {
