@@ -259,8 +259,8 @@
                         <statement><p>The GPIOA peripheral's clock has not been
                         enabled; writes to its registers are silently ignored until
                         the clock is turned on via RCC.</p></statement>
-                        <feedback><p>Correct.  The STM32 gates peripheral clocks by
-                        default.  <c>RCC-&gt;IOPENR</c> must be set before any GPIO
+                        <feedback><p>Correct.  The STM32 leaves peripheral clocks
+                        disabled by default.  <c>RCC-&gt;IOPENR</c> must be set before any GPIO
                         register is accessed.</p></feedback>
                     </choice>
                     <choice>
@@ -702,7 +702,7 @@ int main(void) {
                 <ul>
                     <li>One 32-bit register packs many independent settings — e.g. <c>MODER</c> holds the mode of all 16 pins in a port at once.</li>
                     <li>To configure one pin you must change <em>its</em> bits and leave the other 30 exactly as they were.</li>
-                    <li>A plain <c>reg = value</c> overwrites all 32 bits — it would clobber every other setting in the register.</li>
+                    <li>A plain <c>reg = value</c> writes all 32 bits at once — it would overwrite every other setting in the register.</li>
                     <li>Bitwise operators let you touch <em>exactly</em> the bits you mean: build a <term>mask</term>, then set / clear / test through it.</li>
                 </ul>
             </slide>
@@ -830,7 +830,7 @@ RCC->IOPENR |= GPIOAEN;    // GPIOAEN is (1U << 0) — the mask for bit 0
                 <ul>
                     <li><c>IOPENR</c> (I/O Port Enable Register) is another row of bits — but here each bit is one whole <em>port's</em> clock: bit 0 = Port A, bit 1 = Port B, bit 2 = Port C.</li>
                     <li><c>GPIOAEN</c> is just <c>(1U &lt;&lt; 0)</c> — the mask for bit 0 — so this line sets bit 0 and switches on Port A's clock.</li>
-                    <li>Every port's clock is gated <em>off</em> at reset to save power; until it's on, reads and writes to that port's registers do nothing.</li>
+                    <li>Every port's clock is <em>disabled</em> at reset to save power; until its clock is enabled, reads and writes to that port's registers do nothing.</li>
                     <li>So Step 1 must come <em>before</em> any <c>GPIOA-&gt;MODER</c> or <c>GPIOA-&gt;ODR</c> access.</li>
                 </ul>
             </slide>
@@ -853,7 +853,7 @@ GPIOA->MODER &= ~(1U << 11);   // Step 2b: clear bit 11  → PA5 output
                     <li>16 pins × 2 bits = one 32-bit register. Each pin owns a 2-bit field:</li>
                     <li>pin 0 → bits 0 &amp; 1; pin 1 → bits 2 &amp; 3; pin 2 → bits 4 &amp; 5; … pin n → bits 2n &amp; 2n+1.</li>
                     <li>So PA5 (pin 5) → bits 10 &amp; 11. Output is <c>01</c> → set bit 10, clear bit 11.</li>
-                    <li>That's why Step 2 is two lines: set bit 10 alone and bit 11 might still be <c>1</c> → <c>11</c> (analog). Always clear the upper bit too.</li>
+                    <li>That's why Step 2 is two lines: if you set bit 10 alone and bit 11 is still <c>1</c>, the pair reads <c>11</c> (analog) and the pin is not an output. The upper bit needs to be cleared as well.</li>
                 </ul>
                 <caption>MODER bit-pair encoding.</caption>
             </slide>
