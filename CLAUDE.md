@@ -315,7 +315,8 @@ optional. If no, move that content into the in-class section.
   - Lab 2 spec
 - **ch-uart.ptx**: Complete with in-class section, driver walkthrough, lab
 - **ch-io-datasheets.ptx**: Complete (Day 5X standalone, 55 min)
-  - Datasheet Passport activity (Parts A–E) covering 4 components
+  - Datasheet Worksheet activity (Parts A–E; the xml:ids are still
+    `task-passport-*`) covering 4 components
   - Share-out section
 - **ch-transistors.ptx**: Concepts section complete; figures 4.2.7/4.2.8 fixed
   (standalone figures at width="20%"); table 4.2.9 wrapped in sidebyside at 92%
