@@ -1,0 +1,455 @@
+diff --git a/assets/decks/day8.json b/assets/decks/day8.json
+index b29842b..479a7f7 100644
+--- a/assets/decks/day8.json
++++ b/assets/decks/day8.json
+@@ -25,11 +25,11 @@
+         "Why a background timer",
+         "Design the 500 ms timer — you pick the registers",
+         "Five lines of initialization",
+-        "Run it: Blinky that never waits",
+-        "Two status registers, opposite clears",
++        "Run it: Blinky with a (polled) timer and without delay_ms()",
++        "Clearing status registers",
+         "Programming an interrupt",
+-        "Blinky where the timer does the calling",
+-        "No wiring today — the whole class is code"
++        "Blinky where the timer does the calling (no polling)",
++        "No wiring today — everything is done in code and on the chip's hardware"
+       ]
+     },
+     {
+@@ -189,7 +189,7 @@
+       "type": "ref",
+       "page": "subsec-timers-ref-mechanism.html",
+       "slide": "sl-day8-mechanism",
+-      "title": "The mechanism, resurfaced"
++      "title": "Review: The interrupt mechanism"
+     },
+     {
+       "type": "ref",
+@@ -201,7 +201,8 @@
+       "type": "ref",
+       "page": "subsec-day8-interrupt-prog.html",
+       "slide": "sl-day8-nvic",
+-      "title": "Step 2 — the NVIC"
++      "title": "Step 2 — the NVIC",
++      "presenterNote": "CMSIS enables consistent device support and simple software interfaces to the processor and its peripherals, simplifying software reuse, reducing the learning curve for microcontroller developers, and reducing the time to market for new devices."
+     },
+     {
+       "type": "ref",
+@@ -244,14 +245,13 @@
+       "type": "ref",
+       "page": "subsec-day8-code.html",
+       "slide": "act-timer-interrupt",
+-      "title": "Make the timer do the calling",
+-      "room": true
++      "title": "Make the timer do the calling"
+     },
+     {
+       "type": "ref",
+       "page": "subsec-day8-code.html",
+       "slide": "sl-day8-ladder",
+-      "title": "LED not blinking? The ladder"
++      "title": "LED not blinking? Steps to help you diagnose the fault"
+     },
+     {
+       "type": "ref",
+@@ -312,10 +312,10 @@
+       "items": [
+         "A timer is rate times count: prescaler and auto-reload, each written minus one, each 16 bits.",
+         "Five writes to start it; after that the hardware needs nothing from the CPU.",
+-        "Status flags clear by assigning a mask — and the access type in the RM says which polarity.",
++        "Status flags clear by assigning a mask — and the access type in the RM says which type.",
+         "An interrupt is a function call hardware makes: DIER raises it, the NVIC admits it, the vector table names it.",
+-        "Anything an ISR shares with main is volatile, and ISRs stay short.",
+-        "Tonight: ADCPot gets a heartbeat. Lab 5 asks exactly this at full scale — and next week, timers drive motors."
++        "Anything an ISR shares with main needs to be volatile, and ISRs need to stay short.",
++        "Tonight: ADCPot gets a heartbeat. This is a great preparation for Lab 5."
+       ]
+     }
+   ]
+diff --git a/assets/decks/day8video.json b/assets/decks/day8video.json
+index 27aeef7..2f76722 100644
+--- a/assets/decks/day8video.json
++++ b/assets/decks/day8video.json
+@@ -5,7 +5,7 @@
+     {
+       "type": "title",
+       "title": "Timers and Interrupts",
+-      "subtitle": "ENGS 28 · Day 8 — Before Class (≈ 7 minutes)",
++      "subtitle": "ENGS 28 · Day 8 — Before Class",
+       "presenterNote": "Recording deck — play at ?deck=day8video&student and record the window. Script with per-slide narration: plans/day8-video-script.md."
+     },
+     {
+@@ -58,12 +58,15 @@
+     },
+     {
+       "type": "recap",
+-      "title": "Bring to class",
++      "title": "Summary: What You'll Need In Class",
+       "items": [
+-        "A timer is rate times count — prescaler, auto-reload, wrap, update event.",
+-        "An interrupt is a function call hardware makes, and it can land anywhere.",
+-        "Your ISR: exact name, quick in and out, volatile on anything shared.",
+-        "In class you build all of it: Blinky with no delay_ms() anywhere."
++        "A timer counts at a rate that depends on the system clock and the prescaler.",
++        "The amount of time that has passed is counting rate times count.",
++        "When count reaches the auto-reload value, the timer hardware resets to 0 and generates and update event. (Other behaviors are possible here as well.)",
++        "A timer interrupt is initiated by the hardware, and it can happen at any time during regular code execution.",
++        "The ISR (interrupt service routine) is code you write and to which the processor jumps at the time the interrupt fires.",
++        "Important about the ISR: exact name, quick in and out, volatile on anything shared.",
++        "In class we will build all of it: Blinky with no delay_ms() anywhere."
+       ]
+     }
+   ]
+diff --git a/source/ch-timers-interrupts.ptx b/source/ch-timers-interrupts.ptx
+index 95cd0be..1b5b921 100644
+--- a/source/ch-timers-interrupts.ptx
++++ b/source/ch-timers-interrupts.ptx
+@@ -576,9 +576,9 @@
+     <p><term>delay_ms() is accurate &#8212; and it blocks the CPU completely.</term></p>
+     <ul>
+         <li>While <c>delay_ms(1000)</c> runs, the CPU does nothing else for a full second: no sensor reads, no button checks, no printing.</li>
+-        <li>You felt this in the Lab 2 race game: presses during the countdown delays could slip past unwatched.</li>
++        <li>You noticed this in the Lab 2 race game: button presses during the countdown delays could slip past unwatched.</li>
+         <li>The fix is separation: <term>hardware counts the time; the CPU does the work</term>. Configure TIM14 once and it counts on its own.</li>
+-        <li>We'll revisit this from a different angle in two weeks: timers will hold pins high for exact durations (motor speed) and measure pulse widths (the tachometer).</li>
++        <li>We'll revisit this from a different angle in two weeks: timers will hold pins high for exact durations (motor speed) and measure pulse widths (we'll build a tachometer).</li>
+     </ul>
+     <caption>Timekeeping moves to hardware; the CPU is free for other work.</caption>
+ </slide>
+@@ -607,9 +607,9 @@ prescale by 12,000   ->  counter ticks at 1000 per second
+ count to 1000        ->  1000 ticks = 1 s        check: 12,000 x 1000 = 12,000,000
+ ]]></code></program>
+     <ul>
+-        <li>Both registers are 16 bits: nothing written may exceed 65,535.</li>
+-        <li>Both are written <term>minus one</term>: divide-by-12,000 is written 11999; count-to-1000 is written 999. Counting starts at 0.</li>
+-        <li>Today's target is 500 ms &#8212; 6,000,000 cycles. Your turn.</li>
++        <li>Both the prescale and the count register are 16 bits: they cannot hold anything larger than 65,535.</li>
++        <li>Both the prescaler and counter start counting at 0, we therefore <term>subtract one</term> from the value we have in mind: divide-by-12,000 is written 11999; count-to-1000 is written 999. Counting starts at 0.</li>
++        <li>Today's goal: a 500 ms timer &#8212; 6,000,000 cycles.</li>
+     </ul>
+     <caption>The reading's example. Today's period is different — the method is not.</caption>
+ </slide>
+@@ -674,9 +674,8 @@ count to 1000        ->  1000 ticks = 1 s        check: 12,000 x 1000 = 12,000,0
+                     <p>
+                         Here are four candidate (prescale factor, count) pairs
+                         for the 500 ms period.  For each one, decide whether
+-                        TIM14 can actually be configured that way, and be
+-                        ready to say why.  Commit an answer for all four
+-                        before we discuss.
++                        TIM14 can actually be configured that way, and why or why not.  
++                        Commit an answer for all four before we discuss.
+                     </p>
+                 </introduction>
+                 <task xml:id="act-timer-design-t1">
+@@ -883,7 +882,7 @@ if (TIM14->SR & TIM_SR_UIF) { ... }     // today: check once, keep moving
+             </p>
+ 
+             <slide xml:id="sl-day8-if-not-while">
+-    <p><term>Check, don't wait.</term> This is deliberately <em>not</em> the Day 5 / Day 7 idiom:</p>
++    <p><term>Check, don't wait.</term> This is deliberately <em>not</em> what we did when waiting for the UART / ADC to finish:</p>
+     <program language="c"><code><![CDATA[
+ while (!(ADC1->ISR & ADC_ISR_EOC)) {}   // Day 7: BLOCKING -- stand here until done
+ 
+@@ -895,7 +894,7 @@ if (TIM14->SR & TIM_SR_UIF) {           // today: glance once, keep moving
+ ]]></code></program>
+     <ul>
+         <li>The <c>while</c> <term>plants</term> the program at the flag until it rises. The <c>if</c> <term>glances</term> once per trip around the loop and moves on either way.</li>
+-        <li>That free remainder of the loop is the entire point of a background timer.</li>
++        <li>That free remainder of the loop is the point of a background timer.</li>
+     </ul>
+ </slide>
+             <program language="c"><code><![CDATA[
+@@ -973,11 +972,11 @@ void tim14_500ms_init() {
+             </p>
+ 
+             <slide xml:id="sl-day8-polled-ladder">
+-    <p><term>Not blinking?</term> Two checks catch nearly everything:</p>
++    <p><term>Not blinking?</term> Check these:</p>
+     <ul>
+         <li>1 &#8212; Is <c>blinkyTimerPolled.c</c> in <c>Src</c> and <term>included</term> in the build?</li>
+         <li>2 &#8212; Exactly <term>one</term> <c>main()</c> in the project? A leftover template <c>main.c</c> is the classic conflict.</li>
+-        <li>Still stuck? Flag it, grab the known-good copy, and keep moving &#8212; nothing before Part 7 needs your own board.</li>
++        <li>Still stuck? We're here to help!.</li>
+     </ul>
+     <caption>Two checks catch nearly everything.</caption>
+     <note>Checkpoint slide — if the room isn't mostly blinking by minute 32: screen-share the instructor laptop's running build for Part 5, and start the pre-loaded USB stick down the rows. Neither path touches Canvas (the failing channel). Do not debug individual downloads. [Mechanism to confirm with Petra.]</note>
+@@ -1011,8 +1010,7 @@ TIM14->SR = ~TIM_SR_UIF;     // today: a 0 at the flag, 1s everywhere else
+                 <title>Find the Access Type</title>
+                 <introduction>
+                     <p>
+-                        The answer is printed in RM0490, and you can find it in
+-                        under a minute.
++                        The answer is in the Reference Manual (RM0490):
+                     </p>
+                 </introduction>
+                 <task xml:id="act-timer-rcw0-t1">
+@@ -1074,14 +1072,15 @@ TIM14->SR = ~TIM_SR_UIF;     // today: a 0 at the flag, 1s everywhere else
+             </p>
+ 
+             <slide xml:id="sl-day8-waitwhat" room="yes">
+-    <p><term>Two clears, opposite masks — both correct.</term></p>
++    <p><term>Take a look at how we clear the TIM_SR_UIF flag in TIM14->SR and compare to how we cleared the ADC_ISR_ADRDY flag:</term></p>
+     <program language="c"><code><![CDATA[
+ ADC1->ISR = ADC_ISR_ADRDY;   // Day 7: a 1 at the flag, 0s everywhere else
+ TIM14->SR = ~TIM_SR_UIF;     // today: a 0 at the flag, 1s everywhere else
+ ]]></code></program>
+     <ul>
+-        <li>Day 7's clear put a <term>1</term> at the flag. Today's puts a <term>0</term> at the flag &#8212; and 1s over every other bit.</li>
+-        <li><term>Commit before we look anything up: what must be different about these two registers for opposite masks to both be right?</term></li>
++        <li>The ADC_ISR_ADRDY flag is cleared by writing a <term>1</term> to the flag bit. Today's clear puts a <term>0</term> at the TIM_SR_UIF bit to clear it &#8212; and 1s over every other bit.</li>
++        <li>Discuss at your table: what could possibly be going on here?</li>
++        <li><term>Commit before we look anything up: what must be different about these two registers for opposite masks to both be correct?</term></li>
+     </ul>
+ </slide>
+ 
+@@ -1090,22 +1089,22 @@ TIM14->SR = ~TIM_SR_UIF;     // today: a 0 at the flag, 1s everywhere else
+     <ul>
+         <li>RM0490 &#167;1.2: <c>rc_w0</c> = read; clear by writing 0. <term>Writing 1 has no effect.</term></li>
+         <li>Day 7's ADC flags were <c>rc_w1</c> &#8212; the mirror image: clear by writing 1; writing 0 does nothing.</li>
+-        <li>A clearing mask carries the <term>clearing</term> value at your flag and the <term>no-effect</term> value everywhere else &#8212; which is why the two masks are opposite.</li>
+-        <li>The peripherals split between the two conventions. The access type in the RM, not habit, is the authority.</li>
++        <li>A clearing mask carries the <term>clearing</term> value at your flag and the <term>no-effect</term> value everywhere else &#8212; which is why the two masks are opposites.</li>
++        <li>The peripherals split between the two conventions. To know which to use you need to consult the reference manual.</li>
+     </ul>
+     <caption>Same mechanism as Day 7, opposite polarity — the access type decides the mask.</caption>
+ </slide>
+ 
+             <slide xml:id="sl-day8-moral">
+-    <p><term>Postscript: would the Day 7 mistake have hurt here?</term></p>
++    <p><term>Postscript: would an &amp;= have been as big of an issue here as an |= would have been for ADC_ISR_ADRDY?</term></p>
+     <program language="c"><code><![CDATA[
+ TIM14->SR &= ~TIM_SR_UIF;    // read-modify-write: mostly harmless on rc_w0 ...
+ ]]></code></program>
+     <ul>
+         <li>The write-back sends 1s to set flags (no effect on <c>rc_w0</c>) and 0s to clear ones (already clear) &#8212; so here, no damage.</li>
+-        <li>But on <c>rc_w1</c> it is destructive &#8212; that was the Day 7 case.</li>
+-        <li>And if hardware raises another flag between the read and the write-back, the 0 written over it clears it &#8212; the event is lost. Starting Day 9, that stops being hypothetical.</li>
+-        <li><term>Clear status flags by assigning a mask.</term> The ISR you write next does exactly that.</li>
++        <li>But using the equivalent <c>|=</c> on a <c>rc_w1</c> is destructive &#8212; as we saw for ADC_ISR.</li>
++        <li>And if hardware raises another flag between the read and the write-back, the 0 written over it clears it &#8212; the event is lost.</li>
++        <li><term>Clear status flags by assigning a mask and not by using a compound assignment.</term> You'll use this in the ISR you write next.</li>
+     </ul>
+ </slide>
+         </subsection>
+@@ -1167,9 +1166,8 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
+                 <title>Where the Names Come From</title>
+                 <introduction>
+                     <p>
+-                        Both <c>TIM14_IRQn</c> and the handler name you are
+-                        about to need come from one table in the reference
+-                        manual.
++                        Both <c>TIM14_IRQn</c> (the name we needed to register with the NVIC) and the handler name you are
++                        about to need to write the ISR come from different places.
+                     </p>
+                     </introduction>
+                 <task xml:id="act-timer-vector-t1">
+@@ -1179,30 +1177,27 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
+                     sit?</p></statement>
+                 </task>
+                 <task xml:id="act-timer-vector-t2">
+-                    <statement><p>Now open RM0490 §11.3, Table 40, <em>Vector
++                    <statement><p>Now open the reference manual, RM0490 §11.3, Table 40, <em>Vector
+                     table</em>, and find the TIM14 row.  Note its position
+-                    number and its acronym.</p></statement>
++                    number, its acronym and its default priority.</p></statement>
+                 </task>
+             </activity>
+             <figure xml:id="fig-vector-table">
+                 <caption>An excerpt of RM0490's Table 40, the vector table:
+                 positions 14 through 23, with the header row and the TIM14 row
+-                boxed.  TIM14's interrupt is position 19, and its vector — the
++                boxed.  TIM14's interrupt is position 19, its priority is 24 and its vector — the
+                 address the CPU fetches the handler's location from — is
+                 0x0000_008C.  TIM3, TIM16, TIM17, and I2C1 occupy nearby
+                 positions.</caption>
+                 <image source="images/Day08-Interrupts/vector_table_tim14.png" width="90%"/>
+             </figure>
+             <p>
+-                TIM14 is position 19, and one interrupt channel goes by three
+-                names, each mechanical once you see the pattern.  In Table 40
+-                it is the row at position 19.  In C code it is
+-                <c>TIM14_IRQn</c> — the device header defines one such
+-                constant per populated row, mirroring the position column,
+-                and it is what <c>NVIC_EnableIRQ()</c> takes.
++                TIM14 is the name of the hardware. To interact with it in code we need to add on to this name according to somewhat regular patters.</p>
++            <p> To register with the NVIC we use
++                <c>TIM14_IRQn</c> — we simply add on <c>_IRQn</c>. This is definted in the device header and it is what <c>NVIC_EnableIRQ()</c> takes.
+             </p>
+             <p>
+-                The third name is the one you must get exactly right.  The
++                The third name is what you need to call your ISR.  The
+                 handler function is <c>TIM14_IRQHandler</c>, and that name is
+                 not yours to invent — it is listed in the project's
+                 <term>startup file</term>, <c>startup_stm32c031c6tx.s</c>: an
+@@ -1255,10 +1250,10 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
+             </p>
+ 
+             <slide xml:id="sl-day8-dier" ref="fig-tim14-regmap-interrupt">
+-    <p><term>Step 1 of 3: the timer must raise the interrupt.</term></p>
++    <p><term>Step 1 of 3: the timer must raise the interrupt.</term> So far our timer has counted and set a notification via the UIF flag but it didn't interrupt anything when it reached its counting target.</p>
+     <ul>
+-        <li><c>TIM14-&gt;DIER |= TIM_DIER_UIE;</c> &#8212; each update event now raises an interrupt request, not just the flag.</li>
+-        <li>DIER is the enable on the peripheral side.</li>
++        <li><c>TIM14-&gt;DIER |= TIM_DIER_UIE;</c> sets the update interrupt bit &#8212; the timer will now raise an interrupt request, not just the flag.</li>
++        <li>DIER is the register to enable interrupts on the timer side (we still need to deal with the NVIC).</li>
+         <li><term>UIE</term> (in DIER) <em>enables</em> the request &#8212; the hardware will now ask to interrupt the processor; <term>UIF</term> (in SR) <em>reports</em> that the event happened.</li>
+         <li>CEN and UIF keep their jobs from the polled version &#8212; nothing else in the init changes.</li>
+     </ul>
+@@ -1271,8 +1266,9 @@ NVIC_EnableIRQ(TIM14_IRQn);   // CMSIS function, device-header constant
+ ]]></code></program>
+     <ul>
+         <li>The NVIC ignores every source until told otherwise &#8212; one enable switch per interrupt line, all off at reset.</li>
++        <li> <c>NVIC_EnableIRQ()</c> is a function provided by the CMSIS (Common Microcontroller Software Interface Standard)</li>
+         <li>Two enables, two sides: UIE makes the timer issue the request; the NVIC enable lets the request through to the processor.</li>
+-        <li>Forget either one and you get silence. (That is rung 4 of today's ladder.)</li>
++        <li>Forget either one and you get no interrupt.</li>
+         <li>Next: where <c>TIM14_IRQn</c> and the other names come from.</li>
+     </ul>
+ </slide>
+@@ -1281,8 +1277,9 @@ NVIC_EnableIRQ(TIM14_IRQn);   // CMSIS function, device-header constant
+     <p><term>The table behind the names.</term></p>
+     <ul>
+         <li>The row you predicted: <term>position 19</term>, acronym TIM14, vector address 0x0000_008C &#8212; RM0490 &#167;11.3, Table 40.</li>
+-        <li>The C constant you just used: <c>TIM14_IRQn</c> &#8212; the device header defines one per populated row, mirroring the position column. Handed to you, not looked up.</li>
+-        <li>One more name comes from this table &#8212; the handler's &#8212; and it gets its own slide, because it is the one you must get exactly right.</li>
++        <li>The C constant you just used, <c>TIM14_IRQn</c>, is defined in the device header (stm32c031xx.h) &#8212; it defines one constant per populated row in the table, mirroring the position column.</li>
++        <li> The typical rule: take the acronym from Table 40 and append <c>_IRQn</c>.</li>
++        <li>One more name derives from this table &#8212; the name of the IRQ handler &#8212; we'll discuss this next.</li>
+     </ul>
+ </slide>
+ 
+@@ -1292,7 +1289,11 @@ NVIC_EnableIRQ(TIM14_IRQn);   // CMSIS function, device-header constant
+         <li>The function you are about to write must be named <term>exactly</term> <c>TIM14_IRQHandler</c>.</li>
+         <li>Where it comes from: the <term>startup file</term>, <c>startup_stm32c031c6tx.s</c> &#8212; an assembly file generated with your project (it sits in the project tree alongside <c>Src</c>) that runs before <c>main()</c> and wires each official handler name into its vector-table slot.</li>
+         <li>You <term>read</term> that file, never edit it: find the name, select it, <term>copy</term> it.</li>
+-        <li>A name one character off still compiles <em>and links</em> &#8212; your function never enters the table, and the slot keeps the startup file's default handler. Symptom: no blink, possibly no output at all.</li>
++        <li>A name one character off still compiles <em>and links</em> &#8212; your function never enters the vector table, and the slot keeps the startup file's default handler.</li>
++        <li>Your misspelled function name creates an unused, standalone C function that the vector table never references.</li>
++        <li>Startup files declare standard interrupt names as weak symbols pointing to a generic infinite loop.</li>
++        <li>When the timer interrupt event occurs, the CPU jumps to the weak Default_Handler instead of your written code.</li>
++        <li> Symptom: no blink, possibly no output at all, and the program may appear to freeze or hang.</li>
+     </ul>
+     <note>fig-startup-file (Project Explorer screenshot) pending from Petra — add ref="fig-startup-file" here once it exists.</note>
+ </slide>
+@@ -1415,17 +1416,16 @@ void tim14_500ms_interrupt_init() {
+                     same steady rate as before — now with the main
+                     loop only checking your volatile flag.  Done early?  Make it toggle every 250 ms without
+                     touching PSC; then go back to 500 ms and make it toggle
+-                    every 250 ms without touching ARR.  Now check both against
+-                    a 48 MHz clock: <em>neither</em> survives — why not, and
+-                    what single number would you change to fix either
+-                    one?</p></statement>
++                    every 250 ms without touching ARR.  Now imagine your clock was running
++                    at 48 MHz (which our chip can do): how could you make the 250 ms or 500 ms blink rate work?
++                    </p></statement>
+                 </task>
+             </activity>
+             <p>
+                 <em>LED not blinking?</em>  First, one triage check: is the
+                 board <em>completely</em> dead — no LED, no serial output at
+-                all?  Jump straight to rung 3.  Otherwise walk the ladder in
+-                order — it isolates the fault:
++                all?  Jump straight to step 3.  Otherwise walk through the steps in
++                order — this will help you isolates the fault:
+             </p>
+             <ol>
+                 <li>Does the project build cleanly, with
+@@ -1435,7 +1435,7 @@ void tim14_500ms_interrupt_init() {
+                 <li>Swap back for a moment: does the <em>polled</em> version
+                     still blink?  If yes, your timer configuration is fine —
+                     the problem is in the interrupt path, which narrows it to
+-                    the next two rungs.</li>
++                    the next two steps.</li>
+                 <li>Is the ISR's name <em>exactly</em>
+                     <c>TIM14_IRQHandler</c> — copied from the startup file,
+                     not typed?  A near-miss name builds and links without a
+@@ -1479,24 +1479,24 @@ void tim14_500ms_interrupt_init() {
+ 
+ // TODO 3 -- the ISR: exact name; no arguments, no return value.
+ //           Inside (bracketed by __disable_irq()/__enable_irq()), do TWO things:
+-//           clear UIF the Part 5 way (TIM14->SR = ~TIM_SR_UIF;), set the flag.
++//           clear UIF the Part 5 way (TIM14->SR = ~TIM_SR_UIF;), set your own (volatile!) flag.
+ 
+ // TODO 4 -- in main: the timer registers appear NOWHERE in the loop.
+-//           When the flag is set: clear it, toggle the LED.
++//           When your flag is set: clear it, toggle the LED.
+ ]]></code></program>
+     <caption>Everything new was on the last four slides. The full file is on Canvas.</caption>
+ </slide>
+ 
+             <slide xml:id="sl-day8-ladder">
+-    <p><term>LED not blinking? Walk the ladder in order.</term> Board completely dead &#8212; no LED, no serial output at all? Jump to rung 3.</p>
++    <p><term>LED not blinking? Walk through the steps in order.</term> Board completely dead &#8212; no LED, no serial output at all? Jump straight to step 3.</p>
+     <ul>
+         <li>1 &#8212; Build clean? <c>blinkyTimerInt.c</c> <term>included</term>, <c>blinkyTimerPolled.c</c> <term>excluded</term>, via <em>Resource Configurations &#8594; Exclude from Build</em>?</li>
+-        <li>2 &#8212; Swap back for a moment: does the <term>polled</term> version still blink? If yes, your timer config is fine &#8212; the fault is in the interrupt path (rungs 3 and 4).</li>
++        <li>2 &#8212; Swap back for a moment: does the <term>polled</term> version still blink? If yes, your timer config is fine &#8212; the fault is in the interrupt path (steps 3 and 4).</li>
+         <li>3 &#8212; ISR name <term>exactly</term> <c>TIM14_IRQHandler</c>, copied from the startup file? A near-miss builds and links with zero warnings &#8212; and the board may look completely dead rather than merely dark.</li>
+         <li>4 &#8212; <term>Both</term> enables present? UIE in <c>TIM14-&gt;DIER</c> <em>and</em> <c>NVIC_EnableIRQ(TIM14_IRQn)</c>. Either alone is silence.</li>
+-        <li>Done early instead? 250 ms toggle <em>without touching PSC</em>; then <em>without touching ARR</em>. Check both against a 48 MHz clock: <term>neither survives</term> &#8212; why not?</li>
++        <li>Done early instead? 250 ms toggle <em>without touching PSC</em>; then <em>without touching ARR</em>. Now imagine your clock was running at 48 MHz (which our chip can do): how could you make the 250 ms or 500 ms blink rate work?</li>
+     </ul>
+-    <caption>Four rungs, in order — each one rules out a layer.</caption>
++    <caption>Four steps, in order — each one rules out a layer.</caption>
+     <note>Stays up for all of Part 7. Out of time: the solution slide is next, and the file goes to Canvas after class.</note>
+ </slide>
+ 
+@@ -1926,9 +1926,9 @@ void tim14_ms_interrupt_init(uint16_t period_ms) {
+             <slide xml:id="sl-day8v-timer" ref="fig-tim14-block">
+     <ul>
+         <li>A hardware timer is a circuit that counts clock pulses &#8212; separate from the CPU, running whether the CPU is busy or not.</li>
+-        <li>Three parts do today's work: the <clr c="blue">system clock</clr> in, the <clr c="red">prescaler's output</clr> &#8212; the divided-down counter clock &#8212; and the <clr c="green">counter</clr> itself.</li>
+-        <li>The <clr c="orange">auto-reload register</clr> sets the upper limit: count up to it, wrap to 0, and announce an <term>update event</term>.</li>
+-        <li>Rate &#215; count = period. The chip's full diagram (RM0490 Figure 165) adds capture/compare machinery that returns in the motor chapters.</li>
++        <li>How fast the timer counts depends on the speed of the <clr c="blue">system clock</clr> and the <clr c="red">prescaler</clr> &#8212; it divides down the system clock. The current count is kept in the  <clr c="green">counter</clr> register.</li>
++        <li>The <clr c="orange">auto-reload register</clr> sets the upper limit: count up to it, restart at 0, and announce an <term>update event</term>.</li>
++        <li>Rate &#215; count = period. The chip's full diagram (RM0490 Figure 165) adds capture/compare machinery to which we'll return in the motor chapters.</li>
+     </ul>
+     <caption>The timer core on the chip's own diagram.</caption>
+ </slide>
+@@ -1957,7 +1957,7 @@ void tim14_ms_interrupt_init(uint16_t period_ms) {
+     <ul>
+         <li>Normal execution: the <term>program counter</term> points at the next instruction in flash.</li>
+         <li>Fetch it into the instruction register, decode it, execute it; the program counter advances; repeat.</li>
+-        <li>Everything your programs have done so far is this loop, instruction after instruction, in order.</li>
++        <li>The majority of the programs we have written so far follows these steps, with the processor executing instruction after instruction, in order.</li>
+     </ul>
+     <caption>Normal program execution — one instruction after the next.</caption>
+ </slide>
+@@ -1986,8 +1986,8 @@ void tim14_ms_interrupt_init(uint16_t period_ms) {
+             <slide xml:id="sl-day8v-callstack" ref="fig-function-call">
+     <ul>
+         <li>Normal execution: the program counter walks instruction to instruction through flash.</li>
+-        <li>A function call is a planned detour: save what you'll disturb onto the <term>stack</term>, jump, run, restore, resume at the next instruction.</li>
+-        <li>The stack is what makes the round trip safe &#8212; everything needed to pick up where you left off was saved before leaving.</li>
++        <li>A function call is a planned detour: save (push) what you'll disturb onto the <term>stack</term>, jump to the function code, run that code, restore (pop) the previous state, resume at the next instruction.</li>
++        <li>The stack is what allows this detour to be safe: everything needed to pick up where the code left off before the jump was saved before leaving.</li>
+         <li>Next: an interrupt uses this same mechanism, initiated by hardware.</li>
+     </ul>
+     <caption>The function call: save, run, restore, resume.</caption>
+@@ -2082,10 +2082,10 @@ void tim14_ms_interrupt_init(uint16_t period_ms) {
+ 
+             <slide xml:id="sl-day8v-nvic" ref="fig-nvic-block">
+     <ul>
+-        <li>Between every interrupt source and the CPU sits a referee: the <term>NVIC</term> &#8212; Nested Vectored Interrupt Controller.</li>
+-        <li>Job one, enabling: every source has a switch in the NVIC, <term>off by default</term>. Nothing interrupts until you allow it.</li>
+-        <li>Job two, ordering: two requests at once are served by priority &#8212; and this course leaves every source at the same default.</li>
+-        <li>So on Day 8 you will flip exactly two switches: one in the timer, one in the NVIC.</li>
++        <li>Interrupt sources (like the timer) don't get to talk to the CPU directly: the <term>NVIC</term> &#8212; Nested Vectored Interrupt Controller &#8212; is an intermediary that routes requests according to priority.</li>
++        <li>We therefore need to register an interrupt we wish to be serviced with the NVIC; each interrupt is <term>off by default</term>. </li>
++        <li>If two requests arrive ar the same time, they are served by priority &#8212; we will leave every source at their default priority.</li>
++        <li>So in order to turn on a timer interrupt we'll have to do two things: enable interrupts in the timer itself, and alert the NVIC.</li>
+     </ul>
+     <caption>The NVIC manages every interrupt on the chip.</caption>
+ </slide>
+@@ -2212,7 +2212,7 @@ volatile int timerElapsed;    // volatile: "fetch it fresh, at every use"
+         <li>C is compiled, not read line-by-line: the compiler may legally rewrite your code into anything that behaves the same <em>for everything it can see</em>.</li>
+         <li>The compiler compiles the ISR too &#8212; but <term>no call to it appears anywhere in the program</term>, so the optimizer may decide the flag never changes and read it once, or never.</li>
+         <li>The keyword <c>volatile</c> on the declaration forbids that assumption: fetch it fresh from memory, every use.</li>
+-        <li><term>Every variable an ISR shares with the rest of the program is volatile. Always.</term></li>
++        <li><term>Every variable an ISR shares with the rest of the program therefore needs to be declared volatile.</term></li>
+     </ul>
+     <caption>Why the shared flag must be volatile.</caption>
+ </slide>
