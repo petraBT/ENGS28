@@ -106,6 +106,15 @@ green`) — for bullets that mirror a colour in the figure beside them.
 after each list item / task, so students — and you — can write an answer in class.
 Slide content top-aligns, so the room falls below each problem.
 
+**Compressed spacing** — the opposite setting, `room="compressed"` (or
+`"room": "compressed"` on a deck `ref`). Tightens the gaps between paragraphs,
+list items and tasks so a long activity fits on one slide. **Type size is not
+changed** — only the spacing — so nothing gets harder to read from the back of
+the room. Reach for this when a projected activity overflows: it is the way to
+keep every task on the slide without deleting one (S-9 says split, don't thin —
+compressing the gaps is neither). Day 3's "Exploring the Oscilloscope" is the
+pattern: five tasks, 108px over, and it fits with `"room": "compressed"`.
+
 ### The `@ref` rule (important)
 
 PreTeXt emits an HTML `id` only for **targetable** elements — `<figure>`,
@@ -139,6 +148,9 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   block **or** any element (e.g. `act-…` for an activity).
 - **`"instructor": true`** marks a slide instructor-only. The plain URL shows it
   with an "instructor only" badge; **`?student`** drops it (the student version).
+- **`"room"`** = `true` for writing room after each item, or `"compressed"` to
+  tighten the spacing so a long activity fits (see above). A `<slide>` block sets
+  the same thing with `room="yes"` / `room="compressed"`.
 - **`presenterNote`** = instructor-only timing/cue on a glue slide; not projected.
   (On a `prompt` slide, a `note` field is rendered **visibly** as sub-text — use
   `presenterNote` for anything the class shouldn't see, e.g. a think-pair-share

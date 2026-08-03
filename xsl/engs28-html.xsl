@@ -76,7 +76,9 @@
                 </xsl:attribute>
             </xsl:if>
             <!-- Optional: room="yes" → leave writing space after each list item,
-                 for predict/practice slides students (and the instructor) write on. -->
+                 for predict/practice slides students (and the instructor) write on.
+                 room="compressed" is the opposite: tighten the gaps (not the type
+                 size) so a long activity fits on one slide. -->
             <xsl:if test="@room">
                 <xsl:attribute name="data-deck-room">
                     <xsl:value-of select="@room"/>
