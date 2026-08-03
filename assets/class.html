@@ -164,6 +164,11 @@
          way the book does and costs no vertical space. */
       #ref .task.titled-task { padding-left: 0; }
       #ref .task-lead { color: #256abf; font-weight: 600; }
+      /* Math variables (see mathify): italic head + real subscript, so V_BE and
+         h_FE read as symbols rather than as identifiers with an underscore. */
+      #ref .mvar { font-style: italic; }
+      #ref .mvar + sub { font-size: .68em; font-style: italic; line-height: 0; vertical-align: baseline;
+                         position: relative; bottom: -.28em; padding-left: .04em; }
       #ref pre.program {
         font-family: "SFMono-Regular", Consolas, Menlo, monospace;
         font-size: 2.3vmin; font-size: 2.3cqmin; line-height: 1.55; margin: .3em 0;
@@ -668,6 +673,51 @@
           })
         }
 
+        /* Typeset the subscript convention this book writes math in.
+           demath() flattens <m>V_{BE}</m> to "V_BE", and slides written without
+           <m> (S-6) use the same "V_BE" / "h_FE" / "R_lim" spelling by hand — so
+           one pass over the text makes both look alike: an italic variable with a
+           real subscript, the way it reads in a datasheet.
+
+           The head is a SINGLE letter, which is what keeps names out that must
+           stay verbatim (L-6). Every variable the book actually uses is one
+           letter -- V_BE, I_C, R_lim, h_FE, T_on, f_APB, β_min -- while the
+           things that must not be touched have two-letter heads: rc_w0 and rc_w1
+           (RM access types) and CK_CNT / CK_PSC (RM signal names). Identifiers
+           are excluded by the word boundary as well: in LED_PIN,
+           GPIO_MODER_MODE5_Msk, delay_ms or TIM14_IRQn there is no boundary in
+           front of the character before the underscore. Code is skipped outright
+           regardless. */
+        var MATHVAR = /\b([A-Za-zΑ-Ωα-ω])_(\{[^}]{1,12}\}|[A-Za-z0-9]{1,6})/g
+        function mathify(root) {
+          if (!root) return
+          var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode: function (n) {
+              if (!n.nodeValue || n.nodeValue.indexOf('_') < 0) return NodeFilter.FILTER_REJECT
+              for (var p = n.parentNode; p && p !== root; p = p.parentNode) {
+                var tag = p.nodeName
+                if (tag === 'CODE' || tag === 'PRE' || tag === 'SUB' || tag === 'SUP') return NodeFilter.FILTER_REJECT
+              }
+              return NodeFilter.FILTER_ACCEPT
+            }
+          })
+          var hits = [], n
+          while ((n = walker.nextNode())) if (MATHVAR.test(n.nodeValue)) { MATHVAR.lastIndex = 0; hits.push(n) }
+          hits.forEach(function (node) {
+            var frag = document.createDocumentFragment(), last = 0, m
+            MATHVAR.lastIndex = 0
+            while ((m = MATHVAR.exec(node.nodeValue))) {
+              if (m.index > last) frag.appendChild(document.createTextNode(node.nodeValue.slice(last, m.index)))
+              var v = document.createElement('i'); v.className = 'mvar'; v.textContent = m[1]
+              var s = document.createElement('sub'); s.textContent = m[2].replace(/[{}]/g, '')
+              frag.appendChild(v); frag.appendChild(s)
+              last = m.index + m[0].length
+            }
+            if (last < node.nodeValue.length) frag.appendChild(document.createTextNode(node.nodeValue.slice(last)))
+            node.parentNode.replaceChild(frag, node)
+          })
+        }
+
         function renderRef(slide) {
           refTitle.innerHTML = html(slide.title || '')
           titleEl.innerHTML = html(slide.title || '')
@@ -745,11 +795,15 @@
             var capBlock = block.querySelector('.deck-slide-caption')
 
             var refId = block.getAttribute('data-deck-ref')
-            if (refId) {
-              var target = res.doc.getElementById(refId)
+            function placeMedia(doc, url) {
+              var target = doc.getElementById(refId)
               if (target) {
+                var res = { doc: doc, url: url }   // shadowed on purpose: the body below reads res.url
                 var mediaClone = target.cloneNode(true)
-                strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone)
+                // demath here too: a ref'd table (or a figure caption) can carry
+                // <m>, and without this it reached the projector as raw LaTeX --
+                // "\(R_{\text{lim}}\)" on the BJT-vs-MOSFET table.
+                strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone); demath(mediaClone)
                 // Resolved from the BOOK (a figure, a table): its source is the
                 // reading, not this slide. Tagged so the authoring layer opens
                 // it read-only rather than offering to rewrite it.
@@ -764,7 +818,7 @@
                   refMedia.appendChild(mediaClone)
                   if (capBlock) {
                     var capClone = capBlock.cloneNode(true)
-                    strip(capClone); absolutize(capClone, res.url)
+                    strip(capClone); absolutize(capClone, res.url); demath(capClone)
                     capClone.className = 'slide-caption'
                     capClone.setAttribute('data-edit-origin', 'caption')
                     capClone.setAttribute('data-edit-id', slide.slide)
@@ -786,7 +840,7 @@
                   // instructive caption — shown below, in the body column.
                   if (capBlock) {
                     var capCloneB = capBlock.cloneNode(true)
-                    strip(capCloneB); absolutize(capCloneB, res.url)
+                    strip(capCloneB); absolutize(capCloneB, res.url); demath(capCloneB)
                     capCloneB.className = 'slide-caption'
                     capCloneB.setAttribute('data-edit-origin', 'caption')
                     capCloneB.setAttribute('data-edit-id', slide.slide)
@@ -795,6 +849,21 @@
                 }
               }
             }
+            /* A slide's @ref names an element by id, and normally that element
+               is on the slide's own built page. "refPage" on the deck entry lets
+               it name a figure that lives elsewhere in the book — e.g. an
+               in-class review slide showing a figure from the Before Class
+               reading — without duplicating the figure into a second section. */
+            var mediaStep
+            if (!refId) mediaStep = Promise.resolve()
+            else if (slide.refPage && slide.refPage !== slide.page) {
+              mediaStep = fetchPage(slide.refPage).then(function (r2) {
+                if (r2) placeMedia(r2.doc, r2.url)
+                else fail('Could not load refPage ' + slide.refPage)
+              })
+            } else mediaStep = Promise.resolve(placeMedia(res.doc, res.url))
+
+            mediaStep.then(function () {
 
             /* The presenter <note>, last of all (?notes only). Deliberately
                after the layout decisions above: it is not slide content, and
@@ -808,6 +877,11 @@
               strip(noteClone); absolutize(noteClone, res.url); demath(noteClone)
               refBody.appendChild(noteClone)
             }
+
+            // Last, once every piece of text is in place: typeset V_BE, h_FE,
+            // R_lim and friends as italic variables with real subscripts.
+            mathify(refEl)
+            })
           })
         }
 

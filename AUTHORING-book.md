@@ -367,7 +367,11 @@ These are the quality rules.
 - **S-5 Solutions and instructor cues are never student-facing.** Solutions are
   `"instructor": true`; how-to-solve-it hints are `<note>`; timing goes in
   `presenterNote`.
-- **S-6 No `<m>` math on slides** — the player has no MathJax. Plain text (`V_IL`).
+- **S-6 No `<m>` math on slides** — the player has no MathJax. Write plain text
+  (`V_IL`, `h_FE`, `R_lim`): the player typesets a single-letter variable plus
+  `_subscript` as an italic symbol with a real subscript, so it *looks* like
+  math without one. Two-letter heads are left alone on purpose, so RM names
+  like `rc_w0` and `CK_CNT` stay verbatim (L-6).
 - **S-7 One idea per slide.** See P-7.
 - **S-9 Slides stand alone.** A slide must carry its reasoning without the book
   open beside it — the worked arithmetic, not just the formula; why a register and

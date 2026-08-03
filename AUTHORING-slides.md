@@ -151,6 +151,13 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
 - **`"room"`** = `true` for writing room after each item, or `"compressed"` to
   tighten the spacing so a long activity fits (see above). A `<slide>` block sets
   the same thing with `room="yes"` / `room="compressed"`.
+- **`"refPage"`** = the page a `<slide>`'s `@ref` target lives on, when that is
+  *not* the slide's own page. Normally a slide and the figure it refs must be in
+  the same subsection (they chunk to one page, and the player only searches that
+  page). `refPage` lets an in-class slide show a figure from the Before Class
+  reading instead of duplicating it — Day 6's transistor review reuses
+  `fig-bjt-npn-symbol` this way. `check_deck.py` verifies the target really is on
+  that page, and flags a `refPage` that is no longer needed.
 - **`presenterNote`** = instructor-only timing/cue on a glue slide; not projected.
   (On a `prompt` slide, a `note` field is rendered **visibly** as sub-text — use
   `presenterNote` for anything the class shouldn't see, e.g. a think-pair-share
@@ -174,7 +181,14 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   already had them as two separate small figures with no xref, replace those with the
   one combined figure — it reads better in the book too. (Day 6 N/P-channel topologies.)
 - **No `<m>` math in slides** — the player doesn't load MathJax. Use plain text
-  (e.g. `V_IL`, not `<m>V_{IL}</m>`).
+  (e.g. `V_IL`, not `<m>V_{IL}</m>`). The player still makes it *look* like math:
+  a **single-letter** variable followed by `_subscript` is typeset as an italic
+  symbol with a real subscript (`V_BE` → *V*&#8203;<sub>BE</sub>), in slide text,
+  captions, titles, and in a ref'd table. Two-letter heads are deliberately left
+  alone so reference-manual names — `rc_w0`, `rc_w1`, `CK_CNT`, `CK_PSC` — stay
+  exactly as the RM writes them (L-6), and anything inside `<c>`/`<program>` is
+  never touched. `<m>` in a ref'd **figure or table** is flattened the same way,
+  so a table lifted from the book no longer projects raw LaTeX.
 - **Watch for old PowerPoint titles baked into extracted images** — re-export the
   image cropped, or it duplicates the deck title.
 - **Solutions** shown in class are instructor material: mark the slide
