@@ -157,6 +157,13 @@
         width: 2.5em; padding-right: .4em; box-sizing: border-box;
       }
       #ref .task > .heading .codenumber { color: #256abf; }
+      /* A <task> with its own <title> renders "(a) Trace." into that same heading,
+         and a title does not fit a 2.5em gutter — it wrapped underneath the label
+         and printed straight through the task's text. renderRef folds the label and
+         title into the front of the task's first paragraph instead, which reads the
+         way the book does and costs no vertical space. */
+      #ref .task.titled-task { padding-left: 0; }
+      #ref .task-lead { color: #256abf; font-weight: 600; }
       #ref pre.program {
         font-family: "SFMono-Regular", Consolas, Menlo, monospace;
         font-size: 2.3vmin; font-size: 2.3cqmin; line-height: 1.55; margin: .3em 0;
@@ -714,6 +721,24 @@
             while (bodyClone.firstChild) refBody.appendChild(bodyClone.firstChild)
             // A demo slide (its body is a board simulator) gets the whole slide.
             refBody.classList.toggle('has-sim', !!refBody.querySelector('.sim-embed'))
+            // PreTeXt puts a <task>'s own <title> inside the same .heading as its
+            // (a)/(b) label, but the CSS lays that heading out as a narrow absolute
+            // gutter sized for "(a)" alone — so a title wrapped underneath and printed
+            // through the task's text. Fold the label and title into the front of the
+            // first paragraph, which reads like the book and adds no height.
+            ;[].forEach.call(refBody.querySelectorAll('.task > .heading'), function (h) {
+              if (!h.querySelector('.title')) return
+              var task = h.parentNode
+              var first = task.querySelector('.para, p')
+              if (!first) return
+              var lead = document.createElement('span')
+              lead.className = 'task-lead'
+              while (h.firstChild) lead.appendChild(h.firstChild)
+              task.removeChild(h)
+              first.insertBefore(document.createTextNode(' '), first.firstChild)
+              first.insertBefore(lead, first.firstChild)
+              task.classList.add('titled-task')
+            })
 
             // The slide's own short, instructive caption (shown under the figure
             // instead of the book figure's full caption).
