@@ -1540,6 +1540,22 @@
               .catch(function (e) { toast(describe(e), 'error') })
           }
 
+          /* Open the source of book content shown on a slide, as precisely as
+             the click allows: the exact paragraph or task if one was clicked
+             (/locate matches its text), otherwise the whole element by id. The
+             fallback matters for a figure or a table, where the click may land
+             on something with no prose to match on. */
+          function openBookSource (block, bookId, slide) {
+            var text = block ? textFor(block) : ''
+            if (!text) { openSlideBlock(bookId, 'book content'); return }
+            fetch(EDIT_SERVER + '/locate?open=1' +
+                  '&text=' + encodeURIComponent(text) +
+                  '&id=' + encodeURIComponent(bookId))
+              .then(function (r) { if (!r.ok) throw new Error('no match'); return r.json() })
+              .then(function (b) { toast('Opened ' + b.file + ':' + b.line, 'ok') })
+              .catch(function () { openSlideBlock(bookId, 'book content') })
+          }
+
           function openSource (target, slide) {
             // A ref slide's TITLE is deck glue, not book content: it is the
             // one bit of a ref slide written in the JSON.
@@ -1666,9 +1682,20 @@
             var origin = target.closest('[data-edit-origin]')
             var kind = origin && origin.getAttribute('data-edit-origin')
             if (kind === 'book' || kind === 'book-direct') {
-              toast('This is book content (' + origin.getAttribute('data-edit-id') +
-                    '), not slide-only text — editing it here would change the ' +
-                    'reading too. Alt-click to open it in your editor.', 'error')
+              /* Book content behind a direct ref: not editable from here, for
+                 the same reason as everything else this refuses — it would
+                 change the reading, not just the slide.
+
+                 It OPENS the file rather than telling you to go and Alt-click
+                 it yourself. Being refused and being handed the file are the
+                 same moment, and the pre-flight path below has always done it
+                 that way; leaving this one branch to only talk made the tool
+                 look like it behaved differently on different slides. */
+              var refused = target.closest(BLOCKS)
+              toast('Book content (' + origin.getAttribute('data-edit-id') +
+                    ') — editing it here would change the reading too. ' +
+                    'Opening it in your editor.', 'info')
+              openBookSource(refused, origin.getAttribute('data-edit-id'), slide)
               return
             }
             var block = target.closest(BLOCKS)
