@@ -196,6 +196,42 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   content is still in the page source until a solutions-free build is added at
   deploy time.)
 
+## Voice
+
+Slides are written in Petra's voice, which is **S-11 … S-19** in
+`AUTHORING-book.md`. The specimen those rules were derived from is her own hand
+rewrite of Day 8, frozen at `plans/day8-voice-reference.diff` — read it before
+authoring a deck, and read it again if a rule feels ambiguous. The rules are a
+summary; the diff is the specification.
+
+In one line each: name things plainly and say where they live (S-11, S-12); "we"
+for the class and "you" for the student (S-13); give the reason with the rule,
+even though it makes the slide longer (S-14); no manufactured urgency, stakes, or
+dares (S-15, S-17); requirements rather than slogans, **without weakening the
+technical claim** (S-16); a title that says what the slide is (S-18); and admit
+where a rule has exceptions (S-19).
+
+A `<slide>` block and the prose it condenses are separate texts that must not
+sound like different people, so a voice fix in one needs checking against the
+other (Step 5b).
+
+### What no rule covers
+
+Three changes in the Day 8 pass resist generalization. They are recorded here so
+nobody later mistakes them for rules — if a draft raises one of these, ask rather
+than guessing:
+
+- **Which explanations get expanded.** Day 8 grew the misspelled-handler slide
+  from one bullet to four (weak symbols, the default handler, the symptom) while
+  leaving other slides alone. S-14 says give the reason; it does not say which
+  slides earn four bullets and which earn one.
+- **When a forward reference is worth keeping.** "Starting Day 9, that stops
+  being hypothetical" was cut, but "we'll revisit this in two weeks: timers will
+  hold pins high for exact durations (motor speed)" was kept and made *more*
+  specific. Both point forward; only one survived.
+- **Exclamation marks.** "Still stuck? We're here to help!" is the only one in
+  the corpus. It is clearly deliberate and clearly not a general licence.
+
 ## Educational patterns (Petra's design — follow these for new days)
 
 Observed across the prototyped decks (Days 3–6). Use these when generating slides

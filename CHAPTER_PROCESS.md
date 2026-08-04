@@ -130,6 +130,18 @@ fixed the arc, so this step is condensation, not design. If a section resists
 condensing to a slide, that is a signal the section is not clear yet — fix the
 section.
 
+**Slides are written in Petra's voice — rules S-11 … S-19** in
+`AUTHORING-book.md`, derived from her hand rewrite of Day 8 and frozen as a
+specimen at `plans/day8-voice-reference.diff`. Read that diff before writing a
+deck; the rules summarize it, and the examples in them are what make them
+usable. In short: name things plainly, say where they live, give the reason with
+the rule, and drop manufactured urgency — while keeping every technical claim
+exactly as strong (S-16 softens rhetoric, never engineering).
+
+The same voice applies to the prose the slide condenses. A `<slide>` block and
+its paragraph are separate texts, so a fix to one is not a fix to the other
+(Step 5b).
+
 Remember the deck may legitimately diverge from the reading (P-9): the book may
 show worked code that the deck presents as a fill-in-the-blank skeleton.
 

@@ -384,6 +384,66 @@ These are the quality rules.
 - **S-8 The deck arc.** Title → brief review / where we're headed → agenda → timed
   `Part N` sections → recap or looking ahead.
 
+### S-11 … S-19 — the voice
+
+Derived from Petra's own hand rewrite of the Day 8 deck and the Day 8 pre-class
+video, frozen at `plans/day8-voice-reference.diff`. That diff is the
+specification; these are its summary, and each carries one of her actual
+before → after pairs, because the examples are what make the rules usable.
+
+These are slide rules, but the voice reads the same in the book's prose, and a
+`<slide>` block and the paragraph it condenses should not sound like different
+people (B-7, 5b).
+
+- **S-11 Name the thing plainly; no metaphor as a label.** A metaphor *inside*
+  an explanation is fine — "the `while` **plants** the program at the flag, the
+  `if` **glances** once" survived her pass untouched. What is banned is metaphor
+  used as the *name* of a thing, which the reader must decode before they can
+  start.
+  ~~"LED not blinking? The ladder"~~ → "LED not blinking? Steps to help you
+  diagnose the fault".
+- **S-12 Name what you point at, and where it lives.** No in-group shorthand: a
+  student who missed that day must still be able to follow.
+  ~~"Now open RM0490 §11.3, Table 40"~~ → "Now open the reference manual,
+  RM0490 §11.3, Table 40".
+- **S-13 "We" for what the class does, "you" for what the student does.**
+  ~~"In class you build all of it"~~ → "In class we will build all of it" — but
+  "You noticed this in the Lab 2 race game" stays "you", because the student is
+  the one who did it.
+- **S-14 Give the reason with the rule.** Where a terse slide asserts, say why.
+  This *lengthens* slides, and that is correct — it is S-9, not a conflict with
+  it.
+  ~~"Both are written minus one"~~ → "Both the prescaler and counter start
+  counting at 0, we therefore subtract one from the value we have in mind".
+- **S-15 No manufactured stakes, urgency, or time pressure.** Cut the clause
+  that raises the temperature; keep the one that carries information.
+  ~~"Lab 5 asks exactly this at full scale — and next week, timers drive
+  motors."~~ → "This is a great preparation for Lab 5." Also
+  ~~"(≈ 7 minutes)"~~ in a student-facing subtitle, and ~~"Your turn."~~
+- **S-16 Requirements, not slogans.** Keep the technical claim **exactly as
+  strong**; change only the register. Softening the rhetoric is not softening
+  the engineering — do not weaken a fact to satisfy this rule.
+  ~~"Every variable an ISR shares with the rest of the program is volatile.
+  Always."~~ → "…therefore needs to be declared volatile."
+- **S-17 Support, don't challenge.** A question opens a discussion; it does not
+  dare the student.
+  ~~"Check both against a 48 MHz clock: neither survives — why not?"~~ → "Now
+  imagine your clock was running at 48 MHz (which our chip can do): how could
+  you make the 250 ms or 500 ms blink rate work?" And ~~"Still stuck? Flag it,
+  grab the known-good copy…"~~ → "Still stuck? We're here to help!"
+- **S-18 A title says what the slide is.** Not what it gestures at.
+  ~~"Run it: Blinky that never waits"~~ → "Run it: Blinky with a (polled) timer
+  and without `delay_ms()`".
+- **S-19 Allow honest incompleteness.** Say when a rule has exceptions rather
+  than implying it is the whole story.
+  ~~"Both `TIM14_IRQn` and the handler name … come from one table in the
+  reference manual."~~ → "…come from different places." (because they do), and
+  the added "(Other behaviors are possible here as well.)"
+
+**Not covered by these rules.** Petra's Day 8 pass made a few changes no rule
+explains — see the end of `AUTHORING-slides.md`. Do not invent a rule to cover
+them; ask.
+
 ---
 
 ## L — Standing language rules (mechanically checked)
@@ -397,9 +457,19 @@ These are the quality rules.
 | **L-5** | Specific hardware names. "STM32C031C6", not "the target MCU". |
 | **L-6** | Register, bit, and peripheral names match the reference manual exactly, including case. CMSIS device headers are all lowercase — `stm32c0xx.h`, `stm32c031xx.h` — even though the part is `STM32C031C6`. |
 | **L-7** | American spelling throughout — "stabilize", "center", "labeled", "gray". |
+| **L-8** | No manufactured time pressure — "in under a minute", "(≈ 7 minutes)" in student-facing text. Enforces S-15. |
+| **L-9** | No slogan endings — "`. Always.`", "the entire point". State the requirement instead, just as strongly. Enforces S-16. |
+| **L-10** | No challenge phrasing — "Your turn", "be ready to". Enforces S-15 and S-17. |
+| **L-11** | "on Day N", never "in Day N" — or "tomorrow", since Day Nx follows Day N. |
 
-`scripts/check_rules.py` enforces L-1 … L-7, image paths, and step counts. Run it
+`scripts/check_rules.py` enforces L-1 … L-11, image paths, and step counts. Run it
 before every committee review.
+
+L-8 … L-11 are the *lintable corner* of the voice rules — fixed phrases only.
+The rest of S-11 … S-19 needs judgment and is deliberately not linted. Each was
+validated against the corpus as it stood before the voice pass: together they
+catch 7 real violations, three of them phrases Petra deleted by hand in
+`plans/day8-voice-reference.diff`, with no false positive in any chapter file.
 
 ---
 

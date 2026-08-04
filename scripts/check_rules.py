@@ -44,6 +44,26 @@ RULES = [
             r"whilst|programme|defence|offence|travelling|modelling|labelled|"
             r"cancelled|practise|licence|grey|greyed)\b",
      "British spelling — this book uses American spelling", "error"),
+    # L-8..L-11 are the lintable corner of the voice rules (S-11..S-19).  Only
+    # fixed phrases are here; anything needing taste stays a judgment rule.
+    # Each was validated against the corpus as it stood before the voice pass
+    # (git 7b7fc33^): together they catch 7 real violations — three of them
+    # phrases Petra deleted by hand in plans/day8-voice-reference.diff — with no
+    # false positive in any of the 17 chapter files.
+    ("L-8", r"in under (a|one) (minute|second|hour)\b|\byou can find it in\b"
+            r"|\(\s*[≈~]\s*\d+\s*(minute|min)\b",
+     "manufactured time pressure (S-15) — state the task, not how fast it should go",
+     "error"),
+    ("L-9", r"\.\s+Always\.|\bthe entire point\b",
+     "slogan ending (S-16) — state the requirement; keep the claim just as strong",
+     "error"),
+    # The lookbehind is load-bearing: without it this fires on ordinary English
+    # like "waited for the UART to be ready to accept a character".
+    ("L-10", r"\bYour turn\b|(?<!to )\bbe ready to\b",
+     "challenge phrasing (S-15, S-17) — open the question, don't dare the student",
+     "error"),
+    ("L-11", r"\bin Day \d",
+     "say 'on Day N' — or 'tomorrow', since Day Nx follows Day N", "error"),
 ]
 
 # Bit/register names that must keep reference-manual casing.
