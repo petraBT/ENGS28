@@ -295,13 +295,50 @@ in one panel, `<tabular>` in the other). Slide tables honor PreTeXt's `halign`/`
 `halign="center"` really centers the data under the headers.
 
 **Check that a slide fits.** Content is free to be substantial but must not
-overflow. In the player, `#ref .ref-body` scrolling means it has:
+overflow. Paste this in the browser console with the slide showing; it reports
+every way a slide can be cut, not just the obvious one:
 
 ```js
 // in the browser console, on the slide
-b = document.querySelector('#ref .ref-body');
-[b.scrollHeight - b.clientHeight, b.scrollWidth - b.clientWidth]   // both should be ~0
+(() => {
+  const ref = document.querySelector('#ref');
+  const b   = document.querySelector('#ref .ref-body');
+  if (!ref || getComputedStyle(ref).display === 'none') return 'not a ref slide';
+  const out = [];
+  const shown = b && getComputedStyle(b).display !== 'none';
+  // A hidden/background window suspends layout and every measurement reads 0,
+  // which looks exactly like "fits". Refuse to answer instead of lying.
+  if (shown && b.clientHeight === 0) return 'LAYOUT SUSPENDED — front the window, re-run';
+  if (shown) {
+    const dy = b.scrollHeight - b.clientHeight, dx = b.scrollWidth - b.clientWidth;
+    if (dy > 2 || dx > 2) out.push(`body overflows ${dy}px down, ${dx}px across`);
+  }
+  // A <pre> scrolls INSIDE itself, so clipped code never shows up in .ref-body.
+  document.querySelectorAll('#ref pre').forEach((p, i) => {
+    const dx = p.scrollWidth - p.clientWidth, dy = p.scrollHeight - p.clientHeight;
+    if (dx > 2) out.push(`code block ${i + 1}: ${dx}px CLIPPED across — line ends are cut off`);
+    if (dy > 2) out.push(`code block ${i + 1}: ${dy}px clipped down`);
+  });
+  return out.length ? out : 'fits';
+})()
 ```
+
+Three traps it exists to catch, all of which have produced a false "fits":
+
+- **Suspended layout.** In a background or hidden window the browser stops
+  computing layout, so every `clientHeight` reads 0 and the old one-line check
+  returned `[0, 0]` for every slide regardless of content.
+- **Image-dominant slides.** `#ref.figure-focus .ref-body` is `display: none`,
+  so the body measures 0 there too — correctly, since there is nothing to
+  overflow, but indistinguishable from a pass.
+- **Clipped code.** A `<pre>` scrolls within itself, so a listing can lose a
+  third of every line off the right edge while `.ref-body` reports no overflow
+  at all. This is the one that hid for an entire voice pass; Day 8's
+  `sl-day8-flag` was cutting the words the slide was making its point with.
+
+A code block that reports clipping is fixed by shortening the *comments* (the
+code itself must not drift from the driver, B-6) or by giving the listing the
+full width instead of a column.
 
 **Layout signals meaning:**
 - *talking points + a supporting image* → two-column (bullets left, figure +

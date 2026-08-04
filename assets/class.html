@@ -624,9 +624,20 @@
         // Relative URLs in extracted markup (image src, etc.) are relative to the
         // BOOK PAGE, but we render inside external/class.html, so re-resolve them
         // against the page's own URL or they 404.
+        // Authoring only: bust the browser's image cache so an edited figure
+        // shows up on the next reload. Book PAGES are already fetched with
+        // cache:'no-store' on localhost, but an <img> injected afterwards is an
+        // ordinary subresource — even a hard refresh can serve the cached copy,
+        // because the request is made by script after the reload. So a figure
+        // could be rebuilt correctly on disk and still look unchanged on the
+        // slide. Deployed decks are untouched: they want normal caching.
+        var IMG_BUST = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+          ? String(Date.now()) : ''
         function absolutize(root, baseUrl) {
           ;[].forEach.call(root.querySelectorAll('img[src]'), function (img) {
-            img.src = new URL(img.getAttribute('src'), baseUrl).href
+            var u = new URL(img.getAttribute('src'), baseUrl)
+            if (IMG_BUST) u.searchParams.set('_r', IMG_BUST)
+            img.src = u.href
           })
           ;[].forEach.call(root.querySelectorAll('a[href]'), function (a) {
             a.href = new URL(a.getAttribute('href'), baseUrl).href
