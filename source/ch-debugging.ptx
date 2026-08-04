@@ -244,16 +244,38 @@ main.c:6:21: note: in expansion of macro 'GPIOAEN'
                 message is baffling only because the peripheral name is itself
                 a parenthesized macro.)  The line where an error is
                 <em>reported</em> is often just where the compiler finally gave
-                up making sense of the code — the actual mistake sits at or
-                <em>above</em> it.  Three rules recover almost every case:
+                up making sense of the code.
+            </p>
+            <p>
+                Which direction should you look?  Usually the mistake sits at or
+                <em>above</em> the reported line — but this example is exactly
+                the case where that fails, and it is worth seeing why.  Line 2 is
+                a <c>#define</c>, and a <c>#define</c> is not code that runs
+                where it is written; it is text pasted in wherever the macro is
+                <em>used</em>.  The compiler reported the error at the
+                definition, then told you where the paste happened:
+                <c>note: in expansion of macro 'GPIOAEN'</c>, line 6.  Line 6 is
+                the line it was really reading, and the missing semicolon is at
+                the end of it — <em>below</em> line 2, not above.
+            </p>
+            <p>
+                So the rule is not <q>read up from the error</q> but <q>read up
+                from the line the compiler was reading</q>.  For ordinary code
+                those are the same line.  For a macro they are not, and the
+                <c>note:</c> is what tells you which line to start from.  Three
+                rules recover almost every case:
             </p>
             <ul>
                 <li><em>Start at the top.</em>  One root error can spawn many
                     messages; the first one is closest to the cause, and fixing
                     it often clears several below it.</li>
-                <li><em>Read up.</em>  If the reported line looks healthy, the
-                    bug is usually on an earlier line — a missing semicolon,
-                    <c>)</c>, or <c>}</c> above.</li>
+                <li><em>Read up — from the right line.</em>  If the reported
+                    line looks healthy, the bug is usually on an earlier line —
+                    a missing semicolon, <c>)</c>, or <c>}</c> above.  But when
+                    the message names a macro, the reported line is the
+                    <c>#define</c>; read up from the line in the
+                    <c>note: in expansion of macro</c> instead, which is
+                    wherever the macro was used.</li>
                 <li><em>Isolate when stuck.</em>  For a really pesky error,
                     comment out a block of code and rebuild — if the error
                     moves it tells you a bug was inside the commented out code.</li>
@@ -307,16 +329,19 @@ main.c:6:21: note: in expansion of macro 'GPIOAEN'
                 <ul>
                     <li>Line 2 is perfectly healthy.  The bug: the <em>missing semicolon</em> at the end of line 6.</li>
                     <li>With it gone, the compiler sees <c>GPIOAEN</c>'s value followed by a parenthesized expression (<c>GPIOA</c> is a macro too) — and in C, a value followed by <c>( ... )</c> reads as a <em>function call</em>.  So the error points at the <q>called</q> value: the macro defined on line 2.</li>
-                    <li>The reported line is where the compiler <em>gave up</em> — the mistake sits at or <em>above</em> it.</li>
+                    <li>The reported line is where the compiler <em>gave up</em>.  Usually the mistake is at or <em>above</em> it — but not here.</li>
+                    <li>A <c>#define</c> is pasted in wherever the macro is <em>used</em>, so the compiler reported the definition (line 2) and then said where the paste happened: <c>note: in expansion of macro</c>, <em>line 6</em>.  Line 6 is the line it was really reading — and the bug is <em>below</em> line 2, not above it.</li>
                 </ul>
-                <note>REVEAL — show after answers are committed.</note>
+                <note>REVEAL — show after answers are committed.  This example is
+                deliberately the exception to <q>read up</q>: make the point that
+                the note, not the error, names the line to read up from.</note>
             </slide>
 
             <slide xml:id="sl-debug-compiler-rules">
                 <p>Three rules recover almost every compiler error:</p>
                 <ul>
                     <li><clr c="blue">Start at the top</clr>: one root error can spawn many messages; fixing the first often clears the rest.</li>
-                    <li><clr c="blue">Read up</clr> when the reported line looks healthy — the mistake sits at or above the reported line.</li>
+                    <li><clr c="blue">Read up — from the right line</clr>: when the reported line looks healthy, the mistake is usually at or above it.  But if the message names a macro, the reported line is the <c>#define</c> — read up from the <c>note: in expansion of macro</c> line instead, wherever the macro was used.  (That is today's example: <c>#define</c> on line 2, bug on line 6.)</li>
                     <li><clr c="blue">Isolate when stuck</clr>: comment out a block and rebuild — if the error moves, a bug was inside the commented-out code.</li>
                 </ul>
             </slide>
