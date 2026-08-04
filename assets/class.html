@@ -610,15 +610,24 @@
         var FETCH_OPTS = LOCAL ? { cache: 'no-store' } : undefined
 
         // Book pages, fetched once and cached (several slides can share a page).
+        //
+        // NOT cached on localhost. The book gets rebuilt underneath a running
+        // player all day while authoring, and a memoized document would keep
+        // serving the pre-rebuild slide: cache:'no-store' above stops the
+        // BROWSER holding a stale copy, but not this map. Changing the hash does
+        // not reload the page, so "rebuild, press →" would show old content with
+        // nothing to suggest it was old. Costs one local re-fetch per slide.
+        // Deployed decks keep the cache — their pages cannot change underneath.
         var pageCache = {}
         function fetchPage(page) {
-          if (pageCache[page]) return pageCache[page]
+          if (!LOCAL && pageCache[page]) return pageCache[page]
           var url = new URL('../' + page, location.href).href
-          pageCache[page] = fetch(url, FETCH_OPTS)
+          var pending = fetch(url, FETCH_OPTS)
             .then(function (r) { return r.ok ? r.text() : null })
             .then(function (t) { return t == null ? null : { doc: new DOMParser().parseFromString(t, 'text/html'), url: url } })
             .catch(function () { return null })
-          return pageCache[page]
+          if (!LOCAL) pageCache[page] = pending
+          return pending
         }
 
         // Relative URLs in extracted markup (image src, etc.) are relative to the
