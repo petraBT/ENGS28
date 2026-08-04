@@ -1192,10 +1192,21 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
                 <image source="images/Day08-Interrupts/vector_table_tim14.png" width="90%"/>
             </figure>
             <p>
-                TIM14 is the name of the hardware. To interact with it in code we need to add on to this name according to somewhat regular patters.</p>
+                TIM14 is the name of the hardware. To interact with it in code we need to add on to this name according to somewhat regular patterns.</p>
             <p> To register with the NVIC we use
-                <c>TIM14_IRQn</c> — we simply add on <c>_IRQn</c>. This is definted in the device header and it is what <c>NVIC_EnableIRQ()</c> takes.
+                <c>TIM14_IRQn</c> — we simply add on <c>_IRQn</c>. This is defined in the device header and it is what <c>NVIC_EnableIRQ()</c> takes.
             </p>
+
+            <figure xml:id="fig-irqn-type">
+                <caption>The <c>IRQn_Type</c> enumeration in the device header
+                <c>stm32c031xx.h</c>, with the TIM14 row boxed.  Every populated
+                row of RM0490's Table 40 gets one constant here, and its value is
+                the position number from that table: <c>TIM14_IRQn = 19</c>.  The
+                gaps in the numbering — 1, 8, 15, 17, 18 are absent — are the
+                reserved positions, which have no interrupt on this
+                part.</caption>
+                <image source="images/Day08-Interrupts/irqn_type_tim14.png" width="95%"/>
+            </figure>
             <p>
                 The third name is what you need to call your ISR.  The
                 handler function is <c>TIM14_IRQHandler</c>, and that name is
@@ -1215,11 +1226,22 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
                 diagnosis, and rung 3 of Part 7's ladder is where you check
                 it.
             </p>
-            <!-- TODO (Petra): fig-startup-file — annotated Project Explorer
-                 screenshot (startup_stm32c031c6tx.s's folder circled, house
-                 style of fig-exclude-from-build) + a crop of the file showing
-                 the TIM14_IRQHandler line.  Referenced from the handler-name
-                 slide once supplied. -->
+            <figure xml:id="fig-startup-file">
+                <caption>The vector table inside the startup file
+                <c>startup_stm32c031c6tx.s</c>, with the TIM14 row boxed.  Each
+                <c>.word</c> is one slot, in position order: counting from
+                <c>WWDG_IRQHandler</c> as position 0, <c>TIM14_IRQHandler</c>
+                lands on 19 — the same 19 as Table 40 and as
+                <c>TIM14_IRQn</c>.  The <c>.word 0</c> entries are the reserved
+                positions.  Note that a handler name is <em>not</em> its
+                <c>_IRQn</c> constant with the ending swapped: the header
+                declares <c>ADC1_IRQn</c>, <c>I2C1_IRQn</c> and
+                <c>SPI1_IRQn</c>, while the handlers here are
+                <c>ADC_IRQHandler</c>, <c>I2C_IRQHandler</c> and
+                <c>SPI_IRQHandler</c>.  This is why the handler name is copied
+                from this file rather than constructed.</caption>
+                <image source="images/Day08-Interrupts/startup_vectors_tim14.png" width="95%"/>
+            </figure>
             <p>
                 <term>Give the ISR a way to talk to main.</term>  The
                 video's flag pattern (written version:
@@ -1283,6 +1305,15 @@ NVIC_EnableIRQ(TIM14_IRQn);   // CMSIS function, device-header constant
     </ul>
 </slide>
 
+            <slide xml:id="sl-day8-irqn-header" ref="fig-irqn-type" stack="yes">
+    <p><term>Where <c>TIM14_IRQn</c> actually lives:</term> the device header <c>stm32c031xx.h</c>.</p>
+    <ul>
+        <li>One constant per populated row of Table 40, and its value <em>is</em> that row's position number — so <c>TIM14_IRQn = 19</c>, the same 19 you just looked up.</li>
+        <li>The gaps are real: 1, 8, 15, 17 and 18 are missing because those positions are reserved on this part.</li>
+    </ul>
+    <caption>The device header, with the TIM14 row boxed: TIM14_IRQn = 19.</caption>
+</slide>
+
             <slide xml:id="sl-day8-handler-name">
     <p><term>The third name: the handler — copy it, don't type it.</term></p>
     <ul>
@@ -1295,7 +1326,14 @@ NVIC_EnableIRQ(TIM14_IRQn);   // CMSIS function, device-header constant
         <li>When the timer interrupt event occurs, the CPU jumps to the weak Default_Handler instead of your written code.</li>
         <li> Symptom: no blink, possibly no output at all, and the program may appear to freeze or hang.</li>
     </ul>
-    <note>fig-startup-file (Project Explorer screenshot) pending from Petra — add ref="fig-startup-file" here once it exists.</note>
+</slide>
+
+            <!-- Image-dominant, no bullets: the listing is 31 lines of code and
+                 needs the whole slide to be legible from the back of the room
+                 (B-11a).  Beside this slide's eight bullets it rendered ~9px per
+                 line. -->
+            <slide xml:id="sl-day8-startup-file" ref="fig-startup-file">
+    <caption>The startup file's vector table — this is the file you copy the handler name out of. Counting from <c>WWDG_IRQHandler</c> as position 0, TIM14 lands on 19, the same 19 as Table 40 and as <c>TIM14_IRQn</c>. Note <c>ADC_IRQHandler</c> against the header's <c>ADC1_IRQn</c>: the handler name is not the constant with its ending swapped.</caption>
 </slide>
 
         </subsection>
