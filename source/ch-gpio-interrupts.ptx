@@ -704,21 +704,15 @@ attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
             <title>Part 4a: Choosing the Port — EXTI_EXTICR2</title>
             <p>
                 PB4 has to win the competition for line EXTI4, and the register
-                that decides it is <c>EXTI_EXTICRx</c>.  Rather than being told
-                which one, work it out: the reference manual gives the address
-                and the layout, and the answer follows.
+                that decides it is <c>EXTI_EXTICR2</c>.  There are four of these
+                registers between them covering all sixteen lines, four lines to
+                a register; the one that holds EXTI4 is the second, and how the
+                four are laid out and addressed is in
+                <xref ref="subsec-gpio-ref-exticr"/> for when you need it.  What
+                you need now is on one page of the reference manual: which byte
+                of <c>EXTI_EXTICR2</c> belongs to line EXTI4, and what code
+                selects a port.
             </p>
-            <figure xml:id="fig-exticr-generic">
-                <caption>The <c>EXTI_EXTICRx</c> register as RM0490 §12.5.6
-                prints it.  There is not one such register but four, at address
-                offset <m>0x060 + 0x4 \times (x-1)</m> for <m>x = 1</m> to
-                <m>4</m>, and each holds four eight-bit fields:
-                <c>EXTIm</c> in bits [7:0], <c>EXTIm+1</c> in [15:8],
-                <c>EXTIm+2</c> in [23:16] and <c>EXTIm+3</c> in [31:24], where
-                <m>m = 4 \times (x-1)</m>.  Each field holds a code saying which
-                port drives that line.</caption>
-                <image source="images/Day09-Interrupts(2)/exticr_generic.svg" width="90%"/>
-            </figure>
 
             <slide xml:id="sl-day9-checklist" room="yes">
     <p><term>What we need to do to program a pushbutton interrupt.</term> The button is on PB4.</p>
@@ -733,13 +727,22 @@ attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
     <note>Petra's own running device. Comes back at the top of Part 5 with 1–5 ticked, before the handler. Do not carry it into Part 6 — the ladder owns that screen.</note>
 </slide>
 
-            <slide xml:id="sl-day9-exticr-generic" ref="fig-exticr-generic" stack="yes">
+            <slide xml:id="sl-day9-exticr-generic" ref="fig-exticr2-portb" stack="yes">
+    <p><term>Which port is on a line is set in <c>EXTI_EXTICRx</c>.</term> Four registers cover the sixteen lines, four lines to a register &#8212; so line EXTI4 is in the second one, <c>EXTI_EXTICR2</c>, one byte per line:</p>
+    <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
+        <col width="28%"/><col width="18%"/><col width="18%"/><col width="18%"/><col width="18%"/>
+        <row header="yes" bottom="minor">
+            <cell>bits</cell><cell>[31:24]</cell><cell>[23:16]</cell><cell>[15:8]</cell><cell>[7:0]</cell>
+        </row>
+        <row>
+            <cell><c>EXTI_EXTICR2</c></cell><cell>EXTI7</cell><cell>EXTI6</cell><cell>EXTI5</cell><cell><term>EXTI4</term></cell>
+        </row>
+    </tabular>
     <ul>
-        <li>There is not one such register but <term>four</term>, at offset 0x060 + 0x4 &#215; (x &#8722; 1) for x = 1 to 4 &#8212; RM0490 &#167;12.5.6.</li>
-        <li>Each holds four eight-bit fields, and the field names carry the arithmetic: <c>EXTIm</c> in bits [7:0], <c>EXTIm+1</c> in [15:8], <c>EXTIm+2</c> in [23:16], <c>EXTIm+3</c> in [31:24], with <term>m = 4 &#215; (x &#8722; 1)</term>.</li>
-        <li>Each field holds a code saying which port drives that line. Work out which register and which byte hold EXTI4, then read the port code off the same page.</li>
+        <li>Each byte holds a <term>port code</term>: PA 0x00, PB 0x01, PC 0x02, PD 0x03, PF 0x05. (0x04 is reserved &#8212; no STM32C0 has a port E.)</li>
+        <li>So PB4 on line EXTI4 means writing <c>0x01</c> into the <term>lowest byte</term> of <c>EXTI_EXTICR2</c>.</li>
     </ul>
-    <caption>Four registers, four fields each — the field names tell you the arithmetic.</caption>
+    <caption>Port B's code, 0x01, in the EXTI4 field: bit 0 set, the other seven clear.</caption>
 </slide>
 
             <activity xml:id="act-gpio-exticr-lookup">
@@ -752,11 +755,10 @@ attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
                     </p>
                 </introduction>
                 <task xml:id="act-gpio-exticr-t1">
-                    <statement><p>The field for line EXTI4 is called
-                    <c>EXTIm</c> for some value of <m>m</m>, in the register
-                    numbered <m>x</m>.  Using <m>m = 4 \times (x-1)</m>, find
-                    the <m>x</m> and the bit range.  Which of the four
-                    registers is it, and which byte of it?</p></statement>
+                    <statement><p>Find the four fields of
+                    <c>EXTI_EXTICR2</c>.  Which line does each one control, and
+                    which byte of the register belongs to line
+                    EXTI4?</p></statement>
                 </task>
                 <task xml:id="act-gpio-exticr-t2">
                     <statement><p>The same page lists the code for each port.
@@ -771,9 +773,9 @@ attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
                 </task>
             </activity>
             <p>
-                Working it through: <m>4 = 4 \times (2-1) + 0</m>, so <m>x =
-                2</m> and the field is <c>EXTI4</c> in bits [7:0] — the lowest
-                byte of <c>EXTI_EXTICR2</c>.  The port codes on that page are
+                Working it through: the four fields of <c>EXTI_EXTICR2</c> are
+                EXTI4, EXTI5, EXTI6 and EXTI7, lowest byte first, so line EXTI4
+                is bits [7:0].  The port codes on that page are
                 0x00 for PA, 0x01 for PB, 0x02 for PC, 0x03 for PD and 0x05 for
                 PF; 0x04 is reserved, because this package has no port E.  And
                 the array index is <em>one</em>, not two: the reference manual
@@ -801,13 +803,15 @@ EXTI->EXTICR[1] &= ~EXTI_EXTICR2_EXTI4_Msk;             // clear the EXTI4 field
 EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
 ]]></code></program>
 
-            <slide xml:id="sl-day9-exticr-answer" ref="fig-exticr2-portb" stack="yes">
+            <slide xml:id="sl-day9-exticr-answer">
+    <p><term>The one that catches people: the array index.</term></p>
     <ul>
-        <li><term>Which register:</term> 4 = 4 &#215; (2 &#8722; 1) + 0, so x = 2 and the field is <c>EXTI4</c> in bits [7:0] &#8212; the lowest byte of <c>EXTI_EXTICR2</c>.</li>
-        <li><term>Which code:</term> PA 0x00, PB 0x01, PC 0x02, PD 0x03, PF 0x05. 0x04 is reserved &#8212; no STM32C0 has a port E at all.</li>
-        <li><term>Which index:</term> the reference manual numbers its registers from 1 and C numbers arrays from 0, so <c>EXTI_EXTICR2</c> is <c>EXTI-&gt;EXTICR[1]</c>. An easy slip, and it builds cleanly and never interrupts.</li>
+        <li>The reference manual numbers its four registers <c>EXTI_EXTICR1</c> to <c>EXTI_EXTICR4</c>. The device header declares them as one C array, <c>EXTI-&gt;EXTICR[ ]</c>.</li>
+        <li>C numbers array elements from 0, so <c>EXTI_EXTICR1</c> to <c>EXTI_EXTICR4</c> are <c>EXTI-&gt;EXTICR[0]</c> to <c>EXTI-&gt;EXTICR[3]</c>.</li>
+        <li>Ours is <c>EXTI_EXTICR2</c>, so we write <c>EXTI-&gt;EXTICR[1]</c> &#8212; index <term>one</term>, not two.</li>
+        <li>Writing <c>[2]</c> configures line EXTI8 instead. It builds cleanly, and the button simply never interrupts.</li>
     </ul>
-    <caption>Port B's code, 0x01, in the EXTI4 field: bit 0 set, the other seven clear.</caption>
+    <note>REVEAL, after the lookup activity. The index slip is the one worth dwelling on — it is silent.</note>
 </slide>
 
             <slide xml:id="sl-day9-exticr-code">
@@ -1918,6 +1922,41 @@ int main(void) {
                 arranged for the moment you come back needing one fact.
             </p>
         </introduction>
+
+        <subsection xml:id="subsec-gpio-ref-exticr">
+            <title>The Four EXTICR Registers, in General</title>
+            <p>
+                In class we used <c>EXTI_EXTICR2</c> and read its four fields
+                off the reference manual page.  The general form, for a line
+                other than EXTI4:
+            </p>
+            <figure xml:id="fig-exticr-generic">
+                <caption>The <c>EXTI_EXTICRx</c> register as RM0490 §12.5.6
+                prints it.  There is not one such register but four, at address
+                offset <m>0x060 + 0x4 \times (x-1)</m> for <m>x = 1</m> to
+                <m>4</m>, and each holds four eight-bit fields:
+                <c>EXTIm</c> in bits [7:0], <c>EXTIm+1</c> in [15:8],
+                <c>EXTIm+2</c> in [23:16] and <c>EXTIm+3</c> in [31:24], where
+                <m>m = 4 \times (x-1)</m>.  Each field holds a code saying which
+                port drives that line.</caption>
+                <image source="images/Day09-Interrupts(2)/exticr_generic.svg" width="90%"/>
+            </figure>
+            <p>
+                To find the register and byte for any line <m>n</m>: the
+                register number is <m>x = \lfloor n/4 \rfloor + 1</m>, and the
+                field within it is <c>EXTIn</c> at bits
+                <m>[8k+7 : 8k]</m> where <m>k = n \bmod 4</m>.  Checking it
+                against the case we used, <m>n = 4</m> gives <m>x = 2</m> and
+                <m>k = 0</m> — <c>EXTI_EXTICR2</c>, bits [7:0], which is what we
+                found by reading the page.  In C the register is
+                <c>EXTI-&gt;EXTICR[x-1]</c>.
+            </p>
+            <p>
+                The port codes are 0x00 for PA, 0x01 for PB, 0x02 for PC, 0x03
+                for PD and 0x05 for PF.  0x04 is reserved: no STM32C0 has a
+                port E.
+            </p>
+        </subsection>
 
         <subsection xml:id="subsec-gpio-ref-registers">
             <title>Register Summary</title>
