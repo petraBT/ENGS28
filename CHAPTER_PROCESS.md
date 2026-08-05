@@ -284,7 +284,7 @@ A chapter is done when all of these are true.
 | ch-debugging.ptx | Day07x | Day 7x through Gate 2 (Petra pending) |
 | ch-timers-interrupts.ptx | Day08 | Day 8 through Gate 2 + Petra's review rounds |
 | ch-gpio-interrupts.ptx | Day09 | Day 9 through Gate 2 (Petra pending) |
-| ch-i2c.ptx | Day09X, Day10 | rough (plan at `plans/week5.md`; Day 13 moved out) |
+| ch-i2c.ptx | Day09X, Day10 | Days 9x and 10 through Gate 2 (Petra pending) |
 | ch-motors.ptx | Day11, Day11x, Day12 | rough |
 | ch-accelerometers.ptx | Day13, Day13x, Day14 | rough (Day 13 moved here from ch-i2c, Petra's call) |
 | ch-servos.ptx | Day15, Day15x | rough |
@@ -333,6 +333,59 @@ blocker-class facts), `expert-class-logistics` and `learner-anxious-nonhardware`
 (converged on the wrong wiring figure), `expert-rigor-hawk` and
 `expert-embedded-industry` (converged on the residual race), and
 `learner-ai-reliant`, which falsified a claim the *plan* made about itself.
+
+## What Days 9x and 10 Gate 2 taught us
+
+The same shape as Day 9, which is now the second data point and probably the
+rule: **every linter passed and every slide fitted, and the committee still
+found five wrong hardware claims.**  Worth naming what kind of wrong they were,
+because none of them came from the decks being unreliable in the way Day 9's did.
+
+Three came from **arithmetic and citation drift in material verified
+elsewhere**.  5.0 us plus 4.0 us was written as 10 us -- in the one derivation
+the chapter makes a set-piece of -- because the *answer* (a 100 kHz clock has a
+10 us period) was right and nobody checked the addition against it.  The
+manual's own table has the discrepancy and footnotes it.  Two register sections
+were cited one or two subsections off.  The cheap defence is to check a
+derivation's arithmetic separately from its conclusion, and to paste section
+numbers out of the PDF rather than typing them.
+
+One came from **an explanation that contradicted the chapter's own later text**.
+Day 10's opening verification told students a powered display lights up; Part 6,
+seven hundred lines further on, says correctly that an uninitialized HT16K33
+drives nothing.  Both sentences were written into the same file four days apart.
+A chapter long enough to contradict itself needs a pass that reads it end to end
+for consistency, which no linter does and which the author is worst placed to do
+-- this is `checker-technical-accuracy`'s highest-yield mode, and it is worth
+giving it the whole chapter rather than a list of claims to check.
+
+One came from **a figure edit that fixed one defect and caused another**: the
+segment map was recropped to remove two stray dimension lines and lost its E and
+F labels, in a figure two activities send students to precisely to derive
+letters that need those segments.  Re-render and re-read a figure after any
+change to it, not only after first building it.
+
+**A process defect worth recording separately, because it is the author's and
+not the chapter's.**  Four applied fixes were silently clobbered by a later edit
+script that had read the file before them and wrote it after.  Scripted
+multi-edit passes must re-read before every replacement and write after each
+one -- and the change list must be verified item by item against the finished
+file, not against the scripts' own success output.
+
+**Highest-yield reviewers this round:** `checker-technical-accuracy` (all five
+hardware blockers, and it read the manuals rather than the ground truth);
+`learner-visual` (two figures whose captions promised what the image did not
+show -- the defect class that is invisible in source and obvious on sight, so
+give it rendered figures every time); `learner-arduino-veteran` (found the
+chapter asserting something the chapter itself had falsified 130 lines earlier);
+`learner-anxious-nonhardware` and `expert-class-logistics` (converged on every
+diagnostic ladder dead-ending at "re-seat the wires"); and `learner-ai-reliant`,
+which falsified an AI-resistance claim for the second week running -- the same
+design, comparative code review, defeated the same way.
+
+**Four reviewers independently found one gap in four vocabularies:** open-drain,
+the chapter's one genuinely new circuit idea, had no figure.  When a finding
+arrives in four dialects it is not four findings.
 
 ## What the ADC pilot taught us
 

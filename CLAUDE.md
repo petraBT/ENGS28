@@ -77,9 +77,9 @@ publication.ptx  PreTeXt publication settings
 | ch-adc.ptx | 6: Analog-to-Digital Conversion | 7 |
 | ch-debugging.ptx | 7: Debugging | 7X |
 | ch-timers-interrupts.ptx | 8: Timers and Interrupts | 8, 9 |
-| ch-i2c.ptx | 9: I2C Communication | 9X, 10, 13 |
+| ch-i2c.ptx | 9: I2C: A Two-Wire Bus, and a Display Driver | 9X, 10 |
 | ch-motors.ptx | 10: DC Motor Control | 11, 11X, 12 |
-| ch-accelerometers.ptx | 11: Accelerometers | 13X, 14 |
+| ch-accelerometers.ptx | 11: Accelerometers | 13, 13X, 14 |
 | ch-servos.ptx | 12: Servo Motors | 15, 15X |
 | ch-photosensors.ptx | 13: Photosensors | 16 |
 | ch-ble.ptx | 14: Bluetooth Low Energy | 17 |

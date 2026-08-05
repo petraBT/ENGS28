@@ -973,3 +973,92 @@ those need the manual every time.
 18. **[CONFIRM]** Slide 57's *"This will ALWAYS work. Trust me."* The chapter
     now states the residual coalescing window instead of repeating that. Happy
     for the chapter to be more qualified than the slide was?
+
+---
+
+## Days 9x and 10 status (Steps 3–5 and Gate 2 complete, 2026-08-05)
+
+`source/ch-i2c.ptx` rewritten from scratch — the rough version's `i2c1_init()`
+was invented and wrong in five ways and its `fig-i2c-pins` caption said AF1
+where the datasheet says AF6.  The chapter now carries two readings, Day 9x's
+nine parts (Part 6 split into 6a and 6b at Gate 2), Day 10's nine parts, and a
+Reference section.  Decks: `day9x.json` (51 slides, 34 refs) and `day10.json`
+(42 slides, 28 refs, 4 instructor-only).  Three new starters —
+`pingDisplay.c`, `writeFirstDigit.c`, `SevenSegPartial.c` — registered in
+`check_starters.py`.  All four checks pass and every slide fits at 1280×720 in
+both the instructor and student views.
+
+Gate 2 ran eleven reviewers — the standing core of seven plus
+`learner-arduino-veteran`, `expert-embedded-industry`, `learner-ai-reliant` and
+`learner-weak-circuits`.  **Three BLOCKER, eight PASS WITH CHANGES.**  Reports
+and the synthesized change list are in `reviews/day9x-day10-gate2.md`; the whole
+list is applied.
+
+**What Gate 2 caught, and it is Day 9's lesson again.**  Every linter passed and
+every slide fitted on the draft the committee reviewed, so none of it was
+machine-catchable — and five separate *hardware* claims were wrong.  The worst
+was Day 10's opening verification beat telling a correctly wired room that a
+dark display means a power fault, when a cold HT16K33 is dark by definition
+(system setup defaults to oscillator off) — contradicted by the chapter's own
+Part 6 seven hundred lines later.  The others: 5.0 + 4.0 µs was written as
+10 µs (the manual's own footnote explains the missing microsecond); "5 V on a
+signal pin is outside what the chip is rated for" is false for exactly PB8 and
+PB9, which the datasheet lists as 5 V tolerant; "two of those pins are already
+the UART" is false because PA2/PA3 are not on the Arduino headers at all; and
+`fig-segment-map` had lost its E and F labels to a crop.
+
+## New flags for Petra (Days 9x and 10)
+
+11. **[CONFIRM — blocks nothing now, but the wording is provisional]** Flag 8 is
+    still open, and the chapter now says plainly *"what happens if `+` and `−`
+    are swapped is not something this course has characterized — treat it as a
+    mistake to avoid rather than a test to run."*  One sentence from you
+    replaces it with the real answer.
+
+12. **[FILES]** `SevenSegPartial.h` is still missing, so the `HT16K33_*` values
+    and `numbertable[]` are used by name and never quoted.  The shipped
+    `SevenSegPartial.c` skeleton is therefore **authored, not recovered**: its
+    four signatures are your slide 50's, its bodies are TODOs I wrote.  One look
+    at the real file settles it — and settles the Reference note claiming
+    `SevenSeg_dim()`'s `HT16K33_DISPLAY_CMD` term adds nothing.
+
+13. **[CONFIRM]** Does the kit's display backpack arrive with its pin header
+    already soldered?  `fig-backpack-pins` is a product photo of a bare board —
+    four plated holes, no header — and the chapter's caption now asserts that
+    yours has one fitted and sits in the breadboard.  Nothing in the repo
+    establishes that, and a reviewer raised it as a blocker on the grounds that
+    a student cannot start the physical task otherwise.
+
+14. **[CONFIRM]** Do you keep spare or known-good display backpacks in the room?
+    All four diagnostic ladders now end with *"flag it — there is known-good
+    hardware in the room and we will get you onto it"*, because every one of them
+    previously dead-ended at "re-seat the wires."  If there are no spares the
+    wording has to become "we will pair you up," which is a weaker rescue.
+
+15. **[CONFIRM]** Do students take their kits home between Day 9x and Day 10?
+    Day 10's Part 2 exists entirely to pay for the rebalance, and the chapter
+    says *"the wiring went home in a kit and came back."*  Nothing in the repo
+    supports that, and your old Day 10 deck wires the display fresh.
+
+16. **[SOURCE]** The HT16K33 datasheet is not in the repo, so its page numbers —
+    pp. 24–25 for the command table, p. 22 for the page write — are sourced only
+    through your deck.  Worth adding the PDF to `assets/` alongside the others.
+
+17. **[CONFIRM — your clock]** Day 9x Part 4 stacks four first-time activities
+    into fifteen minutes: new wiring, a project copy and build, a new AD2 mode,
+    and reading a trace.  The synthesizer's recommendation is to ship
+    `SevenSegI2CFirstSteps` ready-made on Canvas for Day 9x only — the
+    copy-and-rename skill is still taught at Day 10 Part 6, where there is room —
+    buying four or five minutes on the day's bottleneck at no homework cost.
+    Not applied.
+
+18. **[CONFIRM — your clock]** Day 10 sums to exactly 65 with one named
+    compression lever (Part 1, 9 → 6).  The recommendation is to name Part 3
+    (6 → 4) as a second, since the reading already covers common cathode and
+    multiplexing and Part 3 opens with a refresher of it.  That would fund a
+    written wrong-answer diagnostic before TODO 4 — the one thing that would test
+    the RAM-map understanding in class rather than in the homework.  Not applied.
+
+19. **[MINOR]** Day 9's homework also *required* an LED driven through
+    `GPIOA->BSRR`.  Day 10's homework review never mentions it and neither AI
+    listing contains it, so that half of Tuesday's assignment goes undiscussed.
