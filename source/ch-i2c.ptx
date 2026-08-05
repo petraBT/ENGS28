@@ -444,6 +444,25 @@
                 itself.  Today is about the two wires.  Thursday is about the
                 chip.
             </p>
+
+            <slide xml:id="sl-day9x-count" ref="fig-display-photo" room="yes">
+    <p><term>Nothing from Tuesday is a prerequisite for today.</term> No EXTI, no NVIC, no ISR, no <c>volatile</c>. A new peripheral and a new protocol, and two habits we keep: look the number up in the manual, and assign a whole mask to a control register rather than compound-assigning one bit into it.</p>
+    <ul>
+        <li>Before we count: <term>how many individually controllable LEDs are in this display?</term></li>
+        <li>And if each one had its own pin on the STM32C031C6, <term>how many pins would that take?</term></li>
+    </ul>
+    <caption>Write both numbers down before we count them together.</caption>
+</slide>
+
+            <slide xml:id="sl-day9x-count-answer">
+    <p><term>34 LEDs, and the board does not have 34 pins to spare.</term></p>
+    <ul>
+        <li>4 digits &#215; 7 segments = 28, plus one decimal point per digit = 32, plus the colon's two dots = <term>34</term>.</li>
+        <li>The Nucleo's Arduino headers carry <term>22</term> pins &#8212; D0 through D15 and A0 through A5 &#8212; and two of those are already the UART. The direct approach is not short by a little.</li>
+        <li>So the display gets <term>four wires</term>: power, ground, and the two wires of an I2C bus. A separate chip underneath it &#8212; a <term>backpack</term> &#8212; takes commands over those two and drives all 34 LEDs itself.</li>
+        <li>Today: the two wires. Thursday: the chip.</li>
+    </ul>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-shared-clock">
@@ -505,6 +524,29 @@
                 end of class, because it is a documented way to lose an
                 afternoon.
             </p>
+
+            <slide xml:id="sl-day9x-uart-i2c" ref="fig-uart-vs-i2c" stack="yes">
+    <ul>
+        <li>On Day 5 the UART sent a byte down one wire and the receiver recovered the bits by starting a timer at the start bit and sampling on a schedule <term>both sides agreed on in advance</term> &#8212; the baud rate. Nothing on the wire says where a bit ends.</li>
+        <li>I2C spends a wire to make that go away: the controller drives a <term>clock</term> line, SCL, next to the data line, and every receiver samples SDA while SCL is HIGH. There is no agreement left to get wrong.</li>
+        <li>Three things follow from sharing the wires. Only one device may talk at a time, so I2C is <term>half duplex</term> where UART is full duplex. The whole bus runs at one speed, which every device on it has to be able to follow. And since every device hears every bit, each one needs an <term>address</term>.</li>
+    </ul>
+    <caption>Left: a pair of wires per device, no clock. Right: two wires for everybody, and a clock.</caption>
+</slide>
+
+            <slide xml:id="sl-day9x-address-shift">
+    <p><term>The address you write and the byte on the wire are not the same number.</term> You will see this on a screen in twenty minutes, so it is worth saying now.</p>
+    <program language="c"><code><![CDATA[
+0x70  is a SEVEN-bit address:      1 1 1 0 0 0 0
+
+on the wire:      1 1 1 0 0 0 0    0
+                  \___address___/  R/W:  0 = write, 1 = read
+]]></code></program>
+    <ul>
+        <li>Read those eight bits as a byte and you get <term>0xE0</term>, not 0x70. Nothing is wrong: the address is in the top seven bits and the bottom bit is the direction.</li>
+        <li>Part 8 comes back to this, because datasheets are not consistent about which of the two numbers they print, and getting it backwards looks exactly like a wiring fault.</li>
+    </ul>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-protocol">
@@ -556,6 +598,16 @@
                 anyway.  It sent all nine pulses and the STOP without knowing,
                 until the ninth, whether anyone was there at all.
             </p>
+
+            <slide xml:id="sl-day9x-protocol" ref="fig-i2c-frame-diagram">
+    <caption>The rule that holds it together: SDA changes only while SCL is LOW — which leaves "SDA changed while SCL was HIGH" free to mean the beginning and the end.</caption>
+    <note>From the reading. Thirty seconds: name START, address, R/W, ACK, data, STOP, then move to the real capture. Do not walk it bit by bit — the next slide is the same thing measured.</note>
+</slide>
+
+            <slide xml:id="sl-day9x-noack" ref="fig-i2c-scope-noack">
+    <caption>The same diagram, measured — and this one fails. Orange is SCL, blue is SDA. Read the eight address bits, then look at the ninth clock pulse.</caption>
+    <note>Walk it: START (SDA falls while SCL is HIGH); 1 1 0 0 0 0 0 is the 7-bit address 0x60, then 0 for write; ninth pulse, SDA still HIGH — nobody answered; STOP. Nine pulses and done. Two points to make: a NACK is the ABSENCE of an answer, so it looks the same for a wrong address, an unpowered device and a disconnected wire; and the controller clocked all nine anyway, not knowing until the ninth whether anyone was there.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-capture">
@@ -694,6 +746,50 @@ int main(void) {
                 capture with a real address in it, and everything in the next
                 part except the ACK is visible in it.
             </p>
+
+            <slide xml:id="sl-day9x-wiring" ref="fig-display-wiring" stack="yes">
+    <ul>
+        <li><term>Four wires, and one of them matters more than the others.</term> The backpack's pins are labeled on the board: <c>+</c>, <c>&#8722;</c>, <c>D</c>, <c>C</c>.</li>
+        <li><c>+</c> goes to the Nucleo's <term>3.3 V</term> pin, not the 5 V pin: the STM32C031C6's I/O runs at 3.3 V, and 5 V on a signal pin is outside what the chip is rated for. Same rule as every other part this term.</li>
+        <li><c>&#8722;</c> to GND, <c>D</c> to <term>PB9 (SDA)</term>, <c>C</c> to <term>PB8 (SCL)</term> &#8212; D14 and D15 on the header. Part 7 says why those two pins.</li>
+        <li>The AD2 as on Day 3, in oscilloscope mode: <clr c="orange">channel 1 on SCL</clr>, <clr c="blue">channel 2 on SDA</clr>, both white-striped minus leads at ground.</li>
+        <li>The pull-ups are already on the backpack, so there is nothing else to add.</li>
+    </ul>
+    <caption>Check all four against this before the USB cable goes in.</caption>
+</slide>
+
+            <slide xml:id="sl-day9x-ping-code">
+    <p><term>pingDisplay.c</term> &#8212; five lines, because everything hard is inside the library you are given:</p>
+    <program language="c"><code><![CDATA[
+#define HT16K33_ADDR  0x70   // I2C address of our backpack controller
+
+int main(void) {
+    uint8_t data = 0b0;   // the hardware makes us send something; the value
+    i2c1_init();          // does not matter here
+    while(1) {
+        i2c1_byteWrite(HT16K33_ADDR, data);
+        delay_ms(250);
+    }
+    return 1;
+}
+]]></code></program>
+    <ul>
+        <li>It calls the display's address four times a second and sends one byte. There is no way in I2C to address a device without also doing something to it, so a <q>ping</q> is a one-byte write.</li>
+        <li>The whole file is on Canvas, along with <c>i2c.c</c> and <c>i2c.h</c> for your <c>mylib</c> folder.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-ladder">
+    <p><term>Nothing on the screen?</term> Three different failures look identical from where you are sitting. Find out which one you have before changing anything.</p>
+    <ul>
+        <li>1 &#8212; <term>Both channels flat at 0 V.</term> Wiring or power. Re-seat the four wires against the photo, and check the scope's minus leads are at ground.</li>
+        <li>2 &#8212; <term>Both channels sitting HIGH, nothing happening.</term> The bus is idle and correctly pulled up; the scope has not triggered. Check the trigger source and edge, not the wiring.</li>
+        <li>3 &#8212; <term>A trace, with a START and eight address bits, and SDA HIGH on the ninth pulse.</term> That is a NACK: the display is not answering. Check that <c>+</c> and <c>&#8722;</c> reach the backpack and that <c>D</c> and <c>C</c> are not swapped.</li>
+        <li>Case 3 still gives you a real capture with a real address in it &#8212; everything in Part 5 except the ACK is in it.</li>
+    </ul>
+    <caption>Which of the three you have decides what to change.</caption>
+    <note>Stays up for all of Part 4. Checkpoint at minute 32: if the room is not mostly holding a trace, project the capture and have everyone mark that one instead.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-debrief">
@@ -802,6 +898,36 @@ int main(void) {
                 <xref ref="subsec-i2c-ref-library"/> shows the flow the
                 reference manual gives for doing it without that hole.
             </p>
+
+            <slide xml:id="sl-day9x-ack" ref="fig-i2c-scope-ack">
+    <caption>A ping of 0x70 that works. Two things changed from the failed one: the ninth pulse, and how long the transaction goes on for.</caption>
+    <note>Have them find both. Ninth pulse SDA is LOW — the display pulled it down. And it did not stop there: the data byte follows, eight more clocks and a second ACK, then the STOP. Eighteen pulses instead of nine.</note>
+</slide>
+
+            <slide xml:id="sl-day9x-handover">
+    <p><term>The ACK is the one moment where the wire changes hands.</term></p>
+    <ul>
+        <li>After the eighth bit the controller keeps clocking and <term>lets go</term> of SDA. The pull-up brings the line HIGH.</li>
+        <li>The display pulls it LOW during the clock's LOW phase, so that when SCL rises, SDA is stable and LOW. On the next LOW phase the display lets go and the controller takes over again.</li>
+        <li>The little HIGH blips around each ACK are that handover. They are harmless, because <term>nothing is read while SCL is LOW</term>.</li>
+        <li>This is also the reason the pins have to be open-drain, which is Part 7a.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-hang">
+    <p><term>Why the wrong-address version needs the reset button.</term> With the address at 0x60 the program stops after one transaction rather than repeating four times a second &#8212; so arm the single sweep first, then press the Nucleo's black button.</p>
+    <ul>
+        <li><c>i2c1_byteWrite()</c> tests for a NACK <term>once</term>, a microsecond or so after setting START &#8212; about ninety microseconds before the device could have failed to answer. The test always passes.</li>
+        <li>It then waits for the peripheral to say it is ready for data, and RM0490 &#167;23.4.9 says plainly: <term>the TXIS flag is not set when a NACK is received</term>. The wait never ends.</li>
+        <li>The <em>hardware</em> is unaffected &#8212; AUTOEND sends the STOP by itself, which is why the capture looks tidy. It is the program that is stuck.</li>
+        <li>The Reference section has the flow the reference manual gives for doing this without the hole. Worth knowing before Lab 5.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-decode" ref="fig-waveforms-setup">
+    <caption>A second way in, for anybody: Waveforms in logic mode decodes I2C for you — DIO0 (pink) to SDA, DIO1 (green) to SCL, black to ground.</caption>
+    <note>Offer this to the whole room, not only to fast finishers. Reading the raw trace stays the skill; this is the instrument you reach for when the question is "is this device answering at all?". The cursors on two SCL rising edges should read 10 µs.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-library">
@@ -980,6 +1106,102 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
                 course does not use.</caption>
                 <image source="images/Day09X-I2C/i2c_hardware_block.svg" width="70%"/>
             </figure>
+
+            <slide xml:id="sl-day9x-five-ops">
+    <p><term>The five, and why five.</term> Yours may be worded differently; check it covers the same ground.</p>
+    <program language="c"><code><![CDATA[
+void i2c1_init(void);                                     // pins, bus speed
+
+void i2c1_byteWrite(uint8_t deviceAddr, uint8_t data);    // one byte out
+void i2c1_byteRead (uint8_t deviceAddr, uint8_t *data);   // one byte in
+
+void i2c1_memWrite(uint8_t deviceAddr, uint8_t registerAddr,
+                   uint8_t nbytes, uint8_t *data);        // several bytes out
+void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
+                   uint8_t nbytes, uint8_t *data);        // several bytes in
+]]></code></program>
+    <ul>
+        <li><term>Initialization</term> happens once and belongs to the bus, not to any device: claim the pins, set the clock rate, switch the peripheral on.</li>
+        <li><term>One byte out</term> and <term>one byte in</term> are everything the ping did.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-five-why">
+    <p><term>Why the last two are separate functions and not loops.</term></p>
+    <ul>
+        <li><term>Several bytes</term> each way carry one extra argument, <c>registerAddr</c>, because a device with more than one thing inside it has to be told <em>where</em> the bytes are going.</li>
+        <li>And between two calls to <c>i2c1_byteWrite()</c> the bus <term>goes idle</term> &#8212; a STOP after the first, a fresh START before the second. Some devices treat that as two unrelated instructions rather than one longer one.</li>
+        <li>Thursday's device is one of them. Writing all ten bytes of the display in one transaction is not an optimization there; it is the only thing that works.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-wire-h">
+    <p><term>If you have used I2C on an Arduino, this is the library you were using.</term></p>
+    <program language="c"><code><![CDATA[
+Wire.begin();                                 ->  i2c1_init();
+
+Wire.beginTransmission(addr);                 ->  i2c1_byteWrite(addr, b);
+Wire.write(b);
+Wire.endTransmission();
+
+... with several Wire.write()s between them   ->  i2c1_memWrite(addr, reg, n, data);
+
+Wire.requestFrom(addr, 1);                    ->  i2c1_byteRead(addr, &b);
+b = Wire.read();
+]]></code></program>
+    <ul>
+        <li>The addresses you passed to <c>Wire</c> were <term>7-bit</term> addresses, exactly like these.</li>
+        <li>The difference is not what the calls do. It is that this time you can open the file and see what happens underneath &#8212; which is the next slide.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-bytewrite">
+    <p><term>The sending half of i2c1_byteWrite(), in full:</term></p>
+    <program language="c"><code><![CDATA[
+    // use "=" to ensure all other bits are cleared
+    I2C1->CR2  = (deviceAddr<<1)
+                 | (1U << I2C_CR2_NBYTES_Pos)  // sending one byte only
+                 | I2C_CR2_AUTOEND             // Stop condition after transfer
+                 | I2C_CR2_START;              // Send Start condition
+    while( !(I2C1->ISR & I2C_ISR_BUSY) );      // Wait until Start is received
+
+    if( !(I2C1->ISR & I2C_ISR_NACKF) ) {       // Make sure ACK received
+        while( !(I2C1->ISR & I2C_ISR_TXIS) );  // Wait for TX to be ready
+        I2C1->TXDR = data;                     // put data in send register
+    }
+]]></code></program>
+    <ul>
+        <li>Five fields describe the <term>entire transaction before any of it happens</term>: <em>who</em> (the address, shifted into SADD), <em>which direction</em> (RD_WRN, 0 here), <em>how many bytes</em> (NBYTES), <em>what to do at the end</em> (AUTOEND), and <em>go</em> (START).</li>
+        <li>Writing that last bit is what puts the START on the wire. Everything you watched on the oscilloscope followed from this one line.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-cr2-assign">
+    <p><term>Notice the <c>=</c>, and the comment on it.</term> Day 8's habit, for a different reason than Day 8 had.</p>
+    <program language="c"><code><![CDATA[
+I2C1->CR2  = (deviceAddr<<1) | ... ;    // states the whole transaction
+I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
+]]></code></program>
+    <ul>
+        <li>On a <term>status</term> register the danger was what the read-back would clear. <c>I2C_CR2</c> is a <term>control</term> register and reads back fine.</li>
+        <li>The danger here is what is <term>left over</term>: the address, the direction and the byte count from the previous transaction are all still in there, and <c>|=</c> cannot clear a bit. An <c>|=</c> leaves the old address ORed with the new one.</li>
+        <li>Assigning the whole mask states the transaction completely, every time.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-master-tx" ref="fig-i2c-master-tx" stack="yes">
+    <ul>
+        <li>The two waits are the peripheral talking back. <c>BUSY</c> comes up when the START has actually appeared on the bus; <c>TXIS</c> comes up when the transmit register is empty and the hardware wants the byte &#8212; <term>after the address has been sent and acknowledged</term>.</li>
+        <li>Reading a byte is the same shape with three changes: <c>I2C_CR2_RD_WRN</c> set, a wait on <c>RXNE</c> instead of <c>TXIS</c>, and <c>*data = I2C1-&gt;RXDR;</c> instead of the write.</li>
+    </ul>
+    <caption>Set-up, then the hardware does the START, the address and the ACK by itself; TXIS asks for each byte.</caption>
+    <note>The point to make: nothing in the library counts a clock edge or times a pulse. It describes a transaction and reads flags; a state machine in silicon does the rest. NBYTES counting down to zero is what triggers AUTOEND's STOP.</note>
+</slide>
+
+            <slide xml:id="sl-day9x-hardware" ref="fig-i2c-hardware">
+    <caption>Everything below I2C1->CR2, on the chip's own diagram: a shift register for the bits, clock control for SCL, and the registers software actually touches.</caption>
+    <note>Name the two we are not using and why: the address-match unit on the left is how this peripheral would recognize its OWN address if the STM32 were the device being addressed — we are always the controller — and the SMBus blocks belong to a related protocol this course does not use.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-pins">
@@ -1055,6 +1277,43 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
                 board's designers knew which pins the library was allowed to
                 assume.
             </p>
+
+            <slide xml:id="sl-day9x-pins" ref="fig-i2c-pins" stack="yes">
+    <ul>
+        <li>I2C1's SCL and SDA come out on several pin pairs; ours is <term>PB8 for SCL and PB9 for SDA</term>, boxed here &#8212; D15 and D14 on the header, where every Arduino-shaped board puts its I2C bus.</li>
+        <li>Getting the peripheral onto the pins is the alternate-function mechanism from the UART: alternate-function mode in <c>MODER</c>, then <em>which</em> one in <c>AFR</c>.</li>
+        <li>The number is in the <term>datasheet</term>, not the reference manual: DS13867 Table 15, <em>Port B alternate function mapping</em>. The PB8 and PB9 rows both name I2C1 under <term>AF6</term>.</li>
+    </ul>
+    <caption>Find PB8 and PB9 in the boxed pair, then find their AF6 column in Table 15.</caption>
+</slide>
+
+            <slide xml:id="sl-day9x-opendrain">
+    <p><term>And one thing that is new: both pins have to be open-drain.</term> <c>GPIOx_OTYPER</c>, RM0490 &#167;6.4.2 &#8212; 1 is open-drain, 0 (the reset value) is push-pull.</p>
+    <program language="c"><code><![CDATA[
+GPIOB->OTYPER |= (GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9);
+
+push-pull:    writing 1 drives the pin to 3.3 V, 0 drives it to 0 V
+open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
+              external pull-up decides
+]]></code></program>
+    <ul>
+        <li>On this bus that is not a preference. SDA <term>changes hands every ninth bit</term>. If both ends were push-pull, the moment one drives HIGH and the other LOW is a transistor from 3.3 V and a transistor to ground across one wire &#8212; a short circuit.</li>
+        <li>With open-drain there is no such moment: the strongest thing any device can do is pull the line LOW.</li>
+        <li>Two more features rest on the same property, and the Reference section has both: several controllers sharing one bus, and a device holding SCL LOW to ask for more time.</li>
+        <li>Pull-ups are typically 5 k&#8486; to 10 k&#8486;, and we fit none &#8212; both devices this course uses carry their own. Worth checking on the datasheet of anything you add.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-wire-begin">
+    <p><term>One line of Arduino did all of that.</term></p>
+    <program language="c"><code><![CDATA[
+Wire.begin();
+]]></code></program>
+    <ul>
+        <li>It put both pins in alternate-function mode, selected the right alternate function, made them open-drain, enabled the peripheral's clock and set the bus speed.</li>
+        <li>It could, because the board's designers knew which pins the library was allowed to assume. On a board nobody has written a <c>Wire</c> for, somebody has to do what we just did.</li>
+    </ul>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-timingr">
@@ -1195,6 +1454,74 @@ void i2c1_init(void){
                 one.  The reference manual calls it <c>GPIOx_AFRH</c>, which is
                 why the field names read <c>GPIO_AFRH_AFSEL8</c>.
             </p>
+
+            <slide xml:id="sl-day9x-timingr-intro" ref="fig-i2c-timing-tables" stack="yes">
+    <ul>
+        <li>The last thing the peripheral needs is the clock: how long SCL is HIGH, how long it is LOW, and how long to wait around the edges before changing or sampling SDA. One register, <c>I2C_TIMINGR</c>, five fields: <c>PRESC</c>, <c>SCLL</c>, <c>SCLH</c>, <c>SDADEL</c>, <c>SCLDEL</c>.</li>
+        <li>You are not expected to compute those from the I2C specification's timing requirements. RM0490 &#167;23.4.10 has done it &#8212; three worked examples, one per peripheral clock: 8 MHz, 16 MHz, 48 MHz.</li>
+        <li><term>Our peripheral clock is 12 MHz.</term> Read the Standard-mode 100 kHz column of all three, and work out what to write.</li>
+    </ul>
+    <caption>Three tables, and no row for our clock — read the 100 kHz column of each and see what does and does not change.</caption>
+</slide>
+
+            <slide xml:id="sl-day9x-presc" room="yes">
+    <p><term>Only one field changes.</term> Read the 100 kHz column of each table:</p>
+    <program language="c"><code><![CDATA[
+                8 MHz     16 MHz    48 MHz     12 MHz (ours)
+   PRESC        0x1       0x3       0xB            ?
+   SCLL         0x13      0x13      0x13
+   SCLH         0xF       0xF       0xF
+   SDADEL       0x2       0x2       0x2
+   SCLDEL       0x4       0x4       0x4
+]]></code></program>
+    <ul>
+        <li>The prescaler divides the peripheral clock by <term>PRESC + 1</term>. Work out what each of those three settings divides its clock down to.</li>
+        <li>Then: what is PRESC for 12 MHz &#8212; and where did the other four numbers come from, given that they are the same in every table?</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-presc-answer">
+    <p><term>Every table divides down to the same 4 MHz.</term></p>
+    <program language="c"><code><![CDATA[
+   8 MHz / (0x1 + 1) =  8/2  = 4 MHz     -> tick = 250 ns
+  16 MHz / (0x3 + 1) = 16/4  = 4 MHz     -> tick = 250 ns
+  48 MHz / (0xB + 1) = 48/12 = 4 MHz     -> tick = 250 ns
+  12 MHz / (0x2 + 1) = 12/3  = 4 MHz        PRESC = 0x2
+
+  SCLL = 0x13 -> 20 x 250 ns = 5.0 us    SCL LOW
+  SCLH = 0xF  -> 16 x 250 ns = 4.0 us    SCL HIGH  -> 10 us = 100 kHz
+]]></code></program>
+    <ul>
+        <li>Everything after the prescaler is counted in <term>units of 250 ns</term>, which is exactly why the other four fields do not change: 20 ticks LOW and 16 HIGH is 10 µs of SCL period whatever clock the chip started from.</li>
+        <li>So PRESC is not a magic constant belonging to a board. It is <term>f_I2CCLK / 4 MHz &#8722; 1</term>, and for 12 MHz that is 2. There is no 12 MHz table, and we did not need one.</li>
+        <li>Move this code to a board running at a different speed and that is the one number to change. The check is Part 5's: cursors on two SCL rising edges, 10 µs.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-init-code" room="compressed">
+    <p><term>i2c1_init()</term> &#8212; the pins first, then the peripheral:</p>
+    <program language="c"><code><![CDATA[
+  RCC->IOPENR |= RCC_IOPENR_GPIOBEN;                       // clock to GPIOB
+  GPIOB->MODER = (GPIOB->MODER & ~GPIO_MODER_MODE8_Msk)    // alternate function
+               | (GPIO_ALTERNATE << GPIO_MODER_MODE8_Pos);
+  GPIOB->AFR[1] = ((GPIOB->AFR[1]) & ~GPIO_AFRH_AFSEL8_Msk)   // ... which one:
+                | (GPIO_AF6 << GPIO_AFRH_AFSEL8_Pos);         // AF6
+        // ... the same two pairs again for PB9 ...
+  GPIOB->OTYPER |= (GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9);    // open drain
+
+  RCC->APBENR1 |= RCC_APBENR1_I2C1EN;   // clock to I2C1
+  I2C1->CR1 &= ~I2C_CR1_PE;             // TIMINGR is writable only when
+  I2C1->TIMINGR &= 0x0;                 //   the peripheral is disabled
+  I2C1->TIMINGR |= (0x2 << I2C_TIMINGR_PRESC_Pos);
+  I2C1->TIMINGR |= (0x4 << I2C_TIMINGR_SCLDEL_Pos) | (0x2 << I2C_TIMINGR_SDADEL_Pos);
+  I2C1->TIMINGR |= (0xf << I2C_TIMINGR_SCLH_Pos) | (0x13 << I2C_TIMINGR_SCLL_Pos);
+  I2C1->CR1 |= I2C_CR1_PE;              // ... and enable again
+]]></code></program>
+    <ul>
+        <li><c>AFR[1]</c>, not <c>AFR[0]</c>, for the same reason <c>EXTICR[1]</c> was not <c>EXTICR[2]</c> on Tuesday: two registers, pins 0&#8211;7 and pins 8&#8211;15. The manual calls the second one <c>GPIOx_AFRH</c>.</li>
+    </ul>
+    <note>Abridged: PB9's MODER and AFR lines are dropped so the function fits legibly. The book carries the full version — say so.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-addressing">
@@ -1277,6 +1604,41 @@ void i2c1_init(void){
                 capture in <xref ref="fig-i2c-scope-noack"/>, which is where this
                 hour started.
             </p>
+
+            <slide xml:id="sl-day9x-addr-frame" ref="fig-ht16k33-addr-frame" stack="yes">
+    <ul>
+        <li>The HT16K33's own datasheet writes its address field out bit by bit: <term>1 1 1 0 A2 A1 A0</term>. Four bits fixed by the chip, three selectable on the board, so eight of these can share one bus.</li>
+        <li>Ours has all three at 0, so the 7-bit address is 0b1110000 &#8212; <c>0x70</c>. The next box along is the direction bit, then the ACK.</li>
+        <li>This datasheet is being explicit. Many are not, and that is the next slide.</li>
+    </ul>
+    <caption>Seven bit positions for the address, and the direction bit separate from it.</caption>
+</slide>
+
+            <slide xml:id="sl-day9x-address-trap" room="yes">
+    <p><term>Some datasheets print the 7-bit address; some print it already shifted.</term> A sensor's datasheet says only: <q>the device address is 0xE0.</q></p>
+    <ul>
+        <li>Write 0xE0 in binary. What does its lowest bit being 0 tell you about which of the two forms you are looking at?</li>
+        <li>What value do you pass to <c>i2c1_byteWrite()</c>?</li>
+        <li>Sketch the first eight bits on SDA for a write to that device &#8212; and then sketch what you would see if you had passed 0xE0. What happens on the ninth clock pulse?</li>
+    </ul>
+    <note>This one happened to us, once, with the only device anyone had seen that quoted the shifted form. Tell it after they have committed an answer, not before.</note>
+</slide>
+
+            <slide xml:id="sl-day9x-address-answer">
+    <p><term>An 8-bit address ending in 0 is the giveaway.</term></p>
+    <program language="c"><code><![CDATA[
+0xE0 = 0b1110 0000
+       \_______/ |
+        address  \-- always 0: it is the write bit, not part of the address
+
+#define SENSOR_ADDR  0x70      // 0b1110000, the top seven bits
+]]></code></program>
+    <ul>
+        <li>A 7-bit address has no reason to end in a fixed 0. An 8-bit one always does, because that bottom bit is the direction.</li>
+        <li><c>i2c1_byteWrite()</c> and its relatives take the <term>7-bit</term> address and do the shift themselves &#8212; that is the <c>(deviceAddr&lt;&lt;1)</c> you read in Part 6. Whatever the datasheet gives you, what you <c>#define</c> is the 7-bit form.</li>
+        <li>Pass 0xE0 instead and the library shifts it again: the bus sees 0b11000000, a write to address 0x60, and nothing answers. Which is the capture this hour started with.</li>
+    </ul>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9x-next">
@@ -1735,6 +2097,65 @@ void pb4_exti_init(void) {
                 Both listings above carry <c>return 1;</c> to match the rest of
                 this book.
             </p>
+
+            <slide xml:id="sl-day10-ai-chatgpt" room="compressed">
+    <p><term>ChatGPT's answer to Tuesday's assignment.</term> It compiles.</p>
+    <program language="c"><code><![CDATA[
+  while (1) {
+    if (timerElapsed) {
+      timerElapsed = 0;
+      printf("%x\t%d\r\n", counter, counter);
+      if (buttonPushed)                 { counter = 0; buttonPushed = 0; }
+      else if (counter == MAXCOUNT - 1) { counter = 0; }
+      else                              { counter++; }
+    }
+  }
+void TIM14_IRQHandler(void) {
+  if (TIM14->SR & TIM_SR_UIF) { TIM14->SR &= ~TIM_SR_UIF; timerElapsed = 1; }
+}
+void tim14_init(void) {
+  RCC->APBENR2 |= RCC_APBENR2_TIM14EN;  TIM14->PSC = 48000 - 1;
+  TIM14->ARR = 1000 - 1;                TIM14->SR &= ~TIM_SR_UIF;
+  TIM14->DIER |= TIM_DIER_UIE;          NVIC_EnableIRQ(TIM14_IRQn);
+  TIM14->CR1 |= TIM_CR1_CEN;   }
+]]></code></program>
+    <note>Abridged for the slide: the includes, the prototypes, the volatile declarations and main()'s opening are dropped, and pb4_exti_init() and the EXTI handler are marked "unchanged from our code" in the original. The book has the full listing.</note>
+</slide>
+
+            <slide xml:id="sl-day10-ai-gemini" room="compressed">
+    <p><term>And Gemini's.</term> Also compiles.</p>
+    <program language="c"><code><![CDATA[
+  while(1) {
+    if (TIM14->SR & TIM_SR_UIF) {
+      TIM14->SR &= ~TIM_SR_UIF;
+      printf("%x\t%d\r\n", counter, counter);
+      if (buttonPushed)                 { counter = 0; buttonPushed = 0; }
+      else if (counter >= MAXCOUNT - 1) { counter = 0; }
+      else                              { counter++; }
+    }
+  }
+void tim14_init(void) {
+  RCC->APBENR2 |= RCC_APBENR2_TIM14EN;  TIM14->PSC = 16000 - 1;
+  TIM14->ARR = 1000 - 1;                TIM14->EGR |= TIM_EGR_UG;
+  TIM14->CR1 |= TIM_CR1_CEN;
+}
+]]></code></program>
+    <ul>
+        <li>Pick one. <term>Write your answers down before anybody talks:</term> what does it do better than yours; what would you change and what would a user see; would you revise your own?</li>
+    </ul>
+    <note>Same abridgement as the previous slide. A working reference copy goes to the whole room before groups form, so that a student whose homework did not run has something to compare against and never has to say so out loud.</note>
+</slide>
+
+            <slide xml:id="sl-day10-ai-findings">
+    <p><term>What is in there.</term> Your list may have more; these are the ones that change what the board does.</p>
+    <ul>
+        <li><term>The clock speed is wrong in both.</term> <c>PSC = 48000-1</c> assumes a 48 MHz clock and <c>16000-1</c> assumes 16 MHz; ours is 12 MHz. The <q>one second</q> comes out at four seconds and one and a third. Nothing warns you &#8212; you have to know the clock.</li>
+        <li><term>Both check the button only when the timer fires.</term> The test is inside <c>if (timerElapsed)</c>, so a press waits for the next tick and two presses in one second become one. That is what the interrupt was for. Two independent <c>if</c>s: a press and a tick are unrelated events.</li>
+        <li><term>Both clear the flag with <c>&amp;=</c>.</term> Harmless on <c>TIM14_SR</c>, which is <c>rc_w0</c> &#8212; but the habit is what protects you on the registers where it is not.</li>
+        <li><term>ChatGPT never zeroes <c>TIM14-&gt;CNT</c>,</term> so the first interval is however far the counter had already got. Our own <c>tim14_ms_interrupt_init()</c> does.</li>
+        <li><term>Gemini's program does not use the timer interrupt at all.</term> No <c>UIE</c>, no <c>NVIC_EnableIRQ()</c>, no ISR &#8212; the loop polls <c>TIM14-&gt;SR</c>. It works, it is not what was asked for, and the output looks identical.</li>
+    </ul>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-verify">
@@ -1762,6 +2183,16 @@ void pb4_exti_init(void) {
                 <c>+</c> is on 3.3 V and not 5 V, and check that <c>D</c> and
                 <c>C</c> have not been swapped.
             </p>
+
+            <slide xml:id="sl-day10-verify">
+    <p><term>Before anything else: flash Thursday's pingDisplay.c, unchanged.</term> The wiring went home in a kit and came back, and four wires is four chances for one to be out.</p>
+    <ul>
+        <li>Finding it now costs three minutes. Finding it at minute 48, in the middle of debugging a driver you have just written, costs the rest of the hour.</li>
+        <li>You do not need the scope. A powered display <term>lights up</term> &#8212; the HT16K33 has not been told to show anything yet, so what appears depends on what is in its RAM, but a board with no glow at all has no power. For proof that the bus is running rather than just the supply, put the AD2 back on and look for the ACK.</li>
+        <li>If it does not answer this is a <term>wiring</term> problem, not a code problem: the code is a file that worked on Thursday. Re-seat all four, check <c>+</c> is on 3.3 V, check <c>D</c> and <c>C</c> are not swapped.</li>
+    </ul>
+    <note>Three minutes, and it is the cost of having moved the ping to Day 9x. It also gives anyone whose display never worked on Thursday a second try with the whole hour still ahead.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-display-hardware">
@@ -1855,6 +2286,35 @@ void pb4_exti_init(void) {
                 reading a keypad matrix, which we do not use.</caption>
                 <image source="images/Day10-I2C(2)/ht16k33_block.svg" width="70%"/>
             </figure>
+
+            <slide xml:id="sl-day10-segment-map" ref="fig-segment-map">
+    <caption>The segment names, and they are the names the bits are in: a across the top, b and c down the right, d along the bottom, e and f up the left, g across the middle, DP the decimal point.</caption>
+    <note>Worth 30 seconds now rather than 20 minutes from now. Ask for a 0 (a b c d e f, g dark) and a 7 (a b c). The colon's two LEDs are D5 and D6 here.</note>
+</slide>
+
+            <slide xml:id="sl-day10-grid" ref="fig-four-digit-wiring" stack="yes" room="yes">
+    <ul>
+        <li><term>Common cathode.</term> Within one digit, all eight LEDs share a cathode, brought out on the pin marked (COM). Across digits, all four <c>a</c> anodes are tied together, all four <c>b</c> anodes, and so on.</li>
+        <li>So: <term>how do you turn on the <c>a</c> segment of digit 2?</term></li>
+        <li>And then: <term>how do you turn on <c>a</c> of digit 2 <em>and</em> <c>b</c> of digit 3, at the same instant?</term></li>
+    </ul>
+    <caption>Five cathode pins and nine anode pins — 14 wires for 34 LEDs. Now find the path to one LED.</caption>
+</slide>
+
+            <slide xml:id="sl-day10-grid-answer">
+    <p><term>One digit at a time, and that is what the sweep is for.</term></p>
+    <ul>
+        <li><c>a</c> of digit 2: drive the shared <c>a</c> anode high and pull digit 2's common cathode low. Current has a path through exactly one LED, because that is the only place an energized anode meets an energized cathode.</li>
+        <li><c>a</c> of digit 2 <em>and</em> <c>b</c> of digit 3: you would energize both anodes and both cathodes &#8212; which also lights <c>b</c> of digit 2 and <c>a</c> of digit 3. <term>A grid cannot do arbitrary patterns at one instant.</term></li>
+        <li>It can do one digit at a time. Sweep the four fast enough and your eye sees all four at once, which is what the backpack does, continuously, forever.</li>
+        <li>Count: four digit cathodes plus one for the colon, eight segment anodes plus one for the colon &#8212; <term>14 pins, 34 LEDs</term>.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day10-block" ref="fig-ht16k33-block">
+    <caption>The HT16K33 from the inside: I2C in on the left, display RAM in the middle, the 14 grid pins on the right — and an internal oscillator that is off at power-up.</caption>
+    <note>That last one is the point: the oscillator running the sweep starts off, so the first thing the driver does is turn it on. The key-scan blocks are the chip's other job, reading a keypad matrix, which we do not use.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-commands">
@@ -1951,6 +2411,48 @@ void pb4_exti_init(void) {
                 to run before the display will show anything at all, and it is
                 three calls long.  You write it in Part 6.
             </p>
+
+            <slide xml:id="sl-day10-cmd-table" ref="fig-ht16k33-cmd-table" stack="yes">
+    <ul>
+        <li>Most I2C devices have registers inside them, reached through commands the datasheet defines. The HT16K33's commands are <term>one byte each</term>, sent as the data of an ordinary write &#8212; exactly what <c>pingDisplay.c</c> was doing, except that this time the byte means something.</li>
+        <li>Reading the table: the eight middle columns are the bits of that byte, D15 down to D8. A <term>0 or 1 is part of the command's identity</term>; a <term>letter is an option you fill in</term>.</li>
+    </ul>
+    <caption>Datasheet pp. 24–25. Three of these rows are all today needs.</caption>
+</slide>
+
+            <slide xml:id="sl-day10-cmd-derive" room="yes">
+    <p><term>Build the three startup bytes.</term> Binary first, then hex.</p>
+    <program language="c"><code><![CDATA[
+   system setup     0b0010 0 0 0 S        S = oscillator on/off
+   display setup    0b1000 X B1 B0 D      D = display on;  B1 B0 = blink rate
+   dimming set      0b1110 P3 P2 P1 P0    duty cycle, in sixteenths
+]]></code></program>
+    <ul>
+        <li>What byte turns the <term>oscillator on</term>?</li>
+        <li>What byte turns the display <term>on and not blinking</term>? And on, blinking at 1 Hz?</li>
+        <li>What byte gives <term>full brightness</term>? Half?</li>
+        <li>All three are one-byte writes to the device. Which library function sends one, and what are its two arguments?</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day10-cmd-answer">
+    <p><term>0x21, 0x81, 0xEF</term> &#8212; and you write the names, not the numbers.</p>
+    <program language="c"><code><![CDATA[
+0b0010 0001 = 0x21   system setup,  oscillator bit set
+0b1000 0001 = 0x81   display setup, D set, both blink bits clear
+0b1110 1111 = 0xEF   dimming set,   all four duty bits set
+
+0b1000 0101 = 0x85   ... on, blinking at 1 Hz  (B1 B0 = 1 0)
+0b1110 0111 = 0xE7   ... half brightness, 8/16
+
+i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
+]]></code></program>
+    <ul>
+        <li>The header names every field of the table: <c>HT16K33_SYSTEM_CMD</c>, <c>HT16K33_OSC_ON</c>, <c>HT16K33_DISPLAY_CMD</c>, <c>HT16K33_DISPLAY_ON</c>, <c>HT16K33_BLINK_OFF</c>, <c>HT16K33_BLINK_1HZ</c>, <c>HT16K33_BRIGHT_CMD</c>.</li>
+        <li>So a line of driver code reads the way the datasheet row does: <term>the command, ORed with its options</term>. That is the structure to copy the next time you write one of these &#8212; the datasheet's layout becomes the header file's layout.</li>
+        <li>Those three bytes are the first function of your driver, and you write it in Part 6.</li>
+    </ul>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-ram">
@@ -2067,6 +2569,53 @@ void pb4_exti_init(void) {
                 thing.</caption>
                 <image source="images/Day10-I2C(2)/ht16k33_page_write.svg" width="95%"/>
             </figure>
+
+            <slide xml:id="sl-day10-ram" ref="fig-display-ram-map" stack="yes">
+    <ul>
+        <li>Sixteen bytes, <term>two per common line</term>: ROW0&#8211;ROW7 in the first and ROW8&#8211;ROW15 in the second. A seven-segment digit uses only the first eight rows, so <term>the second byte of every pair is always 0 for us</term>.</li>
+        <li>That leaves five even addresses carrying anything: <c>0x00</c>, <c>0x02</c>, <c>0x04</c>, <c>0x06</c>, <c>0x08</c> &#8212; digit 1, digit 2, <term>the colon</term>, digit 3, digit 4. The colon sits in the middle because that is where it sits on the display.</li>
+        <li>Within a digit's byte: bit 0 is <c>a</c>, up to bit 6 for <c>g</c>, and bit 7 is the decimal point. Written as a binary literal that reads <c>0b</c> DP g f e d c b a, so a <c>0</c> &#8212; every segment but <c>g</c> &#8212; is <c>0b00111111</c>.</li>
+    </ul>
+    <caption>Two bytes per position, and we write the odd one as 0 every time. The next slide says why it has to be written at all.</caption>
+</slide>
+
+            <slide xml:id="sl-day10-pattern" ref="fig-segment-map" room="yes">
+    <p><term>On paper, before any of this is code.</term> The buffer is ten bytes, <c>display_buffer[0]</c> through <c>display_buffer[9]</c>.</p>
+    <ul>
+        <li>Fill in all ten to light <term>every segment and every decimal point of all four digits</term>. Each byte in binary.</li>
+        <li>Now fill in all ten to display <c>0 1 2 3</c>.</li>
+        <li>Which byte would you change to add a decimal point after the second digit, and what to?</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day10-pattern-answer">
+    <p><term>Everything on, then 0 1 2 3:</term></p>
+    <program language="c"><code><![CDATA[
+all segments:   [0] 0b11111111   [2] 0b11111111   [6] 0b11111111   [8] 0b11111111
+                [1] [3] [4] [5] [7] [9]  all 0
+
+  "0 1 2 3":    [0] 0b00111111   a b c d e f
+                [2] 0b00000110   b c
+                [6] 0b01011011   a b d e g
+                [8] 0b01001111   a b c d g
+
+decimal point after digit 2:  set bit 7 of display_buffer[2]
+]]></code></program>
+    <ul>
+        <li>Worth deriving once by hand, after which you use <c>numbertable[]</c> from the header, which holds exactly these ten patterns.</li>
+        <li>The colon is the pair at address 4, and <term>which bit inside it lights the colon is not on the datasheet pages we have</term>. Find it by experiment &#8212; tonight's clock needs it.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day10-pointer" ref="fig-ht16k33-page-write" stack="yes">
+    <ul>
+        <li><term>Why send the zeros at all,</term> if the second byte of each pair does nothing? Because the HT16K33 has <term>one pointer</term> into its display RAM. You set it once, in the command byte at the start of the transaction, and it <term>advances by one every time a byte arrives</term>.</li>
+        <li>So ten bytes from address 0 fill addresses 0 through 9. Leave the zeros out and the second digit's pattern lands at address 1, which is the top half of digit 1.</li>
+        <li>And all ten go in <term>one</term> transaction: a STOP ends the transaction, and after a STOP the next write starts over at whatever address its own command byte names.</li>
+        <li>The library call for <q>address the device, say where inside it, send this many bytes</q> is <c>i2c1_memWrite()</c> &#8212; Thursday's multi-byte function, and this is what it was for.</li>
+    </ul>
+    <caption>One command byte says where to start; every data byte after it moves the pointer on by one.</caption>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-first-digit">
@@ -2209,6 +2758,61 @@ void SevenSeg_init() {
                 everything you send it and drives nothing at all, which looks
                 exactly like a display that is not wired.
             </p>
+
+            <slide xml:id="sl-day10-skeleton">
+    <p><term>writeFirstDigit.c</term>, given. One byte into one address of the display RAM, over and over.</p>
+    <program language="c"><code><![CDATA[
+int main(void) {
+    uint8_t display_addr = HT16K33_ADDR;
+    uint8_t display_subaddr = 0;      // 0, 2, 4, 6, 8 - depending on the digit
+    uint8_t digit_data = 0b01111001;  // 'E'
+    i2c1_init();
+    SevenSeg_init();
+    while(1) {
+        i2c1_memWrite(display_addr, display_subaddr, 1, &digit_data);
+        delay_ms(250);
+    }
+    return 1;
+}
+]]></code></program>
+    <ul>
+        <li>Three of <c>i2c1_memWrite()</c>'s arguments are the same three every time: <c>display_addr</c> is <term>who</term>, <c>display_subaddr</c> is <term>where inside it</term>, and the <c>1</c> is <term>how many bytes follow</term>.</li>
+        <li><c>0b01111001</c> sets bits 0, 3, 4, 5 and 6 &#8212; segments <c>a d e f g</c>, an <c>E</c>.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day10-skeleton-init">
+    <p><term>It calls SevenSeg_init(), which does not exist yet.</term> <c>SevenSegPartial.c</c> is the file your driver goes in: four empty functions, signatures already written. Fill in the first; the other three are Part 8.</p>
+    <program language="c"><code><![CDATA[
+void SevenSeg_init() {
+    // TODO 1 -- three one-byte writes, in this order: system setup with the
+    //           oscillator on, display setup with the display on and not
+    //           blinking, and dimming set to full brightness.  Build each
+    //           byte out of the names in SevenSegPartial.h.
+
+}
+]]></code></program>
+    <ul>
+        <li>Then move the <c>E</c>: digit 2, 3, 4. Then change it: <c>S</c>, <c>2</c>, <c>8</c>, derived from the segment map rather than guessed.</li>
+        <li>Then set <c>display_subaddr</c> to 1 and <term>predict what happens before you flash it</term>.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day10-init-answer">
+    <p><term>SevenSeg_init(), filled in.</term></p>
+    <program language="c"><code><![CDATA[
+void SevenSeg_init() {
+    i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
+    i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_DISPLAY_ON
+                                                     | HT16K33_BLINK_OFF);
+    i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_BRIGHT_CMD | 0xf);
+}
+]]></code></program>
+    <ul>
+        <li>Three transactions, not one: each is a separate command, and the HT16K33 wants each one addressed to it in its own right.</li>
+        <li>The oscillator goes first. Until it is running the chip accepts commands and drives nothing &#8212; which looks exactly like a display that is not wired.</li>
+    </ul>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-layers">
@@ -2274,6 +2878,35 @@ void SevenSeg_init() {
                 four functions you can read — instead of a library whose failure
                 mode is that it did not work.
             </p>
+
+            <slide xml:id="sl-day10-layers" ref="fig-firmware-layers" stack="yes">
+    <ul>
+        <li>At the bottom, the machine registers &#8212; <c>I2C1-&gt;CR2</c>, <c>GPIOB-&gt;MODER</c> &#8212; which belong to the STM32C031C6 and to nothing else.</li>
+        <li>Above them the <term>interface drivers</term>: <c>uart.c</c>, <c>adc.c</c>, <c>i2c.c</c>. The only files allowed to touch a machine register, one peripheral each.</li>
+        <li>Above those the <term>device drivers</term>, and this is the layer with the rule. <c>SevenSeg.c</c> knows one device &#8212; its commands, its addresses, its quirks &#8212; and does not know how the bytes get there. It may call <c>i2c1_byteWrite()</c> as often as it likes and may not touch <c>I2C1-&gt;CR2</c> once.</li>
+        <li>The point is not tidiness. The same display driver runs unchanged on any board whose I2C library offers those five functions, and moving to a different microcontroller means rewriting <c>i2c.c</c> and nothing else.</li>
+        <li>On top, <c>main()</c>, which calls <c>SevenSeg_write()</c> and has no idea there is a bus involved.</li>
+    </ul>
+    <caption>Today you write the third layer up — the first one in this course that has been yours.</caption>
+</slide>
+
+            <slide xml:id="sl-day10-adafruit">
+    <p><term>If you have driven one of these from an Arduino, you have used somebody else's version of the layer you are about to write.</term></p>
+    <program language="c"><code><![CDATA[
+Adafruit_LEDBackpack.h                    SevenSeg.h
+
+  begin(0x70)                 ->            SevenSeg_init()
+  setBrightness(b)            ->            SevenSeg_dim(b)
+  blinkRate(r)                ->            SevenSeg_blink(r)
+  writeDisplay()              ->            SevenSeg_write(buffer)
+
+        ... and underneath, it calls Wire, which is i2c.c
+]]></code></program>
+    <ul>
+        <li>The same four functions and the same two layers, written by somebody who read the same datasheet pages you read in Part 4.</li>
+        <li>What writing it yourself buys is not performance. It is that when the display shows nothing you have <term>a bus you can put a scope on</term>, a command table you can check the bytes against, and four functions you can read &#8212; instead of a library whose failure mode is that it did not work.</li>
+    </ul>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-driver">
@@ -2421,6 +3054,81 @@ int main(void) {
                 <c>HT16K33_ADDR_PTR</c>, not that you got the segment patterns
                 wrong.
             </p>
+
+            <slide xml:id="sl-day10-driver-todo">
+    <p><term>Three functions left, and their prototypes are already in the header.</term> Two rehearse the one-byte write you have now done four times; the third is the day.</p>
+    <program language="c"><code><![CDATA[
+void SevenSeg_blink(uint8_t rate) {
+    // TODO 2 -- one byte: display-setup command, display-on bit, rate
+}
+
+void SevenSeg_dim(uint8_t brightness) {
+    // TODO 3 -- one byte: the dimming command, plus the brightness
+}
+
+void SevenSeg_write(uint8_t *display_buffer) {
+    // TODO 4 -- ONE call.  Every byte in one transaction, from
+    //           HT16K33_ADDR_PTR.  Go through the i2c library.
+}
+]]></code></program>
+    <ul>
+        <li>Mask each argument to the bits its command actually has &#8212; <c>0x6</c> for blink, <c>0xf</c> for brightness &#8212; so a caller passing something out of range cannot corrupt the command itself.</li>
+        <li>Before you write TODO 4: say out loud what each of <c>i2c1_memWrite()</c>'s four arguments has to be, and why.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day10-driver-answer">
+    <p><term>The three functions.</term></p>
+    <program language="c"><code><![CDATA[
+// Change the display flashing
+void SevenSeg_blink(uint8_t rate) {
+    i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_DISPLAY_ON | (rate & 0x6));
+}
+
+// Dim the display
+void SevenSeg_dim(uint8_t brightness) {
+    i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_BRIGHT_CMD | (brightness & 0xf));
+}
+
+// Write the display RAM
+void SevenSeg_write(uint8_t *display_buffer) {
+    // display_buffer is size 2*HT16K33_NBUF (high byte, low byte)
+    i2c1_memWrite(HT16K33_ADDR, HT16K33_ADDR_PTR, 2*HT16K33_NBUF, display_buffer);
+}
+]]></code></program>
+    <caption>SevenSeg_write() is one line, because Part 5 did the understanding.</caption>
+</slide>
+
+            <slide xml:id="sl-day10-es28" room="compressed">
+    <p><term>ES.28, out of a ten-byte buffer.</term></p>
+    <program language="c"><code><![CDATA[
+    uint8_t display_buffer[2*HT16K33_NBUF];
+    i2c1_init();  SevenSeg_init();  SevenSeg_dim(15);
+    display_buffer[0] = 0b01111001;      display_buffer[1] = 0;   // E
+    display_buffer[2] = 0b11101101;      display_buffer[3] = 0;   // S.
+    display_buffer[4] = 0;               display_buffer[5] = 0;   // no colon
+    display_buffer[6] = numbertable[2];  display_buffer[7] = 0;   // 2
+    display_buffer[8] = numbertable[8];  display_buffer[9] = 0;   // 8
+    SevenSeg_write(display_buffer);
+    delay_ms(1000);   SevenSeg_blink(HT16K33_BLINK_1HZ);
+    delay_ms(5000);   SevenSeg_blink(HT16K33_BLINK_OFF);   SevenSeg_dim(5);
+]]></code></program>
+    <ul>
+        <li>The odd bytes are Part 5's zeros, and they are what move the pointer along. <c>0b11101101</c> is an <c>S</c> with bit 7 set &#8212; a letter and its decimal point in one entry.</li>
+        <li><term>No <c>while(1)</c>.</term> It runs once and stops, and the display keeps showing <c>ES.28</c> &#8212; the HT16K33 is still sweeping its RAM whether or not the STM32C031C6 is doing anything. The argument for the backpack, on your desk.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day10-ladder">
+    <p><term>Nothing, or the wrong thing, on the display?</term> Work down the layers rather than around them.</p>
+    <ul>
+        <li>1 &#8212; Does <c>writeFirstDigit.c</c> still put an <c>E</c> up? If yes, the bus, the init and the RAM addressing are all fine and the fault is in <c>SevenSeg_write()</c> or in how the buffer was filled.</li>
+        <li>2 &#8212; Four garbled characters usually means the buffer is right but <term>shifted</term>: check you sent <c>2*HT16K33_NBUF</c> bytes and started at <c>HT16K33_ADDR_PTR</c>, before suspecting the segment patterns.</li>
+        <li>3 &#8212; Nothing at all, and <c>writeFirstDigit.c</c> also shows nothing: back to Part 2. The bus, then the oscillator.</li>
+    </ul>
+    <caption>Each step rules out a layer — start at the one you know worked.</caption>
+    <note>Stays up for all of Part 8.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-next">

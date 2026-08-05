@@ -1,0 +1,283 @@
+{
+  "id": "day10",
+  "title": "Day 10 — The HT16K33 and Its Device Driver",
+  "slides": [
+    {
+      "type": "title",
+      "title": "The HT16K33 and Its Device Driver",
+      "subtitle": "ENGS 28 · Day 10 — In-Class"
+    },
+    {
+      "type": "recap",
+      "title": "Where we are",
+      "items": [
+        "On Thursday you put an oscilloscope on two wires and watched a transaction go by: START, address, ACK, data, STOP.",
+        "Today the chip at the other end. Its datasheet is four pages of command table and RAM map, and by the end of the hour those pages are three functions your program can call.",
+        "That layer — the device driver — is the one this course has been handing you all term as uart.c and adc.c. This is the one you write.",
+        "By the end of the hour your own display shows ES.28, written out of a ten-byte buffer by a function you wrote. Lab 5 asks for that function."
+      ],
+      "presenterNote": "≈ 2 min with announcements."
+    },
+    {
+      "type": "agenda",
+      "title": "Agenda",
+      "items": [
+        "Homework review, and two AI solutions",
+        "Does the bus still work?",
+        "How the display is actually built",
+        "Reading the command table",
+        "The display RAM, and the byte that is always zero",
+        "One digit",
+        "Layers, and what you are replacing",
+        "The driver: blink, dim, and write",
+        "Homework, and what Lab 5 asks for"
+      ]
+    },
+    {
+      "type": "section",
+      "kicker": "Part 1",
+      "title": "Homework Review, and Two AI Solutions",
+      "presenterNote": "≈ 9 min. Individual written answer BEFORE the group talks, and a working reference copy offered to the whole room before groups form — so a student whose homework did not run has something to compare against and never has to say so out loud. First thing to compress to 6 min if Part 8 looks threatened; not to cut."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-homework.html",
+      "slide": "sl-day10-ai-chatgpt",
+      "title": "I asked ChatGPT to do Tuesday's assignment"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-homework.html",
+      "slide": "sl-day10-ai-gemini",
+      "title": "And Gemini"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-homework.html",
+      "slide": "act-i2c-ai-review",
+      "title": "Would you revise your solution?",
+      "room": "compressed"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day10-homework.html",
+      "slide": "sl-day10-ai-findings",
+      "title": "What is in there"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 2",
+      "title": "Does the Bus Still Work?",
+      "presenterNote": "≈ 3 min, and it is the cost of having moved the ping to Day 9x — paid deliberately. Nobody writes a line of driver code before their display answers."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-verify.html",
+      "slide": "sl-day10-verify",
+      "title": "Flash Thursday's pingDisplay.c, unchanged"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 3",
+      "title": "How the Display Is Actually Built",
+      "presenterNote": "≈ 6 min, opening with a 60-second refresher of the reading for anyone who bounced off it."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-display-hardware.html",
+      "slide": "sl-day10-segment-map",
+      "title": "a b c d e f g, and DP"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-display-hardware.html",
+      "slide": "sl-day10-grid",
+      "title": "Common cathode: how do you light one segment?",
+      "room": true
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-display-hardware.html",
+      "slide": "sl-day10-grid-answer",
+      "title": "One digit at a time — which is what the sweep is for"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-display-hardware.html",
+      "slide": "sl-day10-block",
+      "title": "The HT16K33 from the inside"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 4",
+      "title": "Reading the Command Table",
+      "presenterNote": "≈ 7 min. Derived from the datasheet, not handed over: 0x21, 0x81 and 0xEF are answers, not given constants."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-commands.html",
+      "slide": "sl-day10-cmd-table",
+      "title": "The command table, pp. 24–25"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-commands.html",
+      "slide": "sl-day10-cmd-derive",
+      "title": "Build the three startup bytes",
+      "room": true
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-commands.html",
+      "slide": "sl-day10-cmd-answer",
+      "title": "0x21, 0x81, 0xEF — and the names for them"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 5",
+      "title": "The Display RAM, and the Byte That Is Always Zero",
+      "presenterNote": "≈ 8 min. The pattern activity is on paper, before any of it is code, so that the buffer is not simultaneously a new idea and a debugging surface."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-ram.html",
+      "slide": "sl-day10-ram",
+      "title": "Two bytes per digit, and five that matter"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-ram.html",
+      "slide": "sl-day10-pattern",
+      "refPage": "subsec-day10-display-hardware.html",
+      "title": "Make a pattern — on paper",
+      "room": true
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-ram.html",
+      "slide": "sl-day10-pattern-answer",
+      "title": "Everything on, then 0 1 2 3"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-ram.html",
+      "slide": "sl-day10-pointer",
+      "title": "Why the zeros have to be sent"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 6",
+      "title": "One Digit",
+      "presenterNote": "≈ 6 min. A student who stalls after this still has a lit digit."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-first-digit.html",
+      "slide": "sl-day10-skeleton",
+      "title": "writeFirstDigit.c, given"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-first-digit.html",
+      "slide": "sl-day10-skeleton-init",
+      "title": "SevenSegPartial.c, and TODO 1"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-first-digit.html",
+      "slide": "act-i2c-first-digit",
+      "title": "Write one digit, then another",
+      "room": "compressed"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day10-first-digit.html",
+      "slide": "sl-day10-init-answer",
+      "title": "Solution — SevenSeg_init()"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 7",
+      "title": "Layers, and What You Are Replacing",
+      "presenterNote": "≈ 4 min. The Adafruit beat is not cuttable — it is the third of the week's three Arduino-defusing moments."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-layers.html",
+      "slide": "sl-day10-layers",
+      "title": "Four layers, and the rule in the middle"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-layers.html",
+      "slide": "sl-day10-adafruit",
+      "title": "Adafruit_LEDBackpack.h is this, written by somebody else"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 8",
+      "title": "The Driver",
+      "presenterNote": "≈ 13 min, and the crucial step is SevenSeg_write() alone. blink() and dim() are a two-minute warm-up. If fewer than 11 minutes remain, do dim() on the projector and go straight to write()."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-driver.html",
+      "slide": "sl-day10-driver-todo",
+      "title": "Three functions left"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-driver.html",
+      "slide": "act-i2c-sevenseg",
+      "title": "Finish the driver and show ES.28",
+      "room": "compressed"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-driver.html",
+      "slide": "sl-day10-ladder",
+      "title": "Nothing on the display? Work down the layers"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day10-driver.html",
+      "slide": "sl-day10-driver-answer",
+      "title": "Solution — blink, dim, write"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day10-driver.html",
+      "slide": "sl-day10-es28",
+      "title": "Solution — ES.28"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 9",
+      "title": "Before Next Class",
+      "presenterNote": "≈ 4 min."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-next.html",
+      "slide": "act-i2c-homework",
+      "title": "Homework: counters on the display",
+      "room": "compressed"
+    },
+    {
+      "type": "recap",
+      "title": "Recap",
+      "items": [
+        "34 LEDs on 14 wires, because a grid saves wires and a sweep buys back the one digit at a time it costs you. The backpack runs that sweep so your program does not have to.",
+        "A device's commands come out of its datasheet's command table, one byte each, and the header's names are that table's structure.",
+        "Two bytes per digit position, five positions, and the odd bytes are what advance the HT16K33's pointer — which is why they have to be sent.",
+        "All ten in ONE transaction, because a STOP ends the write and the next one starts over.",
+        "A device driver reaches the hardware only through the interface driver. SevenSeg.c may call i2c1_byteWrite() as often as it likes and may not touch I2C1->CR2 once.",
+        "Tonight: the counters. The MM:SS clock is the one that makes you find the colon bit, and Lab 5 is the same shape."
+      ]
+    }
+  ]
+}
