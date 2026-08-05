@@ -146,7 +146,19 @@ and `pc13_exti_init()` into `exti.c`/`exti.h` with an include guard, `.h` into
 `Inc` and `.c` into `Src`, and watch `main.c` shrink to its actual logic (deck
 slide 49).  This is the habit Lab 5 grades under "Modularity".
 
-## Activity sequence (65 min)
+## Activity sequence (~65 min built, 110 available)
+
+**The class length, stated once, because the earlier revisions of this plan had
+it wrong.**  Day N with N odd is a Tuesday and runs **110 minutes**; Day Nx is a
+Wednesday x-hour and runs **50**; Day N with N even is a Thursday and runs
+**110**.  Day 9 is therefore a 110-minute class, and the table below sums to 65
+— about **45 minutes of slack**.  Nothing on Day 9 has to be cut for time.  The
+cut order below is kept because it is still the right order to shed material in
+if a part overruns, not because the day is over budget.
+
+(For contrast, and not acted on here: **Day 9x is the overcommitted day of the
+week** — 50 minutes available against roughly 64 built.  Its own section still
+says 65 min.)
 
 | Part | Content | Mode | Min |
 | --- | --- | --- | --- |
@@ -170,7 +182,8 @@ there are two failures: a bad download or build gets the verified-good file; a
 dead button gets re-seated against the Day 3x photo.  Nobody debugs either one
 while the class waits.
 
-**If running long, cut in this order:** Part 1 to 2 minutes (project one
+**If a part overruns — the day itself has slack, so this is about pace, not
+about the clock running out — cut in this order:** Part 1 to 2 minutes (project one
 solution, skip the table discussion); Part 3's "other interrupt sources" list
 (deck slide 13) — it is reading material; Part 5's `volatile` beat to a show
 of hands if Day 8 landed.  **Entering Part 6 with fewer than 10 minutes:** do
@@ -966,6 +979,8 @@ those need the manual every time.
     min and Part 7 → 12**; Part 1's only in-class job is planting the
     `ODR ^= LED` line without explaining it, and the table discussion is the
     first thing the cut list drops anyway. Not applied — it is your clock.
+    *(Cheaper to say yes to than it looks: the class is 110 minutes, not 65, so
+    Part 7 can have its extra minute without taking one from Part 1.)*
 17. **[FILES]** `GPIO_BSRR_BS5` / `GPIO_BSRR_BR5` appear in **no** deck and are
     confirmed only against the RM's bit names and the STM32G0/C0 CMSIS
     convention — and `act-gpio-bsrr-t4` now asks students to write exactly

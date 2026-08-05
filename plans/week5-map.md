@@ -13,6 +13,8 @@ A map of what was actually built, for judging the pedagogy without reading
 | Topic | GPIO interrupts (EXTI) | I2C protocol + peripheral | HT16K33 + device driver |
 | Chapter | `ch-gpio-interrupts.ptx` | `ch-i2c.ptx` | `ch-i2c.ptx` |
 | Deck | 55 slides, 9 parts | 51 slides, 11 parts | 42 slides, 9 parts |
+| Class length | Tue, **110 min** | Wed x-hour, **50 min** | Thu, **110 min** |
+| Built to | ~65 min — 45 spare | ~64 min — **14 over** | ~65 min — 45 spare |
 | Students **build** | interrupt-driven counter | nothing — wire, flash, **look** | their first device driver |
 | Hands-on block | 13 min | 15 min | 13 min |
 | Inherits from | Day 8, almost entirely | Day 5 (UART), loosely | Day 9x, entirely |
@@ -33,7 +35,7 @@ A map of what was actually built, for judging the pedagogy without reading
 
 ---
 
-## Day 9 — GPIO interrupts (65 min)
+## Day 9 — GPIO interrupts (~65 min built, 110 available)
 
 | Part | Content | Mode | Min |
 |---|---|---|---|
@@ -97,17 +99,18 @@ Week 5    ── all three ─────────────────�
 
 ## Five things worth your judgment
 
-**1. Every day is budgeted to exactly 65 minutes with zero slack.**
-Day 9 sums to 65, 9x to ~64, 10 to 65. Each has a checkpoint and a documented
-cut order, which is the right mitigation — but three consecutive zero-slack
-days in one week compound. Day 8's experience was that the tooling bottleneck
-overran. Days 9 and 10 open with 9-minute and 12-minute non-teaching blocks
-(wiring checks, downloads, homework review) before anything new is taught.
+**1. Every day was budgeted to 65 minutes, and only one of the three days is
+65 minutes long.** Tuesdays and Thursdays run 110 minutes; the Wednesday x-hour
+runs 50. So Days 9 and 10 each have roughly 45 minutes of slack, and **Day 9x is
+14 minutes over its hour** — the one place in the week where the clock is a real
+constraint. Day 9's own section is corrected; 9x and 10 still read "65 min" and
+need a pass of their own.
 
-**2. Day 9's deck is the densest in the book** — 55 slides in 65 minutes,
-against Day 8's 48. Parts 4a/4b/5 are 15 minutes carrying 18 slides. Worth
-asking whether that is a real pace or a symptom of one-idea-per-slide applied
-too literally (P-7 says slides are free, but attention is not).
+**2. Day 9's deck is the densest in the book** — 55 slides, against Day 8's 48.
+Parts 4a/4b/5 are 15 planned minutes carrying 18 slides. With 110 minutes in the
+room that is no longer a clock problem, but it is still worth asking whether the
+pace is real or a symptom of one-idea-per-slide applied too literally (P-7 says
+slides are free, but attention is not).
 
 **3. Day 10's crucial step depends on the display still being wired from
 Tuesday** — and nothing in the repo establishes whether kits go home
