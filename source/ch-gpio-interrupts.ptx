@@ -87,7 +87,7 @@
                 so it can only see a press that is still happening at the
                 moment it looks.  One work-around was to make the delay shorter, thereby narrowing the
                 window, but the problem never vanishes entirely — and you pay for the
-                narrowing with a loop that does nothing but ask.  Day 8 made the same argument
+                narrowing with a loop that does nothing but ask.  We made the same argument
                 about timekeeping and answered it by moving the counting into
                 hardware.  The answer here is the same in shape: let the
                 hardware watch the pin, and have it tell the CPU when something
@@ -172,7 +172,7 @@
                         one instant per trip around the loop.  A press that
                         starts and ends between two of those instants leaves no
                         trace for the program to find.  This is the problem an
-                        interrupt solves: the hardware notices the change when
+                        interrupt solves: the hardware detects the change when
                         it happens, not when the program next asks.</p></feedback>
                     </choice>
                     <choice>
@@ -258,8 +258,7 @@
             </exercise>
 
             <exercise xml:id="rq-gpio-isr-rules">
-                <statement><p>Compared with the <c>TIM14_IRQHandler</c> you
-                wrote on Day 8, what changes about the <em>rules</em> for an ISR
+                <statement><p>Compared with the <c>TIM14_IRQHandler</c> you wrote last week, what changes about the <em>rules</em> for an ISR
                 when the interrupt comes from a pin instead of a
                 timer?</p></statement>
                 <choices randomize="yes">
@@ -328,7 +327,7 @@
             </p>
             <p>
                 The last part of class returns to something we have been doing
-                since Day 8 without examining it: changing a variable inside an
+                since we started writing ISRs, without examining it: changing a variable inside an
                 ISR.  It works, until it doesn't, and the reason it stops
                 working is worth the last part of the hour.
             </p>
@@ -373,8 +372,8 @@
             <title>Part 2: The Press the Polled Counter Misses</title>
             <p>
                 Before any code, confirm the hardware.  You wired the button on
-                PB4 with its internal pull-up on Day 3 and added the debouncing
-                capacitor on Day 3x (<xref ref="fig-rc-debounce-circuit"/>),
+                PB4 with its internal pull-up earlier in the course and added the debouncing
+                capacitor shortly after (<xref ref="fig-rc-debounce-circuit"/>),
                 and a breadboard has been through several chapters since.  The
                 verification is the first task below, and it takes a minute:
                 run a program that is known to work.  If it does not, the fault
@@ -386,7 +385,7 @@
             <p>
                 <c>counterResetButtonPolled.c</c> prints a counter once a
                 second and resets it when the button is down.  The button read
-                is the Day 3 idiom — the pin is HIGH when the button is open and
+                is the same one we used before — the pin is HIGH when the button is open and
                 LOW when it is pressed, so <q>pressed</q> is
                 <c>(GPIOB-&gt;IDR &amp; BUTTON_PIN) == 0</c>:
             </p>
@@ -647,7 +646,7 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
         <li><c>EXTI_IMR1</c> &#8212; the mask. Whether a detected event may <em>become an interrupt request</em> at all.</li>
         <li><c>EXTI_FPR1</c> &#8212; the pending register. Records that it happened, so the request survives until your ISR acknowledges it.</li>
         <li>The first three are <term>configured once</term>, in Parts 4a and 4b. The fourth is <term>read and cleared by your handler</term>, in Part 5.</li>
-        <li>Then the NVIC on top, exactly as on Day 8 &#8212; so setting a pin up takes four writes where the timer took two.</li>
+        <li>Then the NVIC on top, exactly as for the timer &#8212; so setting a pin up takes four writes where the timer took two.</li>
     </ul>
 </slide>
 
@@ -717,7 +716,7 @@ attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
             <slide xml:id="sl-day9-checklist" room="yes">
     <p><term>What we need to do to program a pushbutton interrupt.</term> The button is on PB4.</p>
     <ol>
-        <li>Configure PB4 as an input pin with pull-up, as per usual. &#8212; done on Day 3</li>
+        <li>Configure PB4 as an input pin with pull-up, as per usual &#8212; we did this earlier.</li>
         <li>Tell the EXTI multiplexer <term>which port</term> is on line EXTI4, via <c>EXTI_EXTICRx</c>.</li>
         <li>Tell the EXTI we are looking for a <term>falling edge</term> on line EXTI4, via <c>EXTI_FTSR1</c>.</li>
         <li>Tell the EXTI to <term>unmask</term> line EXTI4 so the event is actually noticed, via <c>EXTI_IMR1</c>.</li>
@@ -794,8 +793,8 @@ attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
                 <image source="images/Day09-Interrupts(2)/exticr2_exti4_portb.svg" width="90%"/>
             </figure>
             <p>
-                In code it is the clear-then-set pair you have written since Day
-                1, using the mask and position macros from the device header and
+                In code it is the clear-then-set pair you have written many
+                times, using the mask and position macros from the device header and
                 the port constant from <c>ES28.h</c>:
             </p>
             <program language="c"><code><![CDATA[
@@ -815,7 +814,7 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
 </slide>
 
             <slide xml:id="sl-day9-exticr-code">
-    <p><term>In code, the clear-then-set pair you have written since Day 1:</term></p>
+    <p><term>In code, the clear-then-set pair you have written many times:</term></p>
     <program language="c"><code><![CDATA[
 EXTI->EXTICR[1] &= ~EXTI_EXTICR2_EXTI4_Msk;             // clear the EXTI4 field
 EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
@@ -902,8 +901,7 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
 </slide>
 
             <p>
-                <em>Whether the NVIC will listen.</em>  This is Day 8's second
-                enable, unchanged.  The CMSIS function takes the constant built
+                <em>Whether the NVIC will listen.</em>  This is the timer's second enable, unchanged.  The CMSIS function takes the constant built
                 from Table 40's acronym, and for us that is the row covering
                 lines 4 through 15:
             </p>
@@ -913,8 +911,7 @@ EXTI->IMR1  |= EXTI_IMR1_IM4;    // unmask line EXTI4
 NVIC_EnableIRQ(EXTI4_15_IRQn);   // let the request reach the CPU
 ]]></code></program>
             <p>
-                It is worth counting the switches, because Day 8 had two and
-                today has four.  For the timer: <c>UIE</c> in
+                It is worth counting the switches, because the timer needed two and today needs four.  For the timer: <c>UIE</c> in
                 <c>TIM14-&gt;DIER</c> made the peripheral raise a request, and
                 <c>NVIC_EnableIRQ()</c> let it through.  For a pin, the
                 peripheral side is three switches rather than one — which port
@@ -924,8 +921,7 @@ NVIC_EnableIRQ(EXTI4_15_IRQn);   // let the request reach the CPU
                 there is no error, no warning, and no interrupt.
             </p>
             <p>
-                Assembled, with the pin configuration that Day 3 established in
-                front of it, this is the whole initialization:
+                Assembled, with the pin configuration you already have in front of it, this is the whole initialization:
             </p>
             <program language="c"><code><![CDATA[
 void pb4_exti_init(void) {
@@ -960,14 +956,14 @@ EXTI->IMR1  |= EXTI_IMR1_IM4;    // unmask line EXTI4
 NVIC_EnableIRQ(EXTI4_15_IRQn);   // let the request reach the CPU
 ]]></code></program>
     <ul>
-        <li>Count them against Day 8. The timer needed <term>two</term>: UIE in <c>TIM14-&gt;DIER</c> made the peripheral raise a request, and <c>NVIC_EnableIRQ()</c> let it through.</li>
+        <li>Count them against the timer. The timer needed <term>two</term>: UIE in <c>TIM14-&gt;DIER</c> made the peripheral raise a request, and <c>NVIC_EnableIRQ()</c> let it through.</li>
         <li>A pin needs <term>four</term>, because the peripheral side is three: which port is on the line, which edge counts, and whether the line is unmasked. The NVIC side is identical.</li>
         <li>Forget any one of the four and there is no error, no warning, and no interrupt.</li>
     </ul>
 </slide>
 
             <slide xml:id="sl-day9-init-code">
-    <p><term>pb4_exti_init()</term> &#8212; the Day 3 pin configuration, then the four switches:</p>
+    <p><term>pb4_exti_init()</term> &#8212; the pin configuration you already have, then the four switches:</p>
     <program language="c"><code><![CDATA[
 void pb4_exti_init(void) {
     __disable_irq();
@@ -986,7 +982,7 @@ void pb4_exti_init(void) {
     __enable_irq();
 }
 ]]></code></program>
-    <caption>Everything above the blank line is Day 3. Everything below it is today.</caption>
+    <caption>Everything above the blank line you have written before. Everything below it is today.</caption>
 </slide>
         </subsection>
 
@@ -1002,9 +998,7 @@ void pb4_exti_init(void) {
             </p>
             <p>
                 Its second job is to clear that bit, and how to do that is a
-                question you can now answer before looking.  Day 8's TIM14 flag
-                was cleared by writing a <em>0</em>; Day 7's ADC flags were
-                cleared by writing a <em>1</em>; and the thing that decided
+                question you can now answer before looking.  TIM14's flag was cleared by writing a <em>0</em>; the ADC's flags were cleared by writing a <em>1</em>; and the thing that decided
                 which was the access type printed under the bit in the reference
                 manual (<xref ref="subsec-timers-ref-access-types"/>).
             </p>
@@ -1033,10 +1027,9 @@ void pb4_exti_init(void) {
             <p>
                 The access type under every <c>FPIF</c> bit is <c>rc_w1</c>, and
                 the text says it in words: <q>Each bit is cleared by writing 1
-                into it.</q>  So this flag behaves like Day 7's ADC flags and
-                unlike Day 8's timer flag, and the clearing mask carries a 1 at
+                into it.</q>  So this flag behaves like the ADC's flags and unlike the timer's, and the clearing mask carries a 1 at
                 our bit and 0s everywhere else.  Written as an assignment, not a
-                compound assignment, for the reason Day 8 established.  On a
+                compound assignment, for the reason we established with the timer.  On a
                 write-1-to-clear register the read returns a 1 at
                 <em>every</em> flag that is already set, and writing those 1s
                 back clears every one of them — including lines your handler
@@ -1048,16 +1041,15 @@ void pb4_exti_init(void) {
                 through <c>FPIF15</c>: hardware sets the bit when a falling edge
                 is detected on that line, and the access type <c>rc_w1</c> under
                 every bit means software clears it by writing a 1.  Writing a 0
-                has no effect.  This is the same convention as Day 7's ADC flags
-                and the opposite of Day 8's <c>TIM14_SR</c>.</caption>
+                has no effect.  This is the same convention as the ADC's flags and the opposite of <c>TIM14_SR</c>.</caption>
                 <image source="images/Day09-Interrupts(2)/exti_fpr1.svg" width="90%"/>
             </figure>
 
             <slide xml:id="sl-day9-fpr-predict" room="yes">
     <p><term>Twelve lines share one handler, so it has to ask what it was called for.</term> The EXTI records each detected falling edge in <c>EXTI_FPR1</c>, one bit per line. Testing bit 4 answers that. Clearing it is the next question:</p>
     <program language="c"><code><![CDATA[
-TIM14->SR  = ~TIM_SR_UIF;      // Day 8: a 0 at the flag, 1s everywhere else
-ADC1->ISR  = ADC_ISR_ADRDY;    // Day 7: a 1 at the flag, 0s everywhere else
+TIM14->SR  = ~TIM_SR_UIF;      // TIM14:  a 0 at the flag, 1s everywhere else
+ADC1->ISR  = ADC_ISR_ADRDY;    // ADC:    a 1 at the flag, 0s everywhere else
 
 EXTI->FPR1 = ???               // today
 ]]></code></program>
@@ -1070,15 +1062,15 @@ EXTI->FPR1 = ???               // today
             <slide xml:id="sl-day9-fpr-reveal" ref="fig-exti-fpr1" stack="yes">
     <ul>
         <li>The access type printed under every <c>FPIF</c> bit is <c>rc_w1</c>, and the text says it in words: <term>each bit is cleared by writing 1 into it</term>. Writing 0 has no effect.</li>
-        <li>So this flag behaves like Day 7's ADC flags and the opposite of Day 8's <c>TIM14_SR</c> &#8212; and the way you found out is the same both times: RM0490 &#167;12.5.5, the access row.</li>
+        <li>So this flag behaves like the ADC's flags and the opposite of <c>TIM14_SR</c> &#8212; and the way you found out is the same both times: RM0490 &#167;12.5.5, the access row.</li>
         <li>Assign the mask, do not compound-assign it. On a write-1-to-clear register the read returns a 1 at <em>every</em> flag already set, and writing those 1s back clears all of them &#8212; including lines your handler was not called for.</li>
     </ul>
-    <caption>rc_w1 — same convention as Day 7, opposite of Day 8, and the manual is what told you.</caption>
+    <caption>rc_w1 — same convention as the ADC, opposite of the timer, and the manual is what told you.</caption>
 </slide>
 
             <p>
                 That gives the handler.  It checks which line, clears the flag,
-                sets a flag of its own, and leaves — the Day 8 shape exactly,
+                sets a flag of its own, and leaves — the timer handler's shape exactly,
                 with a test in front of it:
             </p>
             <program language="c"><code><![CDATA[
@@ -1102,7 +1094,7 @@ void EXTI4_15_IRQHandler(void){
             </p>
             <p>
                 The variable it sets is shared between the handler and
-                <c>main()</c>, so it carries the keyword Day 8 gave its reason —
+                <c>main()</c>, so it carries the keyword whose reason we saw with the timer —
                 no call to this function appears anywhere in the program, so the
                 compiler has no evidence the variable ever changes and is
                 entitled to assume it does not
@@ -1113,7 +1105,7 @@ volatile int buttonPushed;    // written by the ISR, read by main()
 ]]></code></program>
 
             <slide xml:id="sl-day9-isr-code">
-    <p><term>The handler: which line, clear it, record it, leave.</term> Day 8's shape with a test in front of it.</p>
+    <p><term>The handler: which line, clear it, record it, leave.</term> The timer handler's shape, with a test in front of it.</p>
     <program language="c"><code><![CDATA[
 volatile int buttonPushed;    // written by the ISR, read by main()
 
@@ -1129,7 +1121,7 @@ void EXTI4_15_IRQHandler(void){
 ]]></code></program>
     <ul>
         <li>Return without clearing <c>FPR1</c> and the handler is re-entered the instant it returns, forever &#8212; the pending bit is still set, so the request is still outstanding. The symptom is a program that appears to hang.</li>
-        <li><c>volatile</c> for the same reason as Day 8: no call to this function appears anywhere in the program, so the compiler has no evidence the variable ever changes and is entitled to assume it does not.</li>
+        <li><c>volatile</c> for the same reason as with the timer: no call to this function appears anywhere in the program, so the compiler has no evidence the variable ever changes and is entitled to assume it does not.</li>
     </ul>
 </slide>
         </subsection>
@@ -1194,7 +1186,7 @@ int main(void) {
 void pb4_exti_init(void) {
     __disable_irq();                        // given: no interrupts during setup
 
-    RCC->IOPENR |= RCC_IOPENR_GPIOBEN;      // given: the Day 3 pin configuration
+    RCC->IOPENR |= RCC_IOPENR_GPIOBEN;      // given: the pin configuration you already have
     GPIOB->MODER &= ~GPIO_MODER_MODE4_Msk;
     GPIOB->MODER |= (GPIO_INPUT << GPIO_MODER_MODE4_Pos);
     GPIOB->PUPDR &= ~GPIO_PUPDR_PUPD4_Msk;
@@ -1331,12 +1323,12 @@ int main(void) {
             <p>
                 One thing you may see now that polling hid.  A mechanical
                 switch does not make one clean transition; its contacts bounce,
-                which Day 3x had you capture on the oscilloscope
+                which you captured on the oscilloscope earlier
                 (<xref ref="subsec-contact-bounce"/>).  Polling was immune to
                 that, because it read a level that had long since settled.  An
                 edge-triggered interrupt is not reading a level — it fires on
                 every falling edge it sees, and a bouncing contact can deliver
-                several.  The capacitor you added on Day 3x is what keeps that from
+                several.  The debouncing capacitor is what keeps that from
                 happening here.  If your counter ever jumps by more than one
                 press's worth, look at the capacitor before you look at the
                 code.
@@ -1357,9 +1349,9 @@ int main(void) {
             <slide xml:id="sl-day9-bounce">
     <p><term>One thing you may see now that polling hid.</term></p>
     <ul>
-        <li>A mechanical switch's contacts <term>bounce</term> &#8212; you captured this on the scope on Day 3x.</li>
+        <li>A mechanical switch's contacts <term>bounce</term> &#8212; you captured this on the scope earlier in the course.</li>
         <li>Polling was immune, because it read a level that had long since settled. An edge-triggered interrupt is not reading a level: it fires on <term>every</term> falling edge, and a bouncing contact can deliver several.</li>
-        <li>The capacitor you added on Day 3x is what keeps that from happening here. If your counter ever jumps by more than one press's worth, <term>look at the capacitor before you look at the code</term>.</li>
+        <li>The debouncing capacitor is what keeps that from happening here. If your counter ever jumps by more than one press's worth, <term>look at the capacitor before you look at the code</term>.</li>
     </ul>
 </slide>
 
@@ -1683,7 +1675,7 @@ GPIOA->ODR |= GREEN;                GPIOA->ODR ^= RED;
                 spend an evening on it.
             </p>
             <p>
-                The fix is on a page you have been reading since Day 1 and have
+                The fix is on a page you have been reading all term and have
                 probably never read to the end of.
             </p>
             <slide xml:id="sl-day9-odr-race">
@@ -1793,7 +1785,7 @@ void TIM14_IRQHandler(void) {
             </p>
 
             <slide xml:id="sl-day9-bsrr">
-    <p><term>The fix is a note at the bottom of a page you have read since Day 1.</term> RM0490 &#167;6.4.6, under ODR: <q>For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOx_BSRR register.</q></p>
+    <p><term>The fix is a note at the bottom of a page you have read all term.</term> RM0490 &#167;6.4.6, under ODR: <q>For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOx_BSRR register.</q></p>
     <program language="c"><code><![CDATA[
 GPIOA->BSRR = GPIO_BSRR_BS5;   // PA5 high -- one write, no read
 GPIOA->BSRR = GPIO_BSRR_BR5;   // PA5 low  -- one write, no read
@@ -2095,7 +2087,7 @@ int main(void) {
                 <xref ref="fig-gpio-input-driver"/> is the chip's own diagram of
                 a single I/O pin, and it puts this chapter's two topics in one
                 picture.  On the right are the pull-up and pull-down resistors
-                that Day 3 configured through PUPDR and that hold PB4 HIGH when
+                that we configured through PUPDR and that hold PB4 HIGH when
                 the button is open.  Along the top, the input path leaves for
                 <q>on-chip peripherals, power control and EXTI</q> — that
                 branch is how a pin's level reaches the multiplexer in
@@ -2194,8 +2186,7 @@ int main(void) {
                 times.
             </p>
             <p>
-                The hardware fix is the one already on your breadboard — the
-                capacitor from Day 3x (<xref ref="subsec-hw-debounce"/>), which
+                The hardware fix is the one already on your breadboard — the debouncing capacitor (<xref ref="subsec-hw-debounce"/>), which
                 slows the recovery enough that the voltage never climbs back
                 above the input threshold during the bounce window.
                 <xref ref="fig-pb4-clean-edge"/> is what a debounced press looks
@@ -2203,7 +2194,7 @@ int main(void) {
                 excursions.  The software fix, when hardware debouncing is not
                 an option, is for the ISR to record the time of the edge and
                 ignore any further edge within a few tens of milliseconds — the
-                same idea as Day 3x's software debouncing, moved into the
+                same idea as the software debouncing we saw earlier, moved into the
                 handler.
             </p>
             <figure xml:id="fig-pb4-clean-edge">
