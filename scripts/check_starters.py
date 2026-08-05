@@ -35,6 +35,12 @@ STARTERS = [
      "    int buttonPushed;"),
     ("assets/starters/counterResetButtonInt.c", "source/ch-gpio-interrupts.ptx",
      "TODO 1a"),
+    ("assets/starters/pingDisplay.c", "source/ch-i2c.ptx",
+     "// Ping the display's address, repeatedly"),
+    ("assets/starters/writeFirstDigit.c", "source/ch-i2c.ptx",
+     "uint8_t display_subaddr = 0;"),
+    ("assets/starters/SevenSegPartial.c", "source/ch-i2c.ptx",
+     "TODO 4 -- one call."),
 ]
 
 
