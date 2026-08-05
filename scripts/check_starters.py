@@ -31,6 +31,10 @@ STARTERS = [
      "TODO 4a"),
     ("assets/starters/ADCPot.c", "source/ch-adc.ptx",
      "TODO 5 -- wait until the conversion has finished"),
+    ("assets/starters/counterResetButtonPolled.c", "source/ch-gpio-interrupts.ptx",
+     "    int buttonPushed;"),
+    ("assets/starters/counterResetButtonInt.c", "source/ch-gpio-interrupts.ptx",
+     "TODO 1a"),
 ]
 
 

@@ -255,12 +255,16 @@ A chapter is done when all of these are true.
 
 ## Deferred topics — do not forget
 
-- **BSRR register** — introduce in `ch-gpio-interrupts.ptx` (Day 9), not before. The
-  motivation is that ISRs sharing GPIO state with the main loop create a race on the
-  ODR read-modify-write; BSRR's atomic set/clear is the fix. Students need to have hit
-  the problem before BSRR makes sense. Hook: "you're now writing ISRs that share GPIO
-  pins with the main loop — here's why that matters and here's the one-line fix."
-  CMSIS: `GPIO_BSRR_BS5` to set, `GPIO_BSRR_BR5` to clear.
+- ~~**BSRR register** — introduce in `ch-gpio-interrupts.ptx` (Day 9)~~ — **SPENT
+  (Day 9 authoring, 2026-08-04).** It is Part 7, `subsec-day9-race`, staged in five
+  beats on the old deck's own "cautionary tale" (slides 54–58): two working programs
+  → the `counter++` disassembly → the same shape on `ODR` → predict the fix, then
+  read it off RM0490 §6.4.6's note → what BSRR does *not* do. Students **write** the
+  BSRR line rather than watching it (Gate 1, active-learning), and the homework
+  requires one. Two things learned worth carrying forward: the old deck stages the
+  race on a *variable*, which is the right on-ramp to the register version; and
+  **BSRR has no atomic toggle**, so it fixes the set and the clear and does not
+  rescue `ODR ^= LED` — say so rather than implying otherwise (S-19).
 - ~~Missing image `slide11_c3ead6b8.png`~~ — **RESOLVED (Day 8 authoring,
   2026-07-27).** The hash belonged to slide 16, not 11; the prescaler-timing
   figure was rebuilt from the deck as
@@ -279,10 +283,10 @@ A chapter is done when all of these are true.
 | ch-adc.ptx | Day07 | pilot |
 | ch-debugging.ptx | Day07x | Day 7x through Gate 2 (Petra pending) |
 | ch-timers-interrupts.ptx | Day08 | Day 8 through Gate 2 + Petra's review rounds |
-| ch-gpio-interrupts.ptx | Day09 | rough (split out of ch-timers-interrupts at Petra's direction) |
-| ch-i2c.ptx | Day09X, Day10, Day13 | rough |
+| ch-gpio-interrupts.ptx | Day09 | Day 9 through Step 5 (Gate 2 pending) |
+| ch-i2c.ptx | Day09X, Day10 | rough (plan at `plans/week5.md`; Day 13 moved out) |
 | ch-motors.ptx | Day11, Day11x, Day12 | rough |
-| ch-accelerometers.ptx | Day13x, Day14 | rough |
+| ch-accelerometers.ptx | Day13, Day13x, Day14 | rough (Day 13 moved here from ch-i2c, Petra's call) |
 | ch-servos.ptx | Day15, Day15x | rough |
 | ch-photosensors.ptx | Day16 | rough |
 | ch-ble.ptx | Day17 | rough |

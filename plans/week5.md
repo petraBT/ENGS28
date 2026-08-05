@@ -743,9 +743,10 @@ Full detail in `plans/week5-ground-truth.md` §5 and §7.
    given the library and only call it — but the chapter should not pretend to
    show it.
 4. **Starter files to be written and registered in `check_starters.py`:**
-   `counterResetButtonPolled.c`, `counterResetButtonInt.c` (three-TODO
-   skeleton), `pingDisplay.c`, `writeFirstDigit.c`, `SevenSegPartial.c`.
-   All are recovered complete or near-complete in ground truth §1.
+   ~~`counterResetButtonPolled.c`, `counterResetButtonInt.c`~~ — **DONE**, both
+   in `assets/starters/` and checked against the chapter's listings. Still to
+   write for Days 9x/10: `pingDisplay.c`, `writeFirstDigit.c`,
+   `SevenSegPartial.c`. All recovered in ground truth §1.
 5. **Figures are rebuilt** (Step 1, commit `958a07c`) — twenty-six annotated
    SVGs across the three decks' image directories. They still have to be
    *looked at* in the built book before Gate 2. Note `qlmanage -t` renders SVG
@@ -783,7 +784,7 @@ Full detail in `plans/week5-ground-truth.md` §5 and §7.
    on the display breakout. What actually happens — is the header keyed, does
    the breakout survive it, does the Nucleo? One sentence from you and the
    slide is written; until then it says only what is verified.
-9. **[CONFIRM]** Day 9's homework gains one BSRR line (drive a
+10. **[CONFIRM]** Day 9's homework gains one BSRR line (drive a
    counting-is-alive LED from `main()` with `GPIOA->BSRR`), so that Objective 5
    is practiced and not only watched. Reasonable addition, or does the homework
    have enough in it already?
@@ -891,3 +892,37 @@ Reviewed by `expert-active-learning`, `expert-cognitive-load`,
 "a student whose display never ACKs still has a trace"; the explicit "Day 9x
 needs nothing from Day 9"; and the restraint on Lab 5 — every mention is a
 plain date with no manufactured urgency (S-15, L-8).
+
+---
+
+## Day 9 status (Steps 3–5 complete, 2026-08-04)
+
+`source/ch-gpio-interrupts.ptx` rewritten from scratch — the rough version had
+no Before-Class/in-class split and its two main listings were invented.
+Chapter, 31 `<slide>` blocks, and `assets/decks/day9.json` (51 slides, 3
+instructor-only, 37 refs) all build clean; `check_rules`, `check_deck` and
+`check_starters` pass; every slide fits at 1280×720 in both the instructor and
+student views.
+
+**Things that came up during Steps 3–5, for Petra:**
+
+11. **[MINOR]** Three figures were rebuilt from the wrong picture and are now
+    named for what they actually show. Slide 21's "button with pull-up" is
+    drawn in PowerPoint shapes over an unrelated bitmap, so there is no
+    button schematic to recover from that deck — Day 3's `fig-rc-schematic`
+    is xref'd instead. What the slide's two bitmaps really were: RM0490's
+    GPIO input-driver diagram (now `fig-gpio-input-driver`, used for BSRR's
+    second write port, which it shows explicitly) and a clean-edge scope
+    capture (now `fig-pb4-clean-edge`, in the bounce section).
+12. **[MINOR]** Deck slide 55's right-hand program calls
+    `uart2_rxtx_init()`, which exists nowhere else in the course — the
+    library's name is `uart2_init()`, used 23 times in the book. Normalized
+    to `uart2_init()`. Confirm that is right.
+13. **[MINOR]** `return 0;` vs `return 1;`: all four Day 9 deck programs end
+    `return 0;`, but B-14 states the course convention is `return 1;` and the
+    book uses it 20 times against 9. Normalized to `return 1;` — this is the
+    same question as flag 6 and one answer covers both.
+14. **[NOTE]** The two-solutions slide's listings are abridged (no
+    `uart2_init()`, no `printf`, `buttonPushed` initialized in its
+    declaration) so that both fit side by side and legibly. The book carries
+    the full versions. Said so in the slide's presenter note.
