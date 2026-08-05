@@ -620,11 +620,20 @@ on the wire:      1 1 1 0 0 0 0    0
                 <c>C</c> (<xref ref="fig-backpack-pins"/>).  The backpack's pin
                 header plugs into the breadboard, so each of the four wires goes
                 into the breadboard column that pin lands in.  <c>+</c> goes to
-                the Nucleo's <term>3.3 V</term> pin, not the 5 V pin.  This is the same rule as every other part in this
-                course: the STM32C031C6's I/O runs at 3.3 V, and 5 V on a signal
-                pin is outside what the chip is rated for.  Check the four wires
-                against <xref ref="fig-display-wiring"/> before you plug the
-                Nucleo into USB.
+                the Nucleo's <term>3.3 V</term> pin, not the 5 V pin beside it.
+                The reason is not the STM32's own tolerance — PB8 and PB9 are
+                listed as 5 V tolerant in the datasheet's pin table.  It is that
+                the backpack's pull-up resistors tie SDA and SCL to
+                <em>whatever you feed its <c>+</c> pin</em>, so its supply is
+                also the voltage that ends up on the two signal wires, and this
+                bus is built to sit at 3.3 V throughout.
+            </p>
+            <p>
+                Check the four wires against
+                <xref ref="fig-display-wiring"/> before you plug the Nucleo into
+                USB.  What happens if <c>+</c> and <c>−</c> are swapped is not
+                something this course has characterized — treat it as a mistake
+                to avoid rather than a test to run.
             </p>
             <figure xml:id="fig-backpack-pins">
                 <caption>The display and its backpack, unpowered, with the four
@@ -777,7 +786,8 @@ int main(void) {
             <slide xml:id="sl-day9x-wiring" ref="fig-display-wiring" stack="yes">
     <ul>
         <li><term>Four wires, and one of them matters more than the others.</term> The backpack's connections are labeled on the board: <c>+</c>, <c>&#8722;</c>, <c>D</c>, <c>C</c>. Its pin header plugs into the breadboard, so each wire goes into the column that pin lands in.</li>
-        <li><c>+</c> goes to the Nucleo's <term>3.3 V</term> pin, not the 5 V pin: the STM32C031C6's I/O runs at 3.3 V, and 5 V on a signal pin is outside what the chip is rated for. Same rule as every other part this term.</li>
+        <li><c>+</c> goes to the Nucleo's <term>3.3 V</term> pin, not the 5 V pin beside it. Not because of the STM32's tolerance &#8212; PB8 and PB9 are 5 V tolerant &#8212; but because the backpack's pull-ups tie SDA and SCL to <term>whatever you feed <c>+</c></term>, so its supply is the voltage that lands on the two signal wires.</li>
+        <li>What happens if <c>+</c> and <c>&#8722;</c> are swapped is <term>not something this course has characterized</term>: a mistake to avoid, not a test to run.</li>
         <li><c>&#8722;</c> to GND, <c>D</c> to <term>PB9 (SDA)</term>, <c>C</c> to <term>PB8 (SCL)</term> &#8212; D14 and D15 on the header. Part 7 says why those two pins.</li>
         <li>The AD2 as on Day 3, in oscilloscope mode: <clr c="orange">channel 1 on SCL</clr>, <clr c="blue">channel 2 on SDA</clr>, both white-striped minus leads at ground.</li>
         <li>The pull-ups are already on the backpack, so there is nothing else to add.</li>
@@ -926,8 +936,9 @@ int main(void) {
                 peripheral to say it is ready for data.  RM0490 §23.4.9 is
                 explicit that on a NACK <q>the TXIS flag is not set</q>, so that
                 wait never ends.  The hardware still does the right thing on the
-                wire, because AUTOEND sends the STOP by itself, which is why the
-                capture looks tidy; it is the program that is stuck.
+                wire — the same paragraph of RM0490 §23.4.9 goes on to say that
+                after a NACK <q>a STOP condition is automatically sent</q>, which
+                is why the capture looks tidy.  It is the program that is stuck.
                 <xref ref="subsec-i2c-ref-library"/> shows the flow the
                 reference manual gives for doing it without that hole.
             </p>
@@ -952,7 +963,7 @@ int main(void) {
     <ul>
         <li><c>i2c1_byteWrite()</c> tests for a NACK <term>once</term>, a microsecond or so after setting START &#8212; about ninety microseconds before the device could have failed to answer. The test always passes.</li>
         <li>It then waits for the peripheral to say it is ready for data, and RM0490 &#167;23.4.9 says plainly: <term>the TXIS flag is not set when a NACK is received</term>. The wait never ends.</li>
-        <li>The <em>hardware</em> is unaffected &#8212; AUTOEND sends the STOP by itself, which is why the capture looks tidy. It is the program that is stuck.</li>
+        <li>The <em>hardware</em> is unaffected: the same paragraph of the manual says a STOP is sent automatically after a NACK, which is why the capture looks tidy. It is the <term>program</term> that is stuck.</li>
         <li>The Reference section has the flow the reference manual gives for doing this without the hole. Worth knowing before Lab 5.</li>
     </ul>
 </slide>
@@ -1046,11 +1057,29 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
                 <c>i2c1_byteWrite()</c> — or, with more than one
                 <c>Wire.write()</c> between them, one <c>i2c1_memWrite()</c>.
                 <c>Wire.requestFrom(addr, n)</c> followed by <c>Wire.read()</c>
-                is <c>i2c1_byteRead()</c> or <c>i2c1_memRead()</c>.  The
-                addresses you passed to <c>Wire</c> were 7-bit addresses, exactly
-                like the ones here.  The difference is not what the calls do; it
-                is that this time you can open the file and see what happens
-                underneath.
+                is <c>i2c1_byteRead()</c> — but <c>i2c1_memRead()</c> is
+                <em>not</em> that.  Reading a numbered register on an Arduino
+                takes both halves: <c>beginTransmission(addr)</c>,
+                <c>write(regAddr)</c>, <c>endTransmission(false)</c> — the
+                <c>false</c> being a repeated START rather than a STOP — and only
+                then <c>requestFrom()</c>.  Get that wrong and you read whatever
+                byte the device streams next rather than the register you asked
+                for; <xref ref="subsec-i2c-ref-transfer-pattern"/> draws exactly
+                this.  One more: <c>Wire.begin()</c> is overloaded — with no
+                argument it is the controller-mode setup above, and with an
+                address it makes the board a <em>target</em>, a mode this course
+                never uses.
+            </p>
+            <p>
+                The addresses you passed to <c>Wire</c> were 7-bit addresses,
+                exactly like the ones here.  What is <em>not</em> the same is
+                what you get back.  <c>Wire.endTransmission()</c> returns a status
+                byte the moment it knows the answer; <c>i2c1_byteWrite()</c>
+                returns nothing at all and, as you found twenty minutes ago, can
+                hang instead.  That is the bug you have already met, and it is the
+                honest version of <q>this is the same library</q>.  The other
+                difference is that this time you can open the file and see what
+                happens underneath.
             </p>
 
             <slide xml:id="sl-day9x-five-ops">
@@ -1097,7 +1126,25 @@ b = Wire.read();
 ]]></code></program>
     <ul>
         <li>The addresses you passed to <c>Wire</c> were <term>7-bit</term> addresses, exactly like these.</li>
-        <li>The difference is not what the calls do. It is that this time you can open the file and see what happens underneath &#8212; which is the next slide.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-wire-h-gaps">
+    <p><term>Two places that mapping is not one-to-one</term> &#8212; and both of them matter.</p>
+    <program language="c"><code><![CDATA[
+Wire.beginTransmission(addr);   // reading a NUMBERED REGISTER takes both halves
+Wire.write(regAddr);
+Wire.endTransmission(false);    // false = repeated START, not a STOP
+Wire.requestFrom(addr, n);      // ... and only THEN this
+b = Wire.read();                //  ->  i2c1_memRead(addr, reg, n, data);
+
+uint8_t err = Wire.endTransmission();     // returns 0..4 the moment it knows
+i2c1_byteWrite(addr, data);               // returns void, and can hang
+]]></code></program>
+    <ul>
+        <li>A bare <c>requestFrom</c> is <c>i2c1_byteRead()</c>, <term>not</term> <c>i2c1_memRead()</c>. Get that wrong and you read whatever byte the device streams next rather than the register you asked for.</li>
+        <li>And <c>endTransmission()</c> hands back a status byte where <c>i2c1_byteWrite()</c> hands back nothing and can hang &#8212; which is the bug you met twenty minutes ago.</li>
+        <li>What you gain is that this time you can open the file and see what happens underneath.</li>
     </ul>
 </slide>
         </subsection>
@@ -1171,9 +1218,10 @@ b = Wire.read();
                 once per byte, each time the transmit data register is free —
                 that is the flag <c>i2c1_byteWrite()</c> waits on before writing
                 <c>I2C1->TXDR</c>.  TXE below it is the same information as a
-                level rather than an event.  NBYTES counts the transfer down, and
-                when it reaches zero AUTOEND puts the STOP on the wire without
-                any further help from the program.</caption>
+                level rather than an event.  NBYTES holds the programmed count —
+                2 for the whole of this transfer — and once that many bytes have
+                gone, AUTOEND puts the STOP on the wire without any further help
+                from the program.</caption>
                 <image source="images/Day09X-I2C/i2c_master_tx_sequence.svg" width="95%"/>
             </figure>
             <p>
@@ -1231,7 +1279,7 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
         <li>Reading a byte is the same shape with three changes: <c>I2C_CR2_RD_WRN</c> set, a wait on <c>RXNE</c> instead of <c>TXIS</c>, and <c>*data = I2C1-&gt;RXDR;</c> instead of the write.</li>
     </ul>
     <caption>Set-up, then the hardware does the START, the address and the ACK by itself; TXIS asks for each byte.</caption>
-    <note>The point to make: nothing in the library counts a clock edge or times a pulse. It describes a transaction and reads flags; a state machine in silicon does the rest. NBYTES counting down to zero is what triggers AUTOEND's STOP.</note>
+    <note>The point to make: nothing in the library counts a clock edge or times a pulse. It describes a transaction and reads flags; a state machine in silicon does the rest. Once NBYTES bytes have been transferred, AUTOEND issues the STOP.</note>
 </slide>
 
         </subsection>
@@ -2462,13 +2510,17 @@ void tim14_init(void) {
                 oscillator: 0 leaves it off, 1 turns it on.  <em>Display
                 setup</em> is 1 0 0 0 X B1 B0 D, where D turns the display on and
                 B1 B0 choose the blink rate — 00 for steady, then 2 Hz, 1 Hz and
-                0.5 Hz.  <em>Dimming set</em> is 1 1 1 0 P3 P2 P1 P0, the duty
-                cycle in sixteenths.  The <em>Def.</em> column on the right is
-                each command with its options at their default.  Two rows are
-                here for later: <em>display data address pointer</em>, at the
-                top, is what <xref ref="subsec-day10-ram"/> uses to say where a
-                block of display data starts, and <em>ROW/INT set</em> belongs to
-                the chip's keypad job, which we do not use.</caption>
+                0.5 Hz.  <em>Dimming set</em> is 1 1 1 0 P3 P2 P1 P0, the
+                <term>duty cycle</term> — the fraction of each refresh cycle the
+                LEDs are actually lit — in sixteenths, where 0000 is 1/16 and
+                1111 is 16/16.  The <em>Def.</em> column on the right is each
+                command with its options at their default.  Two more rows are
+                here: <em>display data address pointer</em>, at the top, is what
+                <xref ref="subsec-day10-ram"/> uses to say where a block of
+                display data starts; and <em>ROW/INT set</em> chooses whether the
+                shared pins drive the display's rows or read a keypad, and its
+                default — A0H, ROW driver output — is the one we want, so we
+                never send it.</caption>
                 <image source="images/Day10-I2C(2)/ht16k33_cmd_pointer_system.png" width="94%"/>
                 <image source="images/Day10-I2C(2)/ht16k33_cmd_display.png" width="94%"/>
                 <image source="images/Day10-I2C(2)/ht16k33_cmd_dimming.png" width="94%"/>
@@ -2587,8 +2639,9 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
             <figure xml:id="fig-display-ram-map">
                 <caption>The HT16K33's display RAM, from its datasheet: sixteen
                 bytes, two per common line.  The left column names the common
-                line — one per digit, plus the colon — and the two addresses
-                beside it hold that line's sixteen possible LEDs, ROW0 to ROW7 in
+                line — the chip drives eight of them, COM0 to COM7, of which our
+                display uses five — and the two addresses beside each hold that
+                line's sixteen possible LEDs, ROW0 to ROW7 in
                 the first byte and ROW8 to ROW15 in the second.  The lower table
                 gives the bit order within a byte, D7 down to D0 mapping to
                 ROW7 down to ROW0.  A seven-segment digit uses only the first
@@ -3372,7 +3425,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
                         <cell><c>I2C_TXDR</c> / <c>I2C_RXDR</c></cell>
                         <cell>whole register</cell>
                         <cell>The byte going out, and the byte that came in</cell>
-                        <cell>RM §23.7.11–12</cell>
+                        <cell>RM §23.7.10–11</cell>
                     </row>
                     <row>
                         <cell><c>GPIOx_MODER</c></cell>
@@ -3396,7 +3449,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
                         <cell><c>RCC_APBENR1</c></cell>
                         <cell>I2C1EN</cell>
                         <cell>Enable the I2C1 peripheral clock</cell>
-                        <cell>RM §5.4.15</cell>
+                        <cell>RM §5.4.13</cell>
                     </row>
                 </tabular>
             </table>
@@ -3463,10 +3516,12 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 wire.  In the upper row, <c>NBYTES[7:0]</c> is how many data
                 bytes this transaction will carry, and <c>AUTOEND</c> makes the
                 hardware issue the STOP by itself once they have gone.  The
-                remaining fields — <c>NACK</c>, <c>STOP</c>, <c>HEAD10R</c>,
-                <c>ADD10</c>, <c>RELOAD</c> and <c>PECBYTE</c> — belong to target
-                mode, 10-bit addressing, transfers longer than 255 bytes, and
-                SMBus, none of which this course uses.</caption>
+                remaining fields — <c>NACK</c>, <c>HEAD10R</c>, <c>ADD10</c>,
+                <c>RELOAD</c> and <c>PECBYTE</c> — belong to target mode, 10-bit
+                addressing, transfers longer than 255 bytes, and SMBus, none of
+                which this course uses.  <c>STOP</c> is the exception: it is a
+                controller bit, and it is how software ends a transfer itself
+                when <c>AUTOEND</c> is clear.</caption>
                 <image source="images/Day09X-I2C/i2c_cr2.svg" width="95%"/>
             </figure>
             <p>
@@ -3527,9 +3582,12 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 not set</q>.  The wait never ends.
             </p>
             <p>
-                What the hardware does is unaffected: <c>AUTOEND</c> issues the
-                STOP, the bus is released, and the capture on the oscilloscope
-                looks exactly as it should.  It is the program that stops, which
+                What the hardware does is unaffected — RM0490 §23.4.9 continues
+                <q>a STOP condition is automatically sent after the NACK
+                reception</q>, which is the peripheral's own NACK handling rather
+                than <c>AUTOEND</c> completing a transfer — so the bus is
+                released and the capture on the oscilloscope looks exactly as it
+                should.  It is the program that stops, which
                 is why pinging a wrong address gives you one transaction and then
                 silence rather than four a second.
             </p>

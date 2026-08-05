@@ -224,3 +224,58 @@ Figures rendered and checked: `scope_ping_noack.svg` numerically (9 pulses; SDA 
 - "The wiring went home in a kit and came back" and "leave the display wired" — no source in the repo for students taking kits home; the old deck wires the display fresh on Day 10.
 - "a microsecond or so after setting START" — the ~90 µs to the ninth pulse checks out; nothing quantifies CR2-write → BUSY.
 - `Wire.begin()` doing all five configuration steps — no Arduino core source consulted.
+
+---
+
+# Synthesis — the change list, and what was done with it
+
+`committee-synthesizer` deduplicated twenty-two findings to **10 must-fix, 9
+should-fix**, plus two structural recommendations, two escalations and ten flags
+that cannot be closed from the repo.  Verdict: *not ready for Petra* — "the arc
+and the code are sound, the hardware explanations are not," which is Day 9's
+lesson arriving again.
+
+**All 10 must-fix and all 9 should-fix are applied**, commit `655f0e0` and the
+one that follows it.  So are six of the Consider items: the TIMINGR measurement
+becomes a task, the five-operations activity is tied to the student's own trace,
+the duplicated 0xE0 question is cut, `act-i2c-sevenseg-t3` points at the file
+where the bytes already are, `sl-day9x-decode`'s caption became instructive, and
+the address-conflict warning moved from a quiz distractor into the prose.
+
+**Q1 — Day 9x Part 6.**  Split into 6a (the five-function interface and the
+`Wire.h` beat, with the activity) and 6b (opening `i2c1_byteWrite()`).
+`fig-i2c-hardware` and its slide moved to a new Reference subsection,
+`subsec-i2c-ref-hardware`.  Funded by cutting Part 2 from 6 minutes to 4, which
+was re-teaching the reading's synchronous argument almost verbatim (B-8).  The
+synthesizer overruled the plan's own cut list on one point and I have kept its
+call: the five-field `I2C_CR2` paragraph stays in class, because it is the
+sentence that connects the register to the trace students captured forty minutes
+earlier.  Day 9x now sums to 64 minutes with a minute of slack.
+
+**Q2 — `act-i2c-ai-review`.**  Petra's design is untouched — individual written
+answer before the group, reference copy offered first.  What is added is one
+measurement an assistant cannot make: time ten prints of your own program and
+write down your own PSC and ARR, then justify at least one criticism from those
+numbers.  Two of the five defects in the AI solutions are only visible if you
+know this board runs at 12 MHz.
+
+**Dissent recorded.**  `learner-visual`'s MAJOR on `fig-display-wiring` — that
+the red `+` wire's landing point is cropped off — was checked and rejected: the
+top of that figure renders with the wire terminating visibly on the pin labelled
+3V3 in the POWER header.  Not changed, recorded here so it is not re-raised.
+
+**Escalations, not applied — they are Petra's clock:**
+
+- **E1.** Day 9x Part 4 stacks four first-time activities into fifteen minutes.
+  The only lever that removes real minutes is taking the project copy out of the
+  part.  The synthesizer recommends shipping `SevenSegI2CFirstSteps` ready-made
+  on Canvas for Day 9x only, since the copy-and-rename skill is still taught and
+  practised at Day 10 Part 6 where the clock has room.  Worth four or five
+  minutes on the day's bottleneck at zero homework cost.
+- **E2.** Day 10 has zero slack and one named compression lever.  The
+  synthesizer recommends naming Part 3 (6 → 4 min) as a second one — the reading
+  already covers common cathode and multiplexing, and Part 3 opens with a
+  refresher of exactly that.  That would free the minute for a written
+  wrong-answer diagnostic before TODO 4, which is the one thing that would make
+  the crucial step's underlying understanding testable in class rather than in
+  homework.
