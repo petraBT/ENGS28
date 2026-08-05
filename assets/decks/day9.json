@@ -9,12 +9,12 @@
     },
     {
       "type": "recap",
-      "title": "Where we are",
+      "title": "Review: pre-class reading",
       "items": [
-        "On Day 8 the thing that interrupted the CPU was a timer. Everything else about that hour — the NVIC admitting the request, the vector table naming the handler, the ISR staying short, the volatile flag carrying the news to main() — was the interrupt mechanism, and none of it cares where the interrupt came from.",
-        "Today we change only the source: a pin can interrupt too.",
-        "That takes one new piece of hardware (the EXTI, between the pins and the NVIC) and four registers to configure it.",
-        "And it makes one older problem visible: when an ISR and main() both touch the same thing, \"read it, change it, write it back\" can silently lose an update."
+        "Last week, the thing that interrupted the CPU was a timer. Nearly everything we discussed in this context — the NVIC admitting the request, the vector table naming the handler, the ISR staying short, the volatile flag communicating with main() — was the interrupt mechanism, and none of it changes when we look at other interrupt sources.",
+        "Today we change only the interrupt source: we'll look at a pin triggering an interrupt.",
+        "This takes one new piece of hardware (the EXTI, between the pins and the NVIC) and four registers to configure it.",
+        "We'll also discover: when an ISR and main() both touch the same variable or register, \"read it, change it, write it back\" can silently lose an update."
       ],
       "presenterNote": "≈ 2 min, including announcements. Safety line is on the wiring-check slide."
     },
@@ -23,14 +23,13 @@
       "title": "Agenda",
       "items": [
         "Homework review: ADCPot with a heartbeat",
-        "The press the polled counter misses",
+        "The button press that is missed by the polled counter",
         "Why the EXTI sits between the pin and the NVIC",
         "Choosing the port — EXTI_EXTICR2",
         "The edge, the mask, and the NVIC",
         "The handler: which line fired, and how to clear it",
         "Writing counterResetButtonInt.c",
-        "Changing data in an ISR, and GPIOx_BSRR",
-        "No new wiring today — the button and capacitor are the ones from Day 3"
+        "Changing data in an ISR, and GPIOx_BSRR"
       ]
     },
     {
@@ -62,7 +61,7 @@
       "type": "ref",
       "page": "subsec-day9-polled.html",
       "slide": "sl-day9-polled-code",
-      "title": "counterResetButtonPolled.c — one look per second"
+      "title": "A counter with a button reset — one look per second"
     },
     {
       "type": "ref",
@@ -75,8 +74,7 @@
       "type": "prompt",
       "room": true,
       "title": "What did the program miss?",
-      "body": "A short tap sometimes resets the counter and sometimes does not; a press-and-hold always does.\n\nWrite down: what did the program miss, and where in the program was it when it missed it?",
-      "presenterNote": "The answer opens Part 3 — it was inside delay_ms(), not looking. Do not give it here."
+      "body": "A short tap sometimes resets the counter and sometimes does not; a press-and-hold always does. Why?<br><br>The program was inside <code>delay_ms()</code>, not looking. Polling reads a <em>level</em>, so it can only see a press that is still happening at the one instant it looks.<br><br>The solution: as we did with the timer, rather than have the program continuously check whether the button has been pressed, let the GPIO hardware alert the CPU when a press happens."
     },
     {
       "type": "section",
