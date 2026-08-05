@@ -14,8 +14,9 @@
  *
  * Circuit
  * -------
- *   Unchanged from counterResetButtonPolled.c: the Day 3 button on PB4 with
- *   its debouncing capacitor.  Nothing new is wired today.
+ *   Unchanged from counterResetButtonPolled.c: the button on PB4 from
+ *   Day 3, with the debouncing capacitor added on Day 3x.  Nothing new is
+ *   wired today.
  *
  * What this program does
  * ----------------------
@@ -89,10 +90,13 @@ int main(void) {
         printf("%x\t%d\r\n", counter, counter);
         delay_ms(1000);
 
-        // TODO 3c -- when the flag is set: reset the counter and clear the flag.
+        // TODO 3c -- fill in the test: when the flag is set, reset the counter
+        //            and clear the flag.  One chain, so a press does not reset
+        //            and then immediately increment.
         //            GPIOB->IDR appears NOWHERE in this loop.
+        if ( /* TODO 3c */ ) {
 
-        if (counter == MAXCOUNT) {
+        } else if (counter == MAXCOUNT) {
             counter = 0;
         } else {
             counter++;

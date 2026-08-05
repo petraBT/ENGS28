@@ -323,6 +323,12 @@ every way a slide can be cut, not just the obvious one:
 })()
 ```
 
+**Give the player time to settle.** If you walk the whole deck in a loop, wait
+~300 ms after setting `location.hash` before measuring. At 80 ms the check
+reports large phantom overflows on slides that fit exactly — it is measuring
+mid-layout, and a reload makes it worse. This is the one *false-positive* mode;
+the three below are false negatives.
+
 Three traps it exists to catch, all of which have produced a false "fits":
 
 - **Suspended layout.** In a background or hidden window the browser stops

@@ -14,9 +14,9 @@
  *
  * Circuit
  * -------
- *   The Day 3 button: one side of the pushbutton to PB4, the other to GND,
- *   with the debouncing capacitor across the switch.  No external pull-up
- *   resistor -- PUPDR turns on the one inside the chip.
+ *   The button from Day 3: one side of the pushbutton to PB4, the other to
+ *   GND, with the debouncing capacitor added on Day 3x across the switch.  No
+ *   external pull-up resistor -- PUPDR turns on the one inside the chip.
  *
  * What this program does
  * ----------------------
