@@ -532,46 +532,72 @@ while(1) {
 </slide>
 
             <p>
-                The condensing does not stop there.  Those sixteen lines share
-                only <em>three</em> entries in the vector table.  Look them up
-                the way you looked up TIM14 on Day 8 — RM0490 §11.3, Table 40
-                (<xref ref="fig-vector-table-exti"/>) — and you find
-                <c>EXTI0_1</c> at position 5, <c>EXTI2_3</c> at position 6, and
-                <c>EXTI4_15</c> at position 7.  That last row covers twelve
-                lines with one handler.  Our button is on PB4, so it arrives on
-                EXTI4, so it arrives at <c>EXTI4_15_IRQHandler</c> — the same
-                function that would run for a pin on EXTI11.  Part 5 deals with
-                the consequence: the handler has to find out which line
-                actually fired.
+                Sixteen lines is a large reduction from forty-eight pins, and it
+                is still more room than the NVIC has to give.  Its vector table
+                is shared with every other peripheral on the chip — the timers,
+                the ADC, the USARTs, I2C — so the EXTI is allocated
+                <em>three</em> positions in that table rather than sixteen, and
+                the condensing therefore happens twice.  The sixteen lines are
+                grouped onto three interrupt requests: EXTI0 and EXTI1 raise
+                IRQ5, EXTI2 and EXTI3 raise IRQ6, and EXTI4 through EXTI15 —
+                twelve lines — all raise IRQ7.
             </p>
+            <p>
+                Those three requests are the three vector-table entries.  Look
+                them up the same way we looked up TIM14 for the timer — RM0490
+                §11.3, Table 40 (<xref ref="fig-vector-table-exti"/>) — and you
+                find <c>EXTI0_1</c> at position 5 with priority 12,
+                <c>EXTI2_3</c> at position 6 with priority 13, and
+                <c>EXTI4_15</c> at position 7 with priority 14.  (The lower the
+                priority number, the higher the priority.)  Our button is on
+                PB4, so it arrives on EXTI4, so it arrives at
+                <c>EXTI4_15_IRQHandler</c> — the same function that would run
+                for a pin on EXTI11.  Part 5 deals with the consequence: the
+                handler has to find out which line actually fired.
+            </p>
+
+            <slide xml:id="sl-day9-exti-vector-share">
+    <p><term>Sixteen lines is still more room than the NVIC has to give.</term> Its vector table is shared with every other peripheral on the chip &#8212; the timers, the ADC, the USARTs, I2C &#8212; so the EXTI is allocated <term>three</term> positions in it, not sixteen. The condensing happens twice:</p>
+    <program language="c"><code><![CDATA[
+EXTI0, EXTI1       ->  IRQ5,  priority 12
+EXTI2, EXTI3       ->  IRQ6,  priority 13
+EXTI4 ... EXTI15   ->  IRQ7,  priority 14    <- our button, with eleven others
+]]></code></program>
+    <ul>
+        <li>The lower the priority number, the higher the priority of the interrupt.</li>
+        <li>PB4 is on line EXTI4, so its request is IRQ7 &#8212; and so is the request of every other line from 4 to 15. <term>Twelve lines, one handler.</term></li>
+        <li>So the handler cannot assume what it was called for. Working that out is Part 5's job, and it is the price of the second condensing.</li>
+    </ul>
+</slide>
+
             <figure xml:id="fig-vector-table-exti">
                 <caption>The three EXTI rows of RM0490's Table 40, the vector
                 table.  <c>EXTI0_1</c> is position 5, <c>EXTI2_3</c> is position
                 6, and <c>EXTI4_15</c> — the one PB4 uses — is position 7, with
                 priority 14 and vector address 0x0000_005C.  Sixteen EXTI lines
-                are served by these three entries.  The naming rule is Day 8's:
-                take the acronym from this table and append <c>_IRQn</c> for the
-                NVIC constant, or <c>_IRQHandler</c> for the function
-                name.</caption>
+                are served by these three entries.  The naming rule is the one
+                the timer used: take the acronym from this table and append
+                <c>_IRQn</c> for the NVIC constant, or <c>_IRQHandler</c> for
+                the function name.</caption>
                 <image source="images/Day09-Interrupts(2)/vector_table_exti.svg" width="90%"/>
             </figure>
 
             <slide xml:id="sl-day9-exti-vectors" ref="fig-vector-table-exti">
-    <caption>Sixteen EXTI lines, three vector-table rows — and PB4 shares its handler with eleven other lines.</caption>
-    <note>Same lookup as Day 8's TIM14: RM0490 §11.3, Table 40. Thirty seconds, on the projector.</note>
+    <caption>The three rows in the reference manual: positions 5, 6 and 7, and the priority column that goes with them.</caption>
+    <note>Same lookup as the timer's TIM14: RM0490 §11.3, Table 40. Thirty seconds, on the projector.</note>
 </slide>
 
             <slide xml:id="sl-day9-exti-names">
-    <p><term>The condensing goes one step further than the multiplexer.</term> Sixteen lines share three rows of Table 40:</p>
+    <p><term>Table 40 gives an acronym; the two names you type are built from it.</term></p>
     <program language="c"><code><![CDATA[
-position 5    EXTI0_1     lines 0-1        priority 12
-position 6    EXTI2_3     lines 2-3        priority 13
-position 7    EXTI4_15    lines 4-15       priority 14    <- our button
+Table 40, position 7:   EXTI4_15
+
+NVIC_EnableIRQ(EXTI4_15_IRQn);       // _IRQn        the NVIC constant
+void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
 ]]></code></program>
     <ul>
-        <li>PB4 arrives on line EXTI4, so it arrives at <c>EXTI4_15_IRQHandler</c> &#8212; the same function that would run for a pin on EXTI11.</li>
-        <li>The naming rule is Day 8's: take the acronym from Table 40 and append <c>_IRQn</c> for the NVIC constant, <c>_IRQHandler</c> for the function.</li>
-        <li>Twelve lines, one handler: the handler will have to find out <term>which</term> line fired. That is Part 5.</li>
+        <li>This is the rule that turned TIM14 into <c>TIM14_IRQn</c> and <c>TIM14_IRQHandler</c> &#8212; the same lookup, on a different row of the same table.</li>
+        <li>Neither name is guessable, and a wrong handler name is silent: it builds and links without a warning, and your function is never called. Copy it from the startup file.</li>
     </ul>
 </slide>
 
