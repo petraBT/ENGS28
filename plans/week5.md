@@ -95,9 +95,9 @@ Scaffolding to guarantee it (P-2), reusing Day 8's shape because it worked:
   Part 2 has students run the complete `counterResetButtonPolled.c` (given,
   not written) and *observe the defect* — a short tap during the wait is
   missed, a tap-and-hold is caught.
-- **Part 2 opens with the wiring check** (standing rule above).  PB4 with its
-  pull-up and debounce capacitor was wired on **Day 3**, five class meetings
-  and four chapters ago, on a breadboard that has since carried a transistor
+- **Part 2 opens with the wiring check** (standing rule above).  PB4's button and
+  pull-up were wired on **Day 3** and its debounce capacitor on **Day 3x**,
+  eight class meetings and six chapters ago, on a breadboard that has since carried a transistor
   circuit and a potentiometer.  Nobody is asked to assume it survived.
 - **Part 2 ends with a checkpoint at minute 18.**  If the room is not mostly
   counting, distribute the verified-good file and move on.  Parts 3–5 are
@@ -167,7 +167,7 @@ check, a Canvas download, a project copy, and the first build of the day,
 before anything teachable happens.  Nine minutes and a hard checkpoint at
 **minute 18** (3 settling + 2 announcements + 4 + 9).  Two rescues, because
 there are two failures: a bad download or build gets the verified-good file; a
-dead button gets re-seated against the Day 3 photo.  Nobody debugs either one
+dead button gets re-seated against the Day 3x photo.  Nobody debugs either one
 while the class waits.
 
 **If running long, cut in this order:** Part 1 to 2 minutes (project one
@@ -303,11 +303,16 @@ Four committed answers before a reveal, all `room="yes"`:
 - Part 7 beat 1: *which of these two working solutions would you ship?*
 - Part 7 beat 4: *write the line that turns PA5 on without reading anything.*
 
-These carry the day's P-14 hook.  An AI will hand over a complete
-`pb4_exti_init()` in one shot — and it will also, in the same shot, cheerfully
-hand over the version that zeroes the counter in the ISR, because that version
-*works* in every test a student would run.  Part 7 is the activity an AI answer
-does not survive: it asks which of two working programs is right, and why.
+These carry the day's P-14 hook — but not where Revision 2 claimed.  Gate 2's
+`learner-ai-reliant` tested the claim that Part 7 "is the activity an AI answer
+does not survive" and falsified it: presenting two complete solutions side by
+side and asking which to ship is exactly the comparative task an AI is best at,
+and "an ISR that read-modify-writes shared data races" is the canonical warning
+in every ARM tutorial.  Part 7's value is the student's own committed wrong
+guess, not AI-resistance.  **The actual AI gate is Part 6's new
+`act-gpio-int-t1c`**: predict which single one of the four switches you could
+omit and still get a program that builds, links and never interrupts.  That has
+no answer key in the starter header, and it lands on the crucial step.
 
 ## Hand-offs
 
@@ -926,3 +931,45 @@ student views.
     `uart2_init()`, no `printf`, `buttonPushed` initialized in its
     declaration) so that both fit side by side and legibly. The book carries
     the full versions. Said so in the slide's presenter note.
+
+---
+
+## Gate 2 outcome (2026-08-04)
+
+Eleven reviewers — the standing core of 7 plus `learner-arduino-veteran`,
+`expert-embedded-industry`, `learner-ai-reliant` and `expert-rigor-hawk`.
+**3 BLOCKER, 8 PASS WITH CHANGES.** Reports and the synthesized change list are
+in `reviews/day9-gate2.md`; everything on it is applied. The deck is 55 slides,
+4 instructor-only, 41 refs; all 55 fit; all four linters pass.
+
+**What Gate 2 caught that Gate 1 and the linters could not.** Every check
+passed on the draft the committee reviewed, so none of the three blockers was
+machine-catchable. The worst was a hardware claim contradicted by RM0490 —
+that a masked EXTI line still records edges in `FPR1` — which I had taken from
+your slide-19 speaker note and carried into the ground truth without checking
+it against the manual. Two more were earlier chapters' set-pieces restated
+backwards on the day they pay out (the `rc_w1` read-modify-write hazard, and
+Day 8's minus-one rule). The lesson for the process: **the old decks are
+authoritative for the arc and the code, and not for hardware explanations** —
+those need the manual every time.
+
+**Four new flags for you**, added to the list above:
+
+15. **[CONFIRM — your note is wrong]** Day 9 slide 19's speaker note says the
+    `IMR1`/`FTSR1` split exists so events can be polled without interrupting.
+    RM0490 §12.3.1 and §12.4 and Table 45 all say the pending bit is set only
+    for an unmasked line. The chapter now gives the three defensible reasons
+    instead and says plainly that masked-line polling does not work. You should
+    see this going rather than find it gone.
+16. **[CONFIRM]** Part 7 is the densest eleven minutes of the day even after
+    moving three ideas to Reference. The synthesizer recommends **Part 1 → 3
+    min and Part 7 → 12**; Part 1's only in-class job is planting the
+    `ODR ^= LED` line without explaining it, and the table discussion is the
+    first thing the cut list drops anyway. Not applied — it is your clock.
+17. **[FILES]** `GPIO_BSRR_BS5` / `GPIO_BSRR_BR5` appear in **no** deck and are
+    confirmed only against the RM's bit names and the STM32G0/C0 CMSIS
+    convention — and `act-gpio-bsrr-t4` now asks students to write exactly
+    those two lines. One look at `stm32c031xx.h` settles it.
+18. **[CONFIRM]** Slide 57's *"This will ALWAYS work. Trust me."* The chapter
+    now states the residual coalescing window instead of repeating that. Happy
+    for the chapter to be more qualified than the slide was?

@@ -283,7 +283,7 @@ A chapter is done when all of these are true.
 | ch-adc.ptx | Day07 | pilot |
 | ch-debugging.ptx | Day07x | Day 7x through Gate 2 (Petra pending) |
 | ch-timers-interrupts.ptx | Day08 | Day 8 through Gate 2 + Petra's review rounds |
-| ch-gpio-interrupts.ptx | Day09 | Day 9 through Step 5 (Gate 2 pending) |
+| ch-gpio-interrupts.ptx | Day09 | Day 9 through Gate 2 (Petra pending) |
 | ch-i2c.ptx | Day09X, Day10 | rough (plan at `plans/week5.md`; Day 13 moved out) |
 | ch-motors.ptx | Day11, Day11x, Day12 | rough |
 | ch-accelerometers.ptx | Day13, Day13x, Day14 | rough (Day 13 moved here from ch-i2c, Petra's call) |
@@ -297,6 +297,42 @@ unannotated images, invented code, and no in-class structure. Assume nothing in 
 rough chapter is correct until checked against Step 0 ground truth.
 
 ---
+
+## What Day 9's Gate 2 taught us
+
+The committee's three BLOCKERs all came from the same place, and it is worth
+naming because the process pointed the other way.
+
+**The old decks are authoritative for the arc and the code — not for hardware
+explanations.** Day 9's chapter taught, in four student-facing places, that a
+masked EXTI line still records edges in `FPR1` so software can poll it. RM0490
+§12.3.1 says the pending register is only set for an *unmasked* interrupt. The
+claim came from Petra's own speaker note, was copied into the Step 0 ground
+truth as fact, and survived Gate 1 and every linter. Step 0 should treat a
+deck's *explanation* of why hardware works the way it does as a claim to verify
+against the manual, exactly like a register name — the code and the arc are
+what the decks are trustworthy for.
+
+**Two of the three blockers were earlier chapters' set-pieces restated
+backwards** on the day they pay out — the `rc_w1` read-modify-write hazard and
+Day 8's written-minus-one rule. A chapter that inherits a lesson is a chapter
+that can get it wrong in a way its own linters cannot see, because the correct
+version lives in a different file. Worth a targeted check when a chapter's
+whole design is "Day N's set-piece pays out here".
+
+**Every linter passed on the draft the committee reviewed.** That is the
+strongest argument yet for Gate 2 existing at all. Four of the findings *could*
+be linted cheaply and are worth adding to `check_deck.py`: a `refPage` must
+actually contain the `ref`'d figure (this one did fire, after the fix); deck ref
+order should match source order within a subsection; `room` should agree between
+a `<slide>` and its deck entry; and every code-writing `<activity>` needs a
+matching `"instructor": true` entry (P-10).
+
+**Highest-yield reviewers this round:** `checker-technical-accuracy` (all three
+blocker-class facts), `expert-class-logistics` and `learner-anxious-nonhardware`
+(converged on the wrong wiring figure), `expert-rigor-hawk` and
+`expert-embedded-industry` (converged on the residual race), and
+`learner-ai-reliant`, which falsified a claim the *plan* made about itself.
 
 ## What the ADC pilot taught us
 
