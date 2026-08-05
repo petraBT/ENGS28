@@ -79,6 +79,17 @@ extraction drops them, which is why the images currently in the rough chapters a
 worse than the originals. The script re-composites them. Fall back to a LibreOffice
 render for any figure the script can't reproduce.
 
+**Three traps in that script, all of which shipped broken figures on the I2C week.**
+It drops the *text* of any annotation longer than `--max-text` (default 60
+characters) and draws the empty box instead, silently — which cost
+`firmware_layers.svg` the two layer labels the figure exists to teach. Pass
+`--max-text 200`, and check what it prints against `--list`. It composites only
+*one* picture per figure, so a slide that layers several (Day 9x's three timing
+tables) comes out with every annotation over the wrong one. And it draws each
+paragraph as a single unwrapped line, so a callout that PowerPoint wrapped into a
+narrow box runs off the edge of the crop; the fix is to split the `<text>` element
+by hand.
+
 ### Step 2 — The lesson plan (one page)
 
 Write `plans/dayNN.md`:
@@ -204,6 +215,19 @@ reports are also the evidence for which reviewers earn their keep.
 biggest defect class the pilot found was *wrong or mislabelled figures* — captions
 promising what the image does not show. That is invisible in the source and obvious
 on sight.
+
+PyMuPDF renders SVG, embedded bitmaps and all, so a whole chapter's figures can be
+laid out for the reviewer under their own `xml:id`s in one pass:
+
+```python
+import fitz                      # also opens .svg, not only .pdf
+page = fitz.open(svg_path)[0]
+page.get_pixmap(matrix=fitz.Matrix(3, 3)).save(f"{out}/{fig_id}.png")
+```
+
+Point the reviewer at that directory. On the I2C week it caught a command-table
+figure whose caption promised a row the crop did not contain, and a caption that
+put a scope trace's handover blip on the wrong side of the ACK.
 
 ### Step 6 — Sign-off
 
