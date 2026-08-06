@@ -855,18 +855,17 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
 
             <slide xml:id="sl-day9-ftsr" ref="fig-exti-ftsr1" stack="yes">
     <ul>
-        <li>The pin idles HIGH and goes LOW when pressed, so the <term>press is a falling edge</term> and the release is a rising one. We want the press.</li>
-        <li>One bit per line, <c>FT0</c> through <c>FT15</c>: 1 enables falling-edge detection, 0 disables it. Line 4 is bit 4 &#8212; the bit number <em>is</em> the line number, which is true of all three EXTI registers today.</li>
-        <li>There is a matching <c>EXTI_RTSR1</c> for rising edges. Setting the same bit in both interrupts on press <em>and</em> release, which some designs want (we will not use this today).</li>
+        <li>The pin idles HIGH and goes LOW when pressed, so the <term>press is a falling edge</term>.</li>
+        <li>One bit per line, <c>FT0</c>&#8211;<c>FT15</c>: 1 enables falling-edge detection. The bit number <em>is</em> the line number, in all three EXTI registers today.</li>
     </ul>
-    <caption>Setting FT4 is what makes a press on PB4 an event at all.</caption>
+    <caption>Setting FT4 is what makes a press on PB4 an event at all. <c>EXTI_RTSR1</c> is the matching rising-edge register, which we do not need today.</caption>
 </slide>
 
             <slide xml:id="sl-day9-imr" ref="fig-exti-imr1" stack="yes">
     <ul>
-        <li>Detecting an edge and requesting an interrupt are <term>deliberately separate</term> in this hardware, and this is the second of them.</li>
-        <li>A line whose mask bit is 0 goes no further: RM0490 &#167;12.4 sets the pending bit <term>only for an unmasked line</term>, so a masked line will not propagate into <c>EXTI_FPR1</c> after an edge is detected. One advantage of this design is that with multiple GPIO pins sharing an EXTI line, masking individual lines lets you selectively silence or enable specific pins on the fly without breaking other shared pin interrupts. The separation also lets a low-power design pick which pins may wake the chip.</li>
-        <li>Every GPIO line &#8212; IM0 through IM15 &#8212; is masked at reset, so a missing bit here is the <term>quietest possible bug</term>: the edge is detected, nothing is recorded, nothing happens.</li>
+        <li>Detecting an edge and requesting an interrupt are <term>deliberately separate</term>.</li>
+        <li>A masked line goes no further: RM0490 &#167;12.4 sets the pending bit <term>only for an unmasked line</term>.</li>
+        <li>Every GPIO line is masked at reset, so a missing bit here is the <term>quietest possible bug</term>: the edge is detected, nothing is recorded, nothing happens.</li>
     </ul>
     <caption>Set IM4 and a detected event on line 4 may finally ask for the CPU.</caption>
 </slide>
@@ -1832,14 +1831,13 @@ void TIM14_IRQHandler(void) {
                     one sentence: what does that buy you here, given what else
                     is running?</p></statement>
                 </task>
-                <task xml:id="act-gpio-hw-t2b">
-                    <statement><p>Optional, and the harder one: bracket
-                    <c>main()</c>'s test-and-clear of your flag with
-                    <c>__disable_irq()</c> and <c>__enable_irq()</c>.  In one
-                    sentence, which window does that close, and what does it
-                    cost?  (<xref ref="subsec-gpio-ref-limits"/> has both
-                    halves of the answer if you want to check
-                    yourself.)</p></statement>
+                <task xml:id="act-gpio-hw-t3">
+                    <statement><p>Optional housekeeping, nothing to submit: move
+                    <c>pb4_exti_init()</c> — and <c>pc13_exti_init()</c> if you
+                    wrote it — into <c>exti.c</c> and <c>exti.h</c>, with an
+                    include guard, the header in <c>Inc</c> and the source in
+                    <c>Src</c>.  Watch <c>main.c</c> shrink to the part that is
+                    actually about counting.</p></statement>
                 </task>
                 <task xml:id="act-gpio-hw-t4">
                     <statement><p>Also optional, and a head start on Lab 5:
