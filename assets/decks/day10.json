@@ -11,12 +11,12 @@
       "type": "recap",
       "title": "Where we are",
       "items": [
-        "On Thursday you put an oscilloscope on two wires and watched a transaction go by: START, address, ACK, data, STOP.",
-        "Today the chip at the other end. Its datasheet is four pages of command table and RAM map, and by the end of the hour those pages are three functions your program can call.",
-        "That layer — the device driver — is the one this course has been handing you all term as uart.c and adc.c. This is the one you write.",
-        "By the end of the hour your own display shows ES.28, written out of a ten-byte buffer by a function you wrote. Lab 5 asks for that function."
+        "Yesterday you used a bus: four wires, a program you were given, and four characters on your own display.",
+        "Today is everything that was handed to you — the chip at the far end of the two wires, the peripheral at our end, and the library call in between.",
+        "In that order: the display and its controller first, because that is where yesterday's unanswered questions are; then the STM32C031C6's own I2C1 peripheral; then the five operations a library has to provide.",
+        "By the end of the session your display shows ES.28, written out of a ten-byte buffer by a device driver you wrote. Lab 5 asks for that function."
       ],
-      "presenterNote": "≈ 2 min with announcements."
+      "presenterNote": "≈ 2 min with announcements. 110 minutes today, against 50 yesterday — say that, because the pace is genuinely different."
     },
     {
       "type": "agenda",
@@ -27,9 +27,10 @@
         "How the display is actually built",
         "Reading the command table",
         "The display RAM, and the byte that is always zero",
-        "One digit",
-        "Layers, and what you are replacing",
-        "The driver: blink, dim, and write",
+        "Now the peripheral: the pins, and I2C_TIMINGR",
+        "What a library has to provide — and i2c1_byteWrite() opened",
+        "Layers, and the driver: ES.28",
+        "Break it on purpose",
         "Homework, and what Lab 5 asks for"
       ]
     },
@@ -37,13 +38,13 @@
       "type": "section",
       "kicker": "Part 1",
       "title": "Homework Review, and Two AI Solutions",
-      "presenterNote": "≈ 9 min including the one-minute measurement that opens it (8 for the reading and the discussion). Individual written answer BEFORE the group talks, and a working reference copy offered to the whole room before groups form — so a student whose homework did not run has something to compare against and never has to say so out loud. First thing to compress to 6 min if Part 8 looks threatened; not to cut."
+      "presenterNote": "≈ 9 min including the one-minute measurement that opens it (8 for the reading and the discussion). Individual written answer BEFORE the group talks, and a working reference copy offered to the whole room before groups form — so a student whose homework did not run has something to compare against and never has to say so out loud. First thing to compress to 6 min after Part 9; not to cut."
     },
     {
       "type": "prompt",
       "room": true,
       "title": "Before you read anybody's code — measure your own",
-      "body": "Your program from Tuesday prints once a second.\n\nTime ten prints against a stopwatch and write down what you got.\n\nThen write down the PSC and ARR your program uses.",
+      "body": "Your program from Tuesday prints once a second.<br><br>Time ten prints against a stopwatch and write down what you got.<br><br>Then write down the <code>PSC</code> and <code>ARR</code> your program uses.",
       "presenterNote": "Costed inside Part 1's nine minutes, not on top of them. It is what makes the next ten minutes something an AI cannot do for them: two of the defects in the AI solutions are only visible if you know what clock this board runs at. Coolterm is already up; nobody needs to reflash. A student on the reference copy has a running program too."
     },
     {
@@ -76,26 +77,26 @@
       "type": "section",
       "kicker": "Part 2",
       "title": "Does the Bus Still Work?",
-      "presenterNote": "≈ 3 min, and it is the cost of having moved the ping to Day 9x — paid deliberately. Nobody writes a line of driver code before their display answers."
+      "presenterNote": "≈ 3 min. Nobody writes a line of driver code before their display lights. Four characters is a strong test now: that program exercises the pins, the bus, the three setup commands and a ten-byte write."
     },
     {
       "type": "ref",
       "page": "subsec-day10-verify.html",
       "slide": "sl-day10-verify",
-      "title": "Flash Thursday's pingDisplay.c, unchanged"
+      "title": "Flash yesterday's helloDisplay.c, unchanged"
     },
     {
       "type": "section",
       "kicker": "Part 3",
       "title": "How the Display Is Actually Built",
-      "presenterNote": "≈ 6 min, opening with a 60-second refresher of the reading for anyone who bounced off it."
+      "presenterNote": "≈ 10 min. The grid argument, then the persistence-of-vision observation that makes it something they saw rather than something they were told. See the OPEN note in the book before class — try the wave and the phone yourself with a real display first."
     },
     {
       "type": "ref",
       "page": "subsec-day10-display-hardware.html",
       "slide": "sl-day10-segment-map",
-      "title": "a b c d e f g, and DP",
-      "refPage": "subsec-day9x-one-digit.html"
+      "refPage": "subsec-day9x-one-digit.html",
+      "title": "Yesterday's segment map, for reference"
     },
     {
       "type": "ref",
@@ -113,6 +114,12 @@
     {
       "type": "ref",
       "page": "subsec-day10-display-hardware.html",
+      "slide": "sl-day10-pov",
+      "title": "Your display looks steady. It is not."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-display-hardware.html",
       "slide": "sl-day10-block",
       "title": "The HT16K33 from the inside"
     },
@@ -120,7 +127,7 @@
       "type": "section",
       "kicker": "Part 4",
       "title": "Reading the Command Table",
-      "presenterNote": "≈ 7 min. Derived from the datasheet, not handed over: 0x21, 0x81 and 0xEF are answers, not given constants."
+      "presenterNote": "≈ 10 min. Derived from the datasheet, not handed over: 0x21, 0x81 and 0xEF are answers, not given constants. They have had those three bytes running in front of them since yesterday without knowing what they said."
     },
     {
       "type": "ref",
@@ -145,7 +152,7 @@
       "type": "section",
       "kicker": "Part 5",
       "title": "The Display RAM, and the Byte That Is Always Zero",
-      "presenterNote": "≈ 8 min. The pattern activity is on paper, before any of it is code, so that the buffer is not simultaneously a new idea and a debugging surface."
+      "presenterNote": "≈ 10 min. They have already used the buffer; this is why it is shaped the way it is. The pattern activity stays on paper, so the buffer is not simultaneously a new idea and a debugging surface."
     },
     {
       "type": "ref",
@@ -175,9 +182,168 @@
     },
     {
       "type": "section",
-      "kicker": "Part 6",
-      "title": "One Digit",
-      "presenterNote": "≈ 6 min. A student who stalls after this still has a lit digit."
+      "kicker": "Part 6a",
+      "title": "The Pins, and Why They Must Be Open-Drain",
+      "presenterNote": "≈ 10 min. This is the material that used to sit on the 50-minute day. It lands better here: they have used the bus for a day, so 'which two pins, and why open-drain' is a question about something they have watched work."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-pins.html",
+      "slide": "sl-day9x-pins",
+      "title": "PB8 and PB9, AF6 — and the table it comes from"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-pins.html",
+      "slide": "sl-day9x-opendrain",
+      "title": "Open-drain, and why it is not a preference",
+      "room": true
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-pins.html",
+      "slide": "sl-day9x-opendrain-fig",
+      "title": "Two outputs disagreeing, wired two ways"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-pins.html",
+      "slide": "sl-day9x-opendrain-more",
+      "title": "What else open-drain buys, and sizing the pull-up"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-pins.html",
+      "slide": "sl-day9x-wire-begin",
+      "title": "What Wire.begin() was doing"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 6b",
+      "title": "I2C_TIMINGR, and What PRESC Is For",
+      "presenterNote": "≈ 10 min. Petra's own note on this slide in the old deck says SKIP. It should not be skipped — it is the only thing that makes the table make sense, and it is what a student needs when the clock changes. There is room for it now."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-timingr.html",
+      "slide": "sl-day9x-timingr-intro",
+      "title": "I2C_TIMINGR: five fields, and three worked examples"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-timingr.html",
+      "slide": "sl-day9x-timing-tables",
+      "title": "Three tables in RM0490 §23.4.10 — and no row for us"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-timingr.html",
+      "slide": "sl-day9x-presc",
+      "title": "Only one field changes",
+      "room": true
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-timingr.html",
+      "slide": "sl-day9x-presc-answer",
+      "title": "Every table divides down to 4 MHz"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-timingr.html",
+      "slide": "sl-day9x-init-code",
+      "title": "i2c1_init(), assembled"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 7a",
+      "title": "What an I2C Library Has to Provide",
+      "presenterNote": "≈ 6 min. Individually first, then the group, then the reveal. They have now called three of the five, so the derivation is grounded rather than abstract. The Wire.h beat is not cuttable."
+    },
+    {
+      "type": "prompt",
+      "room": true,
+      "title": "Before we look at the library you were given",
+      "body": "What operations does a program need in order to use this bus?<br><br>Aim for the smallest set that covers everything you have seen on the wire, and say for each one why it cannot be built out of the others.<br><br>One of them has nothing to do with any particular device. Which?",
+      "presenterNote": "Individually in writing, then compare at the table, then reveal. Do not accept 'read and write' — push for what the multi-byte forms need that the single-byte ones do not. They have already called init, byteWrite and memWrite, so two of the five should come straight out of their own program."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-library.html",
+      "slide": "sl-day9x-five-ops",
+      "title": "The five, and why five"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-library.html",
+      "slide": "sl-day9x-five-why",
+      "title": "Why the last two are separate functions"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-library.html",
+      "slide": "sl-day9x-wire-h",
+      "title": "Wire.h is this library, precompiled"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-library.html",
+      "slide": "sl-day9x-wire-h-gaps",
+      "title": "Two places the mapping is not one-to-one"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 7b",
+      "title": "Opening i2c1_byteWrite()",
+      "presenterNote": "≈ 6 min. This is the function that produced every trace they captured yesterday, and the one whose left shift they deduced from the wire. Everything below I2C1->CR2 is silicon; the peripheral's own block diagram is in the chapter's Reference section if the room wants it."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-bytewrite.html",
+      "slide": "sl-day9x-bytewrite",
+      "title": "Inside i2c1_byteWrite()"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-bytewrite.html",
+      "slide": "sl-day9x-cr2-assign",
+      "title": "Why it is = and not |="
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9x-bytewrite.html",
+      "slide": "sl-day9x-master-tx",
+      "title": "The same function, as the manual draws it"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 8a",
+      "title": "Layers, and What You Are Replacing",
+      "presenterNote": "≈ 4 min. The Adafruit beat is not cuttable — it is the week's one Arduino-defusing moment that lands, and it is one sentence."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-layers.html",
+      "slide": "sl-day10-layers",
+      "title": "Four layers, and the rule in the middle"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-layers.html",
+      "slide": "sl-day10-layers-rule",
+      "title": "The rule in the middle, and what it buys"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-layers.html",
+      "slide": "sl-day10-adafruit",
+      "title": "Adafruit_LEDBackpack.h is this, written by somebody else"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 8b",
+      "title": "SevenSeg_init(), and One Digit",
+      "presenterNote": "≈ 8 min. The three commands they derived in Part 4, now written as the header's names. A student who stalls after this still has a working init and a lit digit."
     },
     {
       "type": "ref",
@@ -207,27 +373,9 @@
     },
     {
       "type": "section",
-      "kicker": "Part 7",
-      "title": "Layers, and What You Are Replacing",
-      "presenterNote": "≈ 4 min. The Adafruit beat is not cuttable — it is the third of the week's three Arduino-defusing moments."
-    },
-    {
-      "type": "ref",
-      "page": "subsec-day10-layers.html",
-      "slide": "sl-day10-layers",
-      "title": "Four layers, and the rule in the middle"
-    },
-    {
-      "type": "ref",
-      "page": "subsec-day10-layers.html",
-      "slide": "sl-day10-adafruit",
-      "title": "Adafruit_LEDBackpack.h is this, written by somebody else"
-    },
-    {
-      "type": "section",
-      "kicker": "Part 8",
-      "title": "The Driver",
-      "presenterNote": "≈ 13 min, and the crucial step is SevenSeg_write() alone. blink() and dim() are a two-minute warm-up. If fewer than 11 minutes remain, do dim() on the projector and go straight to write()."
+      "kicker": "Part 8c",
+      "title": "The Rest of the Driver",
+      "presenterNote": "≈ 17 min, and the crucial step is SevenSeg_write() alone. blink() and dim() are a two-minute warm-up. If fewer than 11 minutes remain, do dim() on the projector and go straight to write()."
     },
     {
       "type": "ref",
@@ -265,6 +413,38 @@
     {
       "type": "section",
       "kicker": "Part 9",
+      "title": "Break It on Purpose",
+      "presenterNote": "≈ 8 min, and it is the stretch — trim this first if the session runs long. The second case is the one that matters: a perfect trace and a blank display. Do not let the prediction be skipped."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-breakit.html",
+      "slide": "sl-day10-breakit",
+      "title": "Two one-line changes, and a capture of each"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-breakit.html",
+      "slide": "act-i2c-wrong-address",
+      "title": "Two ways to get a blank display",
+      "room": "compressed"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day10-breakit.html",
+      "slide": "sl-day10-breakit-answer",
+      "title": "A perfect trace and a blank display"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day10-breakit.html",
+      "slide": "sl-day10-hang",
+      "title": "Why case 1 needs the reset button"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 10",
       "title": "Before Next Class",
       "presenterNote": "≈ 4 min."
     },
@@ -279,11 +459,13 @@
       "type": "recap",
       "title": "Recap",
       "items": [
-        "34 LEDs on 14 wires, because a grid saves wires and a sweep buys back the one digit at a time it costs you. The backpack runs that sweep so your program does not have to.",
+        "34 LEDs on 14 wires, because a grid saves wires and a sweep buys back the one digit at a time it costs you. The backpack runs that sweep so your program does not have to — which is what you saw when you waved the display.",
         "A device's commands come out of its datasheet's command table, one byte each, and the header's names are that table's structure.",
-        "Two bytes per digit position, five positions, and the odd bytes are what advance the HT16K33's pointer — which is why they have to be sent.",
-        "All ten in ONE transaction, because a STOP ends the write and the next one starts over.",
+        "Two bytes per digit position, five positions, and the odd bytes are what advance the HT16K33's pointer — which is why they have to be sent. All ten in ONE transaction, because a STOP ends the write and the next one starts over.",
+        "PB8 and PB9 are AF6, and open-drain is not a preference: SDA changes hands every ninth bit. PRESC is f_I2CCLK / 4 MHz − 1, which is why there is no 12 MHz row and we did not need one.",
+        "One assignment to I2C_CR2 describes an entire transaction. Nothing in the library counts a clock edge.",
         "A device driver reaches the hardware only through the interface driver. SevenSeg.c may call i2c1_byteWrite() as often as it likes and may not touch I2C1->CR2 once.",
+        "The bus can be flawless and the device still do nothing. A scope answers 'did my bytes arrive?'; only the datasheet answers 'were they the right bytes?'",
         "Tonight: the counters. The MM:SS clock is the one that makes you find the colon bit, and Lab 5 is the same shape."
       ]
     }
