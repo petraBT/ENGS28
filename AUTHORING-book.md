@@ -314,6 +314,23 @@ download against the book should find the same program. Comments may differ
 freely. `scripts/check_starters.py` enforces exactly that split, and is part of
 Step 5.
 
+### B-11e Arduino comparisons are a garnish, not a thread
+
+Naming the one-line Arduino call a chapter replaces — `attachInterrupt()`,
+`Wire.h`, `Adafruit_LEDBackpack.h` — is worth **at most a sentence**, and only
+where it lands. **Most ENGS 28 students have never used Arduino**, so an
+extended comparison explains the familiar in terms of the unfamiliar: it is
+confusing for the majority and merely nostalgic for the rest.
+
+Banned: a slide devoted to an Arduino call; argument-by-argument mappings; a
+tour of which Arduino boards have which interrupt hardware. If the comparison
+cannot be made in one clause without a digression, cut it.
+
+*(Petra, Day 9: the `attachInterrupt()` slide and its paragraph were removed
+whole. The reviewer briefs that ask for real-world grounding —
+`expert-embedded-industry`, `learner-arduino-veteran` — are the likely source
+and should be weighted down, not followed, on this point.)*
+
 ### B-12 Write for adults — no cute framing
 
 Students are adults; the prose is direct, technical, and plain (Petra, Day 8).

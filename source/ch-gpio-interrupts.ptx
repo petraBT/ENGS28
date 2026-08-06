@@ -422,6 +422,16 @@ int main(void) {
     return 1;
 }
 ]]></code></program>
+            <slide xml:id="sl-day9-missed" room="yes">
+    <p>A short tap sometimes resets the counter and sometimes does not; a press-and-hold always does. Why?</p>
+    <ul>
+        <li>The program was inside <c>delay_ms()</c>, not looking.</li>
+        <li>Polling reads a <term>level</term>, so it can only see a press that is still happening at the one instant it looks.</li>
+        <li>A tap that starts and ends inside the delay leaves nothing behind for the program to find.</li>
+        <li>The fix has the shape we used for the timer: instead of the program checking over and over, let the GPIO hardware tell the CPU when the press happens.</li>
+    </ul>
+</slide>
+
             <slide xml:id="sl-day9-wiring-check" ref="fig-rc-debounce-circuit" stack="yes">
     <ul>
         <li>We'll re-use the button circuit with internal pull-up and debouncing capacitor (see the picture below). If you no longer have this wired on your breadboard, rebuild it now, with the button on D5.</li>
@@ -435,7 +445,7 @@ int main(void) {
     <program language="c"><code><![CDATA[
 while(1) {
     printf("%x\t%d\r\n", counter, counter);
-    delay_ms(1000);                                  // 999+ ms of not looking
+    delay_ms(1000);                                  // 1000 ms of not looking
     buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0); // <- the one look
     if ( (buttonPushed) || (counter == MAXCOUNT) ) {
         counter = 0;
@@ -565,7 +575,7 @@ EXTI4 ... EXTI15   ->  IRQ7,  priority 14    <- our button, with eleven others
     <ul>
         <li>The lower the priority number, the higher the priority of the interrupt.</li>
         <li>PB4 is on line EXTI4, so its request is IRQ7 &#8212; and so is the request of every other line from 4 to 15. <term>Twelve lines, one handler.</term></li>
-        <li>So the handler cannot assume what it was called for. Working that out is Part 5's job, and it is the price of the second condensing.</li>
+        <li>So the handler cannot assume what it was called for. For example, if you have a button on PB4 and another one on PC7, then both of these would call the same ISR. This means that inside the ISR it is the programmer's job to first check which pin actually fired. Working that out is Part 5's job, and it is the price of the second condensing.</li>
     </ul>
 </slide>
 
@@ -596,7 +606,15 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
 ]]></code></program>
     <ul>
         <li>This is the rule that turned TIM14 into <c>TIM14_IRQn</c> and <c>TIM14_IRQHandler</c> &#8212; the same lookup, on a different row of the same table.</li>
-        <li>Neither name is guessable, and a wrong handler name is silent: it builds and links without a warning, and your function is never called. Copy it from the startup file.</li>
+        <li>The <c>_IRQn</c> constant is built from the acronym, but <term>the handler name is not yours to derive</term> &#8212; it is spelled out in the project's startup file, <c>startup_stm32c031c6tx.s</c>, one <c>.word</c> per vector-table slot:</li>
+    </ul>
+    <program><code><![CDATA[
+  .word EXTI0_1_IRQHandler          /* EXTI line 0 and 1 interrupt */
+  .word EXTI2_3_IRQHandler          /* EXTI line 2 and 3 interrupt */
+  .word EXTI4_15_IRQHandler         /* EXTI line 4 and 15 interrupt */
+]]></code></program>
+    <ul>
+        <li>Read that file, never edit it: find the name, select it, <term>copy</term> it. A wrong handler name is silent &#8212; it builds and links without a warning, and your function is simply never called.</li>
     </ul>
 </slide>
 
@@ -646,57 +664,10 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
         <li><c>EXTI_IMR1</c> &#8212; the mask. Whether a detected event may <em>become an interrupt request</em> at all.</li>
         <li><c>EXTI_FPR1</c> &#8212; the pending register. Records that it happened, so the request survives until your ISR acknowledges it.</li>
         <li>The first three are <term>configured once</term>, in Parts 4a and 4b. The fourth is <term>read and cleared by your handler</term>, in Part 5.</li>
-        <li>Then the NVIC on top, exactly as for the timer &#8212; so setting a pin up takes four writes where the timer took two.</li>
+        <li>You also need to register your ISR with the NVIC, exactly as for the timer.</li>
     </ul>
 </slide>
 
-            <p>
-                One thing to name before we start.  If you have used
-                <c>attachInterrupt()</c> in Arduino, you have written all four
-                of those stages plus the NVIC enable plus the handler
-                registration in a single function call:
-            </p>
-            <program language="c"><code><![CDATA[
-attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
-]]></code></program>
-            <p>
-                Its three arguments map onto exactly what we are about to do by
-                hand.  <c>digitalPinToInterrupt(4)</c> is the pin-to-line lookup
-                and the port selection — our <c>EXTI_EXTICRx</c>.  (That
-                <c>4</c> is Arduino's own <em>board</em> pin number, not a port
-                pin number; on an Uno it is the chip's PD4.  Its matching the
-                <c>4</c> in PB4 here is a coincidence of the example, and it is
-                the same collision as A0 / PA0 / ADC channel 0.)
-                <c>FALLING</c> is the edge choice — our <c>EXTI_FTSR1</c>.  And
-                <c>myHandler</c> is a function pointer stored somewhere, so that
-                a library-supplied handler can call it; on this chip there is no
-                such indirection, which is why your function has to
-                <em>be</em> the handler, under the exact name from the vector
-                table.  The unmask and the NVIC enable have no argument at all
-                in the Arduino version, because <c>attachInterrupt()</c> just
-                does them.  None of that machinery is absent on an Arduino: the
-                8-bit AVR boards — Uno, Nano, Mega — do the same job with their
-                own external-interrupt registers, and the ARM-based ones — Due,
-                Zero, Nano 33 BLE — have an EXTI much like this one.  It is
-                written once, inside the library, by someone who had to know
-                what we are about to learn.
-            </p>
-
-            <slide xml:id="sl-day9-attachinterrupt">
-    <p><term>If you have used attachInterrupt(), you have written all four switches in one line:</term></p>
-    <program language="c"><code><![CDATA[
-attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
-//              \_____ port + line _____/  \__ ISR _/  \edge/
-//                    EXTI_EXTICRx                     EXTI_FTSR1
-]]></code></program>
-    <ul>
-        <li><c>digitalPinToInterrupt(4)</c> is the pin-to-line lookup and the port selection &#8212; our <c>EXTI_EXTICRx</c>. That <c>4</c> is Arduino's <em>board</em> pin number, not a port pin number; matching PB4's <c>4</c> is a coincidence of the example.</li>
-        <li><c>FALLING</c> is the edge choice &#8212; our <c>EXTI_FTSR1</c>.</li>
-        <li>The unmask and the NVIC enable have <term>no argument at all</term>, because <c>attachInterrupt()</c> just does them.</li>
-        <li><c>myHandler</c> is stored as a function pointer, so a library handler can call it. There is no such indirection here, which is why your function must <term>be</term> the handler, under the exact name from Table 40.</li>
-        <li>None of this machinery is absent on an Arduino: the 8-bit AVR boards (Uno, Nano, Mega) do the same job with their own external-interrupt registers, and the ARM-based ones (Due, Zero, Nano 33 BLE) have an EXTI much like this one. It is written once, inside the library, by someone who had to know what we are about to learn.</li>
-    </ul>
-</slide>
         </subsection>
 
         <subsection xml:id="subsec-day9-exticr">
@@ -717,7 +688,7 @@ attachInterrupt(digitalPinToInterrupt(4), myHandler, FALLING);
     <p><term>What we need to do to program a pushbutton interrupt.</term> The button is on PB4.</p>
     <ol>
         <li>Configure PB4 as an input pin with pull-up, as per usual &#8212; we did this earlier.</li>
-        <li>Tell the EXTI multiplexer <term>which port</term> is on line EXTI4, via <c>EXTI_EXTICRx</c>.</li>
+        <li>Tell the EXTI multiplexer <term>which port</term> (A, B, C, ...) is on line EXTI4, via <c>EXTI_EXTICRx</c>.</li>
         <li>Tell the EXTI we are looking for a <term>falling edge</term> on line EXTI4, via <c>EXTI_FTSR1</c>.</li>
         <li>Tell the EXTI to <term>unmask</term> line EXTI4 so the event is actually noticed, via <c>EXTI_IMR1</c>.</li>
         <li>Tell the <term>NVIC</term> to enable interrupts on line EXTI4, via <c>NVIC_EnableIRQ()</c>.</li>
@@ -830,7 +801,7 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
         <subsection xml:id="subsec-day9-ftsr-imr-nvic">
             <title>Part 4b: The Edge, the Mask, and the NVIC</title>
             <p>
-                Three switches remain, and after Part 4a they are a relief:
+                Three steps remain, and after Part 4a they are a relief:
                 each is a single bit, and the bit number is the line number.
             </p>
             <p>
@@ -850,7 +821,7 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
                 falling-edge detection on that line, 0 disables it.  Setting
                 <c>FT4</c> is what makes a press on PB4 an event at
                 all.</caption>
-                <image source="images/Day09-Interrupts(2)/exti_ftsr1.svg" width="90%"/>
+                <image source="images/Day09-Interrupts(2)/exti_ftsr1.svg" width="72%"/>
             </figure>
             <p>
                 <em>Whether it may interrupt.</em>  Detecting an edge and
@@ -879,22 +850,22 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
                 direct peripheral lines 19, 23, 25 and 31 are unmasked at
                 reset, which is why the top of the register is not all
                 zeros.)</caption>
-                <image source="images/Day09-Interrupts(2)/exti_imr1.svg" width="90%"/>
+                <image source="images/Day09-Interrupts(2)/exti_imr1.svg" width="72%"/>
             </figure>
 
             <slide xml:id="sl-day9-ftsr" ref="fig-exti-ftsr1" stack="yes">
     <ul>
         <li>The pin idles HIGH and goes LOW when pressed, so the <term>press is a falling edge</term> and the release is a rising one. We want the press.</li>
         <li>One bit per line, <c>FT0</c> through <c>FT15</c>: 1 enables falling-edge detection, 0 disables it. Line 4 is bit 4 &#8212; the bit number <em>is</em> the line number, which is true of all three EXTI registers today.</li>
-        <li>There is a matching <c>EXTI_RTSR1</c> for rising edges. Setting the same bit in both interrupts on press <em>and</em> release, which some designs want and this one does not.</li>
+        <li>There is a matching <c>EXTI_RTSR1</c> for rising edges. Setting the same bit in both interrupts on press <em>and</em> release, which some designs want (we will not use this today).</li>
     </ul>
     <caption>Setting FT4 is what makes a press on PB4 an event at all.</caption>
 </slide>
 
             <slide xml:id="sl-day9-imr" ref="fig-exti-imr1" stack="yes">
     <ul>
-        <li>Detecting an edge and requesting an interrupt are <term>deliberately separate</term> in this hardware, and this is the second switch.</li>
-        <li>A line whose mask bit is 0 goes no further: RM0490 &#167;12.4 sets the pending bit <term>only for an unmasked line</term>, so a masked line leaves nothing in <c>EXTI_FPR1</c> either. The separation is what lets the same edge drive the EXTI's <em>event</em> output instead (<c>EXTI_EMR1</c>), and lets a low-power design pick which pins may wake the chip.</li>
+        <li>Detecting an edge and requesting an interrupt are <term>deliberately separate</term> in this hardware, and this is the second of them.</li>
+        <li>A line whose mask bit is 0 goes no further: RM0490 &#167;12.4 sets the pending bit <term>only for an unmasked line</term>, so a masked line will not propagate into <c>EXTI_FPR1</c> after an edge is detected. One advantage of this design is that with multiple GPIO pins sharing an EXTI line, masking individual lines lets you selectively silence or enable specific pins on the fly without breaking other shared pin interrupts. The separation also lets a low-power design pick which pins may wake the chip.</li>
         <li>Every GPIO line &#8212; IM0 through IM15 &#8212; is masked at reset, so a missing bit here is the <term>quietest possible bug</term>: the edge is detected, nothing is recorded, nothing happens.</li>
     </ul>
     <caption>Set IM4 and a detected event on line 4 may finally ask for the CPU.</caption>
@@ -911,14 +882,14 @@ EXTI->IMR1  |= EXTI_IMR1_IM4;    // unmask line EXTI4
 NVIC_EnableIRQ(EXTI4_15_IRQn);   // let the request reach the CPU
 ]]></code></program>
             <p>
-                It is worth counting the switches, because the timer needed two and today needs four.  For the timer: <c>UIE</c> in
-                <c>TIM14-&gt;DIER</c> made the peripheral raise a request, and
-                <c>NVIC_EnableIRQ()</c> let it through.  For a pin, the
-                peripheral side is three switches rather than one — which port
-                is on the line, which edge counts, and whether the line is
-                unmasked — because the EXTI is a switchboard and a timer is not.
-                The NVIC side is identical.  Forget any one of the four and
-                there is no error, no warning, and no interrupt.
+                That is the whole configuration.  Four things have to be
+                true before a press on PB4 reaches your handler: port B is
+                selected on line EXTI4 (<c>EXTI_EXTICR2</c>), a falling edge
+                counts as an event (<c>EXTI_FTSR1</c>), the line is unmasked so
+                the event may become a request (<c>EXTI_IMR1</c>), and the NVIC
+                is willing to deliver it (<c>NVIC_EnableIRQ()</c>).  Forget any
+                one of them and there is no error, no warning, and no
+                interrupt.
             </p>
             <p>
                 Assembled, with the pin configuration you already have in front of it, this is the whole initialization:
@@ -949,21 +920,25 @@ void pb4_exti_init(void) {
 ]]></code></program>
 
             <slide xml:id="sl-day9-four-switches">
-    <p><term>The three remaining switches, and then the NVIC:</term></p>
+    <p><term>All four steps, in one place.</term> Everything that has to be true before a press on PB4 reaches your handler:</p>
     <program language="c"><code><![CDATA[
-EXTI->FTSR1 |= EXTI_FTSR1_FT4;   // falling edge on line EXTI4
-EXTI->IMR1  |= EXTI_IMR1_IM4;    // unmask line EXTI4
-NVIC_EnableIRQ(EXTI4_15_IRQn);   // let the request reach the CPU
+EXTI->EXTICR[1] &= ~EXTI_EXTICR2_EXTI4_Msk;             // 1. port B ...
+EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); //    ... on line EXTI4
+EXTI->FTSR1 |= EXTI_FTSR1_FT4;   // 2. a falling edge counts as an event
+EXTI->IMR1  |= EXTI_IMR1_IM4;    // 3. unmask the line, so the event may ask
+NVIC_EnableIRQ(EXTI4_15_IRQn);   // 4. and the NVIC will deliver it
 ]]></code></program>
     <ul>
-        <li>Count them against the timer. The timer needed <term>two</term>: UIE in <c>TIM14-&gt;DIER</c> made the peripheral raise a request, and <c>NVIC_EnableIRQ()</c> let it through.</li>
-        <li>A pin needs <term>four</term>, because the peripheral side is three: which port is on the line, which edge counts, and whether the line is unmasked. The NVIC side is identical.</li>
+        <li><c>EXTI_EXTICR2</c> &#8212; <term>which port</term> is on line EXTI4. Without it the line listens to some other port's pin 4.</li>
+        <li><c>EXTI_FTSR1</c> &#8212; <term>which edge</term> counts. Without it nothing is ever detected.</li>
+        <li><c>EXTI_IMR1</c> &#8212; the <term>mask</term>. Without it the edge is detected and goes no further.</li>
+        <li><c>NVIC_EnableIRQ()</c> &#8212; the <term>NVIC</term>. Without it the request never reaches the CPU.</li>
         <li>Forget any one of the four and there is no error, no warning, and no interrupt.</li>
     </ul>
 </slide>
 
             <slide xml:id="sl-day9-init-code">
-    <p><term>pb4_exti_init()</term> &#8212; the pin configuration you already have, then the four switches:</p>
+    <p><term>pb4_exti_init()</term> &#8212; the pin configuration you already have, then the four steps:</p>
     <program language="c"><code><![CDATA[
 void pb4_exti_init(void) {
     __disable_irq();
@@ -1120,7 +1095,7 @@ void EXTI4_15_IRQHandler(void){
 }
 ]]></code></program>
     <ul>
-        <li>Return without clearing <c>FPR1</c> and the handler is re-entered the instant it returns, forever &#8212; the pending bit is still set, so the request is still outstanding. The symptom is a program that appears to hang.</li>
+        <li>If you forget to clear <c>FPR1</c> inside the ISR then the handler is re-entered the instant it returns, forever &#8212; the pending bit is still set, so the request is still outstanding. The symptom is a program that appears to hang.</li>
         <li><c>volatile</c> for the same reason as with the timer: no call to this function appears anywhere in the program, so the compiler has no evidence the variable ever changes and is entitled to assume it does not.</li>
     </ul>
 </slide>
@@ -1140,7 +1115,7 @@ void EXTI4_15_IRQHandler(void){
  *
  * Three blanks to fill in.  Everything you need was in Parts 4 and 5:
  *
- *   TODO 1   the four EXTI/NVIC switches      port, edge, mask, NVIC
+ *   TODO 1   the four EXTI/NVIC steps      port, edge, mask, NVIC
  *   TODO 2   the handler itself               exact name from Table 40
  *   TODO 3   the shared flag                  one keyword matters
  */
@@ -1235,7 +1210,7 @@ int main(void) {
     return 1;
 }
 ]]></code></program>
-    <caption><term>TODO 1</term>: the four switches, in <c>pb4_exti_init()</c>. <term>TODO 2</term>: the ISR, named from Table 40. Swap the build first — two main()s cannot coexist.</caption>
+    <caption><term>TODO 1</term>: the four steps, in <c>pb4_exti_init()</c>. <term>TODO 2</term>: the ISR, named from Table 40. Swap the build first — two main()s cannot coexist.</caption>
 </slide>
 
             <activity xml:id="act-gpio-interrupt">
@@ -1257,7 +1232,7 @@ int main(void) {
                     build.</p></statement>
                 </task>
                 <task xml:id="act-gpio-int-t1c">
-                    <statement><p>Before you build: of the four switches, which
+                    <statement><p>Before you build: of the four steps, which
                     single one could you leave out and still get a program that
                     compiles and links with no warnings and never interrupts?
                     Write down which, and what you would see on the terminal.
@@ -1265,7 +1240,7 @@ int main(void) {
                     is.</p></statement>
                 </task>
                 <task xml:id="act-gpio-int-t2">
-                    <statement><p>Fill TODO 1: the four switches, in order —
+                    <statement><p>Fill TODO 1: the four steps, in order —
                     port, edge, mask, NVIC.</p></statement>
                 </task>
                 <task xml:id="act-gpio-int-t3">
@@ -1316,7 +1291,7 @@ int main(void) {
                     <c>startup_stm32c031c6tx.s</c>?  A near-miss name builds and
                     links without a single warning, and your function simply
                     never runs.</li>
-                <li>Are <em>all four</em> switches present — EXTICR, FTSR1,
+                <li>Are <em>all four</em> steps present — EXTICR, FTSR1,
                     IMR1, and <c>NVIC_EnableIRQ()</c>?  Missing any one is
                     silence, and missing the mask is the quietest of them.</li>
             </ol>
@@ -1334,13 +1309,23 @@ int main(void) {
                 code.
             </p>
 
+            <slide xml:id="sl-day9-stretch">
+    <p><term>Done early? Add the Nucleo's blue user button.</term> It is on <c>PC13</c>, and pressing it should reverse the counting direction.</p>
+    <ul>
+        <li>PC13 is on lines 4 to 15 as well, so it shares <c>EXTI4_15_IRQHandler</c> with PB4 &#8212; the handler now has to tell the two apart.</li>
+        <li>You will need a second initialization function, and a second field in a <em>different</em> <c>EXTICR</c> register &#8212; work out which one.</li>
+        <li>The blue button is wired on the Nucleo already: nothing to add on the breadboard.</li>
+    </ul>
+    <note>Say this at the START of Part 6, not at minute 47 — anyone who finishes early should go straight to it.</note>
+</slide>
+
             <slide xml:id="sl-day9-ladder">
     <p><term>Counter not resetting?</term> Walk these in order &#8212; each one rules out a layer.</p>
     <ul>
-        <li>1 &#8212; Does the <term>polled</term> version still work? Swap the build back for a moment. If it does, the wiring is fine and the fault is in the interrupt path. If it does not &#8212; or if you were handed the file at the checkpoint and never saw it count &#8212; the fault is the button or the capacitor, and no amount of reading your EXTI code will find it: re-seat both against the photo, then flag it.</li>
+        <li>1 &#8212; Does the <term>polled</term> version still work? Swap the build back for a moment. If it does, the wiring is fine and the fault is in the interrupt path. If it does not the fault is the button or the capacitor, and no amount of reading your EXTI code will find it: check and fix your wiring.</li>
         <li>2 &#8212; Is the port selection in <c>EXTI-&gt;EXTICR[<term>1</term>]</c>, and is the value <c>EXTI_PB</c> shifted into the <c>EXTI4</c> field? A port code left at 0 selects port A &#8212; a pin you are not pressing.</li>
         <li>3 &#8212; Is the handler named <term>exactly</term> <c>EXTI4_15_IRQHandler</c>, copied from the startup file? A near-miss builds and links with zero warnings, and your function simply never runs.</li>
-        <li>4 &#8212; Are <term>all four</term> switches present: EXTICR, FTSR1, IMR1, <c>NVIC_EnableIRQ()</c>? Missing the mask is the quietest of them.</li>
+        <li>4 &#8212; Are <term>all four</term> steps present: EXTICR, FTSR1, IMR1, <c>NVIC_EnableIRQ()</c>?</li>
     </ul>
     <caption>Four steps, in order — start with "does the polled version still work?"</caption>
     <note>Stays up for all of Part 6. Out of time: the solution slide is next, and the file goes to Canvas after class.</note>
@@ -1438,7 +1423,7 @@ void EXTI4_15_IRQHandler(void){
                 reset in the ISR instead of setting a flag for <c>main()</c> to
                 act on.
             </p>
-            <sidebyside widths="47% 47%" margins="3%">
+            <sidebyside widths="44% 44%" margins="2%">
                 <program language="c"><code><![CDATA[
 volatile int counter;
 
@@ -1489,7 +1474,7 @@ void EXTI4_15_IRQHandler(void){
             </sidebyside>
             <slide xml:id="sl-day9-two-solutions">
     <p><term>Two programs, same problem, both working.</term> Left: reset in the ISR. Right: set a flag, let <c>main()</c> reset.</p>
-    <sidebyside widths="47% 47%" margins="3%">
+    <sidebyside widths="44% 44%" margins="2%">
         <program language="c"><code><![CDATA[
 volatile int counter;
 int main(void) {
@@ -1637,7 +1622,7 @@ void EXTI4_15_IRQHandler(void){
         <li>An ISR setting a <term>control signal</term> &#8212; a flag saying <q>this happened</q> &#8212; is safe, because nothing else is part-way through changing it.</li>
         <li>An ISR changing <term>data</term> that the main program also changes is a different thing entirely, and it fails silently and rarely: the worst combination a bug can have.</li>
         <li>Be very careful about modifying shared data in an ISR. Often the right answer is not to.</li>
-        <li>Honest small print: the flag pattern does not close <em>every</em> window. A second press between <c>if (buttonPushed)</c> and <c>buttonPushed = 0;</c> is <term>coalesced</term> with the first &#8212; an event merged, not a count corrupted. Milder, and the Reference section says what closes it.</li>
+        <li>Some fine print: the flag pattern does not close <em>every</em> window. A second press between <c>if (buttonPushed)</c> and <c>buttonPushed = 0;</c> is <term>coalesced</term> with the first &#8212; an event merged, not a count corrupted. Likely not as bad and the Reference section explains how you can prevent even this from happening.</li>
     </ul>
 </slide>
 
@@ -1688,7 +1673,7 @@ GPIOA->ODR |= GREEN;               GPIOA->ODR ^= RED;
         <li>This is Lab 5's Additional Feature 1: a green LED driven from the main loop, a red LED flashed at 1 Hz by a timer, and the lab's three LEDs all on PA5&#8211;PA7. One port, <term>one ODR</term>, two pieces of code writing it.</li>
         <li>If the interrupt lands after <c>main()</c> has read ODR but before it writes back, the ISR's change to the red LED is in the register and absent from the copy <c>main()</c> is holding &#8212; and the write-back overwrites it. The red LED misses a toggle.</li>
         <li>Not every time. Just sometimes, unrepeatably &#8212; which is why it is worth knowing before you spend an evening on it.</li>
-        <li><term>Before we look it up: what would you want the hardware to give you here?</term></li>
+        <li><term>What would you want the hardware to give you here so that you could avoid this issue?</term></li>
     </ul>
 </slide>
 
@@ -1768,7 +1753,8 @@ void TIM14_IRQHandler(void) {
     __disable_irq();
     TIM14->SR = ~TIM_SR_UIF;
     redOn = !redOn;                  // flip our own copy of the state ...
-    GPIOA->BSRR = redOn ? GPIO_BSRR_BS6 : GPIO_BSRR_BR6;   // ... then one write
+    if (redOn) { GPIOA->BSRR = GPIO_BSRR_BS6; }   // ... then one write:
+    else       { GPIOA->BSRR = GPIO_BSRR_BR6; }   //     set it, or clear it
     __enable_irq();
 }
 ]]></code></program>
@@ -1806,8 +1792,9 @@ volatile int redOn = 0;        // the ISR owns this; main() never writes it
 void TIM14_IRQHandler(void) {
     __disable_irq();
     TIM14->SR = ~TIM_SR_UIF;
-    redOn = !redOn;            // flip our own copy of the state ...
-    GPIOA->BSRR = redOn ? GPIO_BSRR_BS6 : GPIO_BSRR_BR6;   // ... then one write
+    redOn = !redOn;                        // flip our own copy of the state ...
+    if (redOn) { GPIOA->BSRR = GPIO_BSRR_BS6; }   // ... then one write,
+    else       { GPIOA->BSRR = GPIO_BSRR_BR6; }   //     set it or clear it
     __enable_irq();
 }
 ]]></code></program>
@@ -1853,14 +1840,6 @@ void TIM14_IRQHandler(void) {
                     cost?  (<xref ref="subsec-gpio-ref-limits"/> has both
                     halves of the answer if you want to check
                     yourself.)</p></statement>
-                </task>
-                <task xml:id="act-gpio-hw-t3">
-                    <statement><p>Optional housekeeping, nothing to submit: move
-                    <c>pb4_exti_init()</c> — and <c>pc13_exti_init()</c> if you
-                    wrote it — into <c>exti.c</c> and <c>exti.h</c>, with an
-                    include guard, the header in <c>Inc</c> and the source in
-                    <c>Src</c>.  Watch <c>main.c</c> shrink to the part that is
-                    actually about counting.</p></statement>
                 </task>
                 <task xml:id="act-gpio-hw-t4">
                     <statement><p>Also optional, and a head start on Lab 5:
