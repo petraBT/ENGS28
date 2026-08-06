@@ -14,9 +14,9 @@ A map of what was actually built, for judging the pedagogy without reading
 | Chapter | `ch-gpio-interrupts.ptx` | `ch-i2c.ptx` | `ch-i2c.ptx` |
 | Deck | 55 slides, 9 parts | 51 slides, 11 parts | 42 slides, 9 parts |
 | Class length | Tue, **110 min** | Wed x-hour, **50 min** | Thu, **110 min** |
-| Built to | ~65 min — 45 spare | ~64 min — **14 over** | ~65 min — 45 spare |
-| Students **build** | interrupt-driven counter | nothing — wire, flash, **look** | their first device driver |
-| Hands-on block | 13 min | 15 min | 13 min |
+| Built to | ~65 min — 45 spare | **50 min**, rebalanced | **110 min**, rebalanced |
+| Students **build** | interrupt-driven counter | the bytes for one digit | their first device driver |
+| Hands-on block | 13 min | 22 min | 33 min |
 | Inherits from | Day 8, almost entirely | Day 5 (UART), loosely | Day 9x, entirely |
 | Arduino call replaced | `attachInterrupt()` | `Wire.h` | `Adafruit_LEDBackpack.h` |
 
@@ -28,8 +28,9 @@ A map of what was actually built, for judging the pedagogy without reading
 - **Day 9** — every student's own board runs `counterResetButtonInt.c`; a press
   on PB4 resets the counter *immediately*, including during the one-second wait
   the polled version slept through.
-- **Day 9x** — every student captures a real I2C transaction from their own
-  board on the AD2 and marks START / address / R/W / ACK / STOP on it.
+- **Day 9x** — every student's own display shows characters, driven from their
+  own board, and every student has written the two bytes that put one digit
+  there.
 - **Day 10** — every student's four-digit display shows `ES.28`, written from a
   ten-byte buffer through their own `SevenSeg_write()`.
 
@@ -55,33 +56,34 @@ discrimination on `FPIF4` vs `FPIF13`. Homework: modularize into `exti.c/.h`.
 **Arc quality:** the P-5 observe→explain→fix spine is intact and the Part 1
 plant → Part 7 payoff is the strongest structural idea in the week.
 
-## Day 9x — I2C (65 min)
+## Day 9x — I2C (50 min)
+
+Rebalanced by `plans/week5-revision-9x-10.md`: use it Wednesday, build it
+Thursday.
 
 | Part | Content | Mode | Min |
 |---|---|---|---|
 | 1 | 34 LEDs, how many pins? → two wires and a backpack | predict → tell | 4 |
-| 2 | Shared clock vs UART's baud agreement; address shifted left + R/W | explain | 4 |
-| 3 | Protocol in one figure; **worked example is the wrong-address trace** | explain | 5 |
-| 4 | **Wire, flash `pingDisplay.c`, capture, mark your own trace. CRUCIAL.** Checkpoint min 32 | do | 15 |
-| 5 | Debrief the trace; NACK and data-byte tiers | do → explain | 7 |
-| 6a/6b | Five operations a library needs → `Wire.h` is that library; open `i2c1_byteWrite()` | predict → reveal | 8 |
-| 7a/7b | PB8/PB9, AF6, open-drain and why; `I2C_TIMINGR` — **datasheet moment** | explain | 10 |
-| 8 | Seven bits, eight bits — the trap, exercised | do → explain | 4 |
-| 9 | Recap | tell | 2 |
+| 2 | Safety line, wire it, flash given code → **the display shows characters. CRUCIAL (1)** | do | 12 |
+| 3 | *"How did two wires do that?"* — the protocol, and one captured trace | explain + do | 12 |
+| 4 | Which number is on the wire? 7-bit vs 8-bit, **found on their own trace** | do → explain | 8 |
+| 5 | **Write one digit yourself. CRUCIAL (2)** | do | 10 |
+| 6 | Recap; Thursday is the driver | tell | 4 |
 
-## Day 10 — HT16K33 driver (65 min)
+## Day 10 — HT16K33 driver (110 min)
 
 | Part | Content | Mode | Min |
 |---|---|---|---|
 | 1 | Homework review + **the AI critique** (students commit first, then compare) | do | 9 |
-| 2 | Verify the bus still works — flash Thursday's `pingDisplay.c` | do | 3 |
-| 3 | How the display is built: common cathode, multiplexing → therefore a backpack | explain | 6 |
-| 4 | HT16K33 commands **derived from the datasheet** | do → explain | 7 |
-| 5 | Display RAM; **why the always-zero byte must still be sent**; make a pattern | predict → reveal | 8 |
-| 6 | Write one digit | do | 6 |
-| 7 | Firmware layers; what `Adafruit_LEDBackpack.h` did; what writing it buys | explain | 4 |
-| 8 | **`SevenSeg_write()` → `ES.28`. CRUCIAL.** | do | 13 |
-| 9 | Homework; what Lab 5 asks | tell | 4 |
+| 2 | Does the bus still work? Flash Wednesday's program unchanged | do | 3 |
+| 3 | How the display is built + **persistence of vision** | observe → explain | 10 |
+| 4 | HT16K33 commands **derived from the datasheet** | do → explain | 10 |
+| 5 | Display RAM; **why the always-zero byte must still be sent** | predict → reveal | 10 |
+| 6 | **Now the peripheral**: PB8/PB9, AF6, open-drain, `I2C_TIMINGR` — **datasheet moment** | explain | 20 |
+| 7 | The five library operations, derived — then open `i2c1_byteWrite()` | predict → reveal | 12 |
+| 8 | Firmware layers; **write the driver → `ES.28`. CRUCIAL** | do | 25 |
+| 9 | **Break it on purpose** (stretch): a perfect trace and a blank display | do → explain | 8 |
+| 10 | Homework; what Lab 5 asks | tell | 4 |
 
 ---
 
@@ -99,12 +101,12 @@ Week 5    ── all three ─────────────────�
 
 ## Five things worth your judgment
 
-**1. Every day was budgeted to 65 minutes, and only one of the three days is
-65 minutes long.** Tuesdays and Thursdays run 110 minutes; the Wednesday x-hour
-runs 50. So Days 9 and 10 each have roughly 45 minutes of slack, and **Day 9x is
-14 minutes over its hour** — the one place in the week where the clock is a real
-constraint. Day 9's own section is corrected; 9x and 10 still read "65 min" and
-need a pass of their own.
+**1. Every day was budgeted to 65 minutes, and none of the three days is 65
+minutes long.** Tuesdays and Thursdays run 110 minutes; the Wednesday x-hour
+runs 50. So Days 9 and 10 each had roughly 45 minutes of slack, and Day 9x was
+14 minutes over its hour. All three are now corrected: Day 9 in its own
+section, and Days 9x and 10 by `plans/week5-revision-9x-10.md`, which moves the
+peripheral registers off Wednesday and onto Thursday.
 
 **2. Day 9's deck is the densest in the book** — 55 slides, against Day 8's 48.
 Parts 4a/4b/5 are 15 planned minutes carrying 18 slides. With 110 minutes in the
@@ -118,17 +120,19 @@ Tuesday** — and nothing in the repo establishes whether kits go home
 not cover it, and Day 10's crucial step is at risk from a Day 9x hardware
 decision. This is the biggest single structural risk in the week.
 
-**4. Day 9x is the only day where students write no code.** They wire, flash
-given code, and read a trace. That is a defensible design for a protocol day
-and the capture is genuinely hands-on — but it sits in the middle of the week,
-and it means the I2C *peripheral* registers (Parts 7a/7b, 10 min) are taught
-entirely by explanation with nothing built on them until Thursday.
+**4. `i2c1_byteWrite()` cannot report ACK or NACK, and hangs on one.** It
+returns `void`; its `NACKF` test runs about ninety microseconds before the
+device could have failed to answer, so it always passes, and the `TXIS` wait
+after it never ends (RM0490 §23.4.9). So a bus scanner that walks 0x00–0x7F and
+prints what answers **cannot be built on the library students are given** — it
+would stop at the first address nobody claims. Day 9x Part 4 therefore reaches
+the same discovery through the trace, which is what the API does provide, and
+the scanner stays an open request (flag 20).
 
-**5. `SevenSegPartial.h` is missing, so Day 10's skeleton is authored, not
-recovered** (flag 12). The signatures come from your slide 50, but the bodies
-and the `HT16K33_*` constants are used by name and never quoted against a real
-file. B-6 calls invented-but-plausible code the single largest source of error
-in this book, and this is the one place in the week where it applies.
+**5. `SevenSegPartial.h` is no longer missing** (flag 12 resolved).
+`assets/starters/SevenSegPartialORIGINAL.{c,h}` are Petra's own files, and
+every `HT16K33_*` constant and `numbertable[]` entry in the chapter is now
+checked against them. Two differences remain, both listed in the flags below.
 
 ---
 
@@ -137,10 +141,14 @@ in this book, and this is the one place in the week where it applies.
 | # | Blocks | Question |
 |---|---|---|
 | 8 / 11 | a Day 9x safety slide | What actually happens if +V and GND are swapped on the display breakout? |
-| 12 | Day 10's skeleton + a Reference note | The real `SevenSegPartial.h` |
+| 12 | ~~Day 10's skeleton~~ | **Resolved** — `SevenSegPartialORIGINAL.{c,h}` are in `assets/starters/` |
 | 13 | `fig-backpack-pins` caption | Does the kit's backpack arrive with its header soldered? |
 | 14 | all four diagnostic ladders | Are there spare/known-good displays in the room? |
-| 15 | Day 10 Part 2 (see risk 3) | Do students take kits home between 9x and 10? |
+| 15 | ~~Day 10 Part 2~~ | **Resolved** — kits stay in the classroom with evening access |
 | 16 | P-11 citations | HT16K33 datasheet page numbers are unverified — not in the repo |
+| 20 | Day 9x Part 4, and the accelerometer later | May `i2c.c` gain a version of `i2c1_byteWrite()` that reports a NACK instead of hanging? Without one, a bus scanner cannot be written, and it is a technique students would reuse |
+| 21 | Day 10 Part 3 | The persistence-of-vision figure does not exist — see the `<note>` on `subsec-day10-display-hardware` |
+| 22 | Day 10 Part 6 | `SevenSegPartialORIGINAL.c`'s own `SevenSeg_init()` sends `HT16K33_BRIGHT_CMD \| 0x7U`; the chapter and your Day 10 deck both say full brightness, `0xEF`. Which is the one students should end up with? |
+| 23 | the driver prototypes | `SevenSegPartialORIGINAL.h` declares `SevenSeg_number(uint16_t, uint8_t *)`; the chapter followed your deck slide 50 and said `int16_t`. The chapter now follows the header |
 | 2 | Day 9 Part 7 framing | BSRR has no atomic *toggle*, so `ODR ^= LED` in an ISR is not fixed by it — is that the framing you want? |
 | 3 | Lab 5 PDF | §3.3 prototype is `uint16_t *` over `HT16K33_NBUF`; the chapter follows your slides' `uint8_t *` over `2*HT16K33_NBUF` |

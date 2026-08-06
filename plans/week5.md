@@ -156,9 +156,10 @@ Wednesday x-hour and runs **50**; Day N with N even is a Thursday and runs
 cut order below is kept because it is still the right order to shed material in
 if a part overruns, not because the day is over budget.
 
-(For contrast, and not acted on here: **Day 9x is the overcommitted day of the
-week** — 50 minutes available against roughly 64 built.  Its own section still
-says 65 min.)
+(For contrast: **Day 9x is the overcommitted day of the week** — 50 minutes
+available against roughly 64 built.  That, and Day 10's 45 minutes of unused
+slack, are what `plans/week5-revision-9x-10.md` rebalances; the Day 9x and
+Day 10 sections below are superseded by it.)
 
 | Part | Content | Mode | Min |
 | --- | --- | --- | --- |
@@ -488,7 +489,13 @@ For students who are also fast through the back half of the day, Part 8's
 address exercise has a second tier: given a device whose datasheet lists
 `0xE0`, work out both what to `#define` and what the trace will show.
 
-## Activity sequence (65 min)
+## Activity sequence (~64 min built, 50 available — SUPERSEDED)
+
+**Day 9x is a Wednesday x-hour and runs 50 minutes, not 65.**  The table below
+sums to roughly 64, so it is about **14 minutes over**.  It is kept for its
+per-part reasoning; the sequence that is actually built is the six-part one in
+`plans/week5-revision-9x-10.md`, which moves the pins/AF/open-drain beat,
+`I2C_TIMINGR`, the five library operations and `i2c1_byteWrite()` to Day 10.
 
 | Part | Content | Mode | Min |
 | --- | --- | --- | --- |
@@ -630,7 +637,14 @@ the counters — 16-bit unsigned, 8-bit signed with a minus sign, and a `MM:SS`
 clock using the colon.  Petra's note is explicit that Challenge 3 *is* the setup
 for Lab 5, so it is stretch here and homework for everyone.
 
-## Activity sequence (65 min)
+## Activity sequence (~65 min built, 110 available — SUPERSEDED)
+
+**Day 10 is a Thursday and runs 110 minutes, not 65.**  The table below sums to
+roughly 65, so it leaves about **45 minutes unused**.  It is kept for its
+per-part reasoning; the sequence that is actually built is the ten-part one in
+`plans/week5-revision-9x-10.md`, which spends that slack on the peripheral
+registers moved off Wednesday, a persistence-of-vision beat, and a break-it
+stretch.
 
 | Part | Content | Mode | Min |
 | --- | --- | --- | --- |
@@ -1067,12 +1081,9 @@ the UART" is false because PA2/PA3 are not on the Arduino headers at all; and
     buying four or five minutes on the day's bottleneck at no homework cost.
     Not applied.
 
-18. **[CONFIRM — your clock]** Day 10 sums to exactly 65 with one named
-    compression lever (Part 1, 9 → 6).  The recommendation is to name Part 3
-    (6 → 4) as a second, since the reading already covers common cathode and
-    multiplexing and Part 3 opens with a refresher of it.  That would fund a
-    written wrong-answer diagnostic before TODO 4 — the one thing that would test
-    the RAM-map understanding in class rather than in the homework.  Not applied.
+18. **[RESOLVED]** Day 10 sums to exactly 65 against a 110-minute class, so the
+    compression levers this item worried about are not needed and the slack is
+    the thing to spend.  `plans/week5-revision-9x-10.md` spends it.
 
 19. **[MINOR]** Day 9's homework also *required* an LED driven through
     `GPIOA->BSRR`.  Day 10's homework review never mentions it and neither AI
