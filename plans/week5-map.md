@@ -12,7 +12,8 @@ A map of what was actually built, for judging the pedagogy without reading
 |---|---|---|---|
 | Topic | GPIO interrupts (EXTI) | I2C protocol + peripheral | HT16K33 + device driver |
 | Chapter | `ch-gpio-interrupts.ptx` | `ch-i2c.ptx` | `ch-i2c.ptx` |
-| Deck | 55 slides, 9 parts | 51 slides, 11 parts | 42 slides, 9 parts |
+| Pre-class reading | yes | **none — x-day** | the display |
+| Deck | 55 slides, 9 parts | 40 slides, 8 parts | 71 slides, 12 parts |
 | Class length | Tue, **110 min** | Wed x-hour, **50 min** | Thu, **110 min** |
 | Built to | ~65 min — 45 spare | **50 min**, rebalanced | **110 min**, rebalanced |
 | Students **build** | interrupt-driven counter | the bytes for one digit | their first device driver |
@@ -61,14 +62,19 @@ plant → Part 7 payoff is the strongest structural idea in the week.
 Rebalanced by `plans/week5-revision-9x-10.md`: use it Wednesday, build it
 Thursday.
 
+**No pre-class reading** — x-days do not get one, so the protocol is built in
+class in 3a/3b and its written form lives at the head of the Reference section.
+
 | Part | Content | Mode | Min |
 |---|---|---|---|
-| 1 | 34 LEDs, how many pins? → two wires and a backpack | predict → tell | 4 |
+| 1 | 34 LEDs, how many pins? → two wires and a backpack | predict → tell | 3 |
 | 2 | Safety line, wire it, flash given code → **the display shows characters. CRUCIAL (1)** | do | 12 |
-| 3 | *"How did two wires do that?"* — the protocol, and one captured trace | explain + do | 12 |
+| 3a | *"How did two wires do that?"* — shared clock, shared wires, an address | explain | 5 |
+| 3b | **The framing rule and the ACK, built from scratch** → capture your own | explain + do | 8 |
+| 3c | Reading your own trace | explain | 2 |
 | 4 | Which number is on the wire? 7-bit vs 8-bit, **found on their own trace** | do → explain | 8 |
 | 5 | **Write one digit yourself. CRUCIAL (2)** | do | 10 |
-| 6 | Recap; Thursday is the driver | tell | 4 |
+| 6 | Recap; Thursday is the driver | tell | 2 |
 
 ## Day 10 — HT16K33 driver (110 min)
 

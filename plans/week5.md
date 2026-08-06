@@ -565,15 +565,17 @@ skipped; it is the only thing that makes the table make sense.)
 
 ## Hand-offs
 
-**Pre-class: reading only.**  `ch-i2c.ptx`'s existing `sec-i2c-how-it-works` is
-already close to right for this and is the one part of the rough chapter worth
-keeping — Gate 1 verified it is clean of STM32 registers and captured-trace
-description.  It needs voice work and its `fig-i2c-frame-diagram` caption
-checked, not rewriting.  Its three reading questions are sound.
+**Pre-class: NOTHING.  There is no pre-class reading for an x-day** (Petra,
+2026-08-06), which the rest of the book already follows — `ch-debugging.ptx`
+(Day 7x) and `ch-io-datasheets.ptx` (Day 5x) both open straight into their
+in-class section.  So the protocol reading this plan assumed,
+`sec-i2c-how-it-works`, is gone as a reading: the protocol is **built in class**
+in Parts 3a and 3b, and its written form now sits at the head of the chapter's
+Reference section for revisiting.  The chapter's one reading comes between the
+two days and covers the display.
 
-*The reading must not establish:* any STM32 register, the timing values, or
-what a captured trace looks like.  Part 4's "find the START" needs students who
-have read the definition and never seen one.
+That costs about three minutes on the shortest day of the week, taken from
+Parts 1 and 6, because Parts 3a/3b now teach what they used to recall.
 
 **Homework (due Thursday):** none new — Day 9's timer homework is due, and Day
 10 opens by reviewing it.  Deliberate: Day 9x is the heaviest *conceptual* day

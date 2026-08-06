@@ -109,3 +109,38 @@ Settled since: kits stay in the classroom with evening access, so Thursday may
 assume the display is still wired; `SevenSegPartialORIGINAL.{c,h}` is now in
 `assets/starters/`, and confirms `SevenSeg_write(uint8_t *)` with
 `HT16K33_NBUF 5` — so Lab 5 §3.3's `uint16_t *` is the error, not the chapter.
+
+---
+
+## Follow-on: there is no pre-class reading for an x-day
+
+*(Petra, 2026-08-06, after the first pass was built.)*
+
+The part tables above assumed Day 9x could lean on a protocol reading. It cannot:
+**x-days get no reading**, and the reading students do is the one before Day 10.
+`ch-debugging.ptx` (Day 7x) and `ch-io-datasheets.ptx` (Day 5x) already work this
+way — neither has a Before Class section at all.
+
+What changed:
+
+- `sec-i2c-how-it-works` is no longer a reading. Its four subsections moved to
+  the head of the **Reference** section, which is what B-2 prescribes for
+  mechanism that is first encountered in class.
+- `fig-i2c-frame-diagram` moved into Day 9x Part 3b, where it is now taught.
+- Parts 3a and 3b **build** the protocol instead of recalling it: the
+  synchronous argument and the shared bus in 3a, the SDA-changes-only-while-
+  SCL-is-LOW rule, START, STOP and the ACK in 3b.
+- That costs about 3 minutes, so Part 3 goes 12 → 15 and Parts 1 and 6 give up
+  1 and 2. Day 9x sums to exactly 50 with no slack; the cut order is on the
+  opening slide's note.
+- The chapter's one reading, before Day 10, is retitled *The Display, and the
+  Bus You Have Used*. It carries the display material unchanged, and the three
+  protocol reading questions move to it as an after-the-fact check, because
+  Day 10 opens the peripheral and the library and both are hard to follow if
+  START, ACK and STOP are still vague.
+
+**Open for Petra:** the protocol reading questions are the one judgment call
+here. They now sit in the Day 10 reading, checking material students met in
+class rather than in that night's reading. The alternatives were to drop them or
+to leave them stranded in Reference. Say if you would rather they went.
+

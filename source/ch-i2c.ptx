@@ -25,10 +25,13 @@
         <p>
             This chapter covers two class days, and they are arranged the way
             this course usually arranges things: use it first, then build it.
-            The first day is the shorter one, and by the end of its first
-            quarter your own display is showing characters, driven from your own
-            board over two wires.  The rest of that day is spent finding out
-            what those two wires carried, with an oscilloscope on them.
+            The first day is the shorter one, and there is nothing to read
+            before it — by the end of its first quarter your own display is
+            showing characters, driven from your own board over two wires, and
+            the rest of that day is spent working out what those two wires
+            carried, with an oscilloscope on them.  The protocol is built in
+            class, and written out afterwards in
+            <xref ref="sec-i2c-reference"/>.
         </p>
         <p>
             The second day is everything underneath.  At the far end of the bus
@@ -39,7 +42,9 @@
             <term>device driver</term> that turns those datasheet pages into
             four functions the rest of your program can call.  That is the layer
             this course has been handing you all term — <c>uart.c</c>,
-            <c>adc.c</c> — and this is the one you write yourself.
+            <c>adc.c</c> — and this is the one you write yourself.  The
+            chapter's one reading comes between the two days, and covers the
+            display.
         </p>
         <objectives>
             <ul>
@@ -69,326 +74,6 @@
     </introduction>
 
     <!-- ============================================================ -->
-    <section xml:id="sec-i2c-how-it-works">
-        <title>Before Class: How I2C Works</title>
-        <introduction>
-            <p>
-                This reading is about the protocol only — what the two wires
-                carry and why.  No registers, no code, nothing to build.  In
-                class we will put an oscilloscope on the wires and find every
-                part of it in a real transaction, so the job of the reading is
-                to make sure you know what you are looking for.
-            </p>
-        </introduction>
-
-        <subsection xml:id="subsec-i2c-physical-reality">
-            <title>Two Wires, One Shared Bus</title>
-            <p>
-                I2C uses exactly two wires: <term>SCL</term>, the serial clock,
-                and <term>SDA</term>, the serial data line.  Both run the length
-                of the circuit, and every I2C device is connected to both — not
-                by its own pair back to the microcontroller, but tapped onto the
-                same two wires as everything else.  When one device puts a bit
-                on SDA, every device sees it.
-            </p>
-            <p>
-                A shared medium like that is called a <term>bus</term>, and what
-                it buys is that the wire count does not grow.  A display, a
-                temperature sensor and an accelerometer all connect to the same
-                two wires; adding a fourth device adds no wires at all.
-            </p>
-            <p>
-                Both lines idle HIGH, held there by pull-up resistors.  A device
-                can pull a line LOW, and that is the only thing it can actively
-                do: to send a 1 it releases the line and lets the resistor
-                bring it up.  This is called <term>open-drain</term> signaling,
-                and it is what makes a shared wire safe.  If two devices drive
-                SDA at the same time, one pulling LOW and one releasing, nothing
-                is damaged and nothing is ambiguous — the line goes LOW,
-                because a pull-down always wins over a pull-up.  A device that
-                released the line and then reads it LOW can tell that somebody
-                else is holding it down, which turns out to be useful.
-            </p>
-        </subsection>
-
-        <subsection xml:id="subsec-i2c-addressing">
-            <title>Addressing: Who Is Being Called?</title>
-            <p>
-                Because every device hears every bit, the protocol needs a way
-                to reach one device without disturbing the rest.  Every I2C
-                device has a 7-bit <term>address</term>, fixed by its
-                manufacturer and printed in its datasheet.  At the start of
-                every transaction the controller broadcasts that address plus a
-                single read/write bit — eight bits, clocked out one at a time on
-                SDA — and every device on the bus compares the address it hears
-                against its own.
-            </p>
-            <p>
-                The device whose address matches answers by pulling SDA LOW
-                during the ninth clock pulse.  That one-bit reply is the
-                <term>ACK</term>, for acknowledge.  From the controller's side:
-                SDA LOW after the address byte means a device recognized the
-                address and the transaction can go on.  SDA staying HIGH is a
-                <term>NACK</term> — nobody claimed that address, which usually
-                means the address is wrong, the device is unpowered, or a wire
-                is off.
-            </p>
-            <p>
-                Data bytes follow the same way, each one acknowledged by
-                whichever side is receiving: the device for a write, the
-                controller for a read.  A NACK on a data byte tells the sender
-                the receiver could not take it.
-            </p>
-            <p>
-                One device is in charge of all of this.  The
-                <term>controller</term> — our STM32C031C6 — generates the clock,
-                starts every transaction and decides who is being addressed.
-                Everything else on the bus is a <term>target</term>, and a
-                target only ever speaks when spoken to.  (Older documents,
-                including the reference manual's own I2C chapter, use
-                <q>master</q> and <q>slave</q> for these two roles.  The
-                hardware is the same; the words have changed.)
-            </p>
-        </subsection>
-
-        <subsection xml:id="subsec-i2c-start-stop">
-            <title>Framing: START and STOP Conditions</title>
-            <p>
-                SDA is allowed to change only while SCL is LOW.  That is when
-                the receiver is not sampling it; while SCL is HIGH,
-                SDA holds still and is read.  The protocol then takes the one
-                thing that rule forbids and uses it to mark the edges of a
-                transaction, which is why a START can never be mistaken for
-                data.
-            </p>
-            <p>
-                A <term>START condition</term> is SDA going from HIGH to LOW
-                <em>while SCL is HIGH</em>.  It cannot occur during normal data
-                transfer, so every device on the bus recognizes it immediately:
-                a new transaction is beginning.
-            </p>
-            <p>
-                A <term>STOP condition</term> is SDA going from LOW to HIGH
-                while SCL is HIGH.  Also impossible as a data bit, it means the
-                transaction is over and the bus is free.
-            </p>
-            <p>
-                Both are in <xref ref="fig-i2c-frame-diagram"/>.  The SDA
-                transitions at the START and STOP markers happen while SCL is
-                HIGH; every other SDA edge in the diagram happens while SCL is
-                LOW.  That contrast is the whole framing mechanism.
-            </p>
-
-            <figure xml:id="fig-i2c-frame-diagram">
-                <caption>One I2C write transaction.  SCL (top) begins clocking
-                once the START condition has occurred.  SDA (bottom) shows the
-                START — SDA falling while SCL is HIGH — then seven address bits
-                and the R/W bit, which for address 0x70 and a write are
-                1 1 1 0 0 0 0 followed by 0; then the ACK, with the addressed
-                device pulling SDA LOW; then eight data bits, 0xAA = 10101010,
-                most significant bit first; then a second ACK; and finally the
-                STOP, SDA rising while SCL is HIGH.  Receivers sample SDA during
-                the SCL HIGH phase, and SDA may change only while SCL is LOW —
-                the START and STOP conditions being the two deliberate
-                exceptions.</caption>
-                <image source="i2c_transaction.svg" width="100%"/>
-            </figure>
-        </subsection>
-
-        <subsection xml:id="subsec-i2c-synchronous">
-            <title>No Baud Rate: I2C Is Synchronous</title>
-            <p>
-                UART requires both ends to agree on a baud rate in advance
-                (<xref ref="ch-uart"/>).  Nothing on the wire says when a bit
-                begins; the receiver starts a timer at the start bit and samples
-                on its own schedule.  Get the rate wrong at either end and the
-                frame comes out as garbage.
-            </p>
-            <p>
-                I2C removes that agreement by sending the clock.  The controller
-                drives SCL, and everything on the bus reads SDA while SCL is
-                HIGH.  No device has to know in advance how fast the bits will
-                arrive, because the wire tells it.  That is what
-                <term>synchronous</term> means here: the clock is shared, not
-                reconstructed independently at each receiver.  I2C is
-                synchronous; UART is asynchronous.
-            </p>
-            <p>
-                The controller still picks a clock speed, and it has to pick one
-                every device on the bus can follow.  The standard defines
-                100 kHz (Standard mode), 400 kHz (Fast mode) and 1 MHz
-                (Fast-mode Plus); the parts in this course run comfortably at
-                100 kHz and that is what we use.  Adding a new device does not
-                change the timing of any existing one.
-            </p>
-            <p>
-                What synchronous costs is the extra wire for the clock, and the
-                fact that the two wires are shared: only one device may talk at
-                a time, so unlike UART — which has a separate line each way and
-                can send and receive at once — I2C is half duplex.
-            </p>
-        </subsection>
-
-        <reading-questions xml:id="rq-i2c-how-it-works">
-            <exercise xml:id="rq-i2c-bus-listeners">
-                <statement><p>An I2C bus has four devices connected to the same
-                SCL and SDA lines.  The controller sends an address byte of 0x70.
-                How many of the four examine those address bits?</p></statement>
-                <choices randomize="yes">
-                    <choice correct="yes">
-                        <statement><p>All four examine the address; only the one at
-                        address 0x70 responds with ACK.</p></statement>
-                        <feedback><p>Correct.  Because all devices share SDA, every device
-                        sees every bit.  Each one compares the address it hears against
-                        its own; only the matching device pulls SDA LOW for the ACK.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>Only the device at address 0x70 sees the bits;
-                        the others are unaware of the transaction.</p></statement>
-                        <feedback><p>All devices are physically connected to SDA and SCL —
-                        they all receive every bit.  There is no mechanism to hide bits
-                        from particular devices, and none is needed: a device that does not
-                        recognize the address simply stays quiet.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>Two devices are selected at once; the
-                        one with the lower address wins.</p></statement>
-                        <feedback><p>On a correctly configured bus each device has a
-                        distinct address, so only one can match a given address byte.
-                        Parts that ship with the same default address usually have pins
-                        or solder pads for changing a few of its bits — which is exactly
-                        what you would use to avoid this.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>The controller pre-selects one device before sending
-                        the address byte, so only that device responds.</p></statement>
-                        <feedback><p>There is no such pre-selection step.  The address
-                        byte itself is the selection, and every device evaluates it in
-                        parallel.</p></feedback>
-                    </choice>
-                </choices>
-            </exercise>
-
-            <exercise xml:id="rq-i2c-start-unique">
-                <statement><p>What makes a START condition impossible to confuse with
-                a normal data bit?</p></statement>
-                <choices randomize="yes">
-                    <choice correct="yes">
-                        <statement><p>SDA changes while SCL is HIGH; data bits may
-                        change only while SCL is LOW.</p></statement>
-                        <feedback><p>Correct.  The normal rule is that SDA holds still
-                        during the SCL HIGH phase, because that is when the receiver reads
-                        it.  START and STOP deliberately break that rule, so an SDA edge
-                        while SCL is HIGH cannot be a bit value.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>The controller holds SCL LOW for twice as long
-                        before the START condition.</p></statement>
-                        <feedback><p>SCL timing does not change at the START.  What
-                        distinguishes it is SDA changing while SCL is HIGH, not anything
-                        about SCL itself.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>The controller transmits a reserved 0xFF byte
-                        immediately before the START condition.</p></statement>
-                        <feedback><p>No such preamble exists.  START is identified entirely
-                        by the relationship between SDA and SCL.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>SDA is held LOW for at least eight SCL cycles
-                        before data transmission begins.</p></statement>
-                        <feedback><p>SDA falls once, for one transition, at the START.
-                        The key is <em>when</em> SDA changes — while SCL is HIGH — not how
-                        long it stays LOW.</p></feedback>
-                    </choice>
-                </choices>
-            </exercise>
-
-            <exercise xml:id="rq-i2c-nack-meaning">
-                <statement><p>After sending the 7-bit address and the R/W bit, the
-                controller releases SDA and watches it during the ninth SCL pulse.
-                SDA is HIGH during that pulse.  What does this tell the
-                controller?</p></statement>
-                <choices randomize="yes">
-                    <choice correct="yes">
-                        <statement><p>No device recognized the address (NACK) — the
-                        controller should issue a STOP rather than continue.</p></statement>
-                        <feedback><p>Correct.  A matching device would pull SDA LOW.  If SDA
-                        stays HIGH, nobody claimed the address, and the controller ends the
-                        transaction with a STOP to free the bus.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>The transaction completed successfully and the
-                        data was received.</p></statement>
-                        <feedback><p>A successful address phase shows SDA LOW — the device
-                        pulling it down.  SDA HIGH after the address byte means the
-                        opposite: no device answered.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>The device is busy and will pull SDA LOW on the
-                        next SCL pulse, once it is ready.</p></statement>
-                        <feedback><p>A device that needs more time holds <em>SCL</em> LOW,
-                        not SDA — that is called clock stretching, and the ACK still has to
-                        arrive in its own clock pulse.  SDA HIGH during the ninth pulse is
-                        a NACK.</p></feedback>
-                    </choice>
-                    <choice>
-                        <statement><p>Two devices share the same address and are
-                        colliding on SDA, producing an indeterminate voltage.</p></statement>
-                        <feedback><p>If two devices shared an address and both acknowledged,
-                        both would pull SDA LOW and the line would read LOW.  Open-drain
-                        signaling has no indeterminate state.  SDA HIGH means nobody
-                        responded at all.</p></feedback>
-                    </choice>
-                </choices>
-            </exercise>
-        </reading-questions>
-
-        <!--
-        CANVAS QUIZ: "Before class — I2C protocol concepts"
-        (Due 1 hour before class; auto-graded multiple choice; low stakes.)
-        Same concepts as the reading questions above, different scenarios, so
-        the book is not an answer key.
-
-        Q1. Four I2C devices are on one bus at addresses 0x20, 0x48, 0x70 and 0x77.
-            The controller sends an address byte for 0x48. Which statement is true?
-            A) Only the device at 0x48 drives SDA LOW for the ACK.   <- CORRECT
-            B) All four devices drive SDA LOW simultaneously.
-            C) The devices at 0x48 and 0x49 both respond because they differ by one bit.
-            D) No device responds until the controller first sends a "wake" byte.
-
-        Q2. A logic analyzer shows: START; eight bits of address + R/W; SDA HIGH
-            during the ninth SCL pulse; STOP. All devices are powered and the
-            pull-ups are present. Most likely cause?
-            A) The controller sent the wrong I2C address.   <- CORRECT
-            B) The SCL frequency is higher than the device supports.
-            C) The controller should have sent a repeated START.
-            D) The controller forgot the R/W bit before the ACK slot.
-
-        Q3. You add a third device (address 0x1D) to a bus that already has two
-            working devices at 100 kHz. What must change on the existing two?
-            A) Nothing.   <- CORRECT
-            B) Each must be told the new bus speed.
-            C) Their addresses must be incremented to avoid a conflict.
-            D) The pull-ups must be replaced with lower-value resistors.
-
-        Q4. A device uses open-drain signaling on SDA. What does that mean?
-            A) It can pull SDA LOW but cannot drive it HIGH; a pull-up returns the
-               line HIGH when nobody holds it down.   <- CORRECT
-            B) It drives SDA HIGH and LOW at full current, like a push-pull GPIO.
-            C) SDA is always LOW unless the controller raises it with a command.
-            D) It means the device can only receive, never transmit.
-
-        Q5. A controller writes 3 data bytes. The device ACKs bytes 1 and 2 and
-            NACKs byte 3. What should the controller do next?
-            A) Issue a STOP condition to end the transaction.   <- CORRECT
-            B) Re-transmit byte 3 on the next SCL pulse.
-            C) Issue a repeated START and re-send all three bytes.
-            D) Keep sending; a NACK on one byte is not fatal.
-        -->
-    </section>
-
-    <!-- ============================================================ -->
     <section xml:id="sec-i2c-day9x">
         <title>Day 9X In-Class: Two Wires, and a Display That Works</title>
         <introduction>
@@ -402,8 +87,9 @@
                 compound-assigning one bit into it.
             </p>
             <p>
-                This is a 50-minute session and it is arranged around one
-                thing happening early.  In the first twelve minutes you wire a
+                Nothing was assigned to read before today, and nothing needed
+                to be.  This is a 50-minute session and it is arranged around
+                one thing happening early.  In the first twelve minutes you wire a
                 display to two of the Nucleo's pins, flash a program you are
                 given, and read four characters off it.  Everything after that
                 answers the question you now have — <em>how did two wires do
@@ -468,7 +154,8 @@
     </ul>
     <caption>Write both numbers down before we count them together.</caption>
     <note>Equipment today: Nucleo, the display backpack, four jumper wires, and an AD2 per student — Part 3b assumes one instrument each. No components carried over from Day 9.
-    Fifty minutes, and the two beats that cannot be cut are Part 2 (every display lit) and Part 5 (every student has written a digit's bytes). If the hour runs long, cut in this order: the Waveforms decode setup at the end of Part 3c; then Part 4's second tier; then Part 3a's cost-of-sharing bullet.</note>
+    NOTHING WAS ASSIGNED TO READ. The protocol is built from scratch in Parts 3a and 3b; do not open on "as you read last night". The written version goes into the Reference section, and the reading before Thursday covers the display and re-checks the protocol.
+    Fifty minutes and it sums to exactly 50, so there is no slack. The two beats that cannot be cut are Part 2 (every display lit) and Part 5 (every student has written a digit's bytes). If it runs long, cut in this order: the Waveforms decode view at the end of Part 3c; then the paper address exercise in Part 4, which works as self-study because the book gives the answer under it; then Part 3a's third bullet.</note>
 </slide>
 
             <slide xml:id="sl-day9x-count-answer">
@@ -747,10 +434,27 @@ int main(void) {
             <p>
                 Four characters are on your display and two wires put them
                 there.  The rest of the hour is about what those two wires
-                carried, and the reading has most of it: UART needs both ends
-                configured for the same baud rate, because nothing on the wire
-                says where a bit ends; I2C spends a wire on a clock so that no
-                such agreement exists (<xref ref="fig-uart-vs-i2c"/>).
+                carried.  Nothing before today told you; we build it here, and
+                <xref ref="subsec-i2c-physical-reality"/> has the written version
+                for afterwards.
+            </p>
+            <p>
+                Start with the one you have met before.  The UART sends a byte
+                down a wire, and the receiver recovers the bits by starting a
+                timer at the start bit and sampling on a schedule <em>both ends
+                were configured for in advance</em> — the baud rate.  Nothing on
+                the wire says where a bit ends, so get that rate wrong at either
+                end and the frame comes out as garbage.
+            </p>
+            <p>
+                I2C spends a wire to make that agreement go away
+                (<xref ref="fig-uart-vs-i2c"/>).  The controller drives a
+                <term>clock</term> line, <term>SCL</term>, alongside the data
+                line, <term>SDA</term>, and every device on the bus reads SDA
+                while SCL is HIGH.  No device has to know in advance how fast
+                the bits will arrive, because the wire tells it.  That is what
+                <term>synchronous</term> means here: the clock is shared, not
+                reconstructed independently at each receiver.
             </p>
             <figure xml:id="fig-uart-vs-i2c">
                 <caption>UART and I2C compared.  On the left, UART: a separate
@@ -769,24 +473,52 @@ int main(void) {
                 </sidebyside>
             </figure>
             <p>
-                What the reading did not say is what sharing the wires costs.
-                Only one device may talk at a time, so I2C is half duplex where
-                UART is full duplex.  The whole bus runs at one speed, which has
-                to be a speed every device on it can follow.  And since every
-                device hears every bit, each one needs an
-                <term>address</term> — which is what the controller sends first,
-                every single time.  That address is the <c>HT16K33_ADDR</c> you
-                have just flashed, and it is the first thing you will find on
-                the wire.
+                The other half of the difference is that the two wires are
+                <term>shared</term>.  Every I2C device is tapped onto the same
+                SDA and the same SCL, which is what a <term>bus</term> is, and
+                what it buys is that the wire count does not grow: a display, a
+                temperature sensor and an accelerometer all connect to the same
+                two wires.  Both lines idle HIGH, held there by pull-up
+                resistors — the ones already on your backpack — and a device can
+                only ever pull a line LOW.  To send a 1 it releases the line and
+                lets the resistor bring it up.
+            </p>
+            <p>
+                Three things follow from sharing, and you will see all three
+                before the hour is out.  Only one device may talk at a time, so
+                I2C is <term>half duplex</term> where UART is full duplex.  The
+                whole bus runs at one speed, which has to be a speed every
+                device on it can follow.  And because every device hears every
+                bit, each one needs an <term>address</term> — which is what the
+                controller sends first, every single time.  One device is in
+                charge of all of this: the <term>controller</term>, our
+                STM32C031C6, which generates the clock and starts every
+                transaction.  Everything else is a <term>target</term>, and a
+                target only speaks when spoken to.
+            </p>
+            <p>
+                That address is the <c>HT16K33_ADDR</c> you have just flashed,
+                and it is the first thing you will find on the wire.
             </p>
 
             <slide xml:id="sl-day9x-uart-i2c" ref="fig-uart-vs-i2c" stack="yes">
     <ul>
-        <li>The UART sent a byte down one wire and the receiver recovered the bits by starting a timer at the start bit and sampling on a schedule <term>both sides agreed on in advance</term> &#8212; the baud rate. Nothing on the wire says where a bit ends.</li>
-        <li>I2C spends a wire to make that go away: the controller drives a <term>clock</term> line, SCL, next to the data line, and every receiver samples SDA while SCL is HIGH. There is no agreement left to get wrong.</li>
-        <li>Three things follow from sharing the wires. Only one device may talk at a time, so I2C is <term>half duplex</term> where UART is full duplex. The whole bus runs at one speed, which every device on it has to be able to follow. And since every device hears every bit, each one needs an <term>address</term>.</li>
+        <li>The UART sent a byte down one wire, and the receiver recovered the bits by sampling on a schedule <term>both ends were configured for in advance</term> &#8212; the baud rate. Nothing on the wire says where a bit ends.</li>
+        <li>I2C spends a wire to make that agreement go away: the controller drives a <term>clock</term> line, SCL, alongside the data line, SDA, and every device reads SDA while SCL is HIGH. <term>Synchronous</term> means the clock is shared rather than reconstructed at each receiver.</li>
+        <li>And the two wires are <term>shared</term>. Every device taps onto the same pair &#8212; that is a <term>bus</term> &#8212; so adding a device adds no wires. Both lines idle HIGH on pull-ups (yours are on the backpack), and a device can only pull LOW: to send a 1 it lets go.</li>
     </ul>
     <caption>Left: a pair of wires per device, no clock. Right: two wires for everybody, and a clock.</caption>
+</slide>
+
+            <slide xml:id="sl-day9x-sharing-costs">
+    <p><term>Three things follow from sharing the wires</term>, and all three turn up before the hour is out.</p>
+    <ul>
+        <li>Only one device may talk at a time, so I2C is <term>half duplex</term> where UART is full duplex.</li>
+        <li>The whole bus runs at <term>one speed</term>, which has to be a speed every device on it can follow. Ours is 100 kHz.</li>
+        <li>Every device hears every bit, so each one needs an <term>address</term> &#8212; and that is what the controller sends first, every single time. Yours is the <c>HT16K33_ADDR</c> you flashed ten minutes ago.</li>
+        <li>One device is in charge: the <term>controller</term>, our STM32C031C6, which generates the clock and starts every transaction. Everything else is a <term>target</term>, and a target only speaks when spoken to.</li>
+    </ul>
+    <note>Older documents, including RM0490's own I2C chapter, say "master" and "slave" for these two. Worth saying once — the hardware is the same, the words have changed, and they will meet the old pair in the manual.</note>
 </slide>
 
         </subsection>
@@ -794,13 +526,52 @@ int main(void) {
         <subsection xml:id="subsec-day9x-protocol">
             <title>Part 3b: One Transaction, Measured</title>
             <p>
-                <xref ref="fig-i2c-frame-diagram"/> from the reading is the
-                whole protocol in one picture: START, seven address bits, the
-                R/W bit, ACK, a data byte, ACK, STOP.  The rule that holds it
-                together is that SDA changes only while SCL is LOW, which leaves
-                <q>SDA changed while SCL was HIGH</q> free to mean something
-                else — the beginning and the end.
+                So the controller sends an address, and one device answers.  How
+                does either end know where a transaction begins, or which of the
+                bits flying past is the first one?
             </p>
+            <p>
+                There is one rule, and everything else follows from it.
+                <term>SDA is allowed to change only while SCL is LOW.</term>
+                That is when no receiver is sampling it; while SCL is HIGH, SDA
+                holds still and is read.  The protocol then takes the one thing
+                that rule forbids and uses it to mark the edges of a
+                transaction.  A <term>START condition</term> is SDA going HIGH to
+                LOW <em>while SCL is HIGH</em>; a <term>STOP condition</term> is
+                SDA going LOW to HIGH while SCL is HIGH.  Neither can occur
+                during normal data transfer, so neither can be mistaken for a
+                bit, and every device on the bus recognizes them immediately.
+            </p>
+            <p>
+                One more piece, and it is the only moment in a transaction where
+                the wire changes hands.  After the eight bits of the address the
+                controller lets go of SDA and keeps clocking, and the device
+                whose address matched pulls SDA LOW for that ninth pulse.  That
+                one-bit reply is the <term>ACK</term>.  SDA staying HIGH is a
+                <term>NACK</term> — nobody claimed that address — and every data
+                byte after the address is acknowledged the same way, by whichever
+                side is receiving.
+            </p>
+            <p>
+                <xref ref="fig-i2c-frame-diagram"/> is the whole of it in one
+                picture: START, seven address bits, the R/W bit, ACK, a data
+                byte, ACK, STOP.
+            </p>
+            <figure xml:id="fig-i2c-frame-diagram">
+                <caption>One I2C write transaction.  SCL (top) begins clocking
+                once the START condition has occurred.  SDA (bottom) shows the
+                START — SDA falling while SCL is HIGH — then seven address bits
+                and the R/W bit, which for address 0x70 and a write are
+                1 1 1 0 0 0 0 followed by 0; then the ACK, with the addressed
+                device pulling SDA LOW; then eight data bits, 0xAA = 10101010,
+                most significant bit first; then a second ACK; and finally the
+                STOP, SDA rising while SCL is HIGH.  Receivers sample SDA during
+                the SCL HIGH phase, and SDA may change only while SCL is LOW —
+                the START and STOP conditions being the two deliberate
+                exceptions.</caption>
+                <image source="i2c_transaction.svg" width="100%"/>
+            </figure>
+
             <p>
                 The loop in <c>helloDisplay.c</c> is putting one of those on the
                 wire four times a second, so all six parts of that diagram are
@@ -859,9 +630,27 @@ int main(void) {
                 single sweep again.  Nothing there is a wiring problem, and the
                 display staying lit is the proof.
             </p>
+            <slide xml:id="sl-day9x-framing">
+    <p><term>One rule, and everything else follows from it.</term></p>
+    <program language="c"><code><![CDATA[
+    SDA may change ONLY while SCL is LOW.
+       ... while SCL is HIGH, SDA holds still and is read.
+
+    So an SDA edge while SCL is HIGH cannot be a data bit:
+
+       START  =  SDA goes HIGH -> LOW   while SCL is HIGH
+       STOP   =  SDA goes LOW  -> HIGH  while SCL is HIGH
+]]></code></program>
+    <ul>
+        <li>Neither can occur during normal data transfer, so neither can be mistaken for a bit, and <term>every device on the bus recognizes them immediately</term>.</li>
+        <li>And one more piece, the only moment where the wire changes hands: after the eight address bits the controller <term>lets go</term> of SDA and keeps clocking, and the device whose address matched pulls SDA LOW for that ninth pulse. That is the <term>ACK</term>.</li>
+        <li>SDA staying HIGH on the ninth pulse is a <term>NACK</term>: nobody claimed that address. Every data byte after the address is acknowledged the same way, by whichever side is receiving.</li>
+    </ul>
+</slide>
+
             <slide xml:id="sl-day9x-protocol" ref="fig-i2c-frame-diagram">
     <caption>The rule that holds it together: SDA changes only while SCL is LOW — which leaves "SDA changed while SCL was HIGH" free to mean the beginning and the end.</caption>
-    <note>From the reading. Thirty seconds: name START, address, R/W, ACK, data, STOP. Do not walk it bit by bit — they are about to find every one of them on their own screen.</note>
+    <note>Name each field once — START, address, R/W, ACK, data, STOP — and do not walk it bit by bit; they are about to find every one of them on their own screen. The rule to say out loud is the one on the previous slide: SDA changes only while SCL is LOW, which is what leaves START and STOP free to mean something else.</note>
 </slide>
 
             <slide xml:id="sl-day9x-trigger">
@@ -1352,12 +1141,27 @@ on the wire:      1 1 1 0 0 0 0    0
 
     <!-- ============================================================ -->
     <section xml:id="sec-display-before-class">
-        <title>Before Class: The Display and Its Controller</title>
+        <title>Before Class: The Display, and the Bus You Have Used</title>
         <introduction>
             <p>
-                Short reading, and about the display rather than the bus.  In
-                class we take the datasheet apart and write the driver; this is
-                so that the shape of the problem is already familiar when we do.
+                This is the chapter's one reading, and it comes after a class
+                rather than before one.  It has two jobs.  The first is the
+                display itself — the thing at the far end of the two wires,
+                which the next class takes apart and writes a driver for, and
+                which nothing so far has explained.  That is what the two
+                subsections below are.
+            </p>
+            <p>
+                The second is to consolidate the protocol you worked out on an
+                oscilloscope in class.  There is nothing new in it, and you do
+                not need to read it again if it stuck — but the reading
+                questions cover it as well as the display, because the next
+                class opens the peripheral and the library that produce it, and
+                both are much harder to follow if START, ACK and STOP are still
+                vague.  The written version is at the top of the
+                <xref ref="sec-i2c-reference"/> section: four short
+                subsections, beginning with
+                <xref ref="subsec-i2c-physical-reality"/>.
             </p>
         </introduction>
 
@@ -1426,6 +1230,122 @@ on the wire:      1 1 1 0 0 0 0    0
                 write the code that says it.
             </p>
         </subsection>
+
+        <reading-questions xml:id="rq-i2c-how-it-works">
+            <exercise xml:id="rq-i2c-bus-listeners">
+                <statement><p>An I2C bus has four devices connected to the same
+                SCL and SDA lines.  The controller sends an address byte of 0x70.
+                How many of the four examine those address bits?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>All four examine the address; only the one at
+                        address 0x70 responds with ACK.</p></statement>
+                        <feedback><p>Correct.  Because all devices share SDA, every device
+                        sees every bit.  Each one compares the address it hears against
+                        its own; only the matching device pulls SDA LOW for the ACK.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Only the device at address 0x70 sees the bits;
+                        the others are unaware of the transaction.</p></statement>
+                        <feedback><p>All devices are physically connected to SDA and SCL —
+                        they all receive every bit.  There is no mechanism to hide bits
+                        from particular devices, and none is needed: a device that does not
+                        recognize the address simply stays quiet.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Two devices are selected at once; the
+                        one with the lower address wins.</p></statement>
+                        <feedback><p>On a correctly configured bus each device has a
+                        distinct address, so only one can match a given address byte.
+                        Parts that ship with the same default address usually have pins
+                        or solder pads for changing a few of its bits — which is exactly
+                        what you would use to avoid this.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The controller pre-selects one device before sending
+                        the address byte, so only that device responds.</p></statement>
+                        <feedback><p>There is no such pre-selection step.  The address
+                        byte itself is the selection, and every device evaluates it in
+                        parallel.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-i2c-start-unique">
+                <statement><p>What makes a START condition impossible to confuse with
+                a normal data bit?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>SDA changes while SCL is HIGH; data bits may
+                        change only while SCL is LOW.</p></statement>
+                        <feedback><p>Correct.  The normal rule is that SDA holds still
+                        during the SCL HIGH phase, because that is when the receiver reads
+                        it.  START and STOP deliberately break that rule, so an SDA edge
+                        while SCL is HIGH cannot be a bit value.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The controller holds SCL LOW for twice as long
+                        before the START condition.</p></statement>
+                        <feedback><p>SCL timing does not change at the START.  What
+                        distinguishes it is SDA changing while SCL is HIGH, not anything
+                        about SCL itself.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The controller transmits a reserved 0xFF byte
+                        immediately before the START condition.</p></statement>
+                        <feedback><p>No such preamble exists.  START is identified entirely
+                        by the relationship between SDA and SCL.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>SDA is held LOW for at least eight SCL cycles
+                        before data transmission begins.</p></statement>
+                        <feedback><p>SDA falls once, for one transition, at the START.
+                        The key is <em>when</em> SDA changes — while SCL is HIGH — not how
+                        long it stays LOW.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-i2c-nack-meaning">
+                <statement><p>After sending the 7-bit address and the R/W bit, the
+                controller releases SDA and watches it during the ninth SCL pulse.
+                SDA is HIGH during that pulse.  What does this tell the
+                controller?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>No device recognized the address (NACK) — the
+                        controller should issue a STOP rather than continue.</p></statement>
+                        <feedback><p>Correct.  A matching device would pull SDA LOW.  If SDA
+                        stays HIGH, nobody claimed the address, and the controller ends the
+                        transaction with a STOP to free the bus.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The transaction completed successfully and the
+                        data was received.</p></statement>
+                        <feedback><p>A successful address phase shows SDA LOW — the device
+                        pulling it down.  SDA HIGH after the address byte means the
+                        opposite: no device answered.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The device is busy and will pull SDA LOW on the
+                        next SCL pulse, once it is ready.</p></statement>
+                        <feedback><p>A device that needs more time holds <em>SCL</em> LOW,
+                        not SDA — that is called clock stretching, and the ACK still has to
+                        arrive in its own clock pulse.  SDA HIGH during the ninth pulse is
+                        a NACK.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Two devices share the same address and are
+                        colliding on SDA, producing an indeterminate voltage.</p></statement>
+                        <feedback><p>If two devices shared an address and both acknowledged,
+                        both would pull SDA LOW and the line would read LOW.  Open-drain
+                        signaling has no indeterminate state.  SDA HIGH means nobody
+                        responded at all.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
 
         <reading-questions xml:id="rq-display-hardware">
             <exercise xml:id="rq-display-why-multiplex">
@@ -1561,6 +1481,53 @@ on the wire:      1 1 1 0 0 0 0    0
         </reading-questions>
     </section>
 
+        <!--
+        CANVAS QUIZ: "Before class — I2C protocol concepts"
+        (Due 1 hour before the SECOND of the two class days; auto-graded multiple
+        choice; low stakes.)  Same concepts as the reading questions above,
+        different scenarios, so the book is not an answer key.
+
+        NOTE: this quiz used to sit before the x-hour, when the protocol was a
+        pre-class reading.  There is no reading before an x-hour, so the
+        protocol is now taught in class on that day and this quiz checks it
+        afterwards, alongside the display reading.
+
+        Q1. Four I2C devices are on one bus at addresses 0x20, 0x48, 0x70 and 0x77.
+            The controller sends an address byte for 0x48. Which statement is true?
+            A) Only the device at 0x48 drives SDA LOW for the ACK.   <- CORRECT
+            B) All four devices drive SDA LOW simultaneously.
+            C) The devices at 0x48 and 0x49 both respond because they differ by one bit.
+            D) No device responds until the controller first sends a "wake" byte.
+
+        Q2. A logic analyzer shows: START; eight bits of address + R/W; SDA HIGH
+            during the ninth SCL pulse; STOP. All devices are powered and the
+            pull-ups are present. Most likely cause?
+            A) The controller sent the wrong I2C address.   <- CORRECT
+            B) The SCL frequency is higher than the device supports.
+            C) The controller should have sent a repeated START.
+            D) The controller forgot the R/W bit before the ACK slot.
+
+        Q3. You add a third device (address 0x1D) to a bus that already has two
+            working devices at 100 kHz. What must change on the existing two?
+            A) Nothing.   <- CORRECT
+            B) Each must be told the new bus speed.
+            C) Their addresses must be incremented to avoid a conflict.
+            D) The pull-ups must be replaced with lower-value resistors.
+
+        Q4. A device uses open-drain signaling on SDA. What does that mean?
+            A) It can pull SDA LOW but cannot drive it HIGH; a pull-up returns the
+               line HIGH when nobody holds it down.   <- CORRECT
+            B) It drives SDA HIGH and LOW at full current, like a push-pull GPIO.
+            C) SDA is always LOW unless the controller raises it with a command.
+            D) It means the device can only receive, never transmit.
+
+        Q5. A controller writes 3 data bytes. The device ACKs bytes 1 and 2 and
+            NACKs byte 3. What should the controller do next?
+            A) Issue a STOP condition to end the transaction.   <- CORRECT
+            B) Re-transmit byte 3 on the next SCL pulse.
+            C) Issue a repeated START and re-send all three bytes.
+            D) Keep sending; a NACK on one byte is not fatal.
+        -->
     <!-- ============================================================ -->
     <section xml:id="sec-i2c-day10">
         <title>Day 10 In-Class: The HT16K33 and Its Device Driver</title>
@@ -3770,15 +3737,149 @@ void SevenSeg_write(uint8_t *display_buffer) {
 
     <!-- ============================================================ -->
     <section xml:id="sec-i2c-reference">
-        <title>Reference: The I2C Peripheral, and the HT16K33</title>
+        <title>Reference: The Protocol, the I2C Peripheral, and the HT16K33</title>
         <introduction>
             <p>
                 Lookup material for the two class days.  Nothing here is new;
                 it is the same information arranged for the moment you come back
-                needing one fact, plus the three things the hours did not have
-                room for.
+                needing one fact, plus the things the hours did not have room
+                for.  It opens with the protocol in full — the written version of
+                what the first of the two days works through on an
+                oscilloscope — because that is the part you are most likely to
+                come back to.
             </p>
         </introduction>
+
+        <subsection xml:id="subsec-i2c-physical-reality">
+            <title>The Protocol: Two Wires, One Shared Bus</title>
+            <p>
+                I2C uses exactly two wires: <term>SCL</term>, the serial clock,
+                and <term>SDA</term>, the serial data line.  Both run the length
+                of the circuit, and every I2C device is connected to both — not
+                by its own pair back to the microcontroller, but tapped onto the
+                same two wires as everything else.  When one device puts a bit
+                on SDA, every device sees it.
+            </p>
+            <p>
+                A shared medium like that is called a <term>bus</term>, and what
+                it buys is that the wire count does not grow.  A display, a
+                temperature sensor and an accelerometer all connect to the same
+                two wires; adding a fourth device adds no wires at all.
+            </p>
+            <p>
+                Both lines idle HIGH, held there by pull-up resistors.  A device
+                can pull a line LOW, and that is the only thing it can actively
+                do: to send a 1 it releases the line and lets the resistor
+                bring it up.  This is called <term>open-drain</term> signaling,
+                and it is what makes a shared wire safe.  If two devices drive
+                SDA at the same time, one pulling LOW and one releasing, nothing
+                is damaged and nothing is ambiguous — the line goes LOW,
+                because a pull-down always wins over a pull-up.  A device that
+                released the line and then reads it LOW can tell that somebody
+                else is holding it down, which turns out to be useful.
+            </p>
+        </subsection>
+        <subsection xml:id="subsec-i2c-addressing">
+            <title>The Protocol: Addressing, and the ACK</title>
+            <p>
+                Because every device hears every bit, the protocol needs a way
+                to reach one device without disturbing the rest.  Every I2C
+                device has a 7-bit <term>address</term>, fixed by its
+                manufacturer and printed in its datasheet.  At the start of
+                every transaction the controller broadcasts that address plus a
+                single read/write bit — eight bits, clocked out one at a time on
+                SDA — and every device on the bus compares the address it hears
+                against its own.
+            </p>
+            <p>
+                The device whose address matches answers by pulling SDA LOW
+                during the ninth clock pulse.  That one-bit reply is the
+                <term>ACK</term>, for acknowledge.  From the controller's side:
+                SDA LOW after the address byte means a device recognized the
+                address and the transaction can go on.  SDA staying HIGH is a
+                <term>NACK</term> — nobody claimed that address, which usually
+                means the address is wrong, the device is unpowered, or a wire
+                is off.
+            </p>
+            <p>
+                Data bytes follow the same way, each one acknowledged by
+                whichever side is receiving: the device for a write, the
+                controller for a read.  A NACK on a data byte tells the sender
+                the receiver could not take it.
+            </p>
+            <p>
+                One device is in charge of all of this.  The
+                <term>controller</term> — our STM32C031C6 — generates the clock,
+                starts every transaction and decides who is being addressed.
+                Everything else on the bus is a <term>target</term>, and a
+                target only ever speaks when spoken to.  (Older documents,
+                including the reference manual's own I2C chapter, use
+                <q>master</q> and <q>slave</q> for these two roles.  The
+                hardware is the same; the words have changed.)
+            </p>
+        </subsection>
+        <subsection xml:id="subsec-i2c-start-stop">
+            <title>The Protocol: START and STOP Conditions</title>
+            <p>
+                SDA is allowed to change only while SCL is LOW.  That is when
+                the receiver is not sampling it; while SCL is HIGH,
+                SDA holds still and is read.  The protocol then takes the one
+                thing that rule forbids and uses it to mark the edges of a
+                transaction, which is why a START can never be mistaken for
+                data.
+            </p>
+            <p>
+                A <term>START condition</term> is SDA going from HIGH to LOW
+                <em>while SCL is HIGH</em>.  It cannot occur during normal data
+                transfer, so every device on the bus recognizes it immediately:
+                a new transaction is beginning.
+            </p>
+            <p>
+                A <term>STOP condition</term> is SDA going from LOW to HIGH
+                while SCL is HIGH.  Also impossible as a data bit, it means the
+                transaction is over and the bus is free.
+            </p>
+            <p>
+                Both are in <xref ref="fig-i2c-frame-diagram"/>.  The SDA
+                transitions at the START and STOP markers happen while SCL is
+                HIGH; every other SDA edge in the diagram happens while SCL is
+                LOW.  That contrast is the whole framing mechanism.
+            </p>
+
+        </subsection>
+        <subsection xml:id="subsec-i2c-synchronous">
+            <title>The Protocol: Why There Is No Baud Rate</title>
+            <p>
+                UART requires both ends to agree on a baud rate in advance
+                (<xref ref="ch-uart"/>).  Nothing on the wire says when a bit
+                begins; the receiver starts a timer at the start bit and samples
+                on its own schedule.  Get the rate wrong at either end and the
+                frame comes out as garbage.
+            </p>
+            <p>
+                I2C removes that agreement by sending the clock.  The controller
+                drives SCL, and everything on the bus reads SDA while SCL is
+                HIGH.  No device has to know in advance how fast the bits will
+                arrive, because the wire tells it.  That is what
+                <term>synchronous</term> means here: the clock is shared, not
+                reconstructed independently at each receiver.  I2C is
+                synchronous; UART is asynchronous.
+            </p>
+            <p>
+                The controller still picks a clock speed, and it has to pick one
+                every device on the bus can follow.  The standard defines
+                100 kHz (Standard mode), 400 kHz (Fast mode) and 1 MHz
+                (Fast-mode Plus); the parts in this course run comfortably at
+                100 kHz and that is what we use.  Adding a new device does not
+                change the timing of any existing one.
+            </p>
+            <p>
+                What synchronous costs is the extra wire for the clock, and the
+                fact that the two wires are shared: only one device may talk at
+                a time, so unlike UART — which has a separate line each way and
+                can send and receive at once — I2C is half duplex.
+            </p>
+        </subsection>
 
         <subsection xml:id="subsec-i2c-ref-registers">
             <title>Register Summary</title>
