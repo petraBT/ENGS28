@@ -179,6 +179,21 @@ Fix everything here — the committee's time should go to teaching, not typos.
 wrong picture: a slide often carries several, and the largest is not always the one
 the caption describes. Render each and check it shows what you claimed:
 
+It fails in two further ways, both found on Day 9's EXTI signal-path figure and
+both invisible unless you look:
+
+- **It crops to one picture and drops the rest of the slide.** That figure's
+  blue path ends at the NVIC, inside a Cortex-M0+ box Petra had drawn *below*
+  the picture. The script kept the picture and discarded the box, so the
+  diagram's destination simply did not exist — and no amount of fixing arrows
+  recovers something that was cropped away.
+- **It gets arrow directions wrong.** Two arrows came out reversed, one of them
+  pointing back into the multiplexer.
+
+When a rebuilt figure disagrees with the original, **ask for the original**
+(P-12) rather than patching the composite. Two rounds of arrow-patching on this
+one figure fixed nothing, because the real defect was the crop.
+
 ```bash
 qlmanage -t -s 900 -o /tmp assets/images/DayNN-Name/fig.svg
 ```
