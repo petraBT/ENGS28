@@ -503,9 +503,9 @@ while(1) {
                 A tap-and-hold works every time; a short tap works only if you
                 are lucky enough to still be holding the button at the instant
                 the loop reaches its one read of <c>GPIOB-&gt;IDR</c>.  The
-                program spends 999-and-a-bit milliseconds of every second
-                inside <c>delay_ms()</c> and one moment looking at the pin.
-                Everything that happens in between is invisible to it.
+                program spends 1 second
+                inside <c>delay_ms()</c> followed by one moment looking at the pin.
+                Everything that happens during the 1 second delay is invisible to it.
             </p>
         </subsection>
 
@@ -697,7 +697,7 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
     <note>Petra's own running device. Comes back at the top of Part 5 with 1–5 ticked, before the handler. Do not carry it into Part 6 — the ladder owns that screen.</note>
 </slide>
 
-            <slide xml:id="sl-day9-exticr-generic" ref="fig-exticr2-portb" stack="yes">
+            <slide xml:id="sl-day9-exticr-generic">
     <p><term>Which port is on a line is set in <c>EXTI_EXTICRx</c>.</term> Four registers cover the sixteen lines, four lines to a register &#8212; so line EXTI4 is in the second one, <c>EXTI_EXTICR2</c>, one byte per line:</p>
     <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
         <col width="28%"/><col width="18%"/><col width="18%"/><col width="18%"/><col width="18%"/>
@@ -709,10 +709,9 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
         </row>
     </tabular>
     <ul>
-        <li>Each byte holds a <term>port code</term>: PA 0x00, PB 0x01, PC 0x02, PD 0x03, PF 0x05. (0x04 is reserved &#8212; no STM32C0 has a port E.)</li>
-        <li>So PB4 on line EXTI4 means writing <c>0x01</c> into the <term>lowest byte</term> of <c>EXTI_EXTICR2</c>.</li>
+        <li>So line EXTI4 is the <term>lowest byte</term> of <c>EXTI_EXTICR2</c>.</li>
+        <li>Each byte holds a <term>port code</term> &#8212; a number saying which port drives that line. The reference manual lists them, and finding the one for port B is the next task.</li>
     </ul>
-    <caption>Port B's code, 0x01, in the EXTI4 field: bit 0 set, the other seven clear.</caption>
 </slide>
 
             <activity xml:id="act-gpio-exticr-lookup">
@@ -724,12 +723,6 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
                         Everything below is on that page.
                     </p>
                 </introduction>
-                <task xml:id="act-gpio-exticr-t1">
-                    <statement><p>Find the four fields of
-                    <c>EXTI_EXTICR2</c>.  Which line does each one control, and
-                    which byte of the register belongs to line
-                    EXTI4?</p></statement>
-                </task>
                 <task xml:id="act-gpio-exticr-t2">
                     <statement><p>The same page lists the code for each port.
                     What value selects port B?  What would select port C, and
@@ -773,8 +766,8 @@ EXTI->EXTICR[1] &= ~EXTI_EXTICR2_EXTI4_Msk;             // clear the EXTI4 field
 EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
 ]]></code></program>
 
-            <slide xml:id="sl-day9-exticr-answer">
-    <p><term>The one that catches people: the array index.</term></p>
+            <slide xml:id="sl-day9-exticr-answer" ref="fig-exticr2-portb" stack="yes">
+    <p><term>Port B is 0x01</term> &#8212; PA 0x00, PB 0x01, PC 0x02, PD 0x03, PF 0x05, with 0x04 reserved because no STM32C0 has a port E. And then the one that catches people:</p>
     <ul>
         <li>The reference manual numbers its four registers <c>EXTI_EXTICR1</c> to <c>EXTI_EXTICR4</c>. The device header declares them as one C array, <c>EXTI-&gt;EXTICR[ ]</c>.</li>
         <li>C numbers array elements from 0, so <c>EXTI_EXTICR1</c> to <c>EXTI_EXTICR4</c> are <c>EXTI-&gt;EXTICR[0]</c> to <c>EXTI-&gt;EXTICR[3]</c>.</li>
@@ -1209,7 +1202,7 @@ int main(void) {
     return 1;
 }
 ]]></code></program>
-    <caption><term>TODO 1</term>: the four steps, in <c>pb4_exti_init()</c>. <term>TODO 2</term>: the ISR, named from Table 40. Swap the build first — two main()s cannot coexist.</caption>
+    <caption>Swap the build before you start — two <c>main()</c>s cannot coexist in one project.</caption>
 </slide>
 
             <activity xml:id="act-gpio-interrupt">
@@ -1814,7 +1807,7 @@ void TIM14_IRQHandler(void) {
                 <title>Homework: counterResetButtonIntTimer.c</title>
                 <introduction>
                     <p>
-                        Due at the start of next class, uploaded to Canvas.
+                        Due on Thursday, uploaded to Canvas.
                     </p>
                 </introduction>
                 <task xml:id="act-gpio-hw-t1">
