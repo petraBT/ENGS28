@@ -11,7 +11,10 @@ you go.
 ## Your task
 
 Restructure **Day 9x** and **Day 10** (I2C and the seven-segment display) to a
-shape Petra has already approved.
+shape Petra has already approved — and **redesign how the display and I2C are
+introduced**, which she is not happy with and has asked for new ideas on. See
+"The part that needs actual design work" below; it is the most important
+section of this brief.
 
 **Your files:** `source/ch-i2c.ptx`, `assets/decks/day9x.json`,
 `assets/decks/day10.json`. Day 9 (`ch-gpio-interrupts.ptx`, `day9.json`) is
@@ -46,6 +49,62 @@ minutes.** The plan's 65 for both is wrong; Day 9x is ~14 min over and Day 10
 ~45 under. Correct those claims in `plans/week5.md` and `plans/week5-map.md` as
 part of your work (Day 9's own numbers are already fixed).
 
+## The part that needs actual design work
+
+The revision doc fixes the *shape* of the two days. It does not fix the two
+things Petra is least happy with, and **she has explicitly asked for new ideas
+here rather than a faithful transcription**:
+
+1. **How the seven-segment display is introduced.** Right now it is explained
+   at students — common cathode, 34 LEDs on 14 wires, multiplexing, therefore a
+   backpack — and they do not touch it until Thursday's driver. She wants this
+   *hands-on*, and Thursday has ~45 spare minutes to spend on it.
+2. **How I2C is introduced.** Same problem: the protocol arrives as theory
+   before anything works.
+
+Treat these as design problems with a brief, not as text to reword. **Propose
+what you think is best, say why, and flag anything you are unsure of** — do not
+silently pick one and bury the alternatives.
+
+The criteria a good answer meets, in priority order:
+
+- **Something visible happens early.** The display should be lit within the
+  first ~12 minutes of Wednesday, not at the end of Thursday.
+- **Students do, before they are told.** P-5 observe → explain → fix. The
+  explanation should answer a question they now have.
+- **The load lands on the long day.** Wednesday is 50 minutes; Thursday is 110.
+- **Nothing is invented.** Constants from `SevenSegPartialORIGINAL.*`, protocol
+  facts from the old decks or RM0490, and no HT16K33 datasheet page numbers at
+  all (that datasheet is not in the repo).
+
+Ideas already on the table, from Petra's conversation — use, improve, or
+replace them, but do not ignore them without saying why:
+
+- **Lead with a lit display**, and let the captured trace answer *"how did two
+  wires do that?"*, rather than making the trace the point.
+- **A bus scanner** instead of a ping: walk 0x00–0x7F, print what ACKs, so
+  students *discover* `0x70` — and the wire showing `0xE0` makes the
+  7-bit/8-bit trap a discovery rather than a telling. It is also a technique
+  they will reuse on the accelerometer.
+- **Unplugged I2C**: two students are SDA and SCL holding cards up and down,
+  the class decodes START / address / ACK / STOP. Costs no hardware time, which
+  is what the 50-minute day is short of. There is precedent in this book — the
+  ADC successive-approximation guessing game, recovered from an old speaker
+  note.
+- **Persistence of vision** for the display: film it with a phone at high
+  shutter, or put the AD2 on one segment line, and watch the multiplexing your
+  eye smooths out. It is the honest answer to *"why does this thing need its own
+  chip?"* — and it makes the backpack's existence something observed rather
+  than asserted.
+- **Break it on purpose**: wrong address → NACK on the trace; **omit the
+  oscillator-on command → a perfect trace and a blank display.** That second
+  case is the best teaching moment available here, because it separates "the bus
+  works" from "the device is doing what I want".
+
+Where a new idea needs a figure, a starter file, or a piece of hardware
+knowledge you cannot verify, **say so and leave a `<note>`** rather than
+writing around it.
+
 ## Order of work
 
 ### 1. Ground truth first — do not skip
@@ -62,6 +121,13 @@ part of your work (Day 9's own numbers are already fixed).
 - `python3 scripts/pptx_mine.py "assets/ClassSlidesOLD/Day09X-I2C.pptx"` and the
   same for `Day10-I2C(2).pptx`. The old decks are the authority for the
   intended arc and often carry real driver code as text.
+- **Figures: check every rebuilt one by eye, and prefer Petra's originals.**
+  `pptx_annotate.py` does not merely composite the wrong picture — on Day 9 it
+  also *cropped a slide down to one picture*, silently discarding the box the
+  diagram's signal path ended at, and it *reversed two arrows*. Two rounds of
+  patching the composite fixed nothing, because the defect was the crop; asking
+  Petra for the original PNG fixed it in one step (P-12). If a rebuilt figure
+  disagrees with the old deck, ask rather than patch.
 
 ### 2. Day 9x — Wednesday, 50 min
 
@@ -126,9 +192,26 @@ Several deck refs point at an `<activity>` and sit next to a `<slide>`
 restating the same tasks (S-10, B-8). Keep one — normally the activity, since
 it is what students work from — and reduce or delete the duplicate.
 
+**Check the slide *before* each activity too, not just the one after.** A setup
+slide that includes the answer leaves the activity with nothing to do, and the
+sequence still reads setup → activity → reveal so the loss is invisible in a
+slide list. This is P-6's real failure mode and Day 9 shipped it: the EXTICR
+setup slide gave the layout, the port codes *and* a figure with the answer
+written in, and the lookup activity then asked for exactly those. Do not leave
+an activity/reveal pair collapsed either — a predict step that has been merged
+into its own reveal is a different bug with the same symptom.
+
 ### 6. Fit-check everything you touch
 
-`AUTHORING-slides.md` has the snippet. Four things Day 9 proved:
+`AUTHORING-slides.md` has the snippet. Five things Day 9 proved:
+
+- **A slide image can be silently CROPPED while every overflow number reads
+  zero.** This is the one that cost the most. On a stacked slide the bullets
+  take the top and the figure is cropped, not scaled, into whatever height is
+  left — so a register diagram loses its top row of bit numbers and the
+  measurement says the slide fits. **Look at any slide carrying a figure.** The
+  lever is the number of bullets; the image's `width=` attribute does nothing,
+  because the player overrides it on slides.
 
 - **Layout is suspended in a background window.** Every element reads 0, which
   looks like "fits". A `resize_window` call wakes it. **Require

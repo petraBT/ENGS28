@@ -78,6 +78,15 @@ the answer away before the student is puzzled.
 Students do or predict first; a reveal slide debriefs afterwards. Reveals are
 marked optional so the instructor can adapt to pace.
 
+**The failure mode is the slide *before* the activity, not the one after.** A
+setup slide that helpfully includes the answer leaves the activity with nothing
+to do, and the loss is invisible in a slide list — the sequence still reads
+setup → activity → reveal. Day 9's EXTICR lookup had it in the worst form: the
+setup slide gave the field layout, the port codes, *and* a figure with port B's
+code already written into it, and then the activity asked students to look up
+exactly those. Before shipping a setup slide, read the activity that follows it
+and check that every question still has an answer worth finding.
+
 ### P-7 One idea per unit on first encounter
 
 A concept that is new gets a **mini-arc**, not one dense slide or paragraph:
