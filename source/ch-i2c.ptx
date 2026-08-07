@@ -569,6 +569,19 @@ int main(void) {
                 wire four times a second, so all six parts of that diagram are
                 on your breadboard right now.  Go and find them.
             </p>
+            <figure xml:id="fig-scope-setup">
+                <caption>The AD2 in oscilloscope mode, set up for this capture.
+                The trigger is the part that matters: source <term>Channel 2</term>,
+                the one on SDA; type <term>Edge</term>; condition
+                <term>Falling</term>; level 1 V.  SDA idles HIGH and the first
+                thing that happens in a transaction is SDA falling, so that
+                setting catches the START.  The time base is 25 µs per division
+                with the position at 100 µs, which fits the whole transaction on
+                screen, and the two channels are given different offsets — −4 V
+                on channel 1, 500 mV on channel 2 — so the traces sit one above
+                the other instead of on top of each other.</caption>
+                <image source="images/Day09X-I2C/scope_ping_ack_1.png" width="92%"/>
+            </figure>
             <activity xml:id="act-i2c-capture">
                 <title>Capture a Transaction and Mark It Up</title>
                 <introduction>
@@ -635,6 +648,11 @@ int main(void) {
     </ul>
 </slide>
 
+            <slide xml:id="sl-day9x-scope-setup" ref="fig-scope-setup">
+    <caption>The trigger is what matters: source Channel 2 (SDA), type Edge, condition Falling, level 1 V. SDA idles HIGH and falls at the START, so that setting catches it.</caption>
+    <note>Up while they set the AD2 up. The offsets (-4 V and 500 mV) are only so the two traces do not sit on top of each other — say that, or somebody will think it is significant.</note>
+</slide>
+
             <slide xml:id="sl-day9x-protocol" ref="fig-i2c-frame-diagram">
     <caption>Six things to find: START, seven address bits, the R/W bit, the ACK, a data byte, STOP. Next you find all six on your own screen.</caption>
     <note>Name each field once — START, address, R/W, ACK, data, STOP — and do not walk it bit by bit; they are about to find every one of them on their own screen. The rule to say out loud is the one on the previous slide: SDA changes only while SCL is LOW, which is what leaves START and STOP free to mean something else.</note>
@@ -664,20 +682,16 @@ int main(void) {
                 them.
             </p>
             <figure xml:id="fig-i2c-scope-ack">
-                <caption>A successful ping of address 0x70, captured on the AD2
-                in oscilloscope mode: SCL in orange on channel 1, SDA in blue on
-                channel 2, offset vertically so they do not overlap.  The START
-                is at the left, where SDA falls while SCL is HIGH.  The address
-                byte is 1 1 1 0 0 0 0 — the 7-bit address 0x70 — followed by 0
-                for write.  On the ninth clock pulse SDA is LOW: the display has
-                pulled it down to acknowledge.  The data byte 0x00 follows, eight
-                more clocks with SDA held LOW, then a second ACK, and the STOP at
-                the right.  The short HIGH excursion visible just <em>after</em>
-                each ACK, in the clock's LOW phase, is the display letting go of
-                SDA and the controller taking it back — the handover happens
-                while SCL is LOW, so what matters is the value when the clock
-                next rises.</caption>
-                <image source="images/Day10-I2C(2)/scope_ping_ack.svg" width="95%"/>
+                <caption>One write to address 0x70, captured on the AD2 in
+                oscilloscope mode: SDA in blue on channel 2 above, SCL in orange
+                on channel 1 below, offset vertically so the two do not overlap.
+                The whole transaction is eighteen clock pulses and takes under
+                200 microseconds.  Reading left to right: both lines idle HIGH,
+                SDA falls while SCL is still HIGH, SCL begins clocking, and the
+                first blue pulse near 90 microseconds is the moment the display
+                lets go of SDA after acknowledging.  This is what your own single
+                sweep should look like.</caption>
+                <image source="images/Day09X-I2C/scope_ping_ack_2.png" width="95%"/>
             </figure>
             <p>
                 The ACK is the part worth slowing down on, because it is the
@@ -703,20 +717,23 @@ int main(void) {
                 <xref ref="fig-waveforms-setup"/> is the setup.
             </p>
             <figure xml:id="fig-waveforms-setup">
-                <caption>Setting up Waveforms to decode I2C, in logic mode
-                rather than oscilloscope mode.  The AD2's digital channels — the
-                larger flying-lead bundle — go DIO0 (pink) to SDA, DIO1 (green)
-                to SCL and black to ground.  The numbered steps on the
-                screenshot are numbered 1 and 3 through 6: add DIO0 and DIO1
-                as signals; set DIO0 falling as the trigger; take a single sweep;
-                use the cursors to measure the clock period, which should come
-                out at 10 µs, or 100 kHz; and drag the view so the start bit is
-                at the left.  Step 2 lost its label when the figure was rebuilt —
-                it is the unnumbered arrow at the top, pointing at the time base,
-                which goes to 20 µs per division.  Adding an I2C bus decoder on top of those two signals —
-                DIO1 as clock, DIO0 as data — turns the edges into decoded
-                bytes.</caption>
-                <image source="images/Day10-I2C(2)/waveforms_i2c_setup.svg" width="90%"/>
+                <caption>Setting Waveforms to logic mode, in two stages.  The
+                AD2's digital channels — the larger flying-lead bundle — go DIO0
+                (pink) to SDA, DIO1 (green) to SCL and black to ground.
+                <em>Above</em>, the six steps that get the two signals on screen:
+                add DIO0 and DIO1 as signals, set the time base to 20 µs per
+                division, click to make DIO0 falling the trigger, take a single
+                sweep, use the cursors to measure the clock period, and drag the
+                view so the start bit is at the left.  <em>Below</em>, the three
+                that turn those edges into values: add an I2C bus with DIO1 as
+                clock and DIO0 as data, set DIO0 falling as the trigger again,
+                and take another sweep if the old trace disappears.  The decoded
+                row then reads the transaction out directly — <c>h70 WR</c>, its
+                <c>ACK</c>, the data byte, and its <c>ACK</c>.  (The data byte in
+                this screenshot is <c>hBE</c>, because it was captured with a
+                different value in the program; yours will differ.)</caption>
+                <image source="images/Day09X-I2C/waveforms_i2c_setup_1.png" width="88%"/>
+                <image source="images/Day09X-I2C/waveforms_i2c_setup_2.png" width="88%"/>
             </figure>
             <slide xml:id="sl-day9x-ack" ref="fig-i2c-scope-ack">
     <caption>Find the START, the seven address bits, the R/W bit, the ACK on the ninth pulse, the data byte, and the STOP.</caption>
@@ -771,6 +788,17 @@ int main(void) {
                     likely to be for?</p></statement>
                 </task>
             </activity>
+            <figure xml:id="fig-i2c-scope-decoded">
+                <caption>The same capture with the address phase read off it.
+                The <term>Start condition</term> is where SDA falls while SCL is
+                still HIGH.  The eight bits that follow are
+                1 1 1 0 0 0 0 and then 0: seven address bits, which are 0x70,
+                and then the bit circled in red — the R/W bit, 0 for a write.
+                The device's <c>Ack</c> comes on the pulse after that.  Read all
+                eight as a single byte and you get 0xE0, which is the number on
+                the wire rather than the number in the program.</caption>
+                <image source="images/Day09X-I2C/scope_ping_ack_4.png" width="95%"/>
+            </figure>
             <p>
                 The byte on the wire is <c>0xE0</c>.  0x70 is a
                 <em>seven-bit</em> number, 0b1110000, and what goes onto SDA is
@@ -878,19 +906,16 @@ int main(void) {
                 SCL is HIGH — the STOP — and the bus goes back to idle.
             </p>
             <figure xml:id="fig-i2c-scope-noack">
-                <caption>An oscilloscope capture of one I2C transaction that got
-                no answer, with SCL in orange on channel 1 and SDA in blue on
-                channel 2 (the two channels are given different vertical
-                positions so the traces do not overlap).  Reading left to right:
-                SDA falls while SCL is HIGH — the START condition; eight clock
-                pulses carry 1 1 0 0 0 0 0, the 7-bit address 0x60, followed by
-                a 0 for write; on the ninth pulse SDA stays HIGH, which is the
-                NACK — no device on this bus has address 0x60; and the
-                controller then issues a STOP, SDA rising while SCL is HIGH.
-                Nine clock pulses in all, and then the bus is idle.  Compare
-                <xref ref="fig-i2c-scope-ack"/>, where a device does
-                answer.</caption>
-                <image source="images/Day10-I2C(2)/scope_ping_noack.svg" width="95%"/>
+                <caption>One I2C transaction that got no answer, with SDA in
+                blue above and SCL in orange below.  The decoded bits are marked
+                on the capture: eight clock pulses carry
+                1 1 0 0 0 0 0 followed by 0 — the 7-bit address 0x60 and a write
+                — and on the ninth pulse SDA stays HIGH, which is the
+                <c>NoAck</c>.  No device on this bus has address 0x60.  Nine
+                clock pulses in all against the eighteen of
+                <xref ref="fig-i2c-scope-ack"/>, and then the bus is
+                idle.</caption>
+                <image source="images/Day09X-I2C/scope_ping_noack.png" width="95%"/>
             </figure>
             <p>
                 Two things to take from a failed transaction.  The first is that
@@ -903,6 +928,11 @@ int main(void) {
                 all.  Thursday has you produce this capture yourself, and one
                 other that is more interesting than it.
             </p>
+
+            <slide xml:id="sl-day9x-decoded" ref="fig-i2c-scope-decoded">
+    <caption>Your own trace, with the address phase read off it: 1 1 1 0 0 0 0 is the 7-bit address 0x70, and the bit circled in red is the R/W bit — 0 for a write. Then the ACK.</caption>
+    <note>Show this after they have committed their eight values. The red circle is the eighth bit, not the ACK — the ACK is the green label after it.</note>
+</slide>
 
             <slide xml:id="sl-day9x-address-shift">
     <p><term>The address you write and the byte on the wire are not the same number.</term> This is the number you just read off your own trace.</p>

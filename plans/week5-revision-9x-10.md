@@ -190,23 +190,25 @@ take the screenshots rather than patching the composites (P-12).
 
 ---
 
-## Figures to re-shoot (Petra offered screenshots, 2026-08-07)
+## Figures: re-shot by Petra, 2026-08-07 — RESOLVED
 
-Three rebuilt composites in `assets/images/Day10-I2C(2)/`. Measured defects, so
-that a re-shoot can be checked against them. **No pre-existing clean original
-exists for any of the three** — the extraction dump has no file that maps to
-them — so re-shooting is the only route.
+The three broken `pptx_annotate.py` composites are deleted. Petra supplied clean
+screenshots in `assets/images/Day09X-I2C/`, in graded versions, and Day 9x now
+uses four of them for four distinct jobs:
 
-- **`scope_ping_ack.svg`** — the "Start condition" callout box is 273 units wide
-  holding text that needs ~450, so it overflows by ~180 and the leader arrow
-  (starting at the box's right edge) is drawn straight through the words. And
-  the **red ACK ellipse is on the wrong clock pulse**: measured at x 1009–1071,
-  centre 1040, which is pulse 8's HIGH window (1011–1045); pulse 9 is
-  1084–1120. Every caption and presenter note sends students to the ninth pulse.
-- **`scope_ping_noack.svg`** — a full-height tick line at x≈1073 passes through
-  the "NoAck" callout box and its text (x 1046–1140). No STOP callout, though
-  the caption walks through the STOP.
-- **`waveforms_i2c_setup.svg`** — three of four instruction boxes overflow: step
-  1 by ~280 units (into the neighbouring box), step 3 by ~430, step 6 by ~540.
-  Step 2's label was already known missing.
+| File | Figure | Where | Job |
+|---|---|---|---|
+| `scope_ping_ack_1.png` | `fig-scope-setup` | Part 3b | The AD2's own trigger/timebase/offset settings, so the setup is shown rather than described in prose |
+| `scope_ping_ack_2.png` | `fig-i2c-scope-ack` | Part 3c | Clean SDA/SCL, no decode — what students compare their own capture against |
+| `scope_ping_ack_4.png` | `fig-i2c-scope-decoded` | Part 4 | The reveal: `1 1 1 0 0 0 0` then the R/W bit circled, then `Ack` |
+| `scope_ping_noack.png` | `fig-i2c-scope-noack` | Part 4 | `1 1 0 0 0 0 0` + `0`, then `NoAck` — nine pulses against eighteen |
+| `waveforms_i2c_setup_1.png` + `_2.png` | `fig-waveforms-setup` | Part 3c | Both, as Petra said: `_1` gets the two signals on screen (steps 1–6), `_2` adds the I2C decoder (steps 1–3) |
 
+`scope_ping_ack_3.png` (sample markers, no bit values) was not used — it sits
+between `_2` and `_4` and would have been a third near-identical view of one
+trace, which is the repetition being cut everywhere else.
+
+**One thing to know:** the decoded row in `waveforms_i2c_setup_2.png` reads
+`h70 WR / ACK / hBE / ACK`. The data byte is `0xBE`, not the `0x00` that
+`helloDisplay.c` sends, so that screenshot was taken with a different value in
+the program. The caption says so rather than glossing it.
