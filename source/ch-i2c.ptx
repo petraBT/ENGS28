@@ -354,6 +354,11 @@ int main(void) {
                     board.</li>
             </ol>
 
+            <slide xml:id="sl-day9x-backpack-pins" ref="fig-backpack-pins">
+    <caption>The four labels to find on your own board: + (supply), &#8722; (ground), D (data, SDA) and C (clock, SCL). The header pins sit in the breadboard, so each wire goes into the column its pin lands in.</caption>
+    <note>Up while they wire. This is the close-up of the labels; the next slide is where each one goes.</note>
+</slide>
+
             <slide xml:id="sl-day9x-wiring" ref="fig-display-wiring" stack="yes">
     <ul>
         <li>Labeled on the board: <c>+</c> to <term>3.3 V</term>, <c>&#8722;</c> to GND, <c>D</c> to <term>PB9 (SDA - serial data)</term>, <c>C</c> to <term>PB8 (SCL - serial clock)</term> &#8212; D14 and D15 on the Arduino header.</li>
@@ -364,16 +369,34 @@ int main(void) {
 
 
             <slide xml:id="sl-day9x-hello-code" room="compressed">
-    <p><term>helloDisplay.c</term> &#8212; four calls set the display up and fill it, and then a loop keeps one short transaction going:</p>
+    <p>We'll flash <term>helloDisplay.c</term>. It sends the display three <term>commands</term> to wake it up, then ten bytes of data. Here are the names it uses for those, taken from the HT16K33's datasheet &#8212; we'll work out where the numbers come from tomorrow.</p>
     <program language="c"><code><![CDATA[
-    uint8_t display_buffer[10] = {
-        0b01110110, 0x00,       // H
-        0b00111111, 0x00,       // O
-        0x00,       0x00,       // the colon, both dots off
-        0b00111000, 0x00,       // L
-        0b01110111, 0x00        // A
+#define HT16K33_ADDR         0x70   // I2C address of our backpack controller
+#define HT16K33_SYSTEM_CMD   0x20   // system setup
+#define HT16K33_OSC_ON       0x01
+#define HT16K33_DISPLAY_CMD  0x80   // display setup
+#define HT16K33_DISPLAY_ON   0x01
+#define HT16K33_BLINK_OFF    0x00
+#define HT16K33_BRIGHT_CMD   0xE0   // brightness, ORed with 0 to 15
+#define HT16K33_ADDR_PTR     0x00   // display RAM address pointer
+]]></code></program>
+    <ul>
+        <li>Every I2C device has an <term>address</term>, and ours is <c>0x70</c>. The controller sends it first, so that the right device answers.</li>
+        <li>The rest are the display chip's own commands. Turning its <term>oscillator</term> on is the one that matters: until it is running the chip accepts everything you send and drives nothing.</li>
+    </ul>
+</slide>
+
+            <slide xml:id="sl-day9x-hello-what" room="compressed">
+    <p>And the program that uses them:</p>
+    <program language="c"><code><![CDATA[
+    uint8_t display_buffer[10] = {      // two bytes per digit position;
+        0b01110110, 0x00,   // H        //   you write these yourself later
+        0b00111111, 0x00,   // O
+        0x00,       0x00,   // colon
+        0b00111000, 0x00,   // L
+        0b01110111, 0x00    // A
     };
-    i2c1_init();
+    i2c1_init();                                  // set up the two pins
     i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
     i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_DISPLAY_ON
                                                      | HT16K33_BLINK_OFF);
@@ -384,15 +407,8 @@ int main(void) {
         delay_ms(250);
     }
 ]]></code></program>
-    <caption>Read it for the shape, not for every line. Four calls, then a loop.</caption>
-</slide>
-
-            <slide xml:id="sl-day9x-hello-what">
-    <p><term>What those four calls do</term> &#8212; enough to run it today, and all of it opened up on Thursday.</p>
     <ul>
-        <li>The three one-byte writes are <term>commands to the HT16K33</term>, given today and derived from its datasheet on Thursday. The order matters: the first turns the chip's oscillator on, and until it is running the HT16K33 accepts everything you send and drives nothing.</li>
-        <li><c>i2c1_memWrite()</c> sends all ten buffer bytes in one go &#8212; two per digit position, plus the colon's own position.</li>
-        <li>The loop <term>changes nothing</term>: <c>0x00</c> is the display data address pointer command, so it moves the pointer and no data follows it. It is the shortest transaction there is, four times a second, for the oscilloscope in Part 3b.</li>
+        <li>Three one-byte writes send the commands; <c>i2c1_memWrite()</c> sends all ten data bytes together. The loop <term>changes nothing</term> &#8212; it keeps a short transaction on the wires for the oscilloscope.</li>
     </ul>
 </slide>
 
@@ -558,14 +574,8 @@ int main(void) {
                 <title>Capture a Transaction and Mark It Up</title>
                 <introduction>
                     <p>
-                        The five things to look for, drawn in
-                        <xref ref="fig-i2c-frame-diagram"/>:
-                        <term>START</term>, SDA falling while SCL is HIGH;
-                        <term>seven address bits</term>, most significant first,
-                        each steady across one SCL HIGH; the <term>R/W</term>
-                        bit, 0 for a write; the <term>ACK</term>, a ninth pulse
-                        with SDA pulled LOW by the device; and <term>STOP</term>,
-                        SDA rising while SCL is HIGH.
+                        Everything in <xref ref="fig-i2c-frame-diagram"/> is on
+                        your breadboard right now, four times a second.
                     </p>
                 </introduction>
                 <task xml:id="act-i2c-capture-t3">
@@ -626,7 +636,7 @@ int main(void) {
 </slide>
 
             <slide xml:id="sl-day9x-protocol" ref="fig-i2c-frame-diagram">
-    <caption>The rule that holds it together: SDA changes only while SCL is LOW — which leaves "SDA changed while SCL was HIGH" free to mean the beginning and the end.</caption>
+    <caption>Six things to find: START, seven address bits, the R/W bit, the ACK, a data byte, STOP. Next you find all six on your own screen.</caption>
     <note>Name each field once — START, address, R/W, ACK, data, STOP — and do not walk it bit by bit; they are about to find every one of them on their own screen. The rule to say out loud is the one on the previous slide: SDA changes only while SCL is LOW, which is what leaves START and STOP free to mean something else.</note>
 </slide>
 
@@ -714,12 +724,10 @@ int main(void) {
 </slide>
 
             <slide xml:id="sl-day9x-handover">
-    <p><term>The ACK is the one moment where the wire changes hands.</term></p>
+    <p>One detail on your trace that the diagram does not have: a short <term>HIGH blip</term> just after each ACK, while the clock is still LOW.</p>
     <ul>
-        <li>After the eighth bit the controller keeps clocking and <term>lets go</term> of SDA. The pull-up brings the line HIGH.</li>
-        <li>The display pulls it LOW during the clock's LOW phase, so that when SCL rises, SDA is stable and LOW. On the next LOW phase the display lets go and the controller takes over again.</li>
-        <li>The short HIGH excursion visible <term>after</term> each ACK is the second half of that handover. It is harmless, because <term>nothing is read while SCL is LOW</term> &#8212; and there is no matching blip before the ACK, because the eighth address bit is already 0, so the line never rises.</li>
-        <li>This is also the reason the pins have to be open-drain &#8212; which is Thursday, along with everything else about the two pins at our end of the bus.</li>
+        <li>That is the display letting go of SDA again and the controller taking it back. The handover happens while SCL is LOW, so it is harmless &#8212; nothing is read until the clock next rises.</li>
+        <li>There is no matching blip <em>before</em> the ACK, because the eighth address bit is already 0. The line was LOW and never had a chance to rise.</li>
     </ul>
 </slide>
 
@@ -911,14 +919,6 @@ on the wire:      1 1 1 0 0 0 0    0
     </ul>
 </slide>
 
-            <slide xml:id="sl-day9x-addr-frame" ref="fig-ht16k33-addr-frame" stack="yes">
-    <ul>
-        <li>The HT16K33's own datasheet writes its address field out bit by bit: <term>1 1 1 0 A2 A1 A0</term>. Four bits fixed by the chip, three selectable on the board, so eight of these can share one bus.</li>
-        <li>Ours has all three at 0, so the 7-bit address is 0b1110000 &#8212; <c>0x70</c>. The next box along is the direction bit, then the ACK.</li>
-        <li>This datasheet is being explicit. Many are not, and that is the next slide.</li>
-    </ul>
-    <caption>Seven bit positions for the address, and the direction bit separate from it.</caption>
-</slide>
 
             <slide xml:id="sl-day9x-address-trap" room="yes">
     <p><term>Some datasheets print the 7-bit address; some print it already shifted.</term> A sensor's datasheet says only: <q>the device address is 0xE0.</q></p>
