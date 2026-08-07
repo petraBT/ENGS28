@@ -144,3 +144,47 @@ here. They now sit in the Day 10 reading, checking material students met in
 class rather than in that night's reading. The alternatives were to drop them or
 to leave them stranded in Reference. Say if you would rather they went.
 
+---
+
+## Day 10: Petra's instructions, 2026-08-07 — for a separate session
+
+She glanced at Day 10 while reviewing Day 9x and gave three directions. They are
+**not applied yet**; Day 9x was the focus. Do these first in the Day 10 session.
+
+1. **Cut every Arduino comparison.** *"Get rid of how you would have done things
+   in Arduino. Nobody cares."* This goes further than B-11e, which allowed one
+   sentence. Affected: `sl-day9x-wire-h` and `sl-day9x-wire-h-gaps` (the
+   `Wire.h` mapping slides, now in Day 10 Part 7a), `sl-day9x-wire-begin`
+   ("What `Wire.begin()` was doing", Part 6a), `sl-day10-adafruit`
+   (`Adafruit_LEDBackpack.h`, Part 8a), and the matching prose in
+   `subsec-day9x-library`, `subsec-day9x-pins` and `subsec-day10-layers`.
+   B-11e should be amended to say *cut*, not *at most a sentence*.
+
+2. **Drop the timing settings.** *"Don't bother with timing settings — those are
+   way too complex. Focus on the I2C protocol instead."* That removes Part 6b
+   whole: `subsec-day9x-timingr`, its activity `act-i2c-timingr`, the slides
+   `sl-day9x-timingr-intro`, `sl-day9x-timing-tables`, `sl-day9x-presc`,
+   `sl-day9x-presc-answer`, and the three RM0490 table images. `i2c1_init()` is
+   still given to students, so the `TIMINGR` lines stay in the listing; they are
+   simply not taught. That frees ~10 minutes to spend on the protocol.
+   `fig-i2c-timing-tables` and the `I2C_TIMINGR` row of the register table can
+   stay in Reference for anyone who wants them.
+
+3. **Figures and tables are cut off and do not fit.** Fit-check every Day 10
+   slide by eye, not only by the overflow numbers. Known: the four-layer
+   diagram and the three stacked RM0490 timing tables were both silently
+   cropped with every overflow number reading zero. Item 2 removes the second
+   of those.
+
+Also fixed globally on 2026-08-07 and worth knowing: seven hand-authored SVGs in
+`assets/` had a `viewBox` but no intrinsic `width`/`height`, so browsers gave
+them the 300x150 fallback and they projected at a fraction of their size.
+`i2c_transaction.svg` was one, which is why "the whole protocol in one picture"
+was unreadable. All seven now carry explicit dimensions.
+
+**Still open on Day 10:** the rebuilt scope captures
+(`scope_ping_ack.svg`, `scope_ping_noack.svg`, `waveforms_i2c_setup.svg`) have
+text outside their boxes and arrows drawn through labels. Petra's offer —
+*"I'd rather give you screenshots than go through this again"* — is the fix;
+take the screenshots rather than patching the composites (P-12).
+

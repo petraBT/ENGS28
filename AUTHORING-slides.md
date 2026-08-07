@@ -199,10 +199,15 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
 ## Voice
 
 Slides are written in Petra's voice, which is **S-11 … S-19** in
-`AUTHORING-book.md`. The specimen those rules were derived from is her own hand
-rewrite of Day 8, frozen at `plans/day8-voice-reference.diff` — read it before
-authoring a deck, and read it again if a rule feels ambiguous. The rules are a
-summary; the diff is the specification.
+`AUTHORING-book.md`. There are two frozen specimens, and the rules are only a
+summary of them — read both before authoring a deck, and read them again if a
+rule feels ambiguous:
+
+- `plans/day8-voice-reference.diff` — her hand rewrite of the Day 8 deck.
+- `plans/day9x-voice-reference.md` — her hand pass over the Day 9x opening,
+  with the before/after pairs called out. Written after she rejected a draft
+  with *"You are not speaking in my voice"*, so it is the one to check a draft
+  against when the register feels off rather than the facts.
 
 In one line each: name things plainly and say where they live (S-11, S-12); "we"
 for the class and "you" for the student (S-13); give the reason with the rule,
