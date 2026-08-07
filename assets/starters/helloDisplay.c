@@ -57,13 +57,14 @@
  *   the left.  The second byte of each pair is 0 for a seven-segment digit,
  *   and Thursday explains why it still has to be sent.
  *
- * The byte in the loop
- * --------------------
- *   0x00 is the display data address pointer command: it sets the pointer
- *   into the display RAM back to address 0 and no data bytes follow it, so
- *   nothing on the display changes.  It is here because it is the shortest
- *   legal transaction there is -- an address, one byte, and a STOP -- which
- *   makes it a good thing to point an oscilloscope at.
+ * The loop
+ * --------
+ *   The display is already showing what it is going to show; the loop just
+ *   keeps something on the bus to look at.  I2C has no way to address a
+ *   device without also sending it something, so the shortest thing you can
+ *   put on the wire is a one-byte write, and the value does not matter here.
+ *   Once every 250 ms, so four transactions a second -- slow enough that a
+ *   single sweep on the oscilloscope catches exactly one.
  *
  * Things to try
  * -------------
@@ -91,6 +92,7 @@
 #define HT16K33_ADDR_PTR     0x00   // display RAM address pointer
 
 int main(void) {
+    uint8_t data = 0b0;   // The hardware requires us to send some data, not important here.
     uint8_t display_buffer[10] = {
         0b01110110, 0x00,       // H
         0b00111111, 0x00,       // O
@@ -107,7 +109,7 @@ int main(void) {
 
     // Keep one short transaction on the wire for the oscilloscope
     while(1) {
-        i2c1_byteWrite(HT16K33_ADDR, HT16K33_ADDR_PTR);
+        i2c1_byteWrite(HT16K33_ADDR, data);
         delay_ms(250);
     }
     return 1;
