@@ -188,3 +188,25 @@ text outside their boxes and arrows drawn through labels. Petra's offer —
 *"I'd rather give you screenshots than go through this again"* — is the fix;
 take the screenshots rather than patching the composites (P-12).
 
+---
+
+## Figures to re-shoot (Petra offered screenshots, 2026-08-07)
+
+Three rebuilt composites in `assets/images/Day10-I2C(2)/`. Measured defects, so
+that a re-shoot can be checked against them. **No pre-existing clean original
+exists for any of the three** — the extraction dump has no file that maps to
+them — so re-shooting is the only route.
+
+- **`scope_ping_ack.svg`** — the "Start condition" callout box is 273 units wide
+  holding text that needs ~450, so it overflows by ~180 and the leader arrow
+  (starting at the box's right edge) is drawn straight through the words. And
+  the **red ACK ellipse is on the wrong clock pulse**: measured at x 1009–1071,
+  centre 1040, which is pulse 8's HIGH window (1011–1045); pulse 9 is
+  1084–1120. Every caption and presenter note sends students to the ninth pulse.
+- **`scope_ping_noack.svg`** — a full-height tick line at x≈1073 passes through
+  the "NoAck" callout box and its text (x 1046–1140). No STOP callout, though
+  the caption walks through the STOP.
+- **`waveforms_i2c_setup.svg`** — three of four instruction boxes overflow: step
+  1 by ~280 units (into the neighbouring box), step 3 by ~430, step 6 by ~540.
+  Step 2's label was already known missing.
+

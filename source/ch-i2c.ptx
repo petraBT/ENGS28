@@ -14,9 +14,8 @@
         <p>
             A four-digit seven-segment display has 34 LEDs in it.  Wiring one
             pin to each is not an option on a board whose Arduino headers carry
-            22 pins in total, and some of those are already committed: A0 is
-            the potentiometer's pin, and D0 and D1 are wired to the
-            ST-LINK's virtual COM port by default.  The way out is a bus: two wires, shared by every
+            22 pins in total, and one of those is already committed to the
+            potentiometer.  The way out is a bus: two wires, shared by every
             device on them, with each device answering to an address.  That bus
             is <term>I2C</term> — Inter-Integrated Circuit, also written I<sup>2</sup>C
             and also called TWI, the Two-Wire Interface — and it is how a
@@ -89,9 +88,9 @@
             <p>
                 Nothing was assigned to read before today, and nothing needed
                 to be.  This is a 50-minute session and it is arranged around
-                one thing happening early.  In the first twelve minutes you wire a
-                display to two of the Nucleo's pins, flash a program you are
-                given, and read four characters off it.  Everything after that
+                one thing happening early.  In the first third of it we wire a
+                display to two of the Nucleo's pins, flash a program, and read
+                four characters off it.  Everything after that
                 answers the question you now have — <em>how did two wires do
                 that?</em> — with an oscilloscope on those two wires, and then
                 you change the bytes and put your own character on a digit of
@@ -99,9 +98,9 @@
             </p>
             <p>
                 One thing is worth saying plainly before it happens.  The
-                program you flash calls two functions out of a library you have
-                not read, and it will be Thursday before you find out what they
-                do.  That is deliberate, and it is the same order in which we
+                program you flash calls three functions out of a library you
+                have not read, and it will be Thursday before you find out what
+                they do.  That is deliberate, and it is the same order in which we
                 ran Blinky before explaining a single register.  Using a thing
                 and then opening it works better than the other way round, but
                 only if the opening actually comes — which is what Thursday is.
@@ -114,16 +113,17 @@
                 <xref ref="fig-display-photo"/> is the display we are going to
                 drive: four digits, each with seven segments and a decimal
                 point, plus a colon between the middle two.  Before reading on,
-                write down two numbers.  How many individually controllable LEDs
-                is that?  And if each one had its own pin on the
-                STM32C031C6, how many pins would that take?
+                write down two numbers.  How many LEDs is that?  And if each one
+                had its own pin on the STM32C031C6, how many pins would that
+                take?
             </p>
             <figure xml:id="fig-display-photo">
                 <caption>The four-digit seven-segment display used in this
                 course, mounted on an Adafruit HT16K33 backpack and shown with
                 every segment lit.  Four digits of seven segments each, four
-                decimal points and a two-dot colon come to 34 separately
-                controllable LEDs.  The four header pins along the top edge —
+                decimal points and a two-dot colon come to 34 LEDs.  (The
+                colon's two dots share a pin pair inside the display, so they
+                always light together — 34 LEDs, 33 things you can switch.)  The four header pins along the top edge —
                 labeled +, −, D and C on the board — are the only connections it
                 needs.</caption>
                 <image source="images/Day10-I2C(2)/display_photo.png" width="60%"/>
@@ -132,38 +132,36 @@
                 The count is 4 × 7 segments = 28, plus one decimal point per
                 digit = 32, plus the colon's two dots = <term>34 LEDs</term>.
                 One pin each is 34 pins.  The Nucleo's Arduino headers carry 22
-                — D0 through D15 and A0 through A5 — and some are already
-                committed: A0 is the potentiometer's pin, and D0 and D1 are tied
-                to the ST-LINK's virtual COM port in the board's default
-                configuration.  The direct approach is not short by a little; it
-                is short by more pins than the board has.
+                — D0 through D15 and A0 through A5 — and A0 is already the
+                potentiometer's.  So the direct approach needs a dozen more pins
+                than the headers have, before anything else on the board asks
+                for one.
             </p>
             <p>
                 So the display does not get 34 pins.  It gets four wires: power,
                 ground, and the two wires of an I2C bus.  A separate chip on the
                 small board underneath the display — a <term>backpack</term> —
                 takes commands over those two wires and drives all 34 LEDs
-                itself.  Wiring those four is the next ten minutes.
+                itself.  Wiring those four is what we do next.
             </p>
 
             <slide xml:id="sl-day9x-count" ref="fig-display-photo" room="yes">
     <p>The picture to the right shows our <term>seven-segment display,</term> mounted on a backpack controller</p>
     <ul>
-        <li><term>How many individually controllable LEDs are in this display?</term></li>
+        <li><term>How many LEDs are in this display?</term></li>
         <li>And if each one had its own pin on the STM32C031C6, <term>how many wires would that take?</term></li>
     </ul>
     <caption>Compare your count with your table group.</caption>
     <note>Equipment today: Nucleo, the display backpack, four jumper wires, and an AD2 per student — Part 3b assumes one instrument each. No components carried over from Day 9.
     NOTHING WAS ASSIGNED TO READ. The protocol is built from scratch in Parts 3a and 3b; do not open on "as you read last night". The written version goes into the Reference section, and the reading before Thursday covers the display and re-checks the protocol.
-    Fifty minutes and it sums to exactly 50, so there is no slack. The two beats that cannot be cut are Part 2 (every display lit) and Part 5 (every student has written a digit's bytes). If it runs long, cut in this order: the Waveforms decode view at the end of Part 3c; then the paper address exercise in Part 4, which works as self-study because the book gives the answer under it; then Part 3a's third bullet.</note>
+    Fifty minutes, and the parts as budgeted sum to 52, so two minutes have to come out somewhere. The two beats that cannot be cut are Part 2 (every display lit) and Part 5 (every student has written a digit's bytes). If it runs long, cut in this order: the Waveforms decode view at the end of Part 3c; then the paper address exercise in Part 4, which works as self-study because the book gives the answer under it; then Part 3a's third bullet.</note>
 </slide>
 
             <slide xml:id="sl-day9x-count-answer">
     <p><term>Each LED needs a pin and a ground wire, and the board does not have 34 pins to spare.</term></p>
     <ul>
         <li>4 digits &#215; 7 segments = 28, plus one decimal point per digit = 32, plus the colon's two dots = <term>34</term>.</li>
-        <li>The Nucleo's Arduino headers carry <term>22</term> pins &#8212; more available via the morpho connectors but using 
-        up 34 pins is clearly not a viable solution.</li>
+        <li>The Nucleo's Arduino headers carry <term>22</term> pins &#8212; more are available via the morpho connectors, but using up 34 pins is clearly not a viable solution.</li>
         <li>We'll wire the display with just <term>four wires</term>: power, ground, and the two wires of an I2C (Inter-Integrated Circuit) bus. A separate chip underneath the display &#8212; a <term>backpack</term> &#8212; takes commands from the STM32C0 over those two I2C wires via a special protocol and drives all 34 LEDs itself.</li>
         <li>We'll talk about the I2C protocol today and will examine how to talk to the backpack chip tomorrow.</li>
     </ul>
@@ -298,9 +296,9 @@ int main(void) {
                 is the display data address pointer command — it sets the
                 pointer into the display RAM back to the start, no data bytes
                 follow it, and nothing on the display moves.  It is there
-                because it is the shortest transaction there is, and
-                <xref ref="subsec-day9x-protocol"/> needs one to put an
-                oscilloscope on.
+                because it is the shortest transaction this library can
+                produce, and <xref ref="subsec-day9x-protocol"/> needs one to
+                put an oscilloscope on.
             </p>
             <activity xml:id="act-i2c-hello">
                 <title>Wire the Display and Light It</title>
@@ -364,7 +362,7 @@ int main(void) {
         <li>Labeled on the board: <c>+</c> to <term>3.3 V</term>, <c>&#8722;</c> to GND, <c>D</c> to <term>PB9 (SDA - serial data)</term>, <c>C</c> to <term>PB8 (SCL - serial clock)</term> &#8212; D14 and D15 on the Arduino header.</li>
         <li>The I2C protocol requires pull-up resistors on <term>SCL</term> and <term>SDA</term> but the backpack has this integrated, so no need for us to wire them externally. We'll use the AD2 in a bit.</li>
     </ul>
-    <caption>Check all four against this before pluggin in USB cable in.</caption>
+    <caption>Check all four against this before plugging the USB cable in.</caption>
 </slide>
 
 
@@ -419,7 +417,7 @@ int main(void) {
         <li>2 &#8212; <term>A display that never answers also stops the program.</term> <c>i2c1_byteWrite()</c> waits for a flag the hardware does not set when nobody acknowledges, so the <term>first</term> call never returns and none of the rest runs. From the front of the room that looks the same as a display that was never sent anything &#8212; which is why the wires come first and the code does not.</li>
     </ul>
     <caption>Wires first. There is nothing in the code to change.</caption>
-    <note>Stays up for all of Part 2. Checkpoint at minute 14: if the room is not mostly lit, put one working display on the document camera and move on — Part 3b's trace can be read from the projected capture.</note>
+    <note>Stays up for all of Part 2. Checkpoint at minute 15: if the room is not mostly lit, put one working display on the document camera and move on — Part 3b's trace can be read from the projected capture.</note>
 </slide>
         </subsection>
 
@@ -537,9 +535,10 @@ int main(void) {
             </p>
             <p>
                 One more piece, and it is the only moment in a transaction where
-                the wire changes hands.  After the eight bits of the address the
-                controller lets go of SDA and keeps clocking, and the device
-                whose address matched pulls SDA LOW for that ninth pulse.  That
+                the wire changes hands.  After the seven address bits and the
+                R/W bit the controller lets go of SDA and keeps clocking, and
+                the device whose address matched pulls SDA LOW for that ninth
+                pulse.  That
                 one-bit reply is the <term>ACK</term>.  SDA staying HIGH is a
                 <term>NACK</term> — nobody claimed that address — and every data
                 byte after the address is acknowledged the same way, by whichever
@@ -591,10 +590,11 @@ int main(void) {
                     on a falling edge and let it find one.</p></statement>
                 </task>
                 <task xml:id="act-i2c-capture-t4">
-                    <statement><p>On your own trace, mark the START, the seven
-                    address bits, the R/W bit, the ACK, and the STOP.  For the
-                    address bits, write down the seven values you read off the
-                    screen.</p></statement>
+                    <statement><p>On your own trace, mark all six: the START,
+                    the seven address bits, the R/W bit, the ACK, the data byte,
+                    and the STOP.  Write down the <term>eight</term> bit values
+                    of that first byte — the seven address bits and the R/W bit
+                    after them — in the order they go out.</p></statement>
                 </task>
                 <task xml:id="act-i2c-capture-t5">
                     <statement><p>How many clock pulses are in your capture, and
@@ -630,7 +630,7 @@ int main(void) {
 ]]></code></program>
     <ul>
         <li>Neither can occur during normal data transfer, so neither can be mistaken for a bit, and <term>every device on the bus recognizes them immediately</term>.</li>
-        <li>And one more piece, the only moment where the wire changes hands: after the eight address bits the controller <term>lets go</term> of SDA and keeps clocking, and the device whose address matched pulls SDA LOW for that ninth pulse. That is the <term>ACK</term>.</li>
+        <li>And one more piece, the only moment where the wire changes hands: after the seven address bits and the R/W bit, the controller <term>lets go</term> of SDA and keeps clocking, and the device whose address matched pulls SDA LOW for that ninth pulse. That is the <term>ACK</term>.</li>
         <li>SDA staying HIGH on the ninth pulse is a <term>NACK</term>: nobody claimed that address. Every data byte after the address is acknowledged the same way, by whichever side is receiving.</li>
     </ul>
 </slide>
@@ -724,10 +724,10 @@ int main(void) {
 </slide>
 
             <slide xml:id="sl-day9x-handover">
-    <p>One detail on your trace that the diagram does not have: a short <term>HIGH blip</term> just after each ACK, while the clock is still LOW.</p>
+    <p>One detail on your trace that the diagram does not have: a short <term>HIGH blip</term> just after the first ACK, while the clock is still LOW.</p>
     <ul>
-        <li>That is the display letting go of SDA again and the controller taking it back. The handover happens while SCL is LOW, so it is harmless &#8212; nothing is read until the clock next rises.</li>
-        <li>There is no matching blip <em>before</em> the ACK, because the eighth address bit is already 0. The line was LOW and never had a chance to rise.</li>
+        <li>That is the display letting go of SDA and the controller taking it back. The handover happens while SCL is LOW, so it is harmless &#8212; nothing is read until the clock next rises.</li>
+        <li>There is no matching blip <em>going into</em> the ACK. The R/W bit before it is a 0, so SDA is already LOW, and the display pulls it down again well before the pull-up could bring the line back up.</li>
     </ul>
 </slide>
 
