@@ -1954,13 +1954,8 @@ void tim14_init(void) {
                There is nothing in assets/images to build it from.
             -->
             <p>
-                Either way, what you are seeing is the sweep, and it is the
-                reason the display has a chip of its own.  The image exists only
-                while something redraws it, fast enough that the eye cannot
-                follow, and that
-                job never stops — if your program did it, everything else you
-                wanted the STM32C031C6 to do would have to fit around a refresh
-                loop with a deadline that never ends.  That is why the display is
+                Either way, what you are seeing is the sweep — and, as the
+                reading put it, that job never stops.  Which is why the display is
                 wired to a backpack: the HT16K33 does the multiplexing and the
                 decoding, and talks to the processor over I2C.
             </p>
@@ -2216,12 +2211,9 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 we have been calling rows.  The commons here are COM0–COM7.
                 Two bytes per digit, then, and the second one is always zero for
                 us — the HT16K33 can drive sixteen LEDs per common line and our
-                digits use eight.  The first byte is the segments, in the order
-                the reading's names suggest: bit 0 is <c>a</c>, bit 1 is
-                <c>b</c>, on up to bit 6 for <c>g</c>, and bit 7 is the decimal
-                point.  Written out as a binary literal that is
-                <c>0b</c> DP <c>g f e d c b a</c>, most significant bit first, so
-                that a <c>0</c> — every segment but <c>g</c> — is
+                digits use eight.  The first byte is the segments, in the same
+                order you used yesterday — <c>0b</c> DP <c>g f e d c b a</c>,
+                most significant bit first, so that a <c>0</c> is
                 <c>0b00111111</c>.
             </p>
             <p>
@@ -2508,13 +2500,17 @@ void i2c1_init(void){
                 board whose clock runs at a different speed.
             </p>
 
-            <slide xml:id="sl-day10-pins" ref="fig-i2c-pins" stack="yes">
+            <slide xml:id="sl-day10-pins" ref="fig-i2c-pins">
+    <caption>I2C1's SCL and SDA come out on several pin pairs. Ours is the boxed one: PB8 for SCL and PB9 for SDA, which are D15 and D14 on the header.</caption>
+    <note>Figure-focus deliberately: with bullets above it this pinout projects at about 380 px and PB8/PB9 are four pixels tall, which is exactly what the slide asks the room to find. The alternate-function points are on the next slide.</note>
+</slide>
+
+            <slide xml:id="sl-day10-af6">
+    <p><term>Getting the peripheral onto those two pins</term> is the alternate-function mechanism you first used for the UART.</p>
     <ul>
-        <li>I2C1's SCL and SDA come out on several pin pairs; ours is <term>PB8 for SCL and PB9 for SDA</term>, boxed here &#8212; D15 and D14 on the header, where every Arduino-shaped board puts its I2C bus.</li>
-        <li>Getting the peripheral onto the pins is the alternate-function mechanism from the UART: alternate-function mode in <c>MODER</c>, then <em>which</em> one in <c>AFR</c>.</li>
+        <li>Alternate-function mode in <c>MODER</c>, then <em>which</em> alternate function in <c>AFR</c>.</li>
         <li>The number is in the <term>datasheet</term>, not the reference manual: DS13867 Table 15, <em>Port B alternate function mapping</em>. The PB8 and PB9 rows both name I2C1 under <term>AF6</term>.</li>
     </ul>
-    <caption>Find PB8 and PB9 in the boxed pair, then find their AF6 column in Table 15.</caption>
 </slide>
 
             <slide xml:id="sl-day10-opendrain" room="yes">
@@ -3074,11 +3070,8 @@ void SevenSeg_init() {
             <p>
                 <em>Nothing lights up?</em>  The bus was proved when you flashed
                 <c>helloDisplay.c</c> at the start of class, so the
-                fault is above it.  Check that <c>SevenSeg_init()</c> is actually
-                called, and that its first command is the one that turns the
-                oscillator on: with the oscillator off the HT16K33 accepts
-                everything you send it and drives nothing at all, which looks
-                exactly like a display that is not wired.
+                fault is above it: check that <c>SevenSeg_init()</c> is actually
+                called, and that the oscillator command is in it — see above.
             </p>
 
             <slide xml:id="sl-day10-skeleton">
@@ -3457,8 +3450,8 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 <term>perfect</term>: every transaction is there, every address
                 byte is 0xE0, every ninth pulse comes back LOW because the
                 HT16K33 is powered, listening, and acknowledging every single
-                byte you send it.  It simply is not driving anything, because
-                nothing told its oscillator to run.
+                byte you send it.  It simply is not driving anything — the
+                oscillator, as in Part 8b.
             </p>
             <p>
                 So the bus can be flawless and the device can still do nothing,
