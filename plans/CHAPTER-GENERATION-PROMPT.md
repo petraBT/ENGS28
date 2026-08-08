@@ -43,6 +43,46 @@ all until she asked *"Are you using the committee we constructed?"*, and
 everything it later found — wrong hardware claims, a slide of undefined symbols,
 the same list enumerated four times in ten minutes — reached her first.
 
+## Continuing or reworking an existing unit
+
+Most units from here on are **not greenfield**: a second day in a chapter that
+already has one, or a day that has been rewritten and needs finishing. Run the
+same five gates, with these four changes. Skipping them wastes a day re-deriving
+what the repo already knows; ignoring them ships a unit reviewed against a shape
+it no longer has.
+
+**Gate 0 becomes verification, not collection.** The ground truth is already
+written down — `plans/dayNN-ground-truth.md`, `plans/weekN-*.md`. Read it and
+confirm the handful of facts this unit actually leans on, rather than re-mining
+the deck. Two things you still do in full: **re-run the structural-convention
+check**, because a unit that has been restructured may no longer match its
+siblings, and **re-ask any question still on the open list**.
+
+**The sibling day is your voice reference, ahead of the specimens.** A day in the
+same chapter that has been through Petra's hand is a better model than
+`plans/day8-voice-reference.diff`, because it is the same week, the same
+vocabulary and the same students. Read it first, and match it. The specimens
+remain the authority where the sibling is silent.
+
+**A committee report is void for any part that has moved.** Check the date on
+`reviews/dayNN-gateN.md` against the last commit that changed the section's
+*structure* — a part that has been moved between days, split, merged or
+renumbered was reviewed under a different time budget, a different neighbour and
+sometimes a different day. Its load and sequencing findings do not carry over;
+its factual findings usually do. State plainly which parts are still covered and
+re-run the affected reviewers on the rest.
+
+**Read the existing change list before you look for problems.** An unapplied
+review is the cheapest work available, and it is nearly always partly unapplied —
+a restructure in the middle of applying one leaves a mix nobody has audited.
+Start by checking each finding against the current file and saying whether it is
+live, fixed, or void. Rediscovering them costs a committee run; applying them
+costs an afternoon.
+
+**And clear the rewrite scars**, which are invisible to every linter: `xml:id`s
+that name the wrong day after a part moved, deck `page` fields keyed to them, two
+names for one file, and presenter notes that budget a structure that changed.
+
 ---
 
 ## Gate 0 — Ground truth before prose
