@@ -1662,7 +1662,9 @@ void pb4_exti_init(void) {
                     depends on it.  Your own program prints once a second: time
                     ten prints against a stopwatch and write down what you got.
                     Then write down the <c>PSC</c> and <c>ARR</c> your program
-                    uses.</p></statement>
+                    uses, and from those three numbers work out what clock this
+                    board is running at.  Neither listing below tells you, and
+                    neither can be judged without it.</p></statement>
                 </task>
                 <task xml:id="act-i2c-ai-t1">
                     <statement><p>What does it do better than yours?  There is
@@ -2317,7 +2319,7 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
     <caption>One command byte says where to start; every data byte after it moves the pointer on by one.</caption>
 </slide>
         </subsection>
-        <subsection xml:id="subsec-day9x-pins">
+        <subsection xml:id="subsec-day10-pins">
             <title>Part 6: The Pins, and Why They Must Be Open-Drain</title>
             <p>
                 A peripheral inside the chip has to reach the outside world
@@ -2465,7 +2467,7 @@ void i2c1_init(void){
                 board whose clock runs at a different speed.
             </p>
 
-            <slide xml:id="sl-day9x-pins" ref="fig-i2c-pins" stack="yes">
+            <slide xml:id="sl-day10-pins" ref="fig-i2c-pins" stack="yes">
     <ul>
         <li>I2C1's SCL and SDA come out on several pin pairs; ours is <term>PB8 for SCL and PB9 for SDA</term>, boxed here &#8212; D15 and D14 on the header, where every Arduino-shaped board puts its I2C bus.</li>
         <li>Getting the peripheral onto the pins is the alternate-function mechanism from the UART: alternate-function mode in <c>MODER</c>, then <em>which</em> one in <c>AFR</c>.</li>
@@ -2474,7 +2476,7 @@ void i2c1_init(void){
     <caption>Find PB8 and PB9 in the boxed pair, then find their AF6 column in Table 15.</caption>
 </slide>
 
-            <slide xml:id="sl-day9x-opendrain" room="yes">
+            <slide xml:id="sl-day10-opendrain" room="yes">
     <p><term>And one thing that is new: both pins have to be open-drain.</term> <c>GPIOx_OTYPER</c>, RM0490 &#167;6.4.2 &#8212; 1 is open-drain, 0 (the reset value) is push-pull.</p>
     <program language="c"><code><![CDATA[
 GPIOB->OTYPER |= (GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9);
@@ -2489,11 +2491,11 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
     </ul>
 </slide>
 
-            <slide xml:id="sl-day9x-opendrain-fig" ref="fig-open-drain">
+            <slide xml:id="sl-day10-opendrain-fig" ref="fig-open-drain">
     <caption>A short circuit. Left: both ends push-pull — 3.3 V straight to ground through two transistors, and nothing decides the level. Right: the same disagreement open-drain — the only path from the supply is the pull-up, and the wire reads LOW.</caption>
 </slide>
 
-            <slide xml:id="sl-day9x-opendrain-more">
+            <slide xml:id="sl-day10-opendrain-more">
     <p><term>What else that buys, and the one number it leaves you.</term></p>
     <ul>
         <li>The strongest thing any device can do is pull the line LOW, so two devices disagreeing is never worse than a LOW &#8212; and a device that releases and then reads LOW knows somebody else is pulling. Two more features rest on exactly that, and the Reference section has both: <term>several controllers</term> sharing one bus and sorting out who wins, and a device <term>holding SCL LOW</term> to ask for more time.</li>
@@ -2502,7 +2504,7 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
 </slide>
 
 
-            <slide xml:id="sl-day9x-init-code" room="compressed">
+            <slide xml:id="sl-day10-init-code" room="compressed">
     <p><term>i2c1_init()</term> &#8212; the pins first, then the peripheral:</p>
     <program language="c"><code><![CDATA[
   RCC->IOPENR |= RCC_IOPENR_GPIOBEN;                       // clock to GPIOB
@@ -2529,7 +2531,7 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
     TIMINGR is deliberately not taught (Petra, 2026-08-07). If somebody asks where 0x2 comes from, the one-line answer is that the prescaler divides I2CCLK down to 4 MHz and 12/4 − 1 = 2; the derivation and the three RM0490 tables are in Reference.</note>
 </slide>
         </subsection>
-        <subsection xml:id="subsec-day9x-library">
+        <subsection xml:id="subsec-day10-library">
             <title>Part 7a: What an I2C Library Has to Provide</title>
             <p>
                 You watched the protocol run on an oscilloscope yesterday, and
@@ -2626,7 +2628,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
                 <c>i2c1_byteRead()</c>.
             </p>
 
-            <slide xml:id="sl-day9x-five-ops">
+            <slide xml:id="sl-day10-five-ops">
     <p><term>The five, and why five.</term> Yours may be worded differently; check it covers the same ground.</p>
     <program language="c"><code><![CDATA[
 void i2c1_init(void);                                     // pins, bus speed
@@ -2645,7 +2647,7 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
     </ul>
 </slide>
 
-            <slide xml:id="sl-day9x-five-why">
+            <slide xml:id="sl-day10-five-why">
     <p><term>Why the last two are separate functions and not loops.</term></p>
     <ul>
         <li><term>Several bytes</term> each way carry one extra argument, <c>registerAddr</c>, because a device with more than one thing inside it has to be told <em>where</em> the bytes are going.</li>
@@ -2655,7 +2657,7 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
 </slide>
 
         </subsection>
-        <subsection xml:id="subsec-day9x-bytewrite">
+        <subsection xml:id="subsec-day10-bytewrite">
             <title>Part 7b: Opening i2c1_byteWrite()</title>
             <p>
                 Those five functions are the interface, and now we'll open one
@@ -2747,7 +2749,7 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
 
 
 
-            <slide xml:id="sl-day9x-bytewrite">
+            <slide xml:id="sl-day10-bytewrite">
     <p><term>The sending half of i2c1_byteWrite(), in full:</term></p>
     <program language="c"><code><![CDATA[
     // use "=" to ensure all other bits are cleared
@@ -2768,7 +2770,7 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
     </ul>
 </slide>
 
-            <slide xml:id="sl-day9x-cr2-assign">
+            <slide xml:id="sl-day10-cr2-assign">
     <p><term>Notice the <c>=</c>, and the comment on it.</term> The habit from the timers chapter, for a different reason than it had there.</p>
     <program language="c"><code><![CDATA[
 I2C1->CR2  = (deviceAddr<<1) | ... ;    // states the whole transaction
@@ -2781,7 +2783,7 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
     </ul>
 </slide>
 
-            <slide xml:id="sl-day9x-master-tx" ref="fig-i2c-master-tx" stack="yes">
+            <slide xml:id="sl-day10-master-tx" ref="fig-i2c-master-tx" stack="yes">
     <ul>
         <li>The two waits are the peripheral talking back. <c>BUSY</c> comes up when the START has actually appeared on the bus; <c>TXIS</c> comes up when the transmit register is empty and the hardware is ready for the byte &#8212; <term>after the address has been sent and acknowledged</term>.</li>
         <li>Reading a byte is the same shape with three changes: <c>I2C_CR2_RD_WRN</c> set, a wait on <c>RXNE</c> instead of <c>TXIS</c>, and <c>*data = I2C1-&gt;RXDR;</c> instead of the write.</li>
