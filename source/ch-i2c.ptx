@@ -168,12 +168,14 @@
                 header plugs into the breadboard, so each of the four wires goes
                 into the breadboard column that pin lands in.  <c>+</c> goes to
                 the Nucleo's <term>3.3 V</term> pin, not the 5 V pin beside it.
-                The reason is not the STM32's own tolerance — PB8 and PB9 are
-                listed as 5 V tolerant in the datasheet's pin table.  It is that
-                the backpack's pull-up resistors tie SDA (serial data) and SCL
+                The backpack's pull-up resistors tie SDA (serial data) and SCL
                 (serial clock) to <em>whatever you feed its <c>+</c> pin</em>,
                 so its supply is also the voltage that ends up on the two
                 signal wires, and this bus is built to sit at 3.3 V throughout.
+            </p>
+            <p>
+                I2C needs pull-up resistors on SCL and SDA.  The backpack has
+                them built in, so we wire none ourselves.
             </p>
             <p>
                 Check the four wires against
@@ -221,8 +223,16 @@
                 The program is <c>helloDisplay.c</c>, and it is short because
                 everything hard is inside the library.  Read it before you flash
                 it to see its shape — we'll go through every line on Thursday.
-                Four calls set the display up and fill it, and then a loop keeps
-                one short transaction going.
+                It sends the display three commands to wake it up, then ten
+                bytes of data, and then a loop keeps one short transaction
+                going.
+            </p>
+            <p>
+                Every I2C device has an <term>address</term>, and ours is
+                <c>0x70</c>.  The controller sends it first, so that the right
+                device answers.  The rest of the names below are the display
+                chip's own commands, taken from the HT16K33's datasheet — we'll
+                work out where the numbers come from tomorrow.
             </p>
             <program language="c"><code><![CDATA[
 #include "ES28.h"
@@ -400,7 +410,7 @@ int main(void) {
     <p><term>Display still dark?</term> Double-check:</p>
     <ul>
         <li>1 &#8212; <term>The four wires.</term> Re-seat all of them: <c>+</c> on the <term>3.3 V</term> pin and not the 5 V pin beside it, <c>&#8722;</c> on GND, <c>D</c> on PB9, <c>C</c> on PB8. <c>D</c> and <c>C</c> swapped is the hardest to see and the easiest to do.</li>
-        <li>2 &#8212; <term>A display that never answers also stops the program.</term> <c>i2c1_byteWrite()</c> waits for a flag the hardware does not set when nobody acknowledges, so the <term>first</term> call never returns and none of the rest runs. So if the display is not properly connected then there is no way the program can run. This will look the same as a display that was never been sent anything &#8212; which is why you need to double-check your wires first.</li>
+        <li>2 &#8212; <term>A display that never answers also stops the program.</term> <c>i2c1_byteWrite()</c> waits for a flag the hardware does not set when nobody acknowledges, so the <term>first</term> call never returns and none of the rest of the program runs. From where you are sitting that looks the same as a display that was never sent anything, which is why we check the wires before the code.</li>
     </ul>
     <caption>Wires first. There is nothing in the code to change.</caption>
     <note>Stays up for all of Part 2. Checkpoint at minute 15: if the room is not mostly lit, put one working display on the document camera and move on — Part 3b's trace can be read from the projected capture.</note>
@@ -410,11 +420,10 @@ int main(void) {
         <subsection xml:id="subsec-day9x-shared-clock">
             <title>Part 3a: How Did Two Wires Do That?</title>
             <p>
-                Four characters are on your display and two wires put them
-                there.  The rest of the hour is about what those two wires
-                carried.  Nothing before today told you; we build it here, and
+                Four characters are on your display, and two wires put them
+                there.  Next we'll work out what those two wires carried, and
                 <xref ref="subsec-i2c-physical-reality"/> has the written version
-                for afterwards.
+                to read afterwards.
             </p>
             <p>
                 Start with the one you have met before.  The UART sends a byte
@@ -477,6 +486,16 @@ int main(void) {
                 That address is the <c>HT16K33_ADDR</c> you have just flashed,
                 and it is the first thing you will find on the wire.
             </p>
+            <p>
+                We use <term>100 kHz</term>, which is <term>Standard mode</term>:
+                essentially every I2C device supports it, which is why it is the
+                safe default.  Our chip can go a lot faster — <term>400 kHz</term>
+                (Fast mode) and <term>1 MHz</term> (Fast-mode Plus) — and the
+                devices that need those are the ones moving a lot of data, an
+                EEPROM (a small non-volatile memory chip) being the usual
+                example.  A four-digit display sending ten bytes when the number
+                changes is not one of them.
+            </p>
 
             <slide xml:id="sl-day9x-uart-i2c" ref="fig-uart-vs-i2c" stack="yes">
     <tabular halign="left" valign="top" top="minor" bottom="minor" left="minor" right="minor">
@@ -515,8 +534,7 @@ int main(void) {
         <subsection xml:id="subsec-day9x-protocol">
             <title>Part 3b: One Transaction, Measured</title>
             <p>
-                Two wires carried four characters to the display.  Here is what
-                they carried, field by field
+                Here is what those two wires carried, field by field
                 (<xref ref="fig-i2c-message-frame"/>).
             </p>
             <figure xml:id="fig-i2c-message-frame">
@@ -560,7 +578,9 @@ int main(void) {
             </p>
             <p>
                 There is one rule:
-                <term>SDA is allowed to change only while SCL is LOW.</term>
+                <term>SDA is allowed to change only while SCL is LOW</term> —
+                the only exceptions being the START and STOP conditions
+                described below.
                 That is when no receiver is sampling it; while SCL is HIGH, SDA
                 holds still and is read.  The protocol then takes the one thing
                 that rule forbids and uses it to mark the edges of a
@@ -645,8 +665,11 @@ int main(void) {
                 </task>
                 <task xml:id="act-i2c-capture-t3b">
                     <statement><p>With your <term>helloDisplay.c</term> running, take a <em>single sweep</em>.  Because of the 250 ms delay in the loop you are
-                    catching one transaction out of four per second, so trigger
-                    on a falling edge of the data line and let it find one.</p></statement>
+                    catching one transaction out of four per second, so the
+                    trigger is what matters: source <term>Channel 2</term> (SDA),
+                    type Edge, condition <term>Falling</term>, level 1 V.  SDA
+                    idles HIGH and falls at the START, so that setting catches
+                    it.</p></statement>
                 </task>
                 <task xml:id="act-i2c-capture-t4">
                     <statement><p>On your own trace, mark all six: the START,
@@ -735,7 +758,7 @@ int main(void) {
                 harmless: nothing is read while SCL is LOW.
             </p>
             <p>
-                A second route into the same trace, and it is worth taking even
+                There is a second route into the same trace, worth taking even
                 if your own capture was perfectly readable: the AD2 also has a
                 logic-analyzer mode that decodes I2C for you.  It shows the
                 address, the R/W bit, the ACK and the data as values rather than
@@ -913,7 +936,7 @@ on the wire:      1 1 1 0 0 0 0    0
     <ul>
         <li>Read those eight bits as a byte and you get <term>0xE0</term>, not 0x70. Nothing is wrong: the address is in the top seven bits and the bottom bit is the direction.</li>
         <li><c>i2c1_byteWrite()</c> did the shift for you. On Thursday we'll look at <c>i2c1_byteWrite()</c> more carefully and see where this shift happens.</li>
-        <li>Caution: datasheets are not consistent about which of the two numbers they provide: the one that's already shifted to the left by one of the pure address.</li>
+        <li>Careful: datasheets are not consistent about which of these two numbers they print. A 7-bit address is at most <c>0x7F</c>, so any address quoted above that &#8212; <c>0xE0</c>, say &#8212; cannot be the 7-bit form and must be the shifted one. Shift it back before you <c>#define</c> it.</li>
     </ul>
 </slide>
 
@@ -959,7 +982,8 @@ on the wire:      1 1 1 0 0 0 0    0
                 first digit, <c>[2]</c> the second, <c>[4]</c> the colon,
                 <c>[6]</c> the third and <c>[8]</c> the fourth; the odd-numbered
                 entries are the ones that stay 0, and we'll find out on Thursday
-                why they cannot simply be left out.
+                why they cannot simply be left out.  Everything you change today
+                is one entry of this array.
             </p>
             <activity xml:id="act-i2c-your-digit">
                 <title>Put Your Own Character on a Digit</title>
