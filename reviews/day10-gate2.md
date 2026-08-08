@@ -1410,3 +1410,103 @@ derive from. Re-render and re-read it after any change, and check all six
 sites."* It confirmed the reverse hazard is clean: five figures now live in Day 10
 sections with images under `Day09X-I2C/`, and none is referenced from any other
 chapter.
+
+---
+
+# Synthesis — `committee-synthesizer`, and what was done with it
+
+**Verdict: not ready for Petra, but close, and the gap is narrower than the
+report's length suggests.** *"The single biggest remaining problem is Part 1:
+four of the five AI-critique findings are prose written against ChatGPT's listing
+and asserted of Gemini's… Part 1 is the day's opening 9 minutes and its whole
+payoff is students out-reading an AI; shipping it with four wrong readings
+inverts the lesson."*
+
+It checked every finding against the current file rather than trusting the
+"Applied" notes, and reported **two of my applied fixes as incomplete and one as
+right-but-half-done**.
+
+## Must-fix — all six applied
+
+1. **Part 1's four wrong statements**, all from one cause. Including the
+   `TIM14->CNT` claim, replaced with the update-event argument the book already
+   teaches — which also supplies the answer `act-i2c-ai-t1` never had.
+2. **The pointer contradiction** 1000 lines apart.
+3. **Two invented classroom facts** in three locations.
+4. **Part 2's test fires a false alarm at minute three** — Day 9x's own activity
+   edits that buffer and never restores it.
+5. **The rescue ruling** — see below.
+6. **The pull-up arithmetic**, one fix for three converging agents.
+
+### The ruling on the rescue conflict
+
+> "Both reviewers are right about their own rule, and they are not actually in
+> conflict — they disagree about *length*, not about *mechanism*. What Petra
+> deleted whole was a four-move paragraph… `ch-debugging.ptx:603` ships, in her
+> book, on a slide: *'Still stuck? Raise your hand and watch with a neighbor —
+> nothing later needs your own launch…'* That is **one sentence** carrying act,
+> fallback and scope. So the permitted form is not five words — it is one
+> sentence, and the ban is on the paragraph."
+
+Applied verbatim: *"Still blank after that? Raise your hand and keep going —
+nothing in the next four parts needs your own display, and we'll have you at a
+working one before you write the driver."* Deliberately true whether or not
+spares exist, **so it does not wait on Petra**. And *"We're here to help!"* is
+reduced to one instance in the chapter — hers, at `:348`.
+
+### It also overruled one of my deferrals
+
+I had carried the backwards `(high byte, low byte)` comment as needing Petra,
+because the line is verbatim from her file. *"It does not: **B-13 says the code
+must be identical and comments may differ freely.**"* Corrected in all three
+listings, code untouched.
+
+## Should-fix — applied
+
+**Items 7, 8, 9, 10, 11, 12, 13, 14, 16.** The census cuts (item 10) are the
+important one: it reconciled `expert-cognitive-load` and `expert-class-logistics`
+into a single action, and every cut is *duplication*, so **nothing is removed
+from the middle and no depth is lost** — about seven minutes recovered *before*
+Part 8c, which was the whole of the logistics complaint. Every part now carries
+its own cut trigger, and the Part 4 half-brightness derivation is named as a
+documented lever rather than cut, because `learner-firstgen-novice` calls it the
+day's best productive-struggle moment.
+
+**Item 15 — the `I2C_TIMINGR` cut stands, and Reference is enough.** *"What is
+genuinely still gone is not a fact but the noticing… That is a P-3 loss, and P-3
+loss is repaired at the top, at zero class cost"* — an optional homework exercise
+pointing at the three tables.
+
+## Not applied — recorded as its dissent
+
+- **`SevenSeg_dim()`'s `HT16K33_DISPLAY_CMD` is hers, and it stays.** *"My change
+  is not to her code — it is to move the disclosure to the point of use… If
+  students start OR-ing command constants together in Lab 5, that is the signal
+  to take it to her."*
+- **`checker-voice`'s strict five-word reading was overruled on corpus
+  evidence.** *"If Petra's hand pass deletes the sentence back down to 'Still
+  stuck? We're here to help!', then the five-word form is the rule and
+  `ch-debugging.ptx:603` is the outlier — record that and stop re-litigating
+  it."*
+- **`expert-class-logistics` still predicts Part 8c does not land for the slower
+  half.** ~7 recovered minutes plus a 4-minute lever against a predicted 15–20
+  minute overrun. *"That may not be enough. If the first run confirms the
+  prediction, the next lever is Part 3 in its entirety."*
+
+## Escalated to Petra — four, and it was asked to keep the list short
+
+1. **`fig-ht16k33-block` needs the original, not a patch.** A stray magenta
+   stroke through a label ending nowhere, five more unaccounted-for annotations
+   (two telling Day 9x's story), and the one block the caption calls the point is
+   the one *not* highlighted. *"Two rounds of arrow-patching fixed nothing on the
+   Day 9 figure for exactly this reason."* It probably wants to be two figures.
+2. **The shipped `i2c.c` is not in the repo, and a BLOCKER now rests on a deck
+   transcription.** The `i2c1_memRead()`/`AUTOEND` correction came from
+   `Day13-I2C(3).pptx`. *"Ask for `i2c.c` and `ES28.h`; hold the Day 13 draft
+   until they land."*
+3. **Does the persistence-of-vision beat stay at all?** New material, no
+   counterpart in her deck, three unverified claims, no figure and so no
+   projector fallback, load-bearing in the middle of a part. Five reviewers
+   touched it.
+4. **Lab 5 §3.3's `uint16_t *`** — adjudicated as the handout's error, but the
+   fix is in a PDF only she can change, and the rename instruction ships now.

@@ -3127,6 +3127,14 @@ void SevenSeg_init() {
         <li>Three transactions, not one: each is a separate command, and the HT16K33 wants each one addressed to it in its own right.</li>
         <li>The oscillator command is the one that has to arrive: until the oscillator is running the chip drives nothing at all, which looks exactly like a display that is not wired. We send it first out of habit &#8212; whether it <em>has</em> to be first is a question for later.</li>
     </ul>
+    <program language="c"><code><![CDATA[
+  and the rest of the activity:
+    digits 1..4      display_subaddr = 0, 2, 6, 8      (4 is the colon)
+    S  0b01101101    a c d f g          2  0b01011011    a b d e g
+    8  0b01111111    all seven          E  0b01111001    a d e f g
+    display_subaddr = 4  ->  the colon's pair.  Which bit lights it is not on
+                             the datasheet pages we have -- that is the point.
+]]></code></program>
 </slide>
         </subsection>
 
@@ -3535,6 +3543,34 @@ void SevenSeg_write(uint8_t *display_buffer) {
                     loop does something else.</p></statement>
                 </task>
             </activity>
+            <slide xml:id="sl-day10-hw-solution">
+    <p><term>SevenSeg_number(), the reference version.</term> Reproduced from the course's own driver.</p>
+    <program language="c"><code><![CDATA[
+void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
+    if (num > 9999) {                       // does not fit: show EEEE
+        for (uint8_t i = 0; i < HT16K33_NBUF; i++) {
+            display_buffer[2*i]   = (i==2) ? 0x00 : numbertable[0xE];
+            display_buffer[2*i+1] = 0x00;
+        }
+    } else {
+        display_buffer[0] = numbertable[num/1000];  display_buffer[1] = 0;
+        num %= 1000;
+        display_buffer[2] = numbertable[num/100];   display_buffer[3] = 0;
+        display_buffer[4] = 0;                      display_buffer[5] = 0;
+        num %= 100;
+        display_buffer[6] = numbertable[num/10];    display_buffer[7] = 0;
+        num %= 10;
+        display_buffer[8] = numbertable[num];       display_buffer[9] = 0;
+    }
+}
+]]></code></program>
+    <ul>
+        <li>The out-of-range answer is a design decision, and this is the course's: <term>four <c>E</c>s</term>. Any documented choice is acceptable, but a program that silently shows the wrong number is not.</li>
+        <li>Index 2 is the colon and is skipped in both branches. <c>num %= 1000</c> then <c>/100</c> is the digit-peeling idiom worth recognizing.</li>
+        <li>Note the parameter is <c>uint16_t</c>. The signed counter has to take its absolute value before it gets here, which is why <c>abs()</c> is in the task.</li>
+    </ul>
+</slide>
+
             <p>
                 Lab 5 is due Tuesday 10 February.  It asks for a modular ADC
                 driver, an ADC reading taken on a timer interrupt rather than a
