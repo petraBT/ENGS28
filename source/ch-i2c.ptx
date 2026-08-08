@@ -2020,8 +2020,10 @@ void tim14_init(void) {
         <subsection xml:id="subsec-day10-commands">
             <title>Part 4: Reading the Command Table</title>
             <p>
-                Most I2C devices have registers inside them, and reach them
-                through commands the datasheet defines.  The HT16K33's commands
+                Now we'll read the HT16K33's own command table and build the
+                three bytes <c>helloDisplay.c</c> has been sending since
+                yesterday.  Most I2C devices have registers inside them, and reach
+                them through commands the datasheet defines.  The HT16K33's commands
                 are one byte each, sent as the data of an ordinary write —
                 exactly what the three given lines at the top of
                 <c>helloDisplay.c</c> were doing, except that this
@@ -2343,8 +2345,9 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
         <subsection xml:id="subsec-day10-pins">
             <title>Part 6: The Pins, and Why They Must Be Open-Drain</title>
             <p>
-                A peripheral inside the chip has to reach the outside world
-                through pins, and which pins it can use is not up to us
+                Now we'll look at our end of the two wires.  A peripheral inside
+                the chip has to reach the outside world through pins, and which
+                pins it can use is not up to us
                 (<xref ref="fig-i2c-pins"/>).  I2C1's SCL and SDA signals are
                 available on several pairs, and the pair we use is
                 <term>PB8 for SCL and PB9 for SDA</term>, because those two are
@@ -2588,11 +2591,12 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
                     one?</p></statement>
                 </task>
                 <task xml:id="act-i2c-five-t2">
-                    <statement><p>Two are missing.  Name something a program
-                    might want to do with a device on this bus that
-                    <c>helloDisplay.c</c> cannot do, and say why it cannot be
-                    built out of the three calls that program already
-                    has.</p></statement>
+                    <statement><p>Two are missing.  Your capture from yesterday
+                    shows one acknowledge per byte and never a byte coming back to
+                    you — from <em>that trace</em> rather than from what you know
+                    about I2C in general, what can this program not do, and why
+                    can it not be built out of the three calls it already
+                    has?</p></statement>
                 </task>
                 <task xml:id="act-i2c-five-t3">
                     <statement><p>One of the five has nothing to do with any
@@ -2880,7 +2884,7 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
                 Somebody else has written both of those layers for this exact
                 chip already (if you have met it, that is
                 <c>Adafruit_LEDBackpack.h</c> over <c>Wire</c>), from the same
-                datasheet pages you read in Part 4.
+                datasheet pages you read earlier today.
             </p>
             <p>
                 What writing it yourself buys is not performance.  It is that
@@ -2989,18 +2993,27 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 <title>Write One Digit, Then Another</title>
                 <introduction>
                     <p>
+                        Three files are on Canvas:
                         <c>SevenSegPartial.c</c>, <c>SevenSegPartial.h</c> and
-                        <c>writeFirstDigit.c</c> are on Canvas.  Copy
-                        <c>TemplateProject</c> to a project named
-                        <c>SevenSegI2CSecondSteps</c>; the two
-                        <c>SevenSegPartial</c> files go in <c>Src</c> and
-                        <c>Inc</c>, and <c>writeFirstDigit.c</c> goes in
-                        <c>Src</c>.
+                        <c>writeFirstDigit.c</c>.  Download all three, then set
+                        the project up in two steps.
                     </p>
                 </introduction>
+                <task xml:id="act-i2c-first-setup">
+                    <statement><p>Copy <c>TemplateProject</c> to a new project
+                    named <c>SevenSegI2CSecondSteps</c>.</p></statement>
+                </task>
+                <task xml:id="act-i2c-first-files">
+                    <statement><p>Put <c>SevenSegPartial.c</c> and
+                    <c>writeFirstDigit.c</c> in that project's <c>Src</c> folder,
+                    and <c>SevenSegPartial.h</c> in its <c>Inc</c> folder — the
+                    <c>.c</c> files in <c>Src</c>, the <c>.h</c> file in
+                    <c>Inc</c>.  Build it before you change anything: it should
+                    compile and do nothing.</p></statement>
+                </task>
                 <task xml:id="act-i2c-first-t1">
                     <statement><p>Fill in TODO 1, <c>SevenSeg_init()</c>, with
-                    the three commands you derived in Part 4 — written as the
+                    the three commands you derived from the command table — written as the
                     header's names, not as 0x21, 0x81 and 0xEF.  Build, flash,
                     and confirm the first digit shows an <c>E</c>.</p></statement>
                 </task>
@@ -3043,7 +3056,8 @@ void SevenSeg_init() {
                 last.
             </p>
             <p>
-                <em>Nothing lights up?</em>  The bus was proved in Part 2, so the
+                <em>Nothing lights up?</em>  The bus was proved when you flashed
+                <c>helloDisplay.c</c> at the start of class, so the
                 fault is above it.  Check that <c>SevenSeg_init()</c> is actually
                 called, and that its first command is the one that turns the
                 oscillator on: with the oscillator off the HT16K33 accepts
@@ -3127,14 +3141,14 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
             <p>
                 <c>SevenSeg_blink()</c> and <c>SevenSeg_dim()</c> are each one
                 call to <c>i2c1_byteWrite()</c>, sending the display-setup and
-                dimming commands from Part 4 with the caller's option bits ORed
-                in.  Mask the argument to the bits the command actually has —
+                dimming commands you derived earlier, with the caller's option
+                bits ORed in.  Mask the argument to the bits the command actually has —
                 <c>0x6</c> for the two blink bits, <c>0xf</c> for the four
                 brightness bits — so that a caller passing something out of range
                 cannot corrupt the command itself.
             </p>
             <p>
-                <c>SevenSeg_write()</c> is where the RAM map from Part 5 turns
+                <c>SevenSeg_write()</c> is where the display RAM map turns
                 into code.  It receives a pointer to the caller's ten-byte
                 buffer, and it has to get all ten into the display RAM starting
                 at address 0, in one transaction.  Everything needed for that is
@@ -3146,7 +3160,7 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
                 <introduction>
                     <p>
                         In <c>SevenSegPartial.c</c>.  The header defines
-                        <c>HT16K33_ADDR</c>, the command names from Part 4,
+                        <c>HT16K33_ADDR</c>, the command names you derived,
                         <c>HT16K33_ADDR_PTR</c> for the display RAM's starting
                         address, and <c>HT16K33_NBUF</c> for the number of
                         digit-and-colon positions, so the buffer is
@@ -3159,9 +3173,9 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
                 </task>
                 <task xml:id="act-i2c-sevenseg-t2">
                     <statement><p>Write <c>SevenSeg_write()</c>.  Before you
-                    write it, say out loud what each of
-                    <c>i2c1_memWrite()</c>'s four arguments has to be and
-                    why.</p></statement>
+                    write the line, write down — not just say — what each of
+                    <c>i2c1_memWrite()</c>'s four arguments has to be, and why
+                    each one is that and not something else.</p></statement>
                 </task>
                 <task xml:id="act-i2c-sevenseg-t3">
                     <statement><p>In a new <c>main()</c>, declare
@@ -3234,7 +3248,8 @@ int main(void) {
 ]]></code></program>
             <p>
                 Three things about that listing.  The odd-numbered bytes are the
-                zeros from Part 5, and they are what move the pointer along.
+                zeros from the RAM map, and they are what keep the pointer
+                landing on the right addresses.
                 <c>0b11101101</c> is an <c>S</c> with bit 7 set, which is the
                 decimal point — one buffer entry produces both.  And this
                 <c>main()</c> has no <c>while(1)</c>: it runs once, sets the
@@ -3299,7 +3314,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
     i2c1_memWrite(HT16K33_ADDR, HT16K33_ADDR_PTR, 2*HT16K33_NBUF, display_buffer);
 }
 ]]></code></program>
-    <caption>SevenSeg_write() is one line, because Part 5 did the understanding.</caption>
+    <caption>SevenSeg_write() is one line, because you worked the RAM map out first.</caption>
 </slide>
 
             <slide xml:id="sl-day10-es28" room="compressed">
@@ -3317,7 +3332,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
     delay_ms(5000);   SevenSeg_blink(HT16K33_BLINK_OFF);   SevenSeg_dim(5);
 ]]></code></program>
     <ul>
-        <li>The odd bytes are Part 5's zeros, and they are what move the pointer along. <c>0b11101101</c> is an <c>S</c> with bit 7 set &#8212; a letter and its decimal point in one entry.</li>
+        <li>The odd bytes are the RAM map's zeros, and they are what move the pointer along. <c>0b11101101</c> is an <c>S</c> with bit 7 set &#8212; a letter and its decimal point in one entry.</li>
         <li><term>No <c>while(1)</c>.</term> It runs once and stops, and the display keeps showing <c>ES.28</c> &#8212; the HT16K33 is still sweeping its RAM whether or not the STM32C031C6 is doing anything. The argument for the backpack, on your desk.</li>
     </ul>
 </slide>
