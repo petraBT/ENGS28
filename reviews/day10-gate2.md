@@ -787,3 +787,68 @@ arithmetically sound (9 bit-times × 10 µs at 100 kHz) with RM0490 §23.4.9 quo
 on both sides: *"the strongest 'missing consequence' moment in the day — it names
 what actually happens (program hangs, bus is fine) rather than just 'know your
 library's limits.'"*
+
+---
+
+## `learner-anxious-nonhardware` — BLOCKER
+
+*Raised the BLOCKER on this chapter last time. Asked to judge the fixes honestly
+rather than generously, and it did — including finding a defect in the fix
+itself.*
+
+### Findings
+
+- **[BLOCKER] P-2, P-14, B-12 — "Flag it. We're here to help!" still states no
+  mechanism**, and it answered the open question with evidence from the book's own
+  corpus rather than opinion: `ch-gpio-interrupts.ptx:382` writes *"flag it and we
+  will get you a working board **before Part 6**"*, and `ch-debugging.ptx:603`
+  writes *"raise your hand and watch with a neighbor — **nothing later needs your
+  own launch**, and the chapter has every step for a redo before next class."*
+  **Both name the physical act, the fallback, and a scope or deadline. Day 10 had
+  none of the three.** Its two wordings: with spares, *"we'll swap in a spare
+  backpack; your driver files don't change"*; without, *"watch with a neighbor for
+  Part 8c; nothing in Parts 3–7 needs your own display, and we'll get yours
+  working before Lab 5."* — *"Silence isn't [fine] — for the student with a
+  genuinely dead unit, this sentence is the only thing between 'I have a path' and
+  'I stop and wait.'"*
+  **Partly applied**: the physical act is named, and the scope — that nothing in
+  the next four parts needs a working display — is now stated in both the prose
+  and on both slides. **The spare-versus-neighbour half still needs Petra**, and
+  is on the open-questions list.
+
+- **[MAJOR] P-1, P-14 — the discriminator I added this morning is true but not
+  observable, which makes it unusable by the student it is meant to rescue.**
+  Neither `writeFirstDigit.c` nor `helloDisplay.c` has an LED, a `printf`, or any
+  output independent of the I2C calls under test, *"so a hung program and a
+  successfully-looping-but-wrong-command program both leave the board silent and
+  the display blank."* **Applied, two ways**: Part 2 now says plainly that the two
+  look identical from where the student is sitting — which is Petra's own sentence
+  from Day 9x, reused — and gives that as the reason to check wiring rather than
+  code; and ladder rung 3, where the AD2 is at hand, now names the instrument and
+  what each outcome looks like on it.
+
+- **[MAJOR] B-4, P-2 — nothing told a flagged student to keep going.** *"Without
+  that sentence, the natural reading of 'we're here to help' is 'wait,' when the
+  correct instruction is 'keep going.'"* **Applied.**
+
+- **[MINOR] — "Flag it" never names the physical act**, where `ch-debugging.ptx`
+  says "raise your hand" plainly. *"Not because the phrase is sacred, but because
+  an anxious student shouldn't have to infer what 'flag it' means to do with their
+  body in the moment."* **Applied.**
+
+### What it judged genuinely well handled
+
+- **Part 2's discriminator and ladder rung 3** — *"real physics from
+  `i2c1_byteWrite()`'s wait loop, correctly derived… a genuine fix to what I
+  flagged last time, not a rewording of it."*
+- **Part 9 is safe to actually do, by construction rather than by reassurance.**
+  Two mechanisms: working on a copy is *"a real mechanism — a different file, not
+  a promise"*, and the crucial step is structurally complete before Part 9 begins,
+  *"so even a fumbled Part 9 can't retroactively cost me the thing the day was
+  building toward."* No wiring changes, so no new damage surface. **P-2/B-12
+  satisfied by construction.**
+- **The reversed-polarity line reads as honesty, and is not a finding.** *"'Check
+  the four wires rather than finding out' is a real preventive action, not a
+  soothing sentence layered over an unknown. Given B-11c bans inventing facts the
+  author hasn't verified, 'we have not tested this' is the correct thing to say
+  rather than a false 'it's fine.'"*
