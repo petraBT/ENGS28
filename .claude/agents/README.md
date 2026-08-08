@@ -185,4 +185,41 @@ from the middle.
 
 ## The regression suite
 
-*(filled in below)*
+Every agent changed or added in the August 2026 rebuild was run against the
+defect it exists for, with the **bad version of the artifact checked out of git**
+and a brief that named only the files — never the defect. Full method, fixtures,
+rebuild commands and per-run detail: `reviews/committee-regression-2026-08.md`.
+
+**An agent that does not catch its own regression case is not finished.** Read
+the "how strong is this" column before trusting a row.
+
+| # | Defect that reached Petra | Owner | Result | How strong is this |
+| --- | --- | --- | --- | --- |
+| A | Opening on what is absent; aphoristic register; missing "we'll"; time budgets and "Part 3b" in student-facing text; unexpanded acronyms; reassurance theater; a verbatim second telling; a count as rhetoric | `checker-voice` | **caught — all 7** | strong. Also produced 13 findings in neither specimen, so it generalizes. `we'll` count independently verified |
+| A′ | Her existing wording reinvented instead of reused | `checker-voice` reuse pass | **caught** | strong. Recovered her UART/I2C table, her protocol slide, her controller/target line from the old deck |
+| B1 | "An 8-bit address ending in 0 is the giveaway" — refuted by the chapter's own `0x70` | `checker-technical-accuracy` B1 | **caught (BLOCKER)** | good. Ran the rule over the chapter's instance and showed the misclassification |
+| B2 | "Short by more pins than the board has" — 34 − 22 = 12 | B2 | **caught (BLOCKER)** | good. Recomputed, and listed 18 calculations it checked and found correct |
+| B3 | A paragraph contradicting itself in four lines | B3 | **caught (BLOCKER)** | **strongest in the suite** — it reported the same defect as *still live* in `source/ch-i2c.ptx`, so it cannot be diffing against a fix |
+| B4 | D0/D1 on the virtual COM port, which `ch-uart.ptx` contradicts | B4 | **caught (BLOCKER)** | good. Cited `ch-uart.ptx:900-904` as the source |
+| C1 | Slide captioned "What passing `0xE0` actually looks like" over a capture of `0x60` | `checker-figure-claims` | **caught, under-graded** | mixed. Found the pairing and the fix, graded MINOR where Petra graded it a defect. **Brief corrected** — grade a slide as if seen alone |
+| C2 | Segment names lowercase in text, uppercase in figure | `checker-figure-claims` | **caught (MAJOR)** | strong |
+| C3 | A caption promising what the image does not contain | `checker-figure-claims` | **caught (BLOCKER)** | strong, in two instances — a wiring caption whose destination is cropped out of frame, and a caption promising a decoded view over an undecoded screenshot |
+| D1 | `helloDisplay.c` projected with its `#define` block stripped — every symbol undefined | `learner-in-the-room` | **caught (BLOCKER)** | strong. Tabulated 9 identifiers as "last seen: nowhere" and traced the downstream cost |
+| D2 | A troubleshooting slide with no diagnosis in it | `learner-in-the-room` | **caught (MAJOR)** | strong, via the two-causes test |
+| D3 | "Write down the question you would have to answer…" | `learner-in-the-room` | **caught (MAJOR)** | weaker — **synthetic fixture**. No committed bad version exists |
+| D4 | A whole slide created only to fix a crop | `learner-in-the-room` | **caught (MAJOR)** | weaker — same synthetic fixture |
+| E | An idea stated four times in ten minutes | `expert-cognitive-load` census | **caught 3 of 4** | **weakest row.** The brief's example names this chapter's own instances. Counts differed from the brief's, so it counted rather than copied — but a clean re-test needs a chapter the brief does not describe |
+| F1 | An `.svg` with no `width`/`height` projecting at 300×150 | `scripts/check_rules.py` (B-11a) | **caught — by the linter** | strongest possible. Blocks the commit; fires on the pre-fix file, silent on the whole live book |
+| F2 | A slide's figure silently cropped while every measurement reads zero | — | **not covered** | there is no static or measurable signal. `checker-figure-claims` names candidates with bullet counts; that is triage, not detection. **The control is the human fit check** (`AUTHORING-slides.md`, trap 4) |
+| F3 | Two screenshots stacked in one image-dominant figure | `checker-figure-claims` | **caught (MAJOR)** | strong, with the right fix (two figures, not a `<sidebyside>`) |
+| F4 | Composites with text outside its box, an arrow through a label, a dropped annotation, and an ACK ellipse on clock pulse 8 | `checker-figure-claims` | **caught — all four kinds** | strong. It measured the ellipse's bounding box against pulse centres rather than eyeballing it, and said "ask for the original" instead of proposing patches |
+| G | The committee not being run at all | process, not an agent | **addressed, untestable** | the gate is in this file, `CHAPTER_PROCESS.md` and `plans/CHAPTER-GENERATION-PROMPT.md`. No agent can enforce it |
+| G′ | A structural convention never checked against sibling chapters | `checker-technical-accuracy` B4 + `CHAPTER_PROCESS.md` Step 0.5 | **caught** | good — the B run confirmed the x-day no-reading convention holds, citing `ch-debugging.ptx` |
+
+**Two things this table does not claim.** `learner-visual`, and every expert and
+learner persona other than `learner-in-the-room` and `expert-cognitive-load`,
+were **not re-tested** in this round — they are unchanged and their evidence is
+the `reviews/day*-gate2.md` transcripts. And the agents were exercised by loading
+their briefs into a general-purpose agent at the same model, because the agent
+registry snapshots at session start; what was tested is the brief, not the
+dispatch.

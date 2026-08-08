@@ -240,6 +240,32 @@ not describe** — run it on Day 11 or Day 13 when those are drafted.
   `AUTHORING-slides.md`.
 - **F3, two screenshots stacked in one figure: caught** — see C.
 
+- **F4, the broken `pptx_annotate.py` composites: caught, all four kinds**
+  (`checker-figure-claims`, 107k tokens, 10 min). Fixture: the three composites
+  deleted in `6593603`, recovered from git into a scratch image tree.
+
+  The headline one is the reason the brief says *count the features, do not
+  accept "there is an ellipse near the ACK"*. It read the ellipse out of the SVG
+  (`cx=1040.6 rx=27.0`, spanning x 1013.6–1067.6), measured the clock pulse
+  centres off the embedded bitmap (pulse 8 at 1027, pulse 9 at 1101), and
+  reported that the ellipse encloses the pulse-8 bit marker while the green
+  "Ack" chip sits correctly over pulse 9 — **the circle and the label are one
+  pulse apart**. It then traced the consequence: Part 4 turns on students
+  reading eight bits off this trace and getting `0xE0`; a student who takes the
+  red circle as the ACK counts seven and gets `0x70`, and the payoff collapses.
+
+  Also caught: text drawn outside its box in three of four boxes, with the
+  border striking through it; the "Start condition" arrow drawn through its own
+  label; step 2's label silently dropped past `--max-text`, leaving an arrow
+  entering from above the top edge; and a slide caption promising *"decoded:
+  values instead of edges"* over a logic-analyzer screenshot with no decoder row
+  and no byte values on it at all.
+
+  It said **ask Petra for the original** in every case rather than proposing
+  patches, and gave a reason: three separate defects in one file means the
+  honest ask is the source. It also flagged that the chapter's caption currently
+  *narrates* the step-2 build failure to students, which a textbook should not do.
+
 ### The false-positive check, and what it found instead
 
 An agent that flags everything is a report Petra stops reading, so
