@@ -1888,7 +1888,9 @@ void tim14_init(void) {
                 pin, and likewise for <c>b</c> through <c>g</c> and <c>DP</c> —
                 the eight pins along the bottom, 13, 9, 4, 2, 1, 12, 5 and 3 —
                 with pin 8 for the colon.  Five cathode pins and nine anode pins
-                is 14 wires for 34 LEDs.</caption>
+                is 14 wires for 34 LEDs.  The datasheet prints the segments as
+                capitals; we write them lowercase, as
+                <xref ref="fig-segment-map"/> does.</caption>
                 <image source="images/Day10-I2C(2)/four_digit_wiring.png" width="95%"/>
             </figure>
             <p>
@@ -1980,7 +1982,7 @@ void tim14_init(void) {
                 <image source="images/Day10-I2C(2)/ht16k33_block.svg" width="70%"/>
             </figure>
 
-            <slide xml:id="sl-day10-grid" ref="fig-four-digit-wiring" stack="yes" room="yes">
+            <slide xml:id="sl-day10-grid" ref="fig-four-digit-wiring" stack="yes">
     <ul>
         <li><term>Common cathode.</term> Within one digit, all eight LEDs share a cathode, brought out on the pin marked (COM), for <em>common</em>. Across digits, all four <c>a</c> anodes are tied together, all four <c>b</c> anodes, and so on.</li>
         <li><term>How do you turn on the <c>a</c> segment of digit 2?</term></li>
@@ -2044,7 +2046,9 @@ void tim14_init(void) {
                 <caption>Rows of the HT16K33 command table, pages 24–25 of its
                 datasheet.  The eight middle columns are the bits of the command
                 byte, D15 down to D8; a 0 or a 1 there is part of the command's
-                identity and a letter is an option you supply.  <em>System
+                identity, a name — <c>S</c>, <c>D</c>, <c>B1</c>, <c>P3</c> — is
+                an option you supply, and an <c>X</c> is a don't-care that we
+                write as 0.  <em>System
                 setup</em> is 0 0 1 0 X X X S, where S is the internal
                 oscillator: 0 leaves it off, 1 turns it on.  <em>Display
                 setup</em> is 1 0 0 0 X B1 B0 D, where D turns the display on and
@@ -2129,12 +2133,9 @@ void tim14_init(void) {
                 three calls long.  You write it in <xref ref="subsec-day10-first-digit"/>.
             </p>
 
-            <slide xml:id="sl-day10-cmd-table" ref="fig-ht16k33-cmd-table" stack="yes">
-    <ul>
-        <li>The HT16K33's commands are <term>one byte each</term>, sent as the data of an ordinary write &#8212; which is what the three given lines of <c>helloDisplay.c</c> were doing.</li>
-        <li>The eight middle columns are the bits of that byte, D15 down to D8. <term>0 or 1 = the command's identity; a name = your option; X = don't care, write 0.</term></li>
-    </ul>
-    <caption>Datasheet pp. 24–25. Three of these rows are all today needs.</caption>
+            <slide xml:id="sl-day10-cmd-table" ref="fig-ht16k33-cmd-table">
+    <caption>The HT16K33's command table, datasheet pp. 24&#8211;25. The eight middle columns are the bits of a one-byte command, D15 down to D8: a 0 or 1 is the command's identity, a name is your option, and an X is a don't-care that we write as 0. Three of these rows are all we need.</caption>
+    <note>Figure-focus deliberately: three stacked datasheet crops share one figure box, and with bullets above them the bit cells project at three or four pixels. The two points that were bullets here are now in the caption, and the next slide reprints all three bit layouts at full size, which is what students actually derive from.</note>
 </slide>
 
             <slide xml:id="sl-day10-cmd-derive" room="yes">
@@ -2192,8 +2193,12 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 display uses five — and the two addresses beside each hold that
                 line's sixteen possible LEDs, ROW0 to ROW7 in
                 the first byte and ROW8 to ROW15 in the second.  The lower table
-                gives the bit order within a byte, D7 down to D0 mapping to
-                ROW7 down to ROW0.  A seven-segment digit uses only the first
+                gives the bit order within a byte: the upper row is the even
+                address, D7 down to D0 mapping to ROW7 down to ROW0, and the
+                lower one is the odd address, mapping to ROW15 down to ROW8.
+                Two annotations were left on this crop: the box around COM0's
+                pair is digit 1's two bytes, and the box around the 6 marks bit 6,
+                which is segment <c>g</c>.  A seven-segment digit uses only the first
                 eight rows, so for us the second byte of every pair is always 0 —
                 and the even addresses 0x00, 0x02, 0x04, 0x06 and 0x08 are the
                 five that carry anything.</caption>
@@ -2846,8 +2851,10 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
                 middle ones labeled by their rule as well as their name.  At the
                 bottom, the microcontroller's own registers.  Above them the
                 interface drivers, the only code that reaches a machine register:
-                <c>uart.c</c> and <c>i2c.c</c> here, with <c>stdio.c</c> sitting
-                on <c>uart.c</c> so that <c>printf()</c> works.  Above those the
+                <c>i2c.c</c>, <c>uart.c</c> and <c>adc.c</c> here, with
+                <c>stdio.c</c> sitting on <c>uart.c</c> so that <c>printf()</c>
+                works.  The device-driver box is drawn generically, as
+                <c>device.c</c>; yours is the file this part is about.  Above those the
                 device drivers, which reach a device's registers only through an
                 interface driver and never touch a machine register — the layer
                 you are writing today, over the I2C bus, for a device with its own
@@ -3454,12 +3461,10 @@ void SevenSeg_write(uint8_t *display_buffer) {
             </p>
 
             <slide xml:id="sl-day10-breakit-answer" ref="fig-i2c-scope-noack" stack="yes">
-    <p><term>A perfect trace and a blank display.</term> The two failures look <term>identical on the display</term> and completely different on the wire &#8212; which is what makes a scope worth reaching for, and what makes it not enough.</p>
+    <p><term>Case 1 on the wire: nobody answered.</term></p>
     <ul>
         <li><term>Case 1</term> is visible on the wire, and the figure here is what it looks like: nine clock pulses, SDA HIGH on the ninth, then a STOP. And the program <term>stops</term> after one transaction &#8212; which is why the reset button was needed.</li>
         <li><term>Case 2</term> shows nothing wrong at all. Every transaction is there, every address byte is 0xE0, every ninth pulse comes back LOW: the HT16K33 is powered, listening and <term>acknowledging every byte you send it</term>. It is just not driving anything, because nothing told its oscillator to run.</li>
-        <li>So <term>the bus can be flawless and the device still do nothing</term>, and no amount of staring at SDA and SCL will tell you that.</li>
-        <li>A scope answers <q>did my bytes arrive?</q>, completely. It cannot answer <q>were they the right bytes?</q> &#8212; that is a datasheet question, and the instrument for it is the command table.</li>
     </ul>
     <note>The two-question split is the takeaway to say out loud. It is the debugging chapter's "which tool, when", made physical.
     Do not let the prediction in the second task be skipped — it is the whole beat, and almost everyone predicts a broken trace for case 2. Which is why nothing before this slide says the two traces differ.</note>
@@ -3809,9 +3814,11 @@ void SevenSeg_write(uint8_t *display_buffer) {
             </p>
             <p>
                 Those two do not quite add to the 10 µs a 100 kHz clock needs,
-                and the table says why — its own <c>t_SCL</c> row reads
-                <q>~10 µs</q>, footnoted <q>t_SCL is greater than t_SCLL +
-                t_SCLH due to SCL internal detection delay</q>.  The missing
+                and the manual says why — the <c>t_SCL</c> row of each table
+                reads <q>~10 µs</q>, and RM0490 §23.4.10 footnotes it
+                <q>t_SCL is greater than t_SCLL + t_SCLH due to SCL internal
+                detection delay</q>.  (The crops here stop above the footnote
+                block.)  The missing
                 microsecond is the peripheral synchronizing to its own clock
                 line, and 10 µs is what the AD2 measures between two adjacent SCL
                 rising edges.

@@ -1311,3 +1311,102 @@ transcriptions, which the ground truth names as the only source. **If the real
 file exists, the BLOCKER should be re-checked against it before it is acted on.**
 Also unverified: `ES28.h`'s `GPIO_ALTERNATE`/`GPIO_AF6`, the CMSIS spellings (no
 `stm32c031xx.h` in the repo), and "every Arduino-shaped board puts I2C there".
+
+---
+
+## `checker-figure-claims` — BLOCKER
+
+*Rasterised every SVG at 3× with PyMuPDF **and** re-checked each in the real
+player (headless Chrome, 1280×720); measured the scope trace pixel by pixel.
+Where PyMuPDF and the browser disagreed it used the browser, "because that is
+what ships" — and said so rather than reporting the difference as a defect.*
+
+**B-11a's mechanical half passes**: all eight SVGs carry `width`/`height` as well
+as `viewBox`. *"Its human half does not."*
+
+### Correspondence failures
+
+- **[BLOCKER] `sl-day10-breakit-answer`'s title promises the one thing not
+  pictured.** The title said *"A perfect trace and a blank display"* over
+  `fig-i2c-scope-noack` — the **NoAck** capture, whose one annotation says the
+  opposite. Case 2's perfect trace has **no figure at all**. *"This is the same
+  shape as the 0xE0/0x60 case, and the correction in my brief says not to grade
+  it down because the bullets rescue it."* **Applied**: retitled to name what is
+  on screen.
+- **[BLOCKER] `sl-day10-cmd-table` — the figure the next slide derives from
+  projects at 422×399 px, with the bit cells at 3–4 px.** *"The
+  three-images-in-one-`<figure>` rule bites here: three crops share one 55cqh
+  box, so each gets a third of it."* **Applied**: figure-focus, bullets moved
+  into the caption. Its full split into three slides is recorded as the better
+  fix.
+- **[MAJOR] `fig-ht16k33-block` has a stray magenta stroke** that begins at the
+  corner of the Display RAM highlight, runs **through** the "Common scan output"
+  label, and ends in white space with no head and no label. *"It is the most
+  visually salient mark on the slide and it means nothing."* → **Ask Petra for
+  the original.** *"Two rounds of arrow-patching fixed nothing on the Day 9
+  figure for exactly this reason."*
+- **[MAJOR] `fig-ht16k33-block` carries six colour annotations the caption
+  accounts for none of** — and two of them tell the *device-address* story, which
+  belongs to Day 9x. Meanwhile *"the one thing the caption calls out as the point
+  — an internal oscillator that is off at power-up — is the one block **not**
+  highlighted."* Probably wants to be two figures.
+- **[MAJOR] `fig-i2c-timing-tables` — the prose quotes a footnote the crop
+  removed.** All three crops stop mid-rule above the footnote block. **Applied**:
+  the quote is now attributed to RM0490 §23.4.10, and the crop line is disclosed.
+- **[MAJOR] `fig-display-ram-map`'s two magenta boxes are explained nowhere**,
+  and *"the one round '6' is actively misleading next to the bullet 'bit 0 is a,
+  up to bit 6 for g'."* **Applied.**
+- **[MINOR] ×6**, applied: the caption naming two interface drivers where the
+  figure shows three; the device-driver box being generic `device.c` while the
+  slide names `SevenSegPartial.c`; the figure's fourth heading (PHYSICAL
+  CONNECTIONS) having no counterpart in the caption; the cmd-table caption still
+  carrying the two-way rule the prose replaced today; and the datasheet drawing
+  printing segments in **capitals** where the chapter and `fig-segment-map` both
+  use lowercase — *"a student holding both has two drawings that disagree with
+  each other and one that disagrees with the prose."*
+  Not applied, recorded: the pointer row's Option cell says *"five bits, A0 to
+  A3"* — **Holtek's own typo**, four bits; *"one clause turns a stumble into a
+  small lesson about datasheets."*
+
+### Legibility, measured in the player rather than estimated
+
+*"The player's 2026-08-08 change is real and it moves the whole problem:
+`object-fit: contain` means nothing is cropped any more, but `max-height: 55cqh`
+plus tall bullet stacks means several figures now project at a quarter of the
+size they need. In every case the fix is a bigger figure, not smaller text — and
+the lever is the bullets above it, since the `width=` attribute does nothing."*
+
+| slide | projected | verdict |
+| --- | --- | --- |
+| `sl-day10-cmd-table` | 422×399, bit cells 3–4 px | **BLOCKER** — applied |
+| `sl-day10-breakit-answer` | 253×140, decode digits ~2 px | MAJOR — two bullets moved off |
+| `sl-day10-pins` | 379×265, `PB8`/`D15` ~4 px | MAJOR — the caption says "find PB8 and PB9" and they cannot be read |
+| `sl-day10-grid` | 530×209 | MAJOR — **`room="yes"` was the hidden lever**, taking ~35% of the slide. Applied |
+| `sl-day10-layers` | 425×273, improved today from 200×135 | MAJOR — *"good, and not enough"* |
+| `sl-day10-ram` | 514×526 | **OK — fixed during this run** by the `stack` removal |
+| `sl-day10-opendrain-fig` | ~1180×580 | **OK — the model.** *"What a figure-focus slide with a purpose-drawn figure looks like"* |
+
+### Verified correct, measured
+
+**All thirteen pin numbers in `fig-four-digit-wiring`**, including that pin 7 sits
+*third*, between DIG.2 and DIG.3 — *"which is what makes 'the colon sits in the
+middle' true."* **All five promised rows of the command table are present**;
+both previously reported defects are genuinely fixed. **`fig-i2c-scope-noack`
+measured, not eyeballed**: 10 falling and 10 rising SCL edges → 9 pulses; SDA
+sampled at each clock-high gives `1 1 0 0 0 0 0` then `0`; the green `NoAck` cell
+spans x 1157–1266 and pulse 9 spans 1168–1206, **so the label is on the ninth
+pulse**; and a correctly formed STOP is present. The cross-reference to
+"eighteen" checks out — it counted 19 falls and 19 rises in the ACK capture.
+**`fig-segment-map` is clean**: `e` and `f` are back, lowercase, and it renders
+correctly at both `refPage` sites.
+
+### The cross-day dependency to watch
+
+`fig-segment-map` is declared in Day 9x, its image lives in the Day 10 image
+directory, and it now has **six consumers across two days**. *"This is precisely
+the figure that previously lost its `e` and `f` labels to a re-crop, and any
+future edit for one day silently changes what four activities across two days
+derive from. Re-render and re-read it after any change, and check all six
+sites."* It confirmed the reverse hazard is clean: five figures now live in Day 10
+sections with images under `Day09X-I2C/`, and none is referenced from any other
+chapter.
