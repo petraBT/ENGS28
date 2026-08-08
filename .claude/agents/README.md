@@ -208,7 +208,7 @@ the "how strong is this" column before trusting a row.
 | D2 | A troubleshooting slide with no diagnosis in it | `learner-in-the-room` | **caught (MAJOR)** | strong, via the two-causes test |
 | D3 | "Write down the question you would have to answer…" | `learner-in-the-room` | **caught (MAJOR)** | weaker — **synthetic fixture**. No committed bad version exists |
 | D4 | A whole slide created only to fix a crop | `learner-in-the-room` | **caught (MAJOR)** | weaker — same synthetic fixture |
-| E | An idea stated four times in ten minutes | `expert-cognitive-load` census | **caught 3 of 4** | **weakest row.** The brief's example names this chapter's own instances. Counts differed from the brief's, so it counted rather than copied — but a clean re-test needs a chapter the brief does not describe |
+| E | An idea stated four times in ten minutes | `expert-cognitive-load` census | **caught 3 of 4**, and **re-tested clean 2026-08-08** | **no longer the weakest row — see below.** The August run's brief named this chapter's own instances, so it tested recall as much as detection. The re-test on the reworked Day 10 is the clean one |
 | F1 | An `.svg` with no `width`/`height` projecting at 300×150 | `scripts/check_rules.py` (B-11a) | **caught — by the linter** | strongest possible. Blocks the commit; fires on the pre-fix file, silent on the whole live book |
 | F2 | A slide's figure silently cropped while every measurement reads zero | — | **not covered** | there is no static or measurable signal. `checker-figure-claims` names candidates with bullet counts; that is triage, not detection. **The control is the human fit check** (`AUTHORING-slides.md`, trap 4) |
 | F3 | Two screenshots stacked in one image-dominant figure | `checker-figure-claims` | **caught (MAJOR)** | strong, with the right fix (two figures, not a `<sidebyside>`) |
@@ -223,6 +223,36 @@ the `reviews/day*-gate2.md` transcripts. And the agents were exercised by loadin
 their briefs into a general-purpose agent at the same model, because the agent
 registry snapshots at session start; what was tested is the brief, not the
 dispatch.
+
+### Row E, re-tested on Day 10 — the census holds
+
+The August run of `expert-cognitive-load` was the suite's weakest row for a
+structural reason: the agent's brief names *this chapter's own* repetition
+instances as its calibration example, so running it against this chapter tested
+recall as much as detection. The re-test that row asked for was run on
+**2026-08-08**, against the reworked Day 10 — material the brief does not
+describe, and which did not exist when the brief was written. The agent was
+given the files and the day's shape, and **no hint of what to find**.
+
+**Result: the census works.** Six rows, each with a count, a location list, a
+keep and a reduce-to. Two of them are defects nothing else in the committee
+found — the HT16K33 oscillator fact stated **five times in one session, twice
+back to back inside the part containing the crucial step**, and four of the
+recap's eight items being near-verbatim copies of a slide bullet from minutes
+earlier rather than compressed callbacks.
+
+Two things make this a real detection result rather than a lucky one. It
+**distinguished deepening from rewording** on its own: of Part 3's three
+sub-beats over the pre-class reading it passed two as genuine deepening and
+flagged only the third, which is reworded with no new technical content. And it
+caught a **structural contradiction** the census is not obviously aimed at —
+Part 3 tells students they already know the segment bit mapping, and Part 5 then
+re-derives it in full, in both prose and slide, contradicting Part 3's own
+forward pointer.
+
+Treat row E as good now, on the strength of a fixture the brief cannot have
+memorized. The remaining caveat is the same one that applies to every row: the
+agent was exercised through its brief, not through the registry dispatch.
 
 ### The open risk: `checker-voice`'s false-positive rate is unmeasured
 
