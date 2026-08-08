@@ -80,13 +80,11 @@
                 Today we'll start communicating with the seven-segment display
                 in your kit.  This is a new peripheral, and we'll communicate
                 with it using a new protocol.  We'll continue going to the
-                reference manual for register information, and we'll continue
-                using a whole mask to assign to a control register rather than
-                compound-assigning one bit into it.
+                reference manual for register information.
             </p>
             <p>
                 We'll start by wiring the display to two of the Nucleo's pins,
-                flash a program, and make sure the display lights up.
+                flashing a program, and making sure the display lights up.
                 Everything after that answers the question you then have —
                 <em>how was that possible with just two wires?</em> — with an
                 oscilloscope on those two wires, and then you change the bytes
@@ -125,18 +123,12 @@
             <p>
                 The count is 4 × 7 segments = 28, plus one decimal point per
                 digit = 32, plus the colon's two dots = <term>34 LEDs</term>.
-                One pin each is 34 pins.  The Nucleo's Arduino headers carry 22
-                — D0 through D15 and A0 through A5 — and A0 is already the
-                potentiometer's.  So the direct approach needs a dozen more pins
-                than the headers have, before anything else on the board asks
-                for one.
+                One pin each is 34 pins.  The Nucleo's Arduino headers carry <term>22</term> pins &#8212; more are available via the morpho connectors, but using up 34 pins is clearly not a viable solution.
             </p>
             <p>
-                So the display does not get 34 pins.  It gets four wires: power,
-                ground, and the two wires of an I2C bus.  A separate chip on the
+                We'll wire the display with just <term>four wires</term>: power, ground, and the two wires of an I2C (Inter-Integrated Circuit) bus.  A separate chip on the
                 small board underneath the display — a <term>backpack</term> —
-                takes commands over those two wires and drives all 34 LEDs
-                itself.  Wiring those four is what we do next.
+                takes commands from the STM32C0 over those two I2C wires via a special protocol and drives all 34 LEDs itself.  We'll talk about the I2C protocol today and will examine how to talk to the backpack chip tomorrow.
             </p>
 
             <slide xml:id="sl-day9x-count" ref="fig-display-photo" room="yes">
@@ -685,7 +677,7 @@ int main(void) {
             </p>
             <slide xml:id="sl-day9x-framing" ref="fig-i2c-start-stop" stack="yes">
     <ul>
-        <li><term>SDA may change only while SCL is LOW.</term> While SCL is HIGH, SDA holds still and is read. So an SDA edge while SCL is HIGH cannot be a data bit &#8212; which is exactly what makes the START and the STOP unmistakable.</li>
+        <li><term>SDA may change only while SCL is LOW (the only exception is the START and STOP conditions described below).</term> While SCL is HIGH, SDA holds still and is read. So an SDA edge while SCL is HIGH cannot be a data bit &#8212; which is exactly what makes the START and the STOP unmistakable.</li>
         <li><term>START:</term> SDA goes HIGH to LOW while SCL is HIGH. <term>STOP:</term> SDA goes LOW to HIGH while SCL is HIGH. Every device on the bus recognizes both immediately.</li>
     </ul>
     <caption>The two edges that fall outside the shaded bands are the only two SDA is allowed to make while SCL is HIGH — and they are the START and the STOP.</caption>
@@ -942,8 +934,8 @@ on the wire:      1 1 1 0 0 0 0    0
                 have names: <c>a</c> at the top, then <c>b</c> and <c>c</c> down
                 the right, <c>d</c> along the bottom, <c>e</c> and <c>f</c> up
                 the left, <c>g</c> across the middle, and <c>DP</c> for the
-                decimal point (<xref ref="fig-segment-map"/>, which prints them
-                as capitals).  Those are the names the datasheet uses, and they are the order the bits are
+                decimal point (<xref ref="fig-segment-map"/>).  Those are the
+                names the datasheet uses, and they are the order the bits are
                 in: bit 0 is <c>a</c>, bit 1 is <c>b</c>, on up to bit 6 for
                 <c>g</c>, and bit 7 is the decimal point.  Written as a binary
                 literal a digit's byte therefore reads
@@ -960,7 +952,7 @@ on the wire:      1 1 1 0 0 0 0    0
                 digits 2 and 3 is two more LEDs, called <c>D5</c> and <c>D6</c>
                 here.  Four digits of eight, plus the colon's two, is 34
                 LEDs.</caption>
-                <image source="images/Day10-I2C(2)/seven_seg_segment_map.png" width="85%"/>
+                <image source="images/Day10-I2C(2)/seven_seg_segment_map.svg" width="85%"/>
             </figure>
             <p>
                 Ten bytes, two per position.  <c>display_buffer[0]</c> is the
@@ -1023,7 +1015,7 @@ on the wire:      1 1 1 0 0 0 0    0
 
             <slide xml:id="sl-day9x-segment-map" ref="fig-segment-map" stack="yes">
     <ul>
-        <li>Each digit is seven bar-shaped LEDs and a round one, and they have names: <c>a</c> across the top, <c>b</c> and <c>c</c> down the right, <c>d</c> along the bottom, <c>e</c> and <c>f</c> up the left, <c>g</c> across the middle, <c>DP</c> for the decimal point. (The drawing prints them as capitals; we write them lowercase, as the datasheet does.)</li>
+        <li>Each digit is seven bar-shaped LEDs and a round one, and they have names: <c>a</c> across the top, <c>b</c> and <c>c</c> down the right, <c>d</c> along the bottom, <c>e</c> and <c>f</c> up the left, <c>g</c> across the middle, <c>DP</c> for the decimal point.</li>
         <li>Those names are the <term>order the bits are in</term>: bit 0 is <c>a</c>, up to bit 6 for <c>g</c>, and bit 7 is the decimal point. So a binary literal reads <c>0b</c> DP g f e d c b a, most significant first.</li>
         <li>Which is why the <c>H</c> in the program is <c>0b01110110</c>: bits 1, 2, 4, 5, 6 &#8212; segments <c>b c e f g</c>.</li>
     </ul>
