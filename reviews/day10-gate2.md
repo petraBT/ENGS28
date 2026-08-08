@@ -346,3 +346,365 @@ the question.
 3. **Two slides both want to stay up during Part 8c** — `act-i2c-sevenseg` and
    `sl-day10-ladder`, and the ladder is projected after the activity. Also ladder
    rung 3 is the one rung that names two causes without splitting them.
+
+---
+
+## `expert-class-logistics` — MAJOR
+
+**The arithmetic checks out**: 106 + 2 settling = 108 against 110.
+
+**The realistic pass does not.** Applying its standard discounts — individual
+write-then-compare-then-reveal activities run 20–30% over; a first full
+project-copy → TODO → build → flash → verify cycle runs closer to double for the
+slow half of a thirty-student room; settling is rarely 2 minutes on a Thursday —
+the planned 77 minutes to the end of Part 8b becomes **≈100**. The class then
+arrives at Part 8c, the crucial step, with **~10 minutes left against a 19-minute
+budget whose own stated floor is 11**. Parts 9 and 10 do not happen.
+
+> **Prediction: for the slower half of the room, `SevenSeg_write()` does not get
+> written, built and verified inside the period — the one thing every student was
+> supposed to reach does not land for everyone.**
+
+- **[MAJOR] S-8 — the recovery points sit at the two ends of the day; the overrun
+  risk sits in the middle.** The only authorized cuts are Part 9 (8 min) and Part
+  1 trimmed 9→6 (3 min), 11 minutes recoverable — and they bracket a **64-minute
+  middle** (Parts 3–8b) built from four room-wide paper-derivation activities plus
+  the day's first build/flash/debug cycle, carrying **no compression guidance
+  anywhere, central or local**. By the time an instructor is 15–20 minutes behind
+  at Part 8c, Part 1 has already happened and cannot be compressed retroactively,
+  and Part 9's 8 minutes are the only lever left — not enough to protect a part
+  explicitly marked not cuttable. *Fix: give at least one of Parts 4, 5 or 6 a
+  stated compression — e.g. give the half-brightness byte `0xE7` rather than
+  deriving it — so a lever exists* **before** *Part 8c, not only after it.*
+
+- **[MAJOR] P-2 / P-14 — Part 2's "flag it… we're here to help" does not say what
+  flagging produces, and the crucial step depends on it.** Both wordings, as
+  requested:
+  - *If spares exist*: name them and the quantity in the text ("N spares at the
+    front — a display that still fails the ladder gets swapped now, not diagnosed
+    further"), and state the threshold where swapping stops scaling ("more than
+    two swaps in one section → pair instead"), because instructor bandwidth, not
+    spare count, is the real constraint.
+  - *If none exist*: replace the reassurance with a concrete hardware-free path —
+    pair the student with a working-display neighbour for the rest of the session
+    (their board flashes and verifies; the student writes and reasons about the
+    code), which is the pattern Day 9x already uses as its fallback — plus an
+    explicit deferred check-off. **As written, a student with a genuinely dead
+    display has no stated route to Part 8c at all.**
+
+- **[MINOR] S-8 findability — good where it exists, absent where it is needed
+  most.** Parts 1, 8a, 8c and 9 each repeat their own cut trigger on their own
+  `presenterNote`. Parts 2–8b — the six identified as the actual overrun risk —
+  carry nothing, locally or centrally.
+
+- **[MINOR] P-4/P-5 — the persistence-of-vision demo is untested going into a
+  zero-slack day**, and Part 3 has no stated compression. A demo that visibly
+  fizzles in front of thirty students costs unbudgeted minutes in exactly the part
+  that can least afford them.
+
+- **[MINOR] Part 9's own 8 minutes are optimistic even on a good day** — two full
+  change→rebuild→flash→capture cycles plus a required predict step. Read it as
+  aspirational for the median, not a number the day can rely on recovering.
+
+---
+
+## `learner-ai-reliant` — MAJOR
+
+*Rotator. Fourth run against essentially this design; told what was changed and
+asked to judge whether the fixes are real or cosmetic.*
+
+> "The day's two contested activities are not in the same state. `act-i2c-ai-t0`/
+> `-t2` is a real fix for the one defect it targets, but the fix does not
+> propagate to the slide actually used in class. `act-i2c-five-operations` is a
+> thin wrapper: three of its four tasks are exactly as pasteable as the design it
+> replaced." Every redesign it proposes costs under a minute.
+
+- **[MAJOR] S-9 / B-1 — the fix does not reach the slide.** The book's
+  `act-i2c-ai-t0` asks students to "work out from those three numbers what clock
+  this board is running at". **The projected `prompt` slide does not** — it stops
+  at "write down the `PSC` and `ARR`", and the clock-derivation step exists only
+  in the book and in the instructor's private `presenterNote`. *"A class run
+  strictly off the deck skips the derivation entirely, and t2's anchor
+  requirement quietly reopens."* One line appended to the deck body, zero added
+  time, already inside Part 1's budget.
+
+- **[MAJOR] P-14 — `act-i2c-five-t1`, `-t2`, `-t3` are still outsourceable.**
+  "Your own `helloDisplay.c`" changes the framing, not the content: source code is
+  exactly what an assistant parses perfectly once pasted. It supplied the two
+  prompts that solve them wholesale, one of which needs no file at all — *"Given
+  `i2c1_init`, `i2c1_byteWrite`, `i2c1_memWrite`, what two operations are missing,
+  why can't they be built from these three, and which is device-independent?"*
+  **Only `-t1b` is genuinely resistant**, because it requires reading a specific
+  image the student made. *Fix: make `-t2` cite the trace rather than general
+  knowledge — "Your capture shows one ACK per byte and never a byte coming back
+  to you. From that trace, not from general I2C knowledge, which two operations
+  does it prove are missing?"*
+
+- **[MAJOR] P-2 — the crucial step's only check is still spoken.**
+  `act-i2c-sevenseg-t2` says "say out loud what each of `i2c1_memWrite()`'s four
+  arguments has to be and why". A student arrives having called the identical
+  function in Part 8b, so the line can be produced by analogy —
+  `display_subaddr`→`HT16K33_ADDR_PTR`, `1`→`2*HT16K33_NBUF` — without engaging
+  the reasoning, **and no artifact is left behind that anyone can check.** Same
+  gap as the last two reports, still open. *Fix: "write down (don't just say)".
+  Same content, same time, an artifact instead of air.*
+
+- **[MINOR] P-14 — `act-i2c-ai-t1` and `-t3` are untouched** by the `-t0` fix, so
+  the activity's closure is really `-t2` alone. Explicitly **no redesign
+  proposed**: anchoring a one-sentence "what's better" question to the board is
+  not worth the cost. Flagged for awareness.
+
+- **[MINOR] P-14 — the homework's first two tasks are self-contained**
+  "write a function that does X". `act-i2c-hw-t3`, the `MM:SS` clock, is the one
+  with a real anchor, because the colon bit is not on the datasheet pages we have
+  and must be found by experiment. *Fix: one clause on t1 — predict in writing
+  what the display shows when the counter passes 9999, before testing the
+  wraparound you chose.*
+
+### Already safe — no action needed
+
+`act-i2c-wrong-address` (Part 9) is called **solid**: the written prediction
+before flashing, the presenter note protecting it, and two failure modes that
+genuinely cannot be told apart without both the scope and the datasheet. P-6 and
+P-14 both satisfied. The command-table and RAM-map derivations are AI-completable
+in the abstract, but they are supervised, individually written and immediately
+revealed in class — consistent with how the book treats datasheet literacy
+(P-11), and not a verification gap.
+
+---
+
+## `expert-continuity-auditor` — BLOCKER
+
+- **[BLOCKER] P-13, B-6 — the driver signature Day 10 teaches does not match the
+  one Lab 5 hands the student.** The chapter builds
+  `void SevenSeg_write(uint8_t *display_buffer)` over a `2*HT16K33_NBUF`-byte
+  array. **Lab 5 §3.3 (p.4) specifies `void SevenSeg_write(uint16_t *display_buffer);`**
+  with `HT16K33_NBUF 5` meaning the buffer length itself rather than half of it.
+  `_init`, `_blink` and `_dim` match exactly; only `_write` diverges. A student who
+  does exactly what the chapter and its homework rename instruct arrives at Lab 5
+  with the wrong prototype for what the handout tells them to declare.
+
+  > **Adjudicated already, and the reviewer did not have the note.**
+  > `plans/week5-revision-9x-10.md` records: *"`SevenSegPartialORIGINAL.{c,h}` is
+  > now in `assets/starters/`, and confirms `SevenSeg_write(uint8_t *)` with
+  > `HT16K33_NBUF 5` — so Lab 5 §3.3's `uint16_t *` is the error, not the
+  > chapter."* Both spellings describe the same ten bytes. **The fix belongs in
+  > the Lab 5 PDF, which is Petra's to change, not the chapter's.** Recorded here
+  > so it is not re-raised a third time, and carried to the open-questions list.
+
+- **[MINOR] B-9 — stale "Part 6a" in the Reference open-drain subsection**, twice.
+  Left over from today's cut, which collapsed Part 6a/6b back to a single Part 6.
+  *Fixed in this session.*
+
+### The rename thread — verified closed end to end
+
+It checked the standing defect specifically and found it closed in four places:
+the prose explaining *why* two names exist (`subsec-day10-layers`), the mechanical
+instruction in `act-i2c-homework`'s introduction *before* the tasks (P-1), the
+same instruction in `assets/starters/SevenSegPartial.c`'s header comment, and —
+the part I had not checked — **the deck actually delivers it**: `assets/class.html`
+renders an activity ref's `<introduction>` rather than stripping it, so the rename
+is student-facing in class and not only in the book.
+
+*"This part of the fix is solid. The problem is one layer further downstream: the
+rename gets students to the right file location for Lab 5, but not to the right
+function signature."*
+
+### Checked and clean
+
+BSRR still absent (reserved for the timers chapter). **The TIMINGR cut leaves
+nothing downstream stranded** — no chapter objective, no homework task, and no
+grep hit for `TIMINGR|PRESC|SCLL|SCLH|SDADEL|SCLDEL` outside `ch-i2c.ptx`, so
+neither Lab 5 nor `ch-motors.ptx` nor `ch-accelerometers.ptx` assumes students
+derived it. The Arduino cut held: every surviving "Arduino" is a pin-naming fact,
+and the one `Adafruit_LEDBackpack.h` clause appears exactly once. The Day 9x →
+Day 10 part move left no orphaned ids, and Day 9x's homework note is consistent
+with Day 10 Part 1. No forward reference found used before its introduction.
+P-13: the day does not collapse into lab prep — Lab 5 is first named in Part 8a,
+past the halfway point.
+
+---
+
+## `learner-weak-circuits` — MAJOR
+
+- **[MAJOR] P-1 — the chapter never says why the scope's ground lead must land on
+  the circuit's ground node.** "Both minus leads — the ones with the white stripe
+  — to ground" appears as a bare instruction, and grepping the whole `source/`
+  tree finds the same unexplained instruction in `ch-switches.ptx` on Day 3.
+  **It matters here specifically because Part 9 is a debugging exercise**: with
+  the AD2's ground on the wrong rail the capture looks wrong for a reason that has
+  nothing to do with the address or oscillator changes being taught, and the
+  chapter gives no way to recognize that. *Fix: one sentence, once — Day 3 is the
+  natural home, with a forward pointer from Part 9.*
+
+- **[MINOR] P-4, P-7 — the pull-up arithmetic in Reference is only half worked.**
+  The low end substitutes real numbers (3.3 V ÷ 1 kΩ = 3.3 mA against 3.3 V ÷
+  200 Ω = 16 mA). The high end asserts a range instead of computing one — 10 kΩ ×
+  300 pF = 3 µs is one line and is not shown. And the example resistors are never
+  connected back to the stated 5 kΩ floor: 1 kΩ is shown to sink fine, so a
+  student working the algebra literally has no arithmetic reason the floor is
+  5 kΩ rather than 1 kΩ.
+
+### Confirmed fixed, from its own previous report
+
+- **The half-brightness `(7+1)/16` step is now worked at the point of use**, in
+  the prose *and* on the answer slide the deck actually shows. *"A real fix, not
+  a narrated assertion."*
+- **The pull-up paragraph now points to real arithmetic** via a live xref, and
+  *"no pull-up anywhere → the line can never be released HIGH"* is now tied back
+  to the open-drain explanation rather than left as a bare fact. Both items it
+  flagged last time are closed.
+
+### Opened the images rather than trusting captions
+
+`four_digit_wiring.png` is the real KW4-56NCLB-P datasheet page and matches the
+caption pin for pin; the one-LED and four-LED reasoning is *"fully derivable from
+that figure alone, with no unstated leap."* `open_drain_vs_push_pull.svg` is a
+real checkable circuit diagram whose two panels match what the caption claims.
+
+---
+
+## `expert-embedded-industry` — MAJOR
+
+*Rotator, weighted down on Arduino grounding per B-11e, and it respected that.*
+
+- **[MAJOR] B-6, L-6, P-11 — `SevenSeg_dim()`'s model answer teaches code that
+  works by coincidence.** `HT16K33_DISPLAY_CMD` (0x80) has no business in a
+  dimming-set byte — TODO 3's own spec says "the dimming command", singular — and
+  it produces the right result only because 0x80's one set bit already sits inside
+  0xE0's three fixed bits. *"Nothing on the display or the scope will ever reveal
+  this; it is silent by construction."* It lands directly against the chapter's
+  own inoculation: Part 7b's `=`-not-`|=` argument, and the sentence one line
+  above it about masking so a caller cannot corrupt the command itself.
+
+  > **This is a real conflict, not an oversight, and it needs Petra.** That line
+  > is **hers, verbatim**, from `Day10-I2C(2).pptx` slide 52, and it was kept
+  > deliberately under the reuse rule; `subsec-i2c-ref-library` already discloses
+  > that the term contributes nothing. The same spurious term in
+  > `SevenSeg_init()` **was** invented by the draft and has been corrected against
+  > `assets/starters/SevenSegPartialORIGINAL.c` in commit `8c23e4f`. So the
+  > question is narrow: does her own code stay as the model answer when the
+  > chapter spends a part arguing against exactly this pattern? Carried to the
+  > synthesizer and to the open-questions list.
+
+- **[MINOR] P-14 — the address-conflict failure mode is still only a quiz
+  distractor's feedback**, which a student sees only by choosing the wrong answer.
+  The A2/A1/A0 prose is framed entirely positively ("so that up to eight of these
+  can share one bus") and never states the failure a student doing group work with
+  two kits will actually hit. Still open from its last report; one sentence closes
+  it.
+
+### Held up, and named as the day's strongest material
+
+The Arduino cut **held under restructuring** — every surviving mention names the
+physical header, not an API, and the one `Adafruit_LEDBackpack.h` clause is not
+expanded anywhere including the presenter notes. The three datasheet lookups
+survive as genuinely derived: AF6 out of DS13867 Table 15, the command bytes with
+students deriving `0x85` and `0xE7` themselves as a check, and the RAM layout
+where "why send the zeros at all" is *answered* by the pointer's auto-increment
+rather than asserted as a rule. The `i2c1_byteWrite()` hole and its
+generalization to "none of the waits has a timeout" are accurate and *"not
+overstated — it doesn't claim more than the code supports."* Part 8a's layering
+argument and Part 9's two-fault beat are called the day's best-argued material.
+
+---
+
+## `expert-cognitive-load` — MAJOR
+
+*Standing core, and **the agent's clean re-test**. Its brief's calibration example
+names this chapter's own instances, so the August regression run tested recall as
+much as detection. Day 10 in its current form is material the brief does not
+describe. It was briefed on the files only, with no hint of what to find.*
+
+**Re-test verdict: the census works.** Six rows, each with a count, a location
+list, a keep and a cut — on material the brief has never seen. It also
+distinguished *deepening* repetition from *rewording* repetition, which is the
+judgment the row is supposed to exercise. See the regression-table update in
+`.claude/agents/README.md`.
+
+### The repetition census
+
+| Idea | Times | Keep | Reduce to |
+|---|---|---|---|
+| The HT16K33's oscillator must run before it drives anything | **5 full statements, 6 total in one session** — Part 3 prose + `sl-day10-block` note; Part 8b prose **twice, back to back** + `sl-day10-init-answer`; Part 9 prose + `sl-day10-breakit-answer` | Part 8b's first statement, attached to the code just written | Part 8b's second → "oscillator missing — see above"; Part 9's → "as in Part 8b", not a re-derivation |
+| The device driver may call `i2c1_byteWrite()` freely, never `I2C1->CR2` | 3, near-verbatim | the Part 8a prose/slide pair | recap item 6 → a fragment, not a re-quote |
+| "A scope answers *did my bytes arrive?*; only the datasheet answers *were they the right bytes?*" | 3, near-verbatim | Part 9's telling, the payoff of the activity | recap item 7 → a pointer |
+| Open-drain "is not a preference": SDA changes hands every ninth bit | 3, near-verbatim | the Part 6 prose/slide pair | recap item 4 → keep only "PB8/PB9, AF6, open-drain" |
+| Nothing in the library counts a clock edge | 3 | Part 7b prose | recap item 5's second sentence → drop |
+| The segment bit mapping, `0b DP g f e d c b a` | taught in full on Day 9x; **Part 3 says "you already know this", then Part 5 re-derives it in full anyway** | Day 9x + Part 3's one-line acknowledgment | Part 5 → one clause, freeing the beat for what is actually new: the second byte's meaning |
+
+### Findings
+
+- **[MAJOR] B-8, P-2 — the oscillator fact is re-explained five times across the
+  hour leading into the crucial step, twice back to back inside Part 8b alone.**
+  That stacks extraneous load directly against `SevenSeg_write()`, which needs the
+  room's attention on a four-argument call, not a fourth hearing of a Part 3 fact.
+- **[MAJOR] P-4, P-5 — the persistence-of-vision demo is the only observe-first
+  step the authors themselves flag as unverified**, and it sits as the
+  load-bearing middle beat of a three-idea part. If the effect does not read in
+  the room there is nothing concrete to recover with before four more
+  block-diagram terms arrive. *Run it with a real display before class, and have
+  a fallback image regardless of the outcome.*
+- **[MAJOR] B-2, B-8 — two of Part 3's three sub-beats genuinely deepen the
+  reading; the third only rewords it.** The common-cathode activity grounds the
+  abstract grid argument in the real datasheet pinout and the block diagram gives
+  the division-of-labour argument concrete blocks — but the continuous-refresh
+  argument is reworded with no new technical content. *Replace with a one-line
+  callback and spend the sentence on the block diagram.*
+- **[MAJOR-ish] B-8 — Part 3 contradicts its own forward pointer.** It tells
+  students they already know the segment mapping, and Part 5 then re-derives the
+  identical mapping in full, in both prose and slide.
+- **[MINOR] B-8 — four of the recap's eight items are near-verbatim copies of a
+  slide bullet from minutes earlier** rather than compressed callbacks. *"Exactly
+  the deck-glue duplication the census exists to catch: a recap this close to the
+  source material should compress, not requote."*
+- **[MINOR] P-7 — `HT16K33_NBUF` is introduced inline at the crucial step**,
+  alongside three already-known names, with no beat of its own — one new symbol
+  and a formula in the same breath, at the worst moment for it.
+
+**Not flagged, by design:** both cuts are correctly applied and are not gaps.
+
+---
+
+## `learner-firstgen-novice` — MAJOR
+
+- **[MAJOR] P-2, B-5 — `act-i2c-first-digit`'s introduction is the exact moment
+  this reader stops following.** Five physical actions collapsed into two
+  sentences with no per-step check: download three files, duplicate and rename a
+  whole IDE project, and sort three files into two folders. *"It's also ambiguous
+  on its face: 'the two `SevenSegPartial` files go in `Src` and `Inc`' doesn't say
+  which file goes where; I have to infer `.c`→`Src`, `.h`→`Inc` from the
+  folder-name convention, which is a second silent assumption stacked on the
+  first."* Get any one piece wrong and the next thing that happens is a build
+  error in a section titled "today's crucial step", with nothing saying which of
+  the four things went wrong. **This is the same defect a previous committee
+  flagged on Day 9x — it moved rather than got fixed**, and the slide is projected
+  `room="compressed"`, so the compressed version gets *less* room to say it
+  clearly, not more. *Fix: split into `<task>`s — download; duplicate and rename;
+  then name which file goes in `Src` and which in `Inc` by name.*
+
+- **[MINOR] P-2 — explicitly NOT a violation, flagged so the fix does not
+  overcorrect.** `act-i2c-first-t1`'s "fill in TODO 1, build, flash, confirm the
+  first digit shows an `E`" is a ritual done a dozen times by Day 10 with legible
+  feedback at each stage. *"That's different in kind from the project-copy step,
+  which is a first/rare, multi-folder action whose failure surfaces somewhere else
+  entirely."*
+
+### Confirmed fixed
+
+**"Duty cycle" — fixed.** It now appears twice in the whole file and the *first*
+occurrence is the definition, in the `fig-ht16k33-cmd-table` caption, right where
+it is needed. *"I never had to guess what it meant or go looking for it."*
+
+### What worked, named as such
+
+The half-brightness gotcha is *"P-6 and P-14 done right — exactly the kind of
+productive struggle an AI answer wouldn't force me to notice on my own."*
+`I2C_CR2`'s five fields get a real mini-arc rather than one dense paragraph
+(P-7). And two tone moments landed for precisely this reader: the reference copy
+offered to the whole room *"so that a student whose homework did not run… never
+has to say so out loud"*, and Part 2 giving *"anyone whose display never lit
+yesterday a second try with the whole session still ahead."* — *"Neither of these
+had to be there for the technical content to work, and both are precisely the
+thing that keeps a quiet, behind-feeling student from having to raise a hand and
+admit it."*
