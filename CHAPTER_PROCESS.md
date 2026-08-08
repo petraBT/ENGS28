@@ -8,6 +8,10 @@ Those twelve fixes are now rules, in `AUTHORING-book.md`.
 - **What to write** → `AUTHORING-book.md` (rules P-n, B-n, S-n, L-n)
 - **Slide markup mechanics** → `AUTHORING-slides.md`
 - **Build, git, deploy** → `AUTHORING.md`
+- **The prompt that starts a chapter session** → `plans/CHAPTER-GENERATION-PROMPT.md`
+
+That prompt is this document compressed to what a fresh session needs, as gates
+rather than steps. This file is the reference behind it.
 
 ---
 
@@ -17,7 +21,7 @@ Those twelve fixes are now rules, in `AUTHORING-book.md`.
 | --- | --- | --- |
 | 0 | Ground truth: driver code, downstream constraints, datasheet/RM pages | |
 | 1 | Mined old deck: arc, speaker notes, rebuilt annotated images | |
-| 2 | **Lesson plan** (1 page) | **Gate 1** — small panel |
+| 2 | **Lesson plan** (1 page) **+ the outline** | **Gate 1** — small panel |
 | 3 | Book chapter | |
 | 4 | `<slide>` blocks + deck JSON | |
 | 5 | Mechanical checks pass | |
@@ -26,6 +30,13 @@ Those twelve fixes are now rules, in `AUTHORING-book.md`.
 
 Two gates, not one. A problem with the arc or the objectives costs one page to fix
 at Gate 1 and a whole chapter at Gate 2.
+
+**Gate 2 is not optional, and it is not the place a draft first meets a
+reviewer.** On the I2C week it was not run at all until Petra asked *"Are you
+using the committee we constructed?"* — so a wrong hardware claim, a slide of
+undefined symbols and the same six-field list enumerated four times in ten
+minutes all reached her first. A draft does not go to her until the committee
+has run and its list is applied.
 
 ---
 
@@ -46,9 +57,23 @@ Before reading anything written *about* the topic, collect what is actually true
    sections students will be sent to, by name and number (P-11).
 4. **Continuity.** What has been taught already, and what later chapters depend on
    this one for. Check the deferred-topics list at the bottom of this file.
+5. **The structural convention, read off the sibling chapters.** Before designing
+   the day, open the chapters that already do this shape of day and see how they
+   do it — do not reason it out. An **x-day has no pre-class reading**:
+   `ch-debugging.ptx` (Day 7x) and `ch-io-datasheets.ptx` (Day 5x) have no Before
+   Class section at all, and `ch-switches.ptx` puts the material between Day 3
+   and Day 3x in plain titled sections. Day 9x was designed around a protocol
+   reading that should never have existed, and had to be rebuilt after Petra
+   said so. This costs five minutes at Step 0 and a day's work at Gate 2.
 
 Note what you found and what is missing. Missing driver code blocks Step 3, not
 Steps 1–2 — keep going.
+
+**Then ask Petra your questions**, as one short list, and keep working on
+everything that does not depend on the answers. She would rather answer four
+questions than correct forty sentences, and B-11c facts — what students have in
+front of them, whether spares exist, what happens if a connection is reversed —
+cannot be recovered from plausibility.
 
 ### Step 1 — Mine `ClassSlidesOLD`
 
@@ -105,7 +130,13 @@ Write `plans/dayNN.md`:
 
 One page. If the crucial step won't fit in a sentence, the class isn't designed yet.
 
-### Gate 1 — the lesson plan review
+Then write the **outline** beside it: the `Part N` titles, and two or three lines
+per part on what it teaches and what students do. Gate 1 reviews both together.
+The outline is the cheapest artifact on which a reviewer can see the shape of the
+finished chapter, and reviewing it costs a paragraph of rewriting where the same
+finding on a finished draft costs a section.
+
+### Gate 1 — the plan and outline review
 
 Small panel, minutes to run:
 
