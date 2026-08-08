@@ -12,7 +12,8 @@
     <title>Timers and Interrupts</title>
     <introduction>
         <p>
-            Every program you have written so far stops dead while it waits.
+            The programs we have written so far stop and wait whenever they
+            need to mark off time.
             <c>delay_ms(1000)</c> produces an accurate one-second delay, but for
             that entire second the CPU can do nothing else — not read a sensor,
             not update a display, not notice a button.  This chapter introduces
@@ -35,9 +36,10 @@
                 <li>Read a status bit's clear-by-write convention from the
                     reference manual and clear any status flag correctly.</li>
                 <li>Convert a polled timer into an interrupt-driven one: enable
-                    the update interrupt, enable the timer's line in the NVIC,
-                    and write an Interrupt Service Routine under its exact
-                    vector-table name.</li>
+                    the update interrupt, enable the timer's line in the NVIC
+                    (Nested Vectored Interrupt Controller), and write an
+                    Interrupt Service Routine under its exact vector-table
+                    name.</li>
                 <li>Share state between an ISR and <c>main()</c> through a
                     <c>volatile</c> flag, and apply the two ISR rules: get in
                     and out fast, and never block.</li>
@@ -538,38 +540,35 @@
         <title>Day 8 In-Class: Blinky Without Waiting</title>
         <introduction>
             <p>
-                Today we'll write Blinky entirely without any delay functions.  
-                You will configure TIM14 to
-                mark off 500 ms periods entirely in hardware, first checking
-                its flag from the main loop, then — the day's goal — letting
-                the timer interrupt the CPU so that not even the checking
-                remains.  By the end of the hour, your LED blinks from an ISR
-                you wrote, and your main loop is free.
+                Today we'll write Blinky entirely without any delay functions.
+                We'll configure TIM14 to mark off 500 ms periods entirely in
+                hardware, first checking its flag from the main loop, and then
+                letting the timer interrupt the CPU so that not even the
+                checking remains.  By the end of the hour, your LED blinks from
+                an ISR you wrote, and your main loop is free.
             </p>
             <p>
-                Today's class lives entirely in code. 
-                There is no wiring — the only hardware is the on-board
-                LED — and the worst outcome of any mistake is a program that
-                freezes or an LED that stays dark.  Both are cured by fixing
-                the code and re-flashing.
+                Today's class lives entirely in code.  There is no wiring —
+                everything is done in code and on the chip's hardware, and the
+                only hardware you touch is the on-board LED.
             </p>
         </introduction>
 
         <subsection xml:id="subsec-day8-why">
             <title>Part 1: Why a Background Timer</title>
             <p>
-                While <c>ADCPot.c</c> sits in its <c>delay_ms(1000)</c>, its
-                CPU idles through 12,000 clock cycles every millisecond; while
-                the Lab 2 game flashed its countdown, button presses could
-                slip past unwatched.  A timer that counts in hardware turns
+                While <c>ADCPot.c</c> sits in its <c>delay_ms(1000)</c>, the
+                CPU idles through 12,000 clock cycles every millisecond.  You
+                noticed the same thing in the Lab 2 race game: button presses
+                during the countdown delays could slip past unwatched.  A timer
+                that counts in hardware turns
                 the relationship around: timekeeping costs the CPU nothing,
                 and the CPU's whole attention is available for work — sampling
                 a sensor at fixed intervals, timestamping events, running a
-                control loop at a steady rate.  In two weeks the same timers will
-                hold output pins high for precisely controlled durations —
-                that is how motors get their speed commands — and measure how
-                long input pulses last.  Today builds the foundation all of
-                that stands on.
+                control loop at a steady rate.  We'll come back to these timers
+                in two weeks: they'll hold output pins high for precisely
+                controlled durations — that is how motors get their speed
+                commands — and measure how long input pulses last.
             </p>
 
             <slide xml:id="sl-day8-captivity">
@@ -750,7 +749,7 @@ RCC->APBENR2 |= RCC_APBENR2_TIM14EN;   // enable clock access to TIM14
             </figure>
             <p>
                 <term>The rate and the range.</term>  The prescaler and
-                auto-reload values from Part 2 go into <c>PSC</c> and
+                auto-reload values you chose go into <c>PSC</c> and
                 <c>ARR</c>, each written to the register as value minus one:
             </p>
             <program language="c"><code><![CDATA[
@@ -788,7 +787,7 @@ TIM14->CR1 |= TIM_CR1_CEN;   // start the counter
             <figure xml:id="fig-tim14-regmap-polled">
                 <caption>An excerpt of the TIM14 register map (RM0490 Table 73) with today's
                 two key bits marked: CEN in <c>TIM14_CR1</c> starts the
-                counter, and UIF in <c>TIM14_SR</c> is set by hardware each
+                counter, and UIF (update interrupt flag) in <c>TIM14_SR</c> is set by hardware each
                 time the counter wraps to 0 after reaching the auto-reload
                 value — and is your responsibility to clear.</caption>
                 <image source="images/Day08-Interrupts/tim14_regmap_polled.svg" width="95%"/>
@@ -866,7 +865,8 @@ void tim14_500ms_init() {
             </p>
             <p>
                 Look closely at the shape of that check, because it is
-                deliberately <em>not</em> the wait you used on Days 5 and 7:
+                deliberately <em>not</em> what we did when we waited for the
+                UART or the ADC to finish:
             </p>
             <p>
                 On Day 7, waiting for the ADC looked like this:
@@ -883,9 +883,9 @@ if (TIM14->SR & TIM_SR_UIF) { ... }     // today: check once, keep moving
             <p>
                 The <c>while</c> wait plants the program at the flag until it
                 rises.  Today's <c>if</c> glances at the flag once per trip
-                around the outer main loop and moves on either way — which is the whole
-                point: the rest of the main loop is free for other work.  The
-                program below is on Canvas, complete; your job is to run it.
+                around the outer main loop and moves on either way.  The rest of
+                the main loop is then free for other work.  The complete program
+                is on Canvas — we'll run it next.
             </p>
 
             <slide xml:id="sl-day8-if-not-while">
@@ -901,7 +901,7 @@ if (TIM14->SR & TIM_SR_UIF) {           // today: glance once, keep moving
 // ... and the rest of the loop is free for other work
 ]]></code></program>
     <ul>
-        <li>The <c>while</c> <term>holds</term> the program at the flag until it rises. The processor cannot do anything else while waiting here. The <c>if</c> <term>glances</term> once per trip around the loop and moves on either way.</li>
+        <li>The <c>while</c> <term>plants</term> the program at the flag until it rises. The processor cannot do anything else while waiting here. The<c>if</c> <term>glances</term> once per trip around the loop and moves on either way.</li>
         <li>That free remainder of the loop is the point of a background timer.</li>
     </ul>
 </slide>
@@ -949,8 +949,7 @@ void tim14_500ms_init() {
                 <title>Run the Polled Timer</title>
                 <introduction>
                     <p>
-                        Get this program running before anything else today —
-                        everything that follows builds on top of it.
+                        Everything that follows today builds on this program.
                     </p>
                 </introduction>
                 <task xml:id="act-timer-polled-t1">
@@ -973,10 +972,7 @@ void tim14_500ms_init() {
                 is <c>blinkyTimerPolled.c</c> actually in <c>Src</c> and part
                 of the build, and is there exactly <em>one</em> <c>main()</c>
                 in the project — a leftover <c>main.c</c> from the template is
-                the classic conflict.  If it still will not run, flag it and
-                keep moving with the class discussion — a known-good copy of
-                the program will be available, and nothing until Part 7 needs
-                your own board.
+                the classic conflict.  Still stuck?  We're here to help!
             </p>
 
             <slide xml:id="sl-day8-polled-ladder">
@@ -984,7 +980,7 @@ void tim14_500ms_init() {
     <ul>
         <li>1 &#8212; Is <c>blinkyTimerPolled.c</c> in <c>Src</c> and <term>included</term> in the build?</li>
         <li>2 &#8212; Exactly <term>one</term> <c>main()</c> in the project? A leftover template <c>main.c</c> is the classic conflict.</li>
-        <li>Still stuck? We're here to help!.</li>
+        <li>Still stuck? We're here to help!</li>
     </ul>
     <caption>Two checks catch nearly everything.</caption>
     <note>Checkpoint slide — if the room isn't mostly blinking by minute 32: screen-share the instructor laptop's running build for Part 5, and start the pre-loaded USB stick down the rows. Neither path touches Canvas (the failing channel). Do not debug individual downloads. [Mechanism to confirm with Petra.]</note>
@@ -1148,7 +1144,7 @@ TIM14->SR &= ~TIM_SR_UIF;    // read-modify-write: mostly harmless on rc_w0 ...
 TIM14->DIER |= TIM_DIER_UIE;   // update event now raises an interrupt request
 ]]></code></program>
             <p>
-                To repeat: UIE (in DIER) <em>enables</em> the request, meaning the hardware
+                UIE (in DIER) <em>enables</em> the request, meaning the hardware
                 will now request to interrupt the processor when an update event happens;
                 UIF (in SR) <em>reports</em> that the event happened.  
             </p>
@@ -1163,9 +1159,9 @@ TIM14->DIER |= TIM_DIER_UIE;   // update event now raises an interrupt request
                 <term>Enable the interrupt in the NVIC.</term>  When an update event happens
                 the timer hardware now issues a request to interrupt the processor. This request
                 first goes to the NVIC — which, remember, ignores every source
-                until told otherwise.  CMSIS provides the function, and the
-                device header provides a named constant for each interrupt
-                line:
+                until told otherwise.  CMSIS (Common Microcontroller Software
+                Interface Standard) provides the function, and the device header
+                provides a named constant for each interrupt line:
             </p>
             <program language="c"><code><![CDATA[
 NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
@@ -1224,15 +1220,15 @@ NVIC_EnableIRQ(TIM14_IRQn);    // allow TIM14's requests through the NVIC
                 <c>main()</c> and wires each official handler name into its
                 vector-table slot.  It sits in your project tree alongside
                 <c>Src</c>.  You will read that file, never edit it: find the
-                table with the IRQ handler names, select the one you need, copy it.  A name that is even one character
+                table with the IRQ (interrupt request) handler names, select the one you need, copy it.  A name that is even one character
                 off still compiles and still links — the linker simply never
                 places your function in the table, and the slot keeps the
                 default handler the startup file installed there.  Your ISR
                 never runs.  Depending on what that default handler does, the
                 board may also stop responding entirely — no LED, no serial
                 output — so a dead board and a dark LED are the <em>same</em>
-                diagnosis, and rung 3 of Part 7's ladder is where you check
-                it.
+                diagnosis, and the handler's spelling is the first thing to
+                check for either one.
             </p>
             <figure xml:id="fig-startup-file">
                 <caption>The vector table inside the startup file
@@ -1476,7 +1472,7 @@ void tim14_500ms_interrupt_init() {
                 <em>LED not blinking?</em>  First, one triage check: is the
                 board <em>completely</em> dead — no LED, no serial output at
                 all?  Jump straight to step 3.  Otherwise walk through the steps in
-                order — this will help you isolates the fault:
+                order — this will help you isolate the fault:
             </p>
             <ol>
                 <li>Does the project build cleanly, with
@@ -1498,11 +1494,10 @@ void tim14_500ms_interrupt_init() {
                     alone produces silence.</li>
             </ol>
             <p>
-                Out of time before the four blanks are filled? The complete file will be shown
-                at the end of this part:
-                copy it and move on to <xref ref="subsec-day8-homework"/>
-                with a working reference. Be sure to compare your (not working) version to
-                the working one to understand where you went wrong. Document how to fix your code.
+                The complete file is at the end of this part.  If you did not
+                finish the four blanks in class, copy it, compare it against
+                your own version to find what was different, and note how you
+                would fix yours.
             </p>
 
             <!-- Split across two slides at the init/ISR seam. As one slide the
@@ -1634,10 +1629,9 @@ void TIM14_IRQHandler(void) {          // TODO 3: exact vector-table name
             <title>Part 8: Before Next Class</title>
             <p>
                 Today's pattern — configure a timer, let its interrupt do the
-                timekeeping, keep the main loop for real work — is precisely
-                what Lab 5 will ask of you at larger scale, where a timer
-                interrupt paces the ADC in a temperature controller.  The
-                homework is the bridge.
+                timekeeping, keep the main loop for real work — is great
+                preparation for Lab 5, where a timer interrupt paces the ADC in
+                a temperature controller.
             </p>
             <activity xml:id="act-timer-homework">
                 <title>Homework: ADCPot with a Timer-Interrupt Blink</title>
