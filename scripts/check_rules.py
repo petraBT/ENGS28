@@ -242,12 +242,30 @@ def check_file(path, quiet=False):
             problems.append(("error", line_of(text, m.start()), "S-4",
                              f"slide ref to unknown id: {m.group(1)}"))
 
-    # Count drift: "four steps" vs. how many actually follow.
+    # Count drift: "four steps" vs. how many actually follow.  Both list kinds:
+    # "Three things follow from sharing the wires" sat over a four-item <ul> on a
+    # projected slide, and Petra deleted the lead sentence rather than fix the
+    # number -- a sentence whose only content is a count is not carrying anything.
     for m in re.finditer(r"\b(" + "|".join(NUMBER_WORDS) + r")\s+(steps|things|parts|stages)\b",
                          text, re.I):
         claimed = NUMBER_WORDS[m.group(1).lower()]
         window = text[m.end():m.end() + 4000]
-        actual = len(re.findall(r"<li\b", window[:window.find("</ol>") + 1])) if "</ol>" in window[:2000] else None
+        actual = None
+        at = window.find("</ol>")
+        if 0 <= at and "</ol>" in window[:2000]:
+            actual = len(re.findall(r"<li\b", window[:at + 1]))
+        else:
+            # A <ul> only counts when it is *this sentence's* list: the lead
+            # paragraph ends and the list opens straight after it.  Anything
+            # looser matches the next unrelated bullet list and warns about
+            # nothing -- that costs more than the drift it would find.
+            start = window.find("<ul")
+            lead = window[:start] if start >= 0 else ""
+            if 0 <= start <= 400 and "</p>" in lead \
+                    and not re.search(r"<p[\s>]", lead) and "<li" not in lead:
+                at = window.find("</ul>")
+                if at > start:
+                    actual = len(re.findall(r"<li\b", window[:at + 1]))
         if actual and actual != claimed:
             problems.append(("warn", line_of(text, m.start()), "B-9",
                              f"says {m.group(1)} {m.group(2)} but the next list has {actual} items"))
