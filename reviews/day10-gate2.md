@@ -1237,3 +1237,77 @@ whether 11 "we'll" was right or whether the sweep had over-applied.*
   not rewritten either sentence, because doing so would change the engineering,
   not the register."* — **independently confirmed as a BLOCKER by the B3 run, and
   applied.**
+
+---
+
+## `checker-technical-accuracy` — Parts 6–7 + `subsec-i2c-ref-timingr` — BLOCKER
+
+- **[BLOCKER] B-6, B-9 — the chapter's claim about `i2c1_memRead()` is false, and
+  this session made it worse.** It recovered the real `i2c1_memRead()` from
+  `Day13-I2C(3).pptx` slides 12 and 17 — the only extant source for the given
+  `i2c.c` — and **both `I2C_CR2` writes carry `AUTOEND`**. Per RM0490 §23.7.2, a
+  repeated START requires `AUTOEND = 0`; with it set, the register address is
+  followed by a **STOP** and the read begins with a fresh START. On the wire it
+  is `ST … SP … ST …`, and students will see exactly that on Day 13.
+  *"Note the origin of the error: Petra's own comment on that slide says
+  `// Restart, with read request for n bytes`, while the code below it sets
+  `AUTOEND`. The comment is where the belief came from; the register programming
+  contradicts it."*
+  **My afternoon edit made the wrong claim more specific** ("it has to clear
+  `AUTOEND` for the first half"), so the correction had to be applied in two
+  places. **Applied**, taking its option (a): the protocol argument stays where
+  it belongs, and the chapter now says plainly that our library takes the
+  shortcut — which works with one controller and is a race with two. That is an
+  S-19 beat and it pays out on Day 13.
+- **[MAJOR] B1 — "SDA is driven by the controller for eight bits and by the
+  device for the ninth, every single byte"** is true of a *write* only, and the
+  chapter contradicts it two subsections later in `i2c1_byteRead()` and in
+  `fig-i2c-transfer-pattern`'s caption. `sl-day10-opendrain` already words it
+  correctly. **Applied**, using the slide's wording.
+- **[MAJOR] B-7 — "TXE is the same information as a level rather than an event"**
+  — they differ in exactly the case the whole NACK-hang story rests on: on a
+  NACK, **TXE is set and TXIS is not**. **Applied.**
+- **[MAJOR] B4 — "`AFR[1]` for the same reason `EXTICR[1]` was not
+  `EXTICR[2]`"** supplies a reason that is not Day 9's reason. Day 9's is a
+  1-based-name / 0-based-index offset; AFRL/AFRH carry no number, so there is
+  nothing to transfer. The real precedent is `ch-uart.ptx`. **Applied.**
+- **[MAJOR] B2 — the pull-up arithmetic cannot produce the range it justifies.**
+  Both worked examples (1 kΩ, 200 Ω) lie *below* the stated 5–10 kΩ floor; at
+  5 kΩ the sink current is 0.66 mA, which no part struggles with. *"Right answer,
+  wrong step — and Part 6 sends the reader here specifically for the step."*
+  (Third agent to converge on this paragraph.)
+- **[MAJOR] B-9, B-1 — the projected Part 7a prompt had not been updated when the
+  activity was rewritten**, and its note said "two of the five" where the same
+  deck's previous note and the book both say three. **Both applied.**
+- **[MINOR] ×10**, including: the `sl-day10-init-code` note telling the presenter
+  to hold back a derivation the slide's own bullet now prints; `GPIO_ALTERNATE`
+  and `GPIO_AF6` never attributed to `ES28.h`; the P-MOS being *disabled*, not
+  absent; these pins being in alternate-function mode so nothing ever writes
+  `ODR`; "ours is 12 MHz" asserted with no source when RM0490 §5.4.3 and the
+  `RCC_CCIPR` reset value give it; `SCLL` = 0x13 = **19**, with the `+1` not
+  mentioned where the 20 appears; and the three timing-table crops cutting off
+  the very footnote the prose quotes.
+
+### Verified correct
+
+`i2c1_init()` **byte-for-byte** against Day 9x slides 24/25, comments included,
+and every register and bit name against RM0490. **PB8 = SCL, PB9 = SDA, AF6**
+confirmed against DS13867 Table 15, and D15/D14 against UM2953 Table 11 — *with a
+warning worth keeping*: **UM2953's own Table 12 prints these swapped.** Table 11
+and the datasheet agree with the chapter; the user manual contradicts itself.
+`fig-open-drain` and `fig-i2c-pins` both rendered and correct in every particular,
+including four other orange pins checked against Tables 15 and 16. **The
+5.0 + 4.0 = 10 µs error the previous committee found is fixed**, and the new
+`SDADEL` warning is *"exactly right"*. The pull-up range and the
+breakout-boards-carry-their-own claim are **Petra's own wording** from Day 9x
+slide 13 — and her Day 10 slide 36's "10K pull-ups" is consistent with the
+chapter, which never claims a specific value for the backpack.
+
+### Unverified
+
+**The shipped `i2c.c` is not in the repo.** Everything above about
+`i2c1_init/byteWrite/byteRead/memRead` was checked against the old-deck
+transcriptions, which the ground truth names as the only source. **If the real
+file exists, the BLOCKER should be re-checked against it before it is acted on.**
+Also unverified: `ES28.h`'s `GPIO_ALTERNATE`/`GPIO_AF6`, the CMSIS spellings (no
+`stm32c031xx.h` in the repo), and "every Arduino-shaped board puts I2C there".

@@ -2382,10 +2382,11 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
                 pin floating, so the external pull-up sets the level.
             </p>
             <p>
-                On this bus that is not a preference.  SDA is driven by the
-                controller for eight bits and by the device for the ninth,
-                every single byte, and the two ends do not always agree about
-                what it should be.  <xref ref="fig-open-drain"/> is what that
+                On this bus that is not a preference.  SDA changes hands every
+                ninth bit — on a write the controller drives eight bits and the
+                device drives the acknowledge, on a read it is the other way
+                round — and the two ends do not always agree about what it should
+                be.  <xref ref="fig-open-drain"/> is what that
                 moment looks like in the two arrangements.  If both ends were
                 push-pull, one driving HIGH and one driving LOW puts a transistor
                 from 3.3 V and a transistor to ground both switched on across the
@@ -2471,11 +2472,12 @@ void i2c1_init(void){
 }
 ]]></code></program>
             <p>
-                <c>AFR[1]</c> rather than <c>AFR[0]</c> for the same reason
-                <c>EXTICR[1]</c> was not <c>EXTICR[2]</c> this week: the
-                alternate-function selection is two 32-bit registers, one for
-                pins 0–7 and one for pins 8–15, and PB8 and PB9 are in the second
-                one.  The reference manual calls it <c>GPIOx_AFRH</c>, which is
+                <c>AFR[1]</c> rather than <c>AFR[0]</c>, and it is a different
+                index trap from Day 9's <c>EXTICR</c> one: there the reference
+                manual's names started at 1 and C's array indices started at 0.
+                Here the alternate-function selection is simply two 32-bit
+                registers, one for pins 0–7 and one for pins 8–15, and PB8 and
+                PB9 are in the second one — the same split you met on the UART.  The reference manual calls it <c>GPIOx_AFRH</c>, which is
                 why the field names read <c>GPIO_AFRH_AFSEL8</c>.
             </p>
             <p>
@@ -2641,13 +2643,17 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
             </p>
             <p>
                 Reading a <em>numbered register</em> is the one that is not a
-                loop either: it takes a write of the register number, then a
-                repeated START rather than a STOP, and only then the read.  Get
-                that wrong and you read whatever byte the device streams next
-                rather than the register you asked for;
-                <xref ref="subsec-i2c-ref-transfer-pattern"/> draws exactly this,
-                and it is why <c>i2c1_memRead()</c> exists alongside
-                <c>i2c1_byteRead()</c>.
+                loop either: it takes a write of the register number and then the
+                read, and the protocol's own answer is to join the two with a
+                repeated START instead of a STOP, so that nothing else can get
+                onto the bus in between.
+                <xref ref="subsec-i2c-ref-transfer-pattern"/> draws exactly that.
+                Our <c>i2c1_memRead()</c> does not go that far — it sends the
+                register address, lets the transaction end, and starts a second
+                one — which works on a bus with one controller on it, and is
+                worth knowing before you meet a bus with two.  Either way, that is
+                why it exists alongside <c>i2c1_byteRead()</c>: the register
+                address goes first.
             </p>
 
             <slide xml:id="sl-day10-five-ops">
@@ -2749,8 +2755,10 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
                 and the R/W bit on the wire and collects the ACK.  TXIS rises
                 once per byte, each time the transmit data register is free —
                 that is the flag <c>i2c1_byteWrite()</c> waits on before writing
-                <c>I2C1->TXDR</c>.  TXE below it is the same information as a
-                level rather than an event.  NBYTES holds the programmed count —
+                <c>I2C1->TXDR</c>.  TXE below it is the plain level — the
+                transmit register is empty — where TXIS additionally means
+                <em>and a byte is expected</em>, which is why a NACK sets one and
+                not the other.  NBYTES holds the programmed count —
                 2 for the whole of this transfer — and once that many bytes have
                 gone, AUTOEND puts the STOP on the wire without any further help
                 from the program.</caption>
@@ -3965,11 +3973,17 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 caller; this library is a teaching library and does not.
             </p>
             <p>
-                <c>i2c1_memWrite()</c> follows the same pattern with a larger
-                <c>NBYTES</c> and the register address sent first.
-                <c>i2c1_memRead()</c> cannot: it has to clear <c>AUTOEND</c> for
-                the first half, so that what follows the register address is a
-                repeated START rather than a STOP.  You are given both and only ever call them.
+                <c>i2c1_memWrite()</c> and <c>i2c1_memRead()</c> follow the
+                same pattern with a larger <c>NBYTES</c> and the register address
+                sent first.  Worth knowing what <c>i2c1_memRead()</c> does
+                <em>not</em> do: both of its <c>I2C_CR2</c> writes set
+                <c>AUTOEND</c>, so the register address is followed by a STOP and
+                the read begins with a fresh START, rather than with the repeated
+                START the protocol provides for
+                (<xref ref="subsec-i2c-ref-transfer-pattern"/>).  On a bus with
+                one controller nothing can get in between the two, so it works;
+                on a bus with two it is a race, and that is what the repeated
+                START exists to prevent.  You are given both and only ever call them.
             </p>
         </subsection>
 
