@@ -1787,7 +1787,7 @@ void tim14_init(void) {
     <caption>Pick one of the two. Write your answers before anybody talks.</caption>
     <note>Same abridgement as the previous slide. A working reference copy is on Canvas and goes to the whole room before groups form, so that a student whose homework did not run has something to compare against and never has to say so out loud.
     Equipment today: the display still wired from yesterday and verified in Part 2, and the AD2 — needed in Part 9, and the debugging instrument if a write does not land earlier.
-    110 minutes, and it sums to 111. If it runs long, trim Part 9 first (it is the stretch), then compress Part 1 from 9 to 6 by cutting the group comparison and keeping the individual written answer. NOT cuttable: Part 8c, and Part 8a's Adafruit beat.</note>
+    110 minutes, and it sums to 111. If it runs long, trim Part 9 first (it is the stretch), then compress Part 1 from 9 to 6 by cutting the group comparison and keeping the individual written answer. NOT cuttable: Part 8c, and Part 8a's layering argument. (Time budget predates the Arduino cut of 2026-08-08, which removed four slides — re-time it.)</note>
 </slide>
 
             <slide xml:id="sl-day10-ai-findings">
@@ -2405,14 +2405,6 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
                 line to get back up before the next clock edge.
                 <xref ref="subsec-i2c-ref-opendrain"/> does that arithmetic.
             </p>
-            <p>
-                One line of Arduino did all of that.  <c>Wire.begin()</c> put
-                both pins in alternate-function mode, selected the right
-                alternate function, made them open-drain, enabled the
-                peripheral's clock and set the bus speed.  It could, because the
-                board's designers knew which pins the library was allowed to
-                assume.
-            </p>
 
             <slide xml:id="sl-day9x-pins" ref="fig-i2c-pins" stack="yes">
     <ul>
@@ -2450,16 +2442,6 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
     </ul>
 </slide>
 
-            <slide xml:id="sl-day9x-wire-begin">
-    <p><term>One line of Arduino did all of that.</term></p>
-    <program language="c"><code><![CDATA[
-Wire.begin();
-]]></code></program>
-    <ul>
-        <li>It put both pins in alternate-function mode, selected the right alternate function, made them open-drain, enabled the peripheral's clock and set the bus speed.</li>
-        <li>It could, because the board's designers knew which pins the library was allowed to assume. On a board nobody has written a <c>Wire</c> for, somebody has to do what we just did.</li>
-    </ul>
-</slide>
         </subsection>
         <subsection xml:id="subsec-day9x-timingr">
             <title>Part 6b: I2C_TIMINGR, and What PRESC Is For</title>
@@ -2760,36 +2742,14 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
                 You are about to meet one where it matters.
             </p>
             <p>
-                If you have used I2C on an Arduino, this is the library you were
-                using.  <c>Wire.begin()</c> is <c>i2c1_init()</c>.
-                <c>Wire.beginTransmission(addr)</c>, a <c>Wire.write()</c> and
-                <c>Wire.endTransmission()</c> together are one
-                <c>i2c1_byteWrite()</c> — or, with more than one
-                <c>Wire.write()</c> between them, one <c>i2c1_memWrite()</c>.
-                <c>Wire.requestFrom(addr, n)</c> followed by <c>Wire.read()</c>
-                is <c>i2c1_byteRead()</c> — but <c>i2c1_memRead()</c> is
-                <em>not</em> that.  Reading a numbered register on an Arduino
-                takes both halves: <c>beginTransmission(addr)</c>,
-                <c>write(regAddr)</c>, <c>endTransmission(false)</c> — the
-                <c>false</c> being a repeated START rather than a STOP — and only
-                then <c>requestFrom()</c>.  Get that wrong and you read whatever
-                byte the device streams next rather than the register you asked
-                for; <xref ref="subsec-i2c-ref-transfer-pattern"/> draws exactly
-                this.  One more: <c>Wire.begin()</c> is overloaded — with no
-                argument it is the controller-mode setup above, and with an
-                address it makes the board a <em>target</em>, a mode this course
-                never uses.
-            </p>
-            <p>
-                The addresses you passed to <c>Wire</c> were 7-bit addresses,
-                exactly like the ones here.  What is <em>not</em> the same is
-                what you get back.  <c>Wire.endTransmission()</c> returns a status
-                byte as soon as the result is available;
-                <c>i2c1_byteWrite()</c> returns nothing at all and, as you found twenty minutes ago, can
-                hang instead.  That is the bug you have already met, and it is the
-                honest version of <q>this is the same library</q>.  The other
-                difference is that this time you can open the file and see what
-                happens underneath.
+                Reading a <em>numbered register</em> is the one that is not a
+                loop either: it takes a write of the register number, then a
+                repeated START rather than a STOP, and only then the read.  Get
+                that wrong and you read whatever byte the device streams next
+                rather than the register you asked for;
+                <xref ref="subsec-i2c-ref-transfer-pattern"/> draws exactly this,
+                and it is why <c>i2c1_memRead()</c> exists alongside
+                <c>i2c1_byteRead()</c>.
             </p>
 
             <slide xml:id="sl-day9x-five-ops">
@@ -2820,43 +2780,6 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
     </ul>
 </slide>
 
-            <slide xml:id="sl-day9x-wire-h">
-    <p><term>If you have used I2C on an Arduino, this is the library you were using.</term></p>
-    <program language="c"><code><![CDATA[
-Wire.begin();                                 ->  i2c1_init();
-
-Wire.beginTransmission(addr);                 ->  i2c1_byteWrite(addr, b);
-Wire.write(b);
-Wire.endTransmission();
-
-... with several Wire.write()s between them   ->  i2c1_memWrite(addr, reg, n, data);
-
-Wire.requestFrom(addr, 1);                    ->  i2c1_byteRead(addr, &b);
-b = Wire.read();
-]]></code></program>
-    <ul>
-        <li>The addresses you passed to <c>Wire</c> were <term>7-bit</term> addresses, exactly like these.</li>
-    </ul>
-</slide>
-
-            <slide xml:id="sl-day9x-wire-h-gaps">
-    <p><term>Two places that mapping is not one-to-one</term> &#8212; and both of them matter.</p>
-    <program language="c"><code><![CDATA[
-Wire.beginTransmission(addr);   // reading a NUMBERED REGISTER takes both halves
-Wire.write(regAddr);
-Wire.endTransmission(false);    // false = repeated START, not a STOP
-Wire.requestFrom(addr, n);      // ... and only THEN this
-b = Wire.read();                //  ->  i2c1_memRead(addr, reg, n, data);
-
-uint8_t err = Wire.endTransmission();     // returns 0..4 as soon as it can
-i2c1_byteWrite(addr, data);               // returns void, and can hang
-]]></code></program>
-    <ul>
-        <li>A bare <c>requestFrom</c> is <c>i2c1_byteRead()</c>, <term>not</term> <c>i2c1_memRead()</c>. Get that wrong and you read whatever byte the device streams next rather than the register you asked for.</li>
-        <li>And <c>endTransmission()</c> hands back a status byte where <c>i2c1_byteWrite()</c> hands back nothing and can hang &#8212; which is the bug you met twenty minutes ago.</li>
-        <li>What you gain is that this time you can open the file and see what happens underneath.</li>
-    </ul>
-</slide>
         </subsection>
         <subsection xml:id="subsec-day9x-bytewrite">
             <title>Part 7b: Opening i2c1_byteWrite()</title>
@@ -3040,16 +2963,10 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
                 at all.
             </p>
             <p>
-                If you have driven one of these displays from an Arduino, you
-                have used somebody else's version of the layer you are about to
-                write.  <c>Adafruit_LEDBackpack.h</c> is a device driver for this
-                exact chip: <c>begin(0x70)</c> is <c>SevenSeg_init()</c>,
-                <c>setBrightness()</c> is <c>SevenSeg_dim()</c>,
-                <c>blinkRate()</c> is <c>SevenSeg_blink()</c>, and
-                <c>writeDisplay()</c> is <c>SevenSeg_write()</c>.  Underneath, it
-                calls <c>Wire</c>, which is <c>i2c.c</c>.  The same four
-                functions and the same two layers, written by somebody who read
-                the same datasheet pages you read in Part 4.
+                Somebody else has written both of those layers for this exact
+                chip already (if you have met it, that is
+                <c>Adafruit_LEDBackpack.h</c> over <c>Wire</c>), from the same
+                datasheet pages you read in Part 4.
             </p>
             <p>
                 What writing it yourself buys is not performance.  It is that
@@ -3076,23 +2993,6 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
     </ul>
 </slide>
 
-            <slide xml:id="sl-day10-adafruit">
-    <p><term>If you have driven one of these from an Arduino, you have used somebody else's version of the layer you are about to write.</term></p>
-    <program language="c"><code><![CDATA[
-Adafruit_LEDBackpack.h                    SevenSeg.h
-
-  begin(0x70)                 ->            SevenSeg_init()
-  setBrightness(b)            ->            SevenSeg_dim(b)
-  blinkRate(r)                ->            SevenSeg_blink(r)
-  writeDisplay()              ->            SevenSeg_write(buffer)
-
-        ... and underneath, it calls Wire, which is i2c.c
-]]></code></program>
-    <ul>
-        <li>The same four functions and the same two layers, written by somebody who read the same datasheet pages you read in Part 4.</li>
-        <li>What writing it yourself buys is not performance. It is that when the display shows nothing you have <term>a bus you can put a scope on</term>, a command table you can check the bytes against, and four functions you can read &#8212; instead of a library whose failure mode is that it did not work.</li>
-    </ul>
-</slide>
         </subsection>
         <subsection xml:id="subsec-day10-first-digit">
             <title>Part 8b: SevenSeg_init(), and One Digit</title>
