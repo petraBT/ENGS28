@@ -171,7 +171,7 @@ fixed the arc, so this step is condensation, not design. If a section resists
 condensing to a slide, that is a signal the section is not clear yet — fix the
 section.
 
-**Slides are written in Petra's voice — rules S-11 … S-19** in
+**Slides are written in Petra's voice — rules S-11 … S-21** in
 `AUTHORING-book.md`, derived from her hand rewrite of Day 8 and frozen as a
 specimen at `plans/day8-voice-reference.diff`. Read that diff before writing a
 deck; the rules summarize it, and the examples in them are what make them

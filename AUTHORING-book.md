@@ -420,7 +420,7 @@ These are the quality rules.
 - **S-8 The deck arc.** Title → brief review / where we're headed → agenda → timed
   `Part N` sections → recap or looking ahead.
 
-### S-11 … S-19 — the voice
+### S-11 … S-21 — the voice
 
 Derived from Petra's own hand rewrite of the Day 8 deck and the Day 8 pre-class
 video, frozen at `plans/day8-voice-reference.diff`. That diff is the
@@ -475,6 +475,35 @@ people (B-7, 5b).
   ~~"Both `TIM14_IRQn` and the handler name … come from one table in the
   reference manual."~~ → "…come from different places." (because they do), and
   the added "(Other behaviors are possible here as well.)"
+- **S-20 A day never does the teaching.** *"Don't ever make the weekday the
+  grammatical actor"* (Petra, Day 9x). **We** teach, **you** do the work, and a
+  weekday is only ever *when*. Banned in every position where a day is the
+  subject or the predicate of an act of teaching:
+  ~~"Thursday explains why they still have to be sent"~~ → "we'll see on
+  Thursday why they still have to be sent"; ~~"Thursday is where you find out
+  why"~~ → "we'll find out on Thursday why"; ~~"Thursday starts by flashing
+  `helloDisplay.c`"~~ → "we'll start on Thursday by flashing `helloDisplay.c`";
+  ~~"not to understand every line, which is Thursday"~~ → "we'll go through
+  every line on Thursday".
+  Fine, and unchanged: a day as an adverbial ("On Thursday we'll look at…",
+  "we'll see on Thursday why"), a day in a section title (structural, B-1), and
+  a possessive naming real coursework ("Tuesday's timer program is what is
+  due"). This generalizes: no period of the course — a day, a week, a lab, "the
+  hour" — acts, wants, covers, says or explains anything.
+- **S-21 Say the thing, not that there is a thing.** The armature *"N, and it
+  is the one that…"* announces a quantity and then defers the content into a
+  relative clause, so the reader has to wait a sentence for the subject. Her
+  register puts the subject first.
+  ~~"One question is left, and it is the one that makes the rest work."~~ →
+  "One question is left: if SDA is the line carrying the bits, how does a device
+  tell a START from an ordinary 1 going by?"; ~~"There is one rule, and
+  everything else follows from it."~~ → "There is one rule: **SDA is allowed to
+  change only while SCL is LOW.**"; ~~"One more piece, and it is the only
+  moment in a transaction where the wire changes hands."~~ → "One more piece.
+  After the seven address bits and the R/W bit the controller lets go of SDA…"
+  A colon is usually the whole fix. Related to the count rule in
+  `plans/day9x-voice-reference.md`: where the count is the *only* content, the
+  sentence goes entirely rather than getting a colon.
 
 **Not covered by these rules.** Petra's Day 8 pass made a few changes no rule
 explains — see the end of `AUTHORING-slides.md`. Do not invent a rule to cover
@@ -502,7 +531,7 @@ them; ask.
 before every committee review.
 
 L-8 … L-11 are the *lintable corner* of the voice rules — fixed phrases only.
-The rest of S-11 … S-19 needs judgment and is deliberately not linted. Each was
+The rest of S-11 … S-21 needs judgment and is deliberately not linted. Each was
 validated against the corpus as it stood before the voice pass: together they
 catch 7 real violations, three of them phrases Petra deleted by hand in
 `plans/day8-voice-reference.diff`, with no false positive in any chapter file.

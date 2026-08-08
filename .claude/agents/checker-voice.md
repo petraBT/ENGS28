@@ -25,7 +25,7 @@ Do not start from the rule summaries. Start from her sentences.
    the Day 8 video script. Read the `source/ch-timers-interrupts.ptx` hunks as
    well as the deck JSON: the prose changes are the ones nobody reads.
 
-S-11 … S-19 in `AUTHORING-book.md` are a *summary* of those two files. When a
+S-11 … S-21 in `AUTHORING-book.md` are a *summary* of those two files. When a
 rule and a specimen seem to disagree, the specimen wins, and say so in your
 report. Read `AUTHORING-slides.md` § "What no rule covers" so you do not invent a
 rule out of one of the three changes that resist generalization.
@@ -37,7 +37,7 @@ them beside each other. A finding that cites a rule ID but no specimen pair is a
 weak finding; a finding that quotes her actual before → after is one she can
 act on in three seconds.
 
-## The eight failures that reached her
+## The ten failures that reached her
 
 These are the ones that survived four rounds of review, so look for them by
 name. They are patterns to hunt, not an exhaustive list — a sentence that is
@@ -133,10 +133,39 @@ carrying anything — the fix is to cut it, not to fix the number. (The *number*
 being wrong is `checker-technical-accuracy`'s finding; the sentence existing is
 yours.)
 
+**9 — A weekday doing the teaching (S-20).** *"Don't ever make the weekday the
+grammatical actor"* — Petra, in as many words. Sweep every weekday and every
+period of the course ("the hour", "the lab", "next week") and check what the
+sentence's subject is:
+
+> ~~"Thursday explains why they still have to be sent."~~ → **"we'll see on
+> Thursday why they still have to be sent"**
+> ~~"Thursday is where you find out why."~~ → **"we'll find out on Thursday why"**
+> ~~"not to understand every line, which is Thursday"~~ → **"we'll go through
+> every line on Thursday"**
+
+A day is only ever *when*. Leave adverbials alone ("On Thursday we'll look
+at…"), leave section titles alone, and leave possessives that name real
+coursework alone ("Tuesday's timer program is what is due"). Report the count,
+because this arrives in clusters — one chapter had nine.
+
+**10 — "N, and it is the one that…" (S-21).** The armature announces a quantity
+and defers the content into a relative clause, so the subject arrives a sentence
+late:
+
+> ~~"One question is left, and it is the one that makes the rest work."~~
+> ~~"There is one rule, and everything else follows from it."~~
+> ~~"One more piece, and it is the only moment in a transaction where the wire
+> changes hands."~~
+
+Three consecutive paragraphs opened this way in one draft. A colon is usually
+the whole fix — put the question, the rule, or the piece straight after it. Where
+the count is the *only* content, cut the sentence instead (failure 8).
+
 ## Book prose and slide text are one voice
 
 A `<slide>` block and the paragraph it condenses are separate texts that must not
-sound like two different people (B-7, S-11…S-19, Step 5b). Review them
+sound like two different people (B-7, S-11…S-21, Step 5b). Review them
 **together**, never the deck alone:
 
 ```bash
@@ -234,6 +263,8 @@ is reproducing, and quote the pair.>
 ### Sweeps
 - Unit openings checked: N — failing: <list>
 - Slide titles: N — epigrams rather than names: <list>
+- Weekday or course-period as grammatical actor: N — <list> (S-20)
+- "N, and it is the one that…" armature: N — <list> (S-21)
 - "we" in class-work sentences: N of M
 - Acronyms first-used without expansion: <list, complete>
 - Design scaffolding in student-facing text: <list>

@@ -198,7 +198,7 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
 
 ## Voice
 
-Slides are written in Petra's voice, which is **S-11 … S-19** in
+Slides are written in Petra's voice, which is **S-11 … S-21** in
 `AUTHORING-book.md`. There are two frozen specimens, and the rules are only a
 summary of them — read both before authoring a deck, and read them again if a
 rule feels ambiguous:
