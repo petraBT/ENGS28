@@ -202,9 +202,27 @@ def check_file(path, quiet=False):
         src = m.group(1)
         if src.startswith(("http://", "https://")):
             continue
-        if not os.path.exists(os.path.join(ASSETS, src)):
+        full = os.path.join(ASSETS, src)
+        if not os.path.exists(full):
             problems.append(("error", line_of(text, m.start()), "B-11",
                              f"missing image: {src}"))
+            continue
+        # B-11a: an SVG with a viewBox but no width/height has no intrinsic
+        # size, so a browser gives it the 300x150 replaced-element default and
+        # it projects unreadably small however much room the slide has. Seven
+        # hand-authored figures shipped this way across four chapters.
+        if src.lower().endswith(".svg"):
+            try:
+                head = open(full, encoding="utf-8", errors="replace").read(4000)
+            except OSError:
+                head = ""
+            root = re.search(r"<svg\b[^>]*>", head, re.S)
+            if root and not (re.search(r'\bwidth="', root.group(0))
+                             and re.search(r'\bheight="', root.group(0))):
+                problems.append(("error", line_of(text, m.start()), "B-11a",
+                                 f"{src}: <svg> has no width/height — browsers "
+                                 f"fall back to 300x150 and it projects tiny; "
+                                 f"add both, matching the viewBox"))
 
     # xref targets exist somewhere in the book.
     ids = set(re.findall(r'xml:id="([^"]+)"', raw))
