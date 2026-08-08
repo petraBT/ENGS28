@@ -1126,3 +1126,114 @@ listing anywhere still carries the spurious term. All of Part 9's RM0490 quotes
 are exact and in the one bullet. The ninety-microsecond claim measured off the
 capture at full resolution: nine rising edges, 10.3 µs apart, ACK slot ≈96 µs
 after the `NACKF` test. Lab 5's due date confirmed — and 10 Feb 2026 is a Tuesday.
+
+---
+
+## `checker-voice` — MAJOR (full pass, all fourteen parts)
+
+*The check on the morning's sweep. Told to be adversarial about it, and to say
+whether 11 "we'll" was right or whether the sweep had over-applied.*
+
+### Register — is this her?
+
+> "Mostly, yes — and that is the honest headline. **You did not produce a third
+> voice**: where the hand-sweep touched a sentence, the result is in her register,
+> and I could not tell your rewrites from mine in Part 3. The failure is
+> *coverage*, not register — the sweep stopped at prose in several places,
+> stopped at slides in others, and never reached the deck-only slides or the
+> captions."
+>
+> "**No opening in Day 10 opens on what is absent.** That failure is gone."
+
+### The over-application it was asked to look for — and found
+
+- **[MAJOR] B-12, S-15 — the rescue text in Part 2 and Part 8c has been rebuilt
+  into the shape of the passage she deleted whole.** Her one permitted form is
+  five words — *"Still stuck? We're here to help!"* — and the afternoon's edit
+  replaced it with three sentences of rescue logistics plus a new student-facing
+  minute count ("at minute five"). *"The draft is the same four moves — condition,
+  instruction, rescue logistics, don't-worry — at the same length"* as
+  ~~"Been through the four wires twice and still dark? Flag it. There is
+  known-good hardware in the room…"~~, which she deleted entirely.
+  **This is a direct conflict with `learner-anxious-nonhardware`'s BLOCKER**,
+  which wanted exactly that path stated, with the corpus precedent to back it.
+  **Not resolved here — sent to the synthesizer.**
+
+### The count, recomputed
+
+| | Day 9x (her hand pass) | Day 10 (now) |
+|---|---|---|
+| `we'll`, raw | 34 | 13 |
+| per word, prose only | 1 per 192 | 1 per 869 |
+| parts with `we'll` in the opening paragraph | **6 of 6** | **8 of 14** |
+
+> "**11 was not right, and 13 is not either — but the problem is not that it is
+> scattered as a tic.** Every one of the 13 is doing real work and sits where she
+> puts it. The deficit is at the openings of **Parts 4, 6 and 10**, and Parts 4
+> and 6 together are eighteen minutes of the day's teaching. The `you`-heaviness
+> is *correct* for this day and I am not asking you to move it: Day 10 is a build
+> day, and 'you' is what the student personally does."
+
+### Findings
+
+- **[MAJOR] design vocabulary in student-facing text** — "crucial step" ×3, "this
+  is the case this part exists for", "this part is about reading code, not about
+  whose homework built", and *"in the order Petra's own list gives them"*.
+  **All applied.**
+- **[MAJOR] literal `Part N` in student-facing text, nine places.** *"You already
+  made this exact substitution once, on the slide, while leaving the prose it
+  condenses saying 'in Part 4' — so the house style is already established, just
+  not applied."* `<xref>`s are fine and hers; the literal string is the leak.
+- **[MAJOR] S-20 — the deck was not swept with the prose.** `slides[1]` item 2,
+  *"Today **is** everything that was handed to you"*, on the first slide of the
+  day and the single most-read line in it — while the prose it condenses already
+  says "today we'll open up". Also `sl-day10-cmd-table`'s caption, *"all today
+  needs"*, where the prose twelve lines above says "all we need".
+- **[MAJOR] a lab as grammatical actor, six places** — S-20's generalization
+  names a lab among the periods that may not act, and her Day 8 pass converted
+  *"Lab 5 asks exactly this at full scale"* into *"This is a great preparation for
+  Lab 5."* **Four applied; escalated to her, because a lab is also a document.**
+- **[MAJOR] ×6 more**: Part 10's opening as count-rhetoric; Part 8c's S-21
+  armature; the recap's S-21; the "not X — it is Y" armature twice in Part 8a;
+  the "whole argument for the backpack" slogan ending; and the same wording on
+  two consecutive slides (`sl-day10-driver-todo` then `act-i2c-sevenseg`).
+- **[MINOR] ×10**, including three verbless activity openers, two bare RM0490
+  citations on slides that must stand alone, a student-facing time estimate in
+  the homework, and **API — the only unexpanded acronym in the day**, occurring
+  once in the entire book.
+
+### Reuse — the parts nobody had checked
+
+- **Part 1: she already wrote the questions** (her slide 4). The draft's "What
+  does it do better than yours? There is something." should be her *"Do you see
+  advantages over your own solution?"* — the nudge also pre-answers the question.
+  The draft's t0 and t2 are **better** than her open "problematic parts"; keep
+  those.
+- **Part 1: a missing beat.** Her slide 3 ends *"Demonstrate your counter with
+  timer and reset and discuss with your table partners."* Nobody in the draft
+  ever shows their own working program.
+- **Part 8a: the device-driver recipe is missing entirely** (her slide 48) — and
+  with it **unit testing**, which her slide 53 supports with a `SevenSeg_test.c`
+  from Canvas. *"It is the transferable method, and it is the one thing in her
+  Day 10 arc that has no counterpart in the draft."*
+- **Part 10: her overflow convention** — *"SevenSeg_num will make EEEE when
+  >9999"* — against the draft's open "decide what it should do", which will
+  produce five different behaviours.
+- **Part 9: the draft is better than hers and should stay.** Her second
+  experiment was a different data byte; the missing-oscillator case *"is the only
+  place in either day where a flawless bus and a dead display coexist."*
+
+### Escalated to Petra
+
+- **Is `Lab 5` allowed to be the grammatical actor?** Her own Day 8 pass says no;
+  a lab handout is arguably a document rather than a period.
+- **"We're here to help!" appears three times in one day.** The Day 8 note says
+  that exclamation mark is *"clearly deliberate and clearly not a general
+  licence"* — three uses may be one too many, and that is her call, not a rule.
+- **A technical claim conflicting with her own deck**, flagged from reading both
+  texts together: her `SevenSegPartial.c` comment says *"You can either write one
+  digit at a time or (more efficient!) write the entire display all at once"*,
+  against the chapter's "one transaction is the only thing that works". *"I have
+  not rewritten either sentence, because doing so would change the engineering,
+  not the register."* — **independently confirmed as a BLOCKER by the B3 run, and
+  applied.**
