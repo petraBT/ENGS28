@@ -1,5 +1,9 @@
 # Handover: restructure Days 9x and 10
 
+> **Superseded by `plans/CHAPTER-GENERATION-PROMPT.md`.** Kept as the record of
+> what Days 9x and 10 were actually asked for, and for its open-questions list.
+> Do not paste this one into a new session.
+
 Paste everything below the line into a fresh session in `~/repos/ENGS28`.
 
 ---

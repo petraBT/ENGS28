@@ -1,5 +1,9 @@
 # Prompt: rewrite the Day 9 / 9x / 10 week
 
+> **Superseded by `plans/CHAPTER-GENERATION-PROMPT.md`.** Kept as the record of
+> what the Day 9 week was actually asked for. Do not paste this one into a new
+> session.
+
 Paste everything below the line into a fresh session in `~/repos/ENGS28`.
 
 ---

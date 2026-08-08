@@ -334,11 +334,14 @@ reports large phantom overflows on slides that fit exactly — it is measuring
 mid-layout, and a reload makes it worse. This is the one *false-positive* mode;
 the three below are false negatives.
 
-Three traps it exists to catch, all of which have produced a false "fits":
+Five traps it exists to catch, all of which have produced a false "fits". The
+last two are not measurable at all, and are the reason the rule is **look at
+every slide that carries a figure**, not "run the snippet":
 
 - **Suspended layout.** In a background or hidden window the browser stops
   computing layout, so every `clientHeight` reads 0 and the old one-line check
-  returned `[0, 0]` for every slide regardless of content.
+  returned `[0, 0]` for every slide regardless of content. Require
+  `clientHeight > 0` or the numbers mean nothing; a `resize_window` call wakes it.
 - **Image-dominant slides.** `#ref.figure-focus .ref-body` is `display: none`,
   so the body measures 0 there too — correctly, since there is nothing to
   overflow, but indistinguishable from a pass.
@@ -346,10 +349,32 @@ Three traps it exists to catch, all of which have produced a false "fits":
   third of every line off the right edge while `.ref-body` reports no overflow
   at all. This is the one that hid for an entire voice pass; Day 8's
   `sl-day8-flag` was cutting the words the slide was making its point with.
+- **A silently cropped figure.** On a stacked or two-column slide the bullets
+  take the top and the figure is **cropped, not scaled**, into whatever height
+  is left — so the four-layer diagram loses its top and bottom rows, three
+  stacked timing tables show one, and **every overflow measurement reads zero**.
+  The lever is the number of bullets; the image's `width=` attribute does
+  nothing, because the player overrides it on slides. There is no measurement
+  for this. Look at it.
+- **An `.svg` with a `viewBox` but no `width`/`height`.** It has no intrinsic
+  size, so the browser gives it the 300×150 replaced-element default and it
+  projects tiny no matter how much room the slide has — Petra's *"that picture
+  is so tiny that nobody can see it"*. Seven hand-authored figures shipped this
+  way across four chapters. `scripts/check_rules.py` now errors on it (B-11a);
+  the fix is to add both attributes matching the `viewBox`, which is a no-op on
+  the drawing.
 
 A code block that reports clipping is fixed by shortening the *comments* (the
 code itself must not drift from the driver, B-6) or by giving the listing the
 full width instead of a column.
+
+**Never fix a crop by adding a slide.** Splitting a crowded slide is right when
+both halves teach; a slide invented to absorb the overflow — Day 9x's "why `+`
+goes to 3.3 V and not 5 V" — is a slide a student gets nothing from, and Petra
+deletes it. Cut a bullet instead, or give the figure its own image-dominant
+slide.
+
+Instructor-only solution slides may overflow. Student-facing ones may not.
 
 **Layout signals meaning:**
 - *talking points + a supporting image* → two-column (bullets left, figure +
