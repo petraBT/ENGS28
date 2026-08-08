@@ -1940,7 +1940,8 @@ void tim14_init(void) {
             <p>
                 Either way, what you are seeing is the sweep, and it is the
                 reason the display has a chip of its own.  The image exists only
-                while something redraws it, thousands of times a second, and that
+                while something redraws it, fast enough that the eye cannot
+                follow, and that
                 job never stops — if your program did it, everything else you
                 wanted the STM32C031C6 to do would have to fit around a refresh
                 loop with a deadline that never ends.  That is why the display is
@@ -1995,7 +1996,7 @@ void tim14_init(void) {
     <ul>
         <li><term>Wave it.</term> Pick the breadboard up and move the lit display briskly side to side. A light that is genuinely on all the time smears into a <term>continuous band</term>; one that is being switched leaves <term>separate images with gaps</term> between them.</li>
         <li><term>Or film it.</term> Phone camera, slow-motion mode, then step through the clip. A short enough exposure catches the display part-way through a sweep instead of averaged over one.</li>
-        <li>And that is the reason the display has a chip of its own. The image exists only while something redraws it, thousands of times a second, and that job never stops &#8212; if <term>your program</term> did it, everything else you wanted the STM32C031C6 to do would have to fit around a refresh loop whose deadline never ends.</li>
+        <li>And that is the reason the display has a chip of its own. The image exists only while something redraws it, fast enough that the eye cannot follow, and that job never stops &#8212; if <term>your program</term> did it, everything else you wanted the STM32C031C6 to do would have to fit around a refresh loop whose deadline never ends.</li>
         <li>So the display is wired to a backpack: the HT16K33 does the <term>multiplexing</term> and the decoding, and talks to the processor over I2C.</li>
     </ul>
     <note>OPEN — see the note in the book at this point. The HT16K33's scan rate is not in the repo, so neither route is claimed to work at a stated shutter speed; try one before class. A figure for this beat does not exist.</note>
@@ -2463,8 +2464,9 @@ void i2c1_init(void){
                 long SCL spends HIGH, how long it spends LOW, and how long the
                 peripheral waits around the edges before it changes or samples
                 SDA, and the values are the ones this board needs at 100 kHz.
-                <xref ref="subsec-i2c-ref-timingr"/> works out where each of them
-                came from, which is worth reading the day you move this code to a
+                <xref ref="subsec-i2c-ref-timingr"/> works out where <c>PRESC</c>
+                comes from and checks <c>SCLL</c> and <c>SCLH</c> against the bus
+                speed, which is worth reading the day you move this code to a
                 board whose clock runs at a different speed.
             </p>
 
@@ -2526,7 +2528,7 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
 ]]></code></program>
     <ul>
         <li><c>AFR[1]</c>, not <c>AFR[0]</c>, for the same reason <c>EXTICR[1]</c> was not <c>EXTICR[2]</c> this week: two registers, pins 0&#8211;7 and pins 8&#8211;15. The manual calls the second one <c>GPIOx_AFRH</c>.</li>
-        <li><term>The four <c>TIMINGR</c> lines we leave alone.</term> <c>PRESC</c> divides <c>I2CCLK</c> down to 4 MHz for the rest of the counters, so ours is 12/4 &#8722; 1 = 2; <c>SCLL</c> and <c>SCLH</c> are how long SCL is LOW and HIGH, and <c>SDADEL</c> and <c>SCLDEL</c> are how long the peripheral waits around the edges before changing or sampling SDA. These are the values this board needs at 100 kHz, and the Reference section derives all five.</li>
+        <li><term>The four <c>TIMINGR</c> lines we leave alone.</term> <c>PRESC</c> divides <c>I2CCLK</c> down to 4 MHz for the rest of the counters, so ours is 12/4 &#8722; 1 = 2 &#8212; and <term>no table in RM0490 lists 12 MHz</term>, so that one is worked out rather than looked up; <c>SCLL</c> and <c>SCLH</c> are how long SCL is LOW and HIGH, and <c>SDADEL</c> and <c>SCLDEL</c> are how long the peripheral waits around the edges before changing or sampling SDA. These are the values this board needs at 100 kHz, and the Reference section derives all five.</li>
     </ul>
     <note>Abridged: PB9's MODER and AFR lines are dropped so the function fits legibly. The book carries the full version — say so.
     TIMINGR is deliberately not taught (Petra, 2026-08-07). If somebody asks where 0x2 comes from, the one-line answer is that the prescaler divides I2CCLK down to 4 MHz and 12/4 − 1 = 2; the derivation and the three RM0490 tables are in Reference.</note>
@@ -3769,7 +3771,19 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 So <c>PRESC</c> is not a constant belonging to a board.  It is
                 <m>f_\text{I2CCLK} / 4\,\text{MHz} - 1</m>, which for a 12 MHz
                 clock is 2 — and that is the one number to change if this code
-                moves.  The other four are copied from any of the three tables.
+                moves.
+            </p>
+            <p>
+                The other four are copied from any of the three tables, and this
+                section does not derive them.  <c>SCLL</c> and <c>SCLH</c> are
+                checked above against the bus speed they have to produce.
+                <c>SDADEL</c> and <c>SCLDEL</c> are not: they set how long the
+                peripheral waits after an SCL edge before changing SDA, and how
+                long it waits before sampling it, and both come out of the I2C
+                specification's setup and hold requirements rather than out of the
+                bus frequency.  One warning if you extend the pattern by analogy —
+                RM0490's formula for <c>SDADEL</c> does not carry the <c>+1</c>
+                that the other four fields do.
             </p>
         </subsection>
 

@@ -708,3 +708,82 @@ yesterday a second try with the whole session still ahead."* — *"Neither of th
 had to be there for the technical content to work, and both are precisely the
 thing that keeps a quiet, behind-feeling student from having to raise a hand and
 admit it."*
+
+---
+
+## `expert-rigor-hawk` — MAJOR
+
+*Rotator. Asked directly what the `I2C_TIMINGR` cut costs, and told the decision
+will not be reversed by its report.*
+
+> "The protocol content, the register work, and the AI-critique arithmetic are
+> unusually solid — better than most Gate 2 submissions I see. But the day ships
+> one invented quantity dressed as observed fact, and the 'moved to Reference,
+> not deleted' claim doesn't fully deliver even in Reference."
+
+### The `TIMINGR` cut — its three direct answers
+
+**(a) What is lost.** Not the numbers and not the register's meaning — both
+survive. What is lost is *"the activity of confronting three RM0490 tables that
+don't cover your case and noticing, unprompted, that four of the five fields are
+constant across all three and only `PRESC` moves — which is what makes
+`PRESC = f/4 MHz − 1` a derived fact rather than a quoted one."* Gone from the
+required floor, full stop.
+
+**(b) Is what remains honest?** **Honest.** *"It is not the 'the hardware handles
+it' failure mode"* — it names what each field family does, attributes the
+derivation to a specific subsection, and scopes when a reader would need it.
+*"Better still: the visible slide already carries one real derived number —
+12/4 − 1 = 2 — so the floor isn't 'trust us', it's 'here is one fact,
+checkable.' This is the correct application of P-2 + P-3's resolution: depth
+removed from the required middle, preserved at the top."*
+
+**(c) The cheapest fixes.** Two, and it rates the second as the more important:
+1. *Free.* The visible bullet gives the arithmetic but never says **no RM0490
+   table lists 12 MHz** — *"that clause is what makes the number feel derived
+   rather than looked up, and it costs nothing to add."* **Applied.**
+2. *"Reference is not, in fact, genuinely enough."* `subsec-i2c-ref-timingr`
+   promises to work out where each value came from and **derives one field of
+   five**. `SDADEL` and `SCLDEL` — two of the four the slide describes — are
+   never derived, and RM0490's formula for `SDADEL` *omits the `+1` the other
+   four carry*, so a reader extending the pattern by analogy gets it wrong.
+   *"This is the one place this book currently overclaims what it has done."*
+   **Applied**: the promise is narrowed to what the section actually does, and
+   the `SDADEL` irregularity is now stated.
+
+### Findings
+
+- **[MAJOR] B-11c, B-6 — an invented quantity on a student-facing slide.** *"The
+  image exists only while something redraws it, **thousands of times a second**"*
+  is stated as fact in the prose and on `sl-day10-pov`, while the author's own
+  inline comment eight lines above says the HT16K33's scan rate is not in the
+  repo. *"The discipline of leaving the OPEN comment was right; shipping the
+  specific number anyway undoes it."* **Applied** — now "fast enough that the eye
+  cannot follow", which is all the wave-it/film-it activity needs.
+- **[MAJOR] B-6, L-6 — the pull-up low end is illustrated, not derived.** The high
+  end is genuinely derived (RC against the LOW phase). The low end shows 1 kΩ
+  sinking 3.3 mA, *"which most parts manage"* — **certifying 1 kΩ as fine two
+  paragraphs before the text asserts the convention floor is 5 kΩ.** Either derive
+  the constraint that actually produces 5 kΩ, or move the example to land on it.
+  *(Converges with `learner-weak-circuits` from the opposite direction.)*
+- **[MAJOR] P-3 — `act-i2c-sevenseg-t4` is repetition, not challenge.** Steady,
+  blink, dim is a recombination of three functions already written and called,
+  with no new idea. *"Contrast with `act-i2c-wrong-t6` in the same subsection — a
+  genuine stretch, same day, same driver."* Its proposed replacement tests the
+  pointer-advance idea instead: what breaks if the ten bytes go as ten separate
+  `i2c1_byteWrite()` calls rather than one `i2c1_memWrite()`.
+- **[MINOR] B-6 — `fig-i2c-timing-tables`' caption** states `SDADEL`/`SCLDEL`
+  values with no time-domain meaning attached, unlike the same paragraph's careful
+  `SCLL`/`SCLH` conversion. **Partly addressed** by the new Reference paragraph.
+
+### Confirmed correct
+
+The AI-critique clock arithmetic (4.000 s and 1.333 s, with 4 ms and 1.33 ms tick
+periods) — *"a strong instance of B-6/L-6 and a good model for the rest of the
+chapter."* The `(N+1)/16` derivation, worked correctly in both directions. The
+`I2C_CR2` `=`-not-`|=` argument as *"genuinely a different mechanism from the
+timers chapter's"* — B-8 done right. And Part 9's ninety-microseconds claim,
+arithmetically sound (9 bit-times × 10 µs at 100 kHz) with RM0490 §23.4.9 quoted
+on both sides: *"the strongest 'missing consequence' moment in the day — it names
+what actually happens (program hangs, bus is fine) rather than just 'know your
+library's limits.'"*
