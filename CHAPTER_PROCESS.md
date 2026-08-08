@@ -111,8 +111,7 @@ Small panel, minutes to run:
 
 ```
 expert-active-learning, expert-cognitive-load, expert-continuity-auditor,
-expert-class-logistics, learner-firstgen-novice, learner-arduino-veteran,
-learner-anxious-nonhardware
+expert-class-logistics, learner-firstgen-novice, learner-anxious-nonhardware
 ```
 
 Asking: is the arc sound, is the crucial step actually crucial and actually
@@ -416,7 +415,9 @@ hardware blockers, and it read the manuals rather than the ground truth);
 `learner-visual` (two figures whose captions promised what the image did not
 show -- the defect class that is invisible in source and obvious on sight, so
 give it rendered figures every time); `learner-arduino-veteran` (found the
-chapter asserting something the chapter itself had falsified 130 lines earlier);
+chapter asserting something the chapter itself had falsified 130 lines earlier
+— *that agent has since been retired under B-11e, and self-contradiction is now
+an explicit pass in `checker-technical-accuracy`*);
 `learner-anxious-nonhardware` and `expert-class-logistics` (converged on every
 diagnostic ladder dead-ending at "re-seat the wires"); and `learner-ai-reliant`,
 which falsified an AI-resistance claim for the second week running -- the same
