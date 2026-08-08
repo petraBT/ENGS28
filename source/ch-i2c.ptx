@@ -1702,9 +1702,11 @@ void pb4_exti_init(void) {
             </p>
             <p>
                 <term>Both check the button only when the timer fires.</term>
-                The button test is inside <c>if (timerElapsed)</c>, so a press is
-                acted on at the next tick rather than when it happens, and two
-                presses inside one second become one.  That is the thing the
+                The button test sits inside the once-a-second branch — ChatGPT's
+                <c>if (timerElapsed)</c>, Gemini's
+                <c>if (TIM14->SR &amp; TIM_SR_UIF)</c> — so a press is acted on at
+                the next tick rather than when it happens, and the count on the
+                screen stays stale until it comes round.  That is the thing the
                 interrupt was for.  Compare with two independent <c>if</c>s: a
                 press and a tick are unrelated events and each should be handled
                 when it arrives.
@@ -1721,20 +1723,27 @@ void pb4_exti_init(void) {
                 protects you on the registers where it is not harmless.
             </p>
             <p>
-                <term>ChatGPT's timer never zeroes the count.</term>  Our own
-                <c>tim14_ms_interrupt_init()</c> writes <c>TIM14->CNT = 0;</c>
-                before enabling the timer, so the first interval is a full one.
-                Without it the first interval is however far the counter had
-                already got.
+                <term>Gemini does one thing neither ChatGPT nor our own code
+                does.</term>  <c>TIM14->EGR |= TIM_EGR_UG;</c> forces an update
+                event before the timer starts, and that is what loads <c>PSC</c>
+                into the prescaler's working copy — the buffered register the
+                timers chapter drew (<xref ref="subsec-day8-rcw0"/>).  Without an
+                update event the prescaler is still at its reset value of 1 when
+                <c>CEN</c> is set, so the very first interval is 1000 counts of a
+                12 MHz clock: 83 µs, not a second.  One short interval, once, at
+                startup — and our own <c>tim14_ms_interrupt_init()</c> has it
+                too.
             </p>
             <p>
                 <term>Gemini's program does not use the timer interrupt at
                 all.</term>  Look at its <c>tim14_init()</c>: no
-                <c>TIM_DIER_UIE</c>, no <c>NVIC_EnableIRQ()</c>, and no ISR
-                anywhere in the file.  The main loop polls <c>TIM14->SR</c>
-                instead, which is the <em>polled</em> version we started from.  It works, and
-                it is not what was asked for, and reading the code is the only
-                way to notice — the output looks identical.
+                <c>TIM_DIER_UIE</c>, no <c>NVIC_EnableIRQ()</c>, and no timer ISR
+                — the only handler in the file is the button's
+                <c>EXTI4_15_IRQHandler</c>.  The main loop polls
+                <c>TIM14->SR</c> instead, which is the <em>polled</em> version we
+                started from.  It works, it is not what was asked for, and reading
+                the code is the only way to notice: on the screen only the
+                printing rate gives it away.
             </p>
             <p>
                 And one that is a matter of judgment rather than correctness:
@@ -1808,18 +1817,18 @@ void tim14_init(void) {
             <title>Part 2: Does the Bus Still Work?</title>
             <p>
                 Before anything else, we'll flash <c>helloDisplay.c</c>,
-                unchanged from yesterday, and confirm the display lights.  The
-                kits stayed in the room overnight, but four wires is four chances
-                for one to be out, and a wire that came out is much easier to
-                find now than later, in the middle of debugging a driver you have
-                just written.
+                unchanged from yesterday, and confirm the display lights.  Four
+                wires is four chances for one to be out, and a wire that came out
+                is much easier to find now than later, in the middle of debugging
+                a driver you have just written.
             </p>
             <p>
-                Four characters on the display is a strong test today, because
-                the program that puts them there exercises the whole path: the
-                two pins, the bus, the three setup commands and a ten-byte
-                write.  Anything wrong anywhere in that and the display is
-                blank.
+                Whatever your buffer ended on yesterday should still be there,
+                and it is a strong test whatever it says, because the program that
+                puts it up exercises the whole path: the two pins, the bus, the
+                three setup commands and a ten-byte write.  <term>Blank</term> is
+                the failure — wrong or missing digits are just where you left
+                it.
             </p>
             <p>
                 A blank display is a wiring problem and not a code problem — the
@@ -1837,23 +1846,20 @@ void tim14_init(void) {
                 <xref ref="fig-display-wiring"/>: <c>+</c> on 3.3 V and not the
                 5 V pin beside it, <c>−</c> on GND, <c>D</c> on PB9 and <c>C</c>
                 on PB8.  <c>D</c> and <c>C</c> swapped is the one that is hardest
-                to see and easiest to do.  If it is still blank after that, raise
-                your hand now rather than late in the session — today's crucial
-                step needs a display that talks, and we would rather find that
-                out at minute five.  Nothing in the next four parts needs your own
-                display: the command table, the display RAM, the two pins and the
-                library are book and projector, so keep going while we sort the
-                hardware out.
+                to see and easiest to do.  Still blank after that?  Raise your
+                hand and keep going — nothing in the next four parts needs your
+                own display, and we'll have you at a working one before you write
+                the driver.
             </p>
 
             <slide xml:id="sl-day10-verify">
-    <p><term>Before anything else: flash yesterday's helloDisplay.c, unchanged.</term> The kits stayed in the room overnight, but four wires is four chances for one to be out.</p>
+    <p><term>Before anything else: flash yesterday's helloDisplay.c, unchanged.</term> Four wires is four chances for one to be out.</p>
     <ul>
         <li>A wire that came out is much easier to find now than later, in the middle of debugging a driver you have just written.</li>
-        <li>Four characters is a <term>strong test</term>: that program exercises the two pins, the bus, the three setup commands and a ten-byte write. Anything wrong anywhere in that and the display is blank.</li>
+        <li>Whatever your buffer ended on yesterday is a <term>strong test</term> whatever it says: that program exercises the two pins, the bus, the three setup commands and a ten-byte write. <term>Blank</term> is the failure &#8212; wrong or missing digits are just where you left it.</li>
         <li>A blank display is a <term>wiring</term> problem, not a code problem &#8212; the code is a file that worked yesterday. And a display that never answers also <term>stops the program</term>: <c>i2c1_byteWrite()</c> waits on a flag the hardware never sets when nobody acknowledges, so the first call never returns. From where you are sitting that looks exactly like a display that was never sent anything &#8212; which is why we check the wiring and not the code.</li>
         <li>So re-seat all four against yesterday's wiring figure: <c>+</c> on 3.3 V and not the 5 V pin beside it, <c>&#8722;</c> on GND, <c>D</c> on PB9, <c>C</c> on PB8. <c>D</c> and <c>C</c> swapped is the hardest to see and the easiest to do.</li>
-        <li>Still blank after that? <term>Raise your hand now rather than late in the session.</term> Nothing in the next four parts needs your own display &#8212; the command table, the display RAM, the two pins and the library are book and projector. Keep going while we sort the hardware out.</li>
+        <li>Still blank after that? <term>Raise your hand and keep going</term> &#8212; nothing in the next four parts needs your own display, and we'll have you at a working one before you write the driver.</li>
     </ul>
     <note>Three minutes, and it is the cost of having moved the display work to Day 9x. It also gives anyone whose display never lit yesterday a second try with the whole session still ahead.</note>
 </slide>
@@ -2205,6 +2211,9 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 <image source="images/Day10-I2C(2)/display_ram_map.svg" width="55%"/>
             </figure>
             <p>
+                Note the name clash before going further: the datasheet's
+                ROW0–ROW15 are the <em>segment</em> lines, not the swept commons
+                we have been calling rows.  The commons here are COM0–COM7.
                 Two bytes per digit, then, and the second one is always zero for
                 us — the HT16K33 can drive sixteen LEDs per common line and our
                 digits use eight.  The first byte is the segments, in the order
@@ -2989,7 +2998,7 @@ void SevenSeg_dim(uint8_t brightness) {
 
 // Write the display RAM
 void SevenSeg_write(uint8_t *display_buffer) {
-    // display_buffer is size 2*HT16K33_NBUF (high byte, low byte)
+    // display_buffer is size 2*HT16K33_NBUF (low byte, high byte)
     // TODO 4 -- one call.  Every byte in ONE transaction, starting at display
     //           RAM address HT16K33_ADDR_PTR.  Do not touch an I2C register
     //           directly -- go through the i2c library.
@@ -3195,10 +3204,11 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
                     <c>numbertable[]</c>.</p></statement>
                 </task>
                 <task xml:id="act-i2c-sevenseg-t4">
-                    <statement><p>Done early?  Make the display do a sequence:
-                    <c>ES.28</c> steady at full brightness, wait a second, blink
-                    at 1 Hz, wait five seconds, then steady again at a lower
-                    brightness.</p></statement>
+                    <statement><p>Done early?  What happens if the ten bytes go
+                    as ten separate <c>i2c1_byteWrite()</c> calls instead of one
+                    <c>i2c1_memWrite()</c>?  Predict in writing first, then try
+                    it, and say what the display tells you about where each byte
+                    landed.</p></statement>
                 </task>
             </activity>
             <p>
@@ -3217,7 +3227,7 @@ void SevenSeg_dim(uint8_t brightness) {
 
 // Write the display RAM
 void SevenSeg_write(uint8_t *display_buffer) {
-    // display_buffer is size 2*HT16K33_NBUF (high byte, low byte)
+    // display_buffer is size 2*HT16K33_NBUF (low byte, high byte)
     i2c1_memWrite(HT16K33_ADDR, HT16K33_ADDR_PTR, 2*HT16K33_NBUF, display_buffer);
 }
 ]]></code></program>
@@ -3255,8 +3265,9 @@ int main(void) {
 ]]></code></program>
             <p>
                 Three things about that listing.  The odd-numbered bytes are the
-                zeros from the RAM map, and they are what keep the pointer
-                landing on the right addresses.
+                zeros from the RAM map.  They carry nothing; they are sent
+                because the pointer advances on every byte that arrives, so
+                skipping them would land digit 2's pattern at address 1.
                 <c>0b11101101</c> is an <c>S</c> with bit 7 set, which is the
                 decimal point — one buffer entry produces both.  And this
                 <c>main()</c> has no <c>while(1)</c>: it runs once, sets the
@@ -3276,7 +3287,7 @@ int main(void) {
                 <c>2*HT16K33_NBUF</c> bytes and started at
                 <c>HT16K33_ADDR_PTR</c>, not that you got the segment patterns
                 wrong.  And if you have been through all of that and still have
-                nothing, flag it — we're here to help.
+                nothing, raise your hand.
             </p>
 
             <slide xml:id="sl-day10-driver-todo">
@@ -3317,7 +3328,7 @@ void SevenSeg_dim(uint8_t brightness) {
 
 // Write the display RAM
 void SevenSeg_write(uint8_t *display_buffer) {
-    // display_buffer is size 2*HT16K33_NBUF (high byte, low byte)
+    // display_buffer is size 2*HT16K33_NBUF (low byte, high byte)
     i2c1_memWrite(HT16K33_ADDR, HT16K33_ADDR_PTR, 2*HT16K33_NBUF, display_buffer);
 }
 ]]></code></program>
@@ -3339,7 +3350,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
     delay_ms(5000);   SevenSeg_blink(HT16K33_BLINK_OFF);   SevenSeg_dim(5);
 ]]></code></program>
     <ul>
-        <li>The odd bytes are the RAM map's zeros, and they are what move the pointer along. <c>0b11101101</c> is an <c>S</c> with bit 7 set &#8212; a letter and its decimal point in one entry.</li>
+        <li>The odd bytes are the RAM map's zeros. They carry nothing &#8212; they are sent because the pointer advances on <term>every</term> byte, so skipping them would land digit 2's pattern at address 1. <c>0b11101101</c> is an <c>S</c> with bit 7 set &#8212; a letter and its decimal point in one entry.</li>
         <li><term>No <c>while(1)</c>.</term> It runs once and stops, and the display keeps showing <c>ES.28</c> &#8212; the HT16K33 is still sweeping its RAM whether or not the STM32C031C6 is doing anything. The argument for the backpack, on your desk.</li>
     </ul>
 </slide>
@@ -3350,7 +3361,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
         <li>1 &#8212; Does <c>writeFirstDigit.c</c> still put an <c>E</c> up? If yes, the bus, the init and the RAM addressing are all fine and the fault is in <c>SevenSeg_write()</c> or in how the buffer was filled.</li>
         <li>2 &#8212; Four garbled characters usually means the buffer is right but <term>shifted</term>: check you sent <c>2*HT16K33_NBUF</c> bytes and started at <c>HT16K33_ADDR_PTR</c>, before suspecting the segment patterns.</li>
         <li>3 &#8212; Nothing at all, and <c>writeFirstDigit.c</c> also shows nothing: does the program keep running, or does it stop on its first I2C call? Neither is visible from the outside, so pause it in the debugger and see where it is. <term>Stopped inside <c>i2c1_byteWrite()</c> means nobody acknowledged</term> &#8212; the wires, the power, or the address you passed. <term>Still looping means the bus answered</term>, so the fault is above it: check that <c>SevenSeg_init()</c> is called, and that its three commands are the ones you derived.</li>
-        <li>4 &#8212; Been through all three and still nothing? <term>Raise your hand and we'll sort it out.</term> Nothing in the rest of the session needs your own display working &#8212; keep going, and we'll get yours running before Lab 5.</li>
+        <li>4 &#8212; Been through all three and still nothing? <term>Raise your hand.</term></li>
     </ul>
     <caption>Each step rules out a layer — start at the one you know worked.</caption>
     <note>Stays up for all of Part 8c.</note>
@@ -4020,19 +4031,36 @@ void SevenSeg_write(uint8_t *display_buffer) {
             </p>
             <p>
                 <term>Sizing the pull-up.</term>  Part 6 said the value is
-                squeezed from both ends (<xref ref="fig-open-drain"/>); here is
-                the arithmetic.  At the low end, the device pulling the line down
-                has to sink the whole of 3.3 V ÷ R and still hold the line below
-                the receiver's LOW threshold — 3.3 V through 1 kΩ is 3.3 mA,
-                which most parts manage, and through 200 Ω is 16 mA, which many
-                do not.  At the high end, nothing drives the line up: the
-                resistor charges the bus's own capacitance, so the rise is an
-                exponential with time constant <m>RC</m>, and it has to finish
-                inside the clock's LOW phase.  With a few hundred picofarads of
-                bus capacitance, 10 kΩ gives a time constant of a few
-                microseconds, which is already a noticeable fraction of a 5 µs
-                LOW phase at 100 kHz.  That is the whole of the 5–10 kΩ
-                convention: small enough to be quick, large enough to be sinkable.
+                squeezed from both ends.  Here is the arithmetic, and it is worth
+                seeing that the two ends are not equally tight.
+            </p>
+            <p>
+                <term>The low end is the sink current.</term>  The device pulling
+                the line LOW has to hold it below the receiver's threshold while
+                the pull-up feeds current into it, and that current is 3.3 V
+                divided by the resistor: 3.3 V through 1 kΩ is 3.3 mA, which most
+                parts manage, and through 200 Ω is 16 mA, which many do not.  So
+                the sink current sets a hard floor at somewhere around 1 kΩ — not
+                at 5 kΩ.
+            </p>
+            <p>
+                <term>The high end is the RC (resistor-capacitor) time
+                constant.</term>  Nothing drives the line HIGH; the pull-up
+                charges the bus's own capacitance, a few hundred picofarads on a
+                short bus, and the line has to get past the receiver's HIGH
+                threshold — about 0.7 × 3.3 V = 2.3 V, which takes roughly 1.2
+                time constants.  With 300 pF: 5 kΩ gives RC = 1.5 µs and reaches
+                threshold in about 1.8 µs; 10 kΩ gives 3 µs and about 3.6 µs;
+                20 kΩ gives 6 µs and about 7.2 µs.  A 100 kHz clock spends 5 µs
+                LOW, so 5 kΩ is comfortable, 10 kΩ uses most of the window, and
+                20 kΩ does not make it.  That is the ceiling.
+            </p>
+            <p>
+                So the arithmetic gives a window from about 1 kΩ to about 10 kΩ,
+                and 5 kΩ to 10 kΩ is where designers sit inside it — high enough
+                to keep the current down, and stopping where the RC starts to
+                bite.  The convention is a choice within the window rather than
+                the window itself.
             </p>
             <p>
                 <term>Arbitration.</term>  I2C allows more than one controller on
