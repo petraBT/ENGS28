@@ -852,3 +852,277 @@ itself.*
   soothing sentence layered over an unknown. Given B-11c bans inventing facts the
   author hasn't verified, 'we have not tested this' is the correct thing to say
   rather than a false 'it's fine.'"*
+
+---
+
+## `learner-in-the-room` — MAJOR (re-walk, post-rework)
+
+> "Different MAJOR from this morning. The four archetypes are gone: no listing
+> shows a name with no referent, no slide restates the one before it, no slide
+> exists only to absorb a crop, and every task can be answered on paper except
+> one."
+
+**But it found that my own ladder fix leaked Part 9's punchline.**
+
+- **[MAJOR] `sl-day10-ladder` rung 3** now splits the space correctly — and pays
+  for it by putting Part 9's answer on the wall three slides early: *"Still
+  running means the bus answered, and the suspect is the oscillator command"* is
+  exactly case 2. **Applied**: the rung stops one clause earlier, at "check that
+  `SevenSeg_init()` is called and that its three commands are the ones you
+  derived."
+- **[MAJOR] Part 9 had no student-facing conclusion.** Moving the spoiler to
+  `sl-day10-breakit-answer` moved the *lesson* there too, and that slide is
+  `instructor: true`. **Applied**: the two-questions takeaway now closes
+  `sl-day10-hang`, which is *after* the activity and so spoils nothing.
+- **[MAJOR] `sl-day10-verify` bullet 3** — *"Nothing is on the bus at all in that
+  case"* is false and Part 9 disproves it. *(Already removed in `26a4b79`.)*
+- **[MAJOR] the AI listings are abridged and the notice is instructor-only**,
+  while one of the five findings is an argument from absence. **Applied**: the
+  disclosure is now a visible line.
+- **[MAJOR] the Part 1 prompt is not startable for the students it was designed
+  for** — everything after "your program from Tuesday prints once a second"
+  assumes it runs, and the reference copy exists only in presenter notes.
+- **[MINOR] `sl-day10-init-code`** — `I2CCLK` and the bare `12` unanchored, and
+  "derives all five" reads as a miscount. **Applied.**
+- **[MINOR] `act-i2c-first-t4` is recall wearing a prediction's clothes** — the
+  same experiment ran on Day 9x and today's own slides give the answer.
+  **Applied**: it now points at address 4, the colon, whose bit genuinely nobody
+  knows.
+
+### On the one thing I did not apply, it withdrew the flag
+
+> "Keeping both the Part 1 prompt and `act-i2c-ai-t0` was right, and I withdraw
+> the flag. Reading it in projection order rather than as two texts side by side:
+> the prompt is at index 4, the activity at index 7, and t0 is not a repeat at
+> that distance — it adds the step the prompt deliberately withholds."
+
+---
+
+## `checker-technical-accuracy` — Parts 3–5 — BLOCKER
+
+*Rendered every figure and read the datasheet crops rather than the captions.*
+
+- **[BLOCKER] L-6 — "the fourteen pins going to the display"** (prose and
+  `sl-day10-block`). The rendered block diagram shows **COM0–COM7 and
+  ROW0–ROW15: 24 driver pins**. The chapter contradicts itself 220 lines later,
+  where the RAM-map caption correctly says eight COMs of which our display uses
+  five. **Applied.**
+- **[BLOCKER] L-6, B-3 — the duty-cycle definition is wrong and contradicts the
+  chapter's own Part 3.** The datasheet row reads *"Defines the pulse width of
+  ROW"* — it is the fraction of each digit's scan slot, not of the refresh cycle.
+  As written, `0xEF` would mean the LEDs are lit for the whole refresh cycle,
+  against Part 3's *"at every instant most of it is dark."* **Applied.**
+- **[BLOCKER] L-6 — ROW/INT set does not choose "rows or read a keypad."** The
+  rendered row gives INT output active low/high; it is **one pin**, and the
+  alternative is an interrupt output. Keypad sensing happens on K0–K13 either
+  way. **Applied.**
+- **[BLOCKER] B-7 — "the only way into the chip"** is refuted by the figure it
+  captions: `A[2:0]` enters from the pin block too. **Applied.**
+- **[MAJOR] B1 — the table-reading rule is refuted by the chapter's own rows.**
+  "A column with a letter is an option you fill in" — but `X` is a don't-care,
+  and the chapter's own answer silently fills it with 0, while task t1 writes
+  `0b0010000S` and t2 writes `0b1000XB1B0D`, inconsistently, inside one activity.
+  **Applied**: three cases stated, both rows rendered the same way.
+- **[MAJOR] B-8 — "row" is used in two incompatible senses and the chapter never
+  reconciles them.** The reading's "row" is the swept common; the figure's
+  ROW0–ROW15 are the segment lines. *Worse:* the datasheet prose inside the
+  figure image uses "Row" for the commons — a third usage, printed above a table
+  whose left column is COM0–COM7.
+- **[MINOR] B1 — "its default is the one we want, so we never send it"** is
+  refuted on the same page: the Def. column gives **EFH** for Dimming set, and
+  `0xEF` is exactly the byte the driver does send.
+- **[MINOR]** `display_ram_map.svg` carries two magenta highlights inherited from
+  the old deck's g-segment example that the caption never mentions; `fig-four-digit-wiring`
+  should name the part (KW4-56NCLB-P) per P-11; the middle command-table crop has
+  no D15–D8 header row.
+- **[OBSERVATION]** Part 4 derives `0xE7` as half brightness — and that is the
+  byte `helloDisplay.c` has been sending since yesterday. *"Somebody will notice
+  they have been running at half brightness, and one sentence turns that into a
+  free win."* **Applied.**
+
+### Verified correct
+
+The diode bars are at the top joined to the COM bus, so **"common cathode" is the
+right term and the drive directions are right**. Every pin traced individually:
+commons 14/11/7/10/6, anodes A→13, B→9, C→4, D→2, E→1, F→12, G→5, DP→3, colon 8.
+All three command bytes bit by bit against the rendered rows, plus `0x85` and
+`0xE7`; `HT16K33_BLINK_1HZ 0x04` corroborated three ways against the header. Every
+header name the chapter claims exists, exists. The RAM map, the segment patterns
+against `numbertable[]`, and DP=bit 7 confirmed four independent ways. **And the
+chapter is better than the deck on the pointer**: her speaker note says *"if you
+don't write the zeros, the pointer won't advance"*, which is wrong; the chapter's
+version is right.
+
+---
+
+## `checker-technical-accuracy` — B3 self-contradiction, whole chapter — BLOCKER
+
+*The strongest agent in the suite, again. Five BLOCKERs, most invisible to any
+scoped read.*
+
+- **[BLOCKER] cross-day — `helloDisplay.c` sends `BRIGHT_CMD | 0x7`**, and Day 10
+  calls all three of yesterday's bytes "given rather than derived" and then
+  derives `0xEF`, identifying `0xE7` as *half* brightness in the same paragraph.
+  The deck note says it outright: *"They have had those three bytes running in
+  front of them since yesterday."* They have not. **Applied.**
+- **[BLOCKER] inside one paragraph** — "the pull-up brings the line HIGH" then,
+  four lines later, "the line was already LOW and never had a chance to rise."
+  It rendered the capture and measured: **no pre-ACK rise; the excursions are at
+  ≈94 µs and ≈181 µs, after each ACK.** **Applied.**
+- **[BLOCKER] both introductions state the chapter's central taxonomy backwards**
+  — `uart.c`/`adc.c` named as the device-driver layer, where Part 8a and the
+  figure put them in the interface-driver layer, and `sl-day10-layers` calls the
+  device-driver layer *"the first one in this course that has been yours."*
+  **Applied.**
+- **[BLOCKER] B1 — "one transaction is the only thing that works"** is refuted by
+  `writeFirstDigit.c` two parts later, which writes one byte per transaction, and
+  by the activity that has every student do it four times. **Applied**, narrowed
+  to the true claim.
+- **[BLOCKER]** *(already fixed before it reported)* `sl-day10-verify`'s "nothing
+  is on the bus at all".
+- **[MAJOR] ×10**, of which applied: the oscillator "has to come first" pre-empting
+  and contradicting `act-i2c-wrong-t6`; the ladder's "stopped means the bus and
+  the wires" omitting *the address you passed*, which is what students have been
+  editing all hour; `sl-day9x-handover` hedging what the figure plainly shows;
+  the reading question saying "address byte of 0x70" against the day's own
+  set-piece that the address byte is `0xE0`; Reference's "fixed by its
+  manufacturer" against A2/A1/A0; and Reference calling `memRead` "the same
+  pattern" when it must clear `AUTOEND` for the repeated START.
+  **Not applied, carried:** the `(high byte, low byte)` comment states the pair
+  order backwards and is verbatim from Petra's file — needs the same disclosure
+  treatment the `SevenSeg_dim()` oddity gets; and **Day 9x's budget note says 52
+  where its deck sums to 46**, a wrong total driving a cut list.
+
+### Cross-boundary pairs checked and found consistent
+
+Listed *because "not reported" and "not looked at" are otherwise
+indistinguishable*: every day/date phrase in both days against the real schedule
+(**all correct after the 6 Aug move — no surviving stale "you just saw"**); the
+powered-display defect that shipped before (**fixed and consistent**); the whole
+protocol between Day 9x and Reference; pin assignment in ten places; the scope
+channel/colour convention across six figures and slides; the entire address
+set-piece; the buffer layout; 34 LEDs / 14 pins everywhere; the `=`-not-`|=`
+argument in four places; the NACK hang in five. Arithmetic recomputed
+independently throughout — including the `TIMINGR` derivation the brief warned
+about, *"the step is right, not just the answer."*
+
+---
+
+## `learner-visual` — MAJOR
+
+*Screenshotted the live deck in headless Chrome at 1280×720 — which is the human
+fit check `AUTHORING-slides.md` names as the only control for trap 4.*
+
+- **[MAJOR] `fig-firmware-layers` projects at roughly 150×140 px** under four
+  paragraph-length bullets. *"Every label is a gray smudge."* The source SVG is
+  clear at native size, **so the fix is layout, not art.** **Applied**: bullets
+  cut from four to three and shortened.
+- **[MAJOR] `fig-ht16k33-cmd-table`'s three stacked crops render ~250 px wide** —
+  illegible — and the very next slide asks students to read those bits off it.
+  **Applied**: bullets trimmed.
+- **[MAJOR] `fig-display-ram-map` is portrait (825×933) on a `stack="yes"`
+  slide**, which is exactly the shape the authoring notes say to give a
+  two-column treatment. **Applied**: `stack` removed.
+- **[MINOR] orphaned annotations** on `fig-ht16k33-block` and `fig-display-ram-map`
+  that no caption accounts for. *"A visual learner's eye goes to the colour
+  first; finding no textual anchor there is worse than no highlight at all."*
+- **[Guidance] what the persistence-of-vision figure would need to show**, once
+  the scan rate is verified: one digit lit with the other three and the colon
+  dark, over a time axis divided into five equal slices — *"the same diagram that
+  can be drawn on that P-4 asks for, not a photograph."* Until it exists the beat
+  is live-or-nothing with no projector fallback.
+
+**Counter-examples named as working:** `fig-four-digit-wiring` and
+`fig-ht16k33-page-write` — wide art with `stack="yes"` renders large and legible,
+*"confirming the layout mechanism works correctly when the figure's own shape
+matches the chosen layout."*
+
+---
+
+## `checker-technical-accuracy` — Parts 1–2 — BLOCKER
+
+- **[BLOCKER] L-6, B-6 — the `TIM14->CNT = 0` claim is wrong in both halves.**
+  `CNT`'s reset value is 0 and the peripheral has never counted, so the stated
+  failure mode cannot arise; and with no update event the **prescaler shadow is
+  still ÷1**, so the first interval is 83.3 µs in ChatGPT's program *and in our
+  own `tim14_ms_interrupt_init()`*. `CNT = 0` does not make the first interval
+  full — only an update event does. **The book already teaches this**
+  (`ch-timers-interrupts.ptx:621`), and the facing listing carries the
+  counter-example: Gemini's `TIM14->EGR |= TIM_EGR_UG` is exactly that event, and
+  is almost certainly the intended answer to *"what does it do better than
+  yours?"* — which is nowhere stated. **Inherited from Petra's own deck
+  annotation, so the rewrite needs her.**
+- **[BLOCKER] B-6 — "no ISR anywhere in the file"** is refuted by the chapter's
+  own Gemini listing fourteen lines above: `EXTI4_15_IRQHandler` is there, and it
+  is the only thing that ever sets `buttonPushed`.
+- **[BLOCKER] B-6 — "the button test is inside `if (timerElapsed)`"** is asserted
+  of both; Gemini has no `timerElapsed` at all.
+- **[MAJOR] "the output looks identical"** — refuted by the chapter's own first
+  finding six paragraphs earlier (1.33 s per print) and by the stopwatch
+  measurement the same activity requires.
+- **[MAJOR] B4 — Day 10 upgrades Day 8's "mostly harmless" to "harmless"** and
+  drops the second hazard, in a Part whose programs are exactly the case Day 8
+  said would come due.
+- **[MAJOR] P-10 — `act-i2c-ai-t1` has no answer anywhere.** It names three real
+  candidates the instructor currently has to invent live.
+- **[MAJOR] B-11c — two unsourced classroom facts**: *"the kits stayed in the
+  room overnight"* (only occurrence in `source/`; B-11c's standing fact points
+  the other way) and the deck note *"Coolterm is already up; nobody needs to
+  reflash"* (Thursday morning's boards hold Wednesday's display program).
+- **[MAJOR] B4 — "four characters on the display is a strong test"** assumes
+  Wednesday's buffer survived, but Day 9x's activity has students edit it and
+  never restore it — *and t4 deliberately makes a digit disappear*, which is the
+  exact confusion Part 2 exists to remove.
+- **[MINOR]** the `return 1;` disclosure claims completeness and Gemini has three
+  edits; "two presses become one" is wrong twice over; `rc_w0` belongs to bits,
+  not registers; Tuesday's homework also required a BSRR-driven LED that neither
+  AI listing has; and "time ten prints" is ambiguous between ten intervals and
+  nine — *"the two differ by 11%, i.e. 12.0 MHz against 13.3 MHz — enough to land
+  a student on Gemini's assumed clock."*
+
+**Verified:** both listings diffed line by line against the deck — *"Nothing is
+invented."* The five findings map one-to-one onto her own deck annotations. All
+of Part 1's clock arithmetic recomputed and correct, and `act-i2c-ai-t0` is
+derivable as stated: 12000 × 1000 / 1 s = **12 MHz**. **Part 2's causal claim
+verified three ways** against the driver body and RM0490 §23.4.9.
+
+---
+
+## `checker-technical-accuracy` — Parts 8–10 — BLOCKER
+
+- **[BLOCKER] B-11c — neither fault in Part 9 blanks the display.** The HT16K33
+  holds its RAM and keeps sweeping while powered — *which is Part 8c's own
+  set-piece twenty lines earlier* — and NRST resets the STM32C031C6, not the
+  backpack. Case 1 leaves `ES.28` up; case 2 shows the new buffer. `act-i2c-wrong-t5`
+  ("compare the two displays") would have nothing to compare. **Applied**: both
+  the prose and the projected activity introduction now require a USB power cycle
+  before each capture, and say why.
+- **[BLOCKER] B1 — "the oscillator has to come first"** is refuted by the
+  chapter's own stretch task, which exists to try the opposite ordering.
+  **Applied** as a convention with a reason.
+- **[MAJOR] ×4 P-10 — missing instructor solutions**: `act-i2c-homework` has none
+  at all, against the precedent of `day7`, `day8` and `day9`, and the reference
+  `SevenSeg_number()` is already sitting unused in `assets/starters/`;
+  `act-i2c-wrong-t6` has none; `act-i2c-first-t2/t3/t4` have none.
+- **[MAJOR] B-11c — `act-i2c-first-t2` sends students to the colon.** **Applied.**
+- **[MAJOR] B4 — the two introductions vs Part 8a** *(same as B3's finding)*.
+  **Applied.**
+- **[MAJOR] B-11c — Lab 5 never names `SevenSeg.c` or a folder.** The rename is
+  sourced from her deck; the *"because Lab 5 goes looking for it there"*
+  justification is not. **Applied.**
+- **[MAJOR] B2 — "Two programs" against three required.** **Applied.**
+- **[MINOR] ×10**, including: `SevenSegPartialORIGINAL.c` ships `0x7` where the
+  book derives `0xf` (**the book is right and the shipped file should follow**);
+  "the only files allowed to touch a machine register" contradicted by three
+  starters (**applied**); "the odd bytes are what move the pointer" — every byte
+  moves it; and `assets/starters/` has no `SevenSegPartial.h`, only
+  `SevenSegPartialORIGINAL.h`.
+
+**Verified:** `writeFirstDigit.c` and the `SevenSegPartial.c` skeleton are
+**byte-identical** to the starters (programmatic diff, zero differences).
+`SevenSeg_blink/_dim/_write` and the `ES.28` program are byte-for-byte Petra's.
+**The `SevenSeg_init()` correction made this morning is right and complete** — no
+listing anywhere still carries the spurious term. All of Part 9's RM0490 quotes
+are exact and in the one bullet. The ninety-microsecond claim measured off the
+capture at full resolution: nine rising edges, 10.3 µs apart, ACK slot ≈96 µs
+after the `NACKF` test. Lab 5's due date confirmed — and 10 Feb 2026 is a Tuesday.
