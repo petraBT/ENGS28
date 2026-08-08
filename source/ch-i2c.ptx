@@ -1527,9 +1527,8 @@ on the wire:      1 1 1 0 0 0 0    0
                 button-reset counter with <c>delay_ms()</c> replaced by a
                 one-second timer interrupt, so that the program has two
                 interrupt sources and blocks on neither.  If yours is not
-                running, take the working copy from Canvas before we start — the
-                next twenty minutes are about reading code, not about whose
-                built.
+                running, take the working copy from Canvas before we start — this
+                part is about reading code, not about whose homework built.
             </p>
             <p>
                 Both of the programs below are answers to that assignment,
@@ -2141,7 +2140,7 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
     <ul>
         <li>The header names every field of the table: <c>HT16K33_SYSTEM_CMD</c>, <c>HT16K33_OSC_ON</c>, <c>HT16K33_DISPLAY_CMD</c>, <c>HT16K33_DISPLAY_ON</c>, <c>HT16K33_BLINK_OFF</c>, <c>HT16K33_BLINK_1HZ</c>, <c>HT16K33_BRIGHT_CMD</c>.</li>
         <li>So a line of driver code reads the way the datasheet row does: <term>the command, ORed with its options</term>. That is the structure to copy the next time you write one of these &#8212; the datasheet's layout becomes the header file's layout.</li>
-        <li>Those three bytes are the first function of your driver, and you write it in Part 8b.</li>
+        <li>Those three bytes are the first function of your driver, <c>SevenSeg_init()</c>, and you write it yourself once we have looked at the display RAM and the pins.</li>
     </ul>
 </slide>
         </subsection>
@@ -2526,11 +2525,12 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
         <subsection xml:id="subsec-day9x-library">
             <title>Part 7a: What an I2C Library Has to Provide</title>
             <p>
-                You have now watched the protocol run twice.  Before looking at
-                the library you were handed, work out what has to be in it.  A
-                program using a device on this bus needs a small
-                number of operations, and you can derive the list from what you
-                just saw on the screen rather than from anybody's API.
+                You watched the protocol run on an oscilloscope yesterday, and
+                you have called three of these functions since without reading
+                one of them.  Before we open the library, work out what has to be
+                in it.  A program using a device on this bus needs a small number
+                of operations, and you can derive the list from what you saw on
+                the screen rather than from anybody's API.
             </p>
             <activity xml:id="act-i2c-five-operations">
                 <title>What Five Things Does the Library Have to Do?</title>
@@ -2595,8 +2595,11 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
                 function and not a loop over the single-byte one: between two
                 calls to <c>i2c1_byteWrite()</c> the bus goes back to idle, with
                 a STOP after the first and a fresh START before the second.
-                Some devices treat that as two unrelated instructions.  On
-                You are about to meet one where it matters.
+                Some devices treat that as two unrelated instructions rather
+                than one longer one, and you have already met one of them: the
+                display takes its ten bytes in a single transaction, and
+                <xref ref="subsec-day10-ram"/> is why ten separate writes would
+                not do the same thing.
             </p>
             <p>
                 Reading a <em>numbered register</em> is the one that is not a
@@ -2642,8 +2645,8 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
             <title>Part 7b: Opening i2c1_byteWrite()</title>
             <p>
                 Five functions is the interface.  This is the one that produced
-                the trace you captured forty minutes ago, and it is short enough
-                to read in full.  Here is its sending half:
+                the trace you captured yesterday, and it is short enough to read
+                in full.  Here is its sending half:
             </p>
             <program language="c"><code><![CDATA[
     // Ping target address for writing 1 byte, use "=" to ensure all other bits are cleared
@@ -2806,7 +2809,8 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
                 Above <em>those</em> are <term>device drivers</term>, and that is
                 the layer with the interesting rule.  A device driver knows about
                 one device: its commands, its addresses, its quirks.  It does not
-                know how the bytes get there.  <c>SevenSeg.c</c> may call
+                know how the bytes get there.  <c>SevenSegPartial.c</c>, which is
+                the file you are about to open, may call
                 <c>i2c1_byteWrite()</c> as often as it likes and may not touch
                 <c>I2C1->CR2</c> even once.  The point is not tidiness — it is
                 that the same display driver runs unchanged on any board whose
@@ -2818,6 +2822,12 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
                 On top is <c>main()</c>, which calls
                 <c>SevenSeg_write()</c> and has no idea there is a bus involved
                 at all.
+            </p>
+            <p>
+                It arrives called <c>SevenSegPartial.c</c> because it arrives
+                unfinished.  When it is done it becomes <c>SevenSeg.c</c> and
+                moves into <c>mylib</c> beside <c>i2c.c</c>, which is where Lab 5
+                goes looking for it; tonight's homework is where you do that.
             </p>
             <p>
                 Somebody else has written both of those layers for this exact
@@ -2844,9 +2854,10 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
             <slide xml:id="sl-day10-layers-rule">
     <p><term>The device-driver layer is the one with the rule.</term></p>
     <ul>
-        <li><c>SevenSeg.c</c> knows <term>one device</term> &#8212; its commands, its addresses, its quirks &#8212; and does not know how the bytes get there. It may call <c>i2c1_byteWrite()</c> as often as it likes, and may not touch <c>I2C1-&gt;CR2</c> once.</li>
+        <li><c>SevenSegPartial.c</c> &#8212; the file you are about to open &#8212; knows <term>one device</term>: its commands, its addresses, its quirks. It does not know how the bytes get there. It may call <c>i2c1_byteWrite()</c> as often as it likes, and may not touch <c>I2C1-&gt;CR2</c> once.</li>
         <li>The point is not tidiness. The same display driver runs <term>unchanged</term> on any board whose I2C library offers those five functions.</li>
         <li>And the day you move to a different microcontroller, you rewrite <c>i2c.c</c> and nothing else. That is what the rule buys.</li>
+        <li>It is called <term>Partial</term> because it arrives unfinished. Finished, it becomes <c>SevenSeg.c</c> in <c>mylib</c> beside <c>i2c.c</c> &#8212; which is where Lab 5 looks for it, and what tonight's homework asks you to do.</li>
     </ul>
 </slide>
 
@@ -2977,7 +2988,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
 void SevenSeg_init() {
     i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
     i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_DISPLAY_ON | HT16K33_BLINK_OFF);
-    i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_BRIGHT_CMD | 0xf);
+    i2c1_byteWrite(HT16K33_ADDR, HT16K33_BRIGHT_CMD | 0xf);
 }
 ]]></code></program>
             <p>
@@ -3018,7 +3029,7 @@ int main(void) {
 </slide>
 
             <slide xml:id="sl-day10-skeleton-init">
-    <p><term>It calls SevenSeg_init(), which does not exist yet.</term> <c>SevenSegPartial.c</c> is the file your driver goes in: four empty functions, signatures already written. Fill in the first; the other three are Part 8c.</p>
+    <p><term>It calls SevenSeg_init(), which does not exist yet.</term> <c>SevenSegPartial.c</c> is the file your driver goes in: four empty functions, signatures already written. Fill in the first one now; the other three come next.</p>
     <program language="c"><code><![CDATA[
 void SevenSeg_init() {
     // TODO 1 -- three one-byte writes, in this order: system setup with the
@@ -3041,7 +3052,7 @@ void SevenSeg_init() {
     i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
     i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_DISPLAY_ON
                                                      | HT16K33_BLINK_OFF);
-    i2c1_byteWrite(HT16K33_ADDR, HT16K33_DISPLAY_CMD | HT16K33_BRIGHT_CMD | 0xf);
+    i2c1_byteWrite(HT16K33_ADDR, HT16K33_BRIGHT_CMD | 0xf);
 }
 ]]></code></program>
     <ul>
