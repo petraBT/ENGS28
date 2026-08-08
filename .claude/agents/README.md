@@ -223,3 +223,35 @@ the `reviews/day*-gate2.md` transcripts. And the agents were exercised by loadin
 their briefs into a general-purpose agent at the same model, because the agent
 registry snapshots at session start; what was tested is the brief, not the
 dispatch.
+
+### The open risk: `checker-voice`'s false-positive rate is unmeasured
+
+An agent that flags everything is a report Petra stops reading, so `checker-voice`
+was run twice against prose that had *already* had her hand pass, expecting
+silence. **Neither fixture was clean, so no false-positive rate exists yet.**
+
+Both runs found real, hand-verified defects instead, and both are the same
+defect: **her hand pass reaches the `<slide>` blocks and the deck and stops at
+the paragraph margin.** In `ch-i2c.ptx` the rejected opening, the known-good-
+hardware paragraph and "Three things follow from sharing" all survive in prose
+while the deck carries her replacements. In `ch-timers-interrupts.ptx` the slide
+says "the point" where the prose still says "the whole point", the slide expands
+CMSIS where the prose does not, the prose still carries the rescue sentence she
+cut from the slide — and a later sweep flattened `plants` to `holds` on the
+slide, a metaphor she had deliberately left standing.
+
+That is Step 5b, observed twice, in the only two chapters where it can be
+checked against a specimen. It is also the strongest argument for this agent
+reading prose and slides **together**.
+
+Evidence it discriminates rather than flags everything is indirect but real: it
+graded the swept chapter **MAJOR** and the unswept one **BLOCKER** and said why;
+it named titles it deliberately did *not* flag because her hand was visibly on
+them; and it escalated three rule-versus-specimen tensions to her rather than
+ruling on them.
+
+**Treat the false-positive rate as an open risk until this agent runs on a
+chapter swept end to end.** One scoping caveat found the hard way: **acronym
+first-use sweeps are unreliable on an extract**, because first use is
+chapter-wide — give it the whole chapter, or tell it what earlier sections
+already expanded.

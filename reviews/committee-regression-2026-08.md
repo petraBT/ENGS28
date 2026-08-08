@@ -296,6 +296,63 @@ it, correctly handed it to `checker-technical-accuracy` as out of its own remit,
 and did not let it derail the review.
 
 So the false-positive property is **still unmeasured** by that run. A second
-attempt against `sec-timers-day8` — the section Petra hand-rewrote in
+attempt was made against `sec-timers-day8` — the section Petra hand-rewrote in
 `plans/day8-voice-reference.diff`, and the cleanest available specimen of her
-own finished prose — is the real test.
+own finished prose.
+
+**It came back MAJOR, and again it was right.** Five claims were spot-checked
+against the live `source/ch-timers-interrupts.ptx`; four are real:
+
+| Live | She changed the slide… | …and the prose still says |
+| --- | --- | --- |
+| `:884` vs `:904` | kept `plants`/`glances` untouched in her pass — it is one of her surviving metaphors | prose says "plants", the **slide now says "holds"** — a later sweep flattened the metaphor she had deliberately preserved |
+| `:977-978` | cut *"grab the known-good copy… nothing before Part 7 needs your own board"* | still carries it whole, `Part 7` reference and all |
+| slide vs `:932` | cut *"the **entire point** of a background timer"* → "the point" | prose still says *"which is the whole point"* forty lines earlier |
+| `:1299` vs `:1166` | added *"CMSIS (Common Microcontroller Software Interface Standard)"* by hand | prose still says bare "CMSIS" |
+
+The fifth — "NVIC is never expanded anywhere" — is a **fixture artifact, and
+mine**: it is expanded at `:2127` and `:2150`, in the Reference section I cut
+out of the extract. Worth recording as guidance rather than as a miss:
+**acronym first-use sweeps are unreliable on a scoped extract**, because first
+use is chapter-wide. When scoping this agent, either give it the whole chapter
+or tell it which acronyms earlier sections already expanded.
+
+### What that means, honestly
+
+**I could not produce a false positive**, because there is no clean specimen in
+this repo to produce one against. Both chapters believed to have had her hand
+pass turn out to be half-swept in the same way, and the agent found it in both.
+
+The evidence that it discriminates rather than flags everything is indirect but
+real:
+
+- it graded the swept chapter **MAJOR** and the unswept one **BLOCKER**, and
+  said why — *"the section opening, Parts 5–6, and the deck are hers… it is not
+  a BLOCKER; it is a sweep to finish"*;
+- it listed titles and openings it **deliberately did not flag** because her
+  hand had visibly been on them ("ADCPot gets a heartbeat", "Design the 500 ms
+  timer — you pick the registers", "LED not blinking? Steps to help you
+  diagnose the fault");
+- it declined to flag three things the rules would condemn, and escalated them
+  to her as *rule-versus-specimen* tensions instead — the "not X but Y" caption
+  at `:126` she edited around and left standing, the "the RM" abbreviation in a
+  bullet she rewrote by hand, and a "Two checks" caption she cut from a lead but
+  kept as a caption.
+
+That last behaviour is the one worth keeping. It is the brief's "the specimen
+wins, and say so" rule working.
+
+**The false-positive rate remains unmeasured and should be treated as an open
+risk** until this agent runs on a chapter that has been swept end to end. The
+first such chapter will be the real test.
+
+### The pattern behind both attempts
+
+Two chapters, two voice passes, the same failure: **her hand pass reaches the
+`<slide>` blocks and the deck, and stops at the paragraph margin.** This is
+`CHAPTER_PROCESS.md` Step 5b — separate texts, and the build will not tell you
+— and it has now been observed twice, in the two chapters where it can be
+checked against a specimen.
+
+It is the strongest argument in this whole suite for `checker-voice` reading
+book prose and slide text **together**, which is what its brief requires.
