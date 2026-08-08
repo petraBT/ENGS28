@@ -299,6 +299,14 @@ in one panel, `<tabular>` in the other). Slide tables honor PreTeXt's `halign`/`
 — the player maps PreTeXt's per-cell alignment classes (`c`/`l`/`r`, `m`/`t`/`b`) — so
 `halign="center"` really centers the data under the headers.
 
+**`<col width="…"/>` works on slides, and only on slides.** PreTeXt honours it in
+print but emits no `<colgroup>` in HTML, so a slide table used to size its columns
+by *content*: the UART/I2C comparison came out 422 px against 755 px with both
+columns declared `50%`. The XSL now carries the declared widths through as
+`data-deck-colwidths` and the player injects the missing `<colgroup>` and switches
+the table to a fixed layout. Declare a width on **every** column and make them sum
+to 100%, or leave them off entirely and take content sizing.
+
 **Check that a slide fits.** Content is free to be substantial but must not
 overflow. Paste this in the browser console with the slide showing; it reports
 every way a slide can be cut, not just the obvious one:
@@ -349,13 +357,20 @@ every slide that carries a figure**, not "run the snippet":
   third of every line off the right edge while `.ref-body` reports no overflow
   at all. This is the one that hid for an entire voice pass; Day 8's
   `sl-day8-flag` was cutting the words the slide was making its point with.
-- **A silently cropped figure.** On a stacked or two-column slide the bullets
-  take the top and the figure is **cropped, not scaled**, into whatever height
-  is left — so the four-layer diagram loses its top and bottom rows, three
-  stacked timing tables show one, and **every overflow measurement reads zero**.
-  The lever is the number of bullets; the image's `width=` attribute does
-  nothing, because the player overrides it on slides. There is no measurement
-  for this. Look at it.
+- **A silently cropped figure — FIXED in the player, 2026-08.** On a stacked or
+  two-column slide the bullets took the top and the figure was **cropped, not
+  scaled**, into whatever height was left, with **every overflow measurement
+  reading zero**. The cause: `.ref-media` centres its children on the cross
+  axis, so the `<figure>` was shrink-to-fit and the image rendered at its
+  *intrinsic pixel size* inside an `overflow: hidden` box — too small on a wide
+  slide and clipped on a short one. The figure is now a flex column that
+  stretches to the media box, and the image is sized by the box with
+  `object-fit: contain`, so it letterboxes instead of clipping and **cannot be
+  cut**. It also means figures now fill the width they are given, which is what
+  this document always claimed happened.
+  Still worth a look when a figure carries fine detail: letterboxing makes a
+  wide image *small* on a bullet-heavy slide, and small is still unreadable.
+  The lever remains the number of bullets.
 - **An `.svg` with a `viewBox` but no `width`/`height`.** It has no intrinsic
   size, so the browser gives it the 300×150 replaced-element default and it
   projects tiny no matter how much room the slide has — Petra's *"that picture

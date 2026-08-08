@@ -199,9 +199,28 @@
       #ref .ref-media figure, #ref .ref-media .figure-like { margin: 0; text-align: center; }
       /* Fill the available column with the figure. The book sizes images small
          (e.g. width:55%) for the reading page; on a slide we want them as large
-         as the space allows, so override that and let the image use the column. */
-      #ref .ref-media .image-box { width: 100% !important; margin: 0 !important; }
-      #ref .ref-media img { width: 100%; max-width: 100%; max-height: 72cqh; object-fit: contain; }
+         as the space allows, so override that and let the image use the column.
+
+         The figure has to be a flex COLUMN that stretches to the media box, and
+         the image-box the flex item that absorbs what the caption does not use.
+         Without this the figure is shrink-to-fit (`.ref-media` centres its
+         children on the cross axis), so the image renders at its intrinsic
+         pixel size: too small on a wide slide, and — because `.ref-media` is
+         `overflow: hidden` — silently CROPPED whenever the bullets above leave
+         it less room than the image's natural height. That is the crop that
+         reads as zero on every overflow measurement, and it ate the "Message"
+         label off the top of `i2c_message_frame.svg` at 1280x720. With the
+         image sized by the box instead, `object-fit: contain` letterboxes it
+         and it can never be cut. */
+      #ref .ref-media > figure,
+      #ref .ref-media > .figure-like {
+        width: 100%; height: 100%; min-height: 0;
+        display: flex; flex-direction: column; justify-content: center;
+      }
+      #ref .ref-media .image-box { width: 100% !important; margin: 0 !important;
+                                   flex: 1 1 auto; min-height: 0; display: flex; }
+      #ref .ref-media img { width: 100%; max-width: 100%; height: 100%;
+                            max-height: 72cqh; object-fit: contain; }
       /* Guard against any figure spilling past the slide, and re-enable the CSS
          grid a PreTeXt <sidebyside> uses (without the book stylesheet its panels
          would stack and overflow instead of sitting in a row). */
@@ -789,6 +808,27 @@
               if (el.parentNode) el.parentNode.removeChild(el)
             })
             while (bodyClone.firstChild) refBody.appendChild(bodyClone.firstChild)
+            // Apply the slide's declared <col width="..."/> values. PreTeXt drops
+            // them from its HTML, so a slide table sizes its columns by content —
+            // two columns both declared 50% came out 422px and 755px. Inject the
+            // colgroup PreTeXt did not, and switch the table to a fixed layout so
+            // the widths are actually obeyed.
+            var colw = block.getAttribute('data-deck-colwidths')
+            if (colw) {
+              var tbl = refBody.querySelector('table.tabular')
+              if (tbl && !tbl.querySelector('colgroup')) {
+                var widths = colw.split(',')
+                var cg = document.createElement('colgroup')
+                widths.forEach(function (w) {
+                  var c = document.createElement('col')
+                  if (w.trim()) c.style.width = w.trim()
+                  cg.appendChild(c)
+                })
+                tbl.insertBefore(cg, tbl.firstChild)
+                tbl.style.tableLayout = 'fixed'
+                tbl.style.width = '100%'
+              }
+            }
             // A demo slide (its body is a board simulator) gets the whole slide.
             refBody.classList.toggle('has-sim', !!refBody.querySelector('.sim-embed'))
             // PreTeXt puts a <task>'s own <title> inside the same .heading as its

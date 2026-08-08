@@ -84,6 +84,21 @@
                     <xsl:value-of select="@room"/>
                 </xsl:attribute>
             </xsl:if>
+            <!-- Column widths for a <tabular> in this slide.  PreTeXt honours
+                 <col width="..."/> in print but emits NO <colgroup> in HTML, so
+                 on a slide the columns size themselves by content: the UART/I2C
+                 comparison came out 422px against 755px despite both columns
+                 being declared 50%.  Carry the declared widths through so the
+                 player can apply them; without this the attribute is simply
+                 absent and the table keeps the old content-sized behaviour. -->
+            <xsl:if test="descendant::tabular[1]/col/@width">
+                <xsl:attribute name="data-deck-colwidths">
+                    <xsl:for-each select="descendant::tabular[1]/col">
+                        <xsl:value-of select="@width"/>
+                        <xsl:if test="position() != last()">,</xsl:if>
+                    </xsl:for-each>
+                </xsl:attribute>
+            </xsl:if>
             <div class="deck-slide-body">
                 <xsl:apply-templates select="*[not(self::note) and not(self::caption)]"/>
             </div>
