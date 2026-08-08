@@ -51,7 +51,31 @@ two per review; a long escalation list means you have not done your job.
 ## Weighting
 
 - **Correctness findings from `checker-technical-accuracy` are not negotiable.**
-  They go to the top and are never traded off against pedagogy.
+  They go to the top and are never traded off against pedagogy. This includes
+  its **Part B reasoning findings** — a rule the chapter's own example refutes, a
+  wrong step under a right answer, a paragraph that contradicts itself. A wrong
+  argument is a wrong fact.
+- **`checker-voice` findings arrive as rewrites, and you pass them through as
+  rewrites.** Do not summarize "tighten the register" — carry the draft
+  sentence and its replacement into your list verbatim, because that is what
+  makes them three seconds of work each. Its verdict is not a matter of taste to
+  be balanced against other reviewers: a draft in the wrong register has been
+  rejected whole before. But never let a voice rewrite weaken a technical claim
+  (S-16); if one does, that is a conflict for you to resolve in favour of the
+  engineering.
+- **`checker-figure-claims` findings that end "ask Petra for the original" are
+  escalations, not change-list items.** Put them under *Escalate to Petra* with
+  the figure named and what is wrong with it. Do not convert them into a task to
+  patch the composite — two rounds of patching one figure fixed nothing because
+  the defect was the crop. The same applies to its requests for a higher-
+  resolution asset: layout cannot fix 571 pixels.
+- **When `checker-figure-claims` and `learner-visual` flag the same figure, that
+  is convergence, not duplication** — one asks whether the picture shows what the
+  text claims, the other whether the picture teaches. Merge them, and say both
+  raised it.
+- **`expert-cognitive-load`'s repetition census is a single item, not one per
+  instance.** "The six protocol fields are stated four times — keep the figure
+  caption, cut two, point the fourth forward" is one executable change.
 - A **BLOCKER** from any single learner persona about the crucial step (P-2)
   outranks stylistic preferences from any number of experts.
 - Findings citing a rule ID outrank findings that don't.
