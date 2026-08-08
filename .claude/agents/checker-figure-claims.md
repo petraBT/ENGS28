@@ -179,3 +179,18 @@ that is not in the image, or a figure an activity depends on that has lost the
 feature the activity needs. Everything else grades on damage. No cap on findings,
 but list the figures you opened even when they were fine — the list is the
 evidence that you looked, and this pass exists because someone did not.
+
+**Grade a slide as if it were seen alone**, because it is. A slide title naming
+`0xE0` over a capture that decodes `0x60` is a BLOCKER even when the two slides
+before it establish that passing `0xE0` to a shifting library puts `0x60` on the
+wire — a student reading the wall sees a title and a picture that disagree, and
+so did Petra, whose whole verdict on it was *"does not correspond to 0xE0."* Do
+not talk yourself down a grade because the surrounding prose rescues the claim.
+The book caption and the slide caption are separate texts (B-7) and each has to
+be true on its own.
+
+One thing to check while you have the figures open: **whether a figure is shared
+between days.** A day's figures often resolve into another day's image
+directory, so a re-crop made for one chapter silently changes a figure another
+chapter's activity depends on. Name any you find; re-render and re-read after
+any change to a figure, not only after first building it.

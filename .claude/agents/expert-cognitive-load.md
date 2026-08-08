@@ -39,7 +39,9 @@ and should be eliminated outright.
 report that appears every time, even when the answer is "nothing over two".
 
 Petra's verdict on the draft where this was found: *"Stop repeating things
-constantly."* What was actually in it:
+constantly."* What was actually in it — **an example of the shape to look for,
+from a chapter that is finished. It is not a checklist; build your census from
+the draft in front of you.**
 
 | Idea | Times stated | Where |
 | --- | --- | --- |
