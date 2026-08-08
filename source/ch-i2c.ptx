@@ -1495,23 +1495,21 @@ on the wire:      1 1 1 0 0 0 0    0
         <title>Day 10 In-Class: The HT16K33 and Its Device Driver</title>
         <introduction>
             <p>
-                Yesterday you used a bus.  Today you find out what you were
-                using.  The wiring is the wiring you left in place and the
-                program is the program you flashed; what is new is everything
-                that was handed to you — the chip at the far end of the two
-                wires, the peripheral at our end, and the library call in
-                between.
+                Yesterday you used a bus, and today we'll open up everything
+                that was handed to you: the chip at the far end of the two wires,
+                the peripheral at our end, and the library call in between.  The
+                wiring is the wiring you left in place and the program is the
+                program you flashed.
             </p>
             <p>
-                It is a long session, and it goes in that order: the display and
-                its controller first, because that is where yesterday's
-                unanswered questions are; then the STM32C031C6's own I2C1
-                peripheral and the two pins it reaches the wires through; then
-                the five operations an I2C library has to provide, and
-                <c>i2c1_byteWrite()</c> opened up.
+                We'll go in that order.  The display and its controller first,
+                because that is where yesterday's unanswered questions are; then
+                the STM32C031C6's own I2C1 peripheral and the two pins it reaches
+                the wires through; then the five operations an I2C library has to
+                provide, and <c>i2c1_byteWrite()</c> opened up.
             </p>
             <p>
-                By the end of the hour your own display shows <c>ES.28</c>,
+                By the end of the session your own display shows <c>ES.28</c>,
                 written out of a ten-byte buffer by a
                 <term>device driver</term> you wrote.  That is the layer this
                 course has been handing you all term as <c>uart.c</c> and
@@ -1533,7 +1531,8 @@ on the wire:      1 1 1 0 0 0 0    0
             <p>
                 Both of the programs below are answers to that assignment,
                 produced by asking an AI assistant to do it.  Neither is
-                nonsense; both would compile.  Read one of them closely.
+                nonsense and both would compile, and we'll read one of them
+                closely.
             </p>
             <program language="c"><code><![CDATA[
 /* counterResetButtonIntTimer.c -- ChatGPT */
@@ -1803,12 +1802,12 @@ void tim14_init(void) {
         <subsection xml:id="subsec-day10-verify">
             <title>Part 2: Does the Bus Still Work?</title>
             <p>
-                Before anything else: flash <c>helloDisplay.c</c>, unchanged from
-                yesterday, and confirm the display lights.  The kits stayed in
-                the room overnight, but four wires is four chances for one to be
-                out.  Finding that now costs three minutes; finding it at minute
-                90, in the middle of debugging a driver you have just written,
-                costs what is left of a long session.
+                Before anything else, we'll flash <c>helloDisplay.c</c>,
+                unchanged from yesterday, and confirm the display lights.  The
+                kits stayed in the room overnight, but four wires is four chances
+                for one to be out, and a wire that came out is much easier to
+                find now than later, in the middle of debugging a driver you have
+                just written.
             </p>
             <p>
                 Four characters on the display is a strong test today, because
@@ -1819,20 +1818,31 @@ void tim14_init(void) {
             </p>
             <p>
                 A blank display is a wiring problem and not a code problem — the
-                code is a file that worked yesterday.  Re-seat all four wires
-                against <xref ref="fig-display-wiring"/>, check <c>+</c> is on
-                3.3 V and not 5 V, and check that <c>D</c> and <c>C</c> have not
-                been swapped.  If it is still blank, flag it now rather than at
-                minute 90 — today's crucial step needs a display that talks.
+                code is a file that worked yesterday.  One thing tells you which
+                wiring problem it is: a display that never acknowledges also
+                stops the program, because <c>i2c1_byteWrite()</c> waits on a
+                flag the hardware never sets when nobody answers, so nothing
+                after the first call runs.  A program that is visibly still
+                running has had its bytes acknowledged by something.
+            </p>
+            <p>
+                So re-seat all four wires against
+                <xref ref="fig-display-wiring"/>: <c>+</c> on 3.3 V and not the
+                5 V pin beside it, <c>−</c> on GND, <c>D</c> on PB9 and <c>C</c>
+                on PB8.  <c>D</c> and <c>C</c> swapped is the one that is hardest
+                to see and easiest to do.  If it is still blank after that, flag
+                it now rather than late in the session — today's crucial step
+                needs a display that talks, and we're here to help.
             </p>
 
             <slide xml:id="sl-day10-verify">
     <p><term>Before anything else: flash yesterday's helloDisplay.c, unchanged.</term> The kits stayed in the room overnight, but four wires is four chances for one to be out.</p>
     <ul>
-        <li>Finding it now costs three minutes. Finding it at minute 90, in the middle of debugging a driver you have just written, costs the rest of a long session.</li>
+        <li>A wire that came out is much easier to find now than later, in the middle of debugging a driver you have just written.</li>
         <li>Four characters is a <term>strong test</term>: that program exercises the two pins, the bus, the three setup commands and a ten-byte write. Anything wrong anywhere in that and the display is blank.</li>
-        <li>A blank display is a <term>wiring</term> problem, not a code problem &#8212; the code is a file that worked yesterday. Re-seat all four, check <c>+</c> is on 3.3 V, check <c>D</c> and <c>C</c> are not swapped.</li>
-        <li>Still blank? <term>Flag it now rather than at minute 90.</term> Today's crucial step needs a display that talks.</li>
+        <li>A blank display is a <term>wiring</term> problem, not a code problem &#8212; the code is a file that worked yesterday. To tell which wiring problem: a display that never acknowledges also <term>stops the program</term>, because <c>i2c1_byteWrite()</c> waits on a flag the hardware never sets, so nothing after the first call runs. Nothing is on the bus at all in that case.</li>
+        <li>So re-seat all four against yesterday's wiring figure: <c>+</c> on 3.3 V and not the 5 V pin beside it, <c>&#8722;</c> on GND, <c>D</c> on PB9, <c>C</c> on PB8. <c>D</c> and <c>C</c> swapped is the hardest to see and the easiest to do.</li>
+        <li>Still blank after that? <term>Flag it now rather than late in the session.</term> Today's crucial step needs a display that talks &#8212; we're here to help!</li>
     </ul>
     <note>Three minutes, and it is the cost of having moved the display work to Day 9x. It also gives anyone whose display never lit yesterday a second try with the whole session still ahead.</note>
 </slide>
@@ -1841,20 +1851,19 @@ void tim14_init(void) {
         <subsection xml:id="subsec-day10-display-hardware">
             <title>Part 3: How the Display Is Actually Built</title>
             <p>
-                From the reading: 34 LEDs, a grid, and a sweep fast enough to
-                fool the eye.  You already know the segment names and the bit
-                order they map to (<xref ref="fig-segment-map"/>), because you
-                wrote a digit's byte with them yesterday.  What is left is the
-                wiring behind them, and the answer to a question you have not
-                been given a reason to ask yet: <em>why does a display need its
-                own chip?</em>
+                You already know the segment names and the bit order they map to
+                (<xref ref="fig-segment-map"/>), because you wrote a digit's byte
+                with them yesterday.  Now we'll look at the wiring behind them:
+                how 34 LEDs are reached with 14 pins, and why the display needs a
+                chip of its own.
             </p>
             <p>
                 The grid is drawn in <xref ref="fig-four-digit-wiring"/>, which
                 is the display's own datasheet.  It is a
                 <term>common cathode</term> arrangement: within one digit, all
                 eight LEDs have their cathodes tied together and brought out on a
-                single pin — the ones marked <c>(COM)</c> — while across digits,
+                single pin — the ones marked <c>(COM)</c>, for
+                <em>common</em> — while across digits,
                 all four <c>a</c> anodes are tied together, all four <c>b</c>
                 anodes are tied together, and so on.
             </p>
@@ -1872,7 +1881,8 @@ void tim14_init(void) {
                 <image source="images/Day10-I2C(2)/four_digit_wiring.png" width="95%"/>
             </figure>
             <p>
-                Work out what that costs and what it forbids.  To light the
+                We'll work out what that wiring makes possible and what it rules
+                out.  To light the
                 <c>a</c> segment of digit 2, drive the shared <c>a</c> anode high
                 and pull digit 2's common cathode low: current has a path through
                 exactly one LED, because that is the only place where an
@@ -1880,22 +1890,22 @@ void tim14_init(void) {
                 <c>a</c> of digit 2 <em>and</em> <c>b</c> of digit 3 at the same
                 time, you would have to energize both anodes and both cathodes —
                 which also lights <c>b</c> of digit 2 and <c>a</c> of digit 3.
-                A grid cannot do arbitrary patterns at one instant.  It can do
-                one digit at a time, and that is what the sweep is for.
+                A grid cannot light an arbitrary set of segments at one instant;
+                it can light one digit at a time.  To show four digits, the
+                display shows them in sequence, sweeping through them fast enough
+                that the eye does not notice.
             </p>
             <p>
-                The count comes out at four digit cathodes plus one for the
-                colon, and eight segment anodes plus one for the colon: 14 pins,
-                34 LEDs.  Everything the backpack does — sweeping the four
+                Everything the backpack does — sweeping the four
                 digits, holding each one on for its share of the time, keeping
-                the whole thing going while your program does something else —
+                the display lit while your program does something else —
                 is that grid, driven continuously.
             </p>
             <p>
-                That is an argument, and you can watch it.  The display in front
-                of you looks steady, and it is not: at every instant most of it
-                is dark.  Two ways to catch it, and they take a minute between
-                them.  <term>Wave it.</term>  Pick the breadboard up and move the
+                We can watch that happen.  The display in front of you looks
+                steady, but at every instant most of it is dark, and there are
+                two ways to see it.
+                <term>Wave it.</term>  Pick the breadboard up and move the
                 lit display briskly from side to side, and watch what the trail
                 does — a light that is genuinely on all the time smears into a
                 continuous band, and one that is being switched leaves separate
@@ -1925,21 +1935,22 @@ void tim14_init(void) {
                There is nothing in assets/images to build it from.
             -->
             <p>
-                Either way, what you are seeing is the sweep.  And it is the
-                answer to a question nobody has asked out loud yet: <em>why does
-                a display need its own chip?</em>  Because the image only exists
-                while something is redrawing it, thousands of times a second,
-                and it never gets to stop.  If that something were your program,
-                every other thing you wanted the STM32C031C6 to do would have to
-                be fitted around a refresh loop with a deadline that never ends.
-                The backpack is what takes that job.
+                Either way, what you are seeing is the sweep, and it is the
+                reason the display has a chip of its own.  The image exists only
+                while something redraws it, thousands of times a second, and that
+                job never stops — if your program did it, everything else you
+                wanted the STM32C031C6 to do would have to fit around a refresh
+                loop with a deadline that never ends.  That is why the display is
+                wired to a backpack: the HT16K33 does the multiplexing and the
+                decoding, and talks to the processor over I2C.
             </p>
             <p>
                 <xref ref="fig-ht16k33-block"/> is the HT16K33 from the inside.
                 The I2C interface is on the left; the display RAM in the middle
                 holds which LEDs are on; the row and common drivers on the right
                 are the fourteen pins going to the display; and the internal RC
-                oscillator with the timing generator is what runs the sweep.
+                (resistor-capacitor) oscillator with the timing generator is what
+                runs the sweep.
                 That oscillator is off when the chip powers up, which is the
                 first thing our driver will have to fix.
             </p>
@@ -1949,29 +1960,24 @@ void tim14_init(void) {
                 way into the chip.  The display RAM — 16 bytes of it — holds
                 which LEDs are lit, and the common-scan and row-driver outputs on
                 the right are the pins that go to the display's grid.  The
-                internal RC oscillator and timing generator sweep that grid from
+                internal RC (resistor-capacitor) oscillator and timing generator sweep that grid from
                 the RAM, continuously and without any further instruction.  The
                 key-scan and key-data blocks belong to the chip's other job,
                 reading a keypad matrix, which we do not use.</caption>
                 <image source="images/Day10-I2C(2)/ht16k33_block.svg" width="70%"/>
             </figure>
 
-            <slide xml:id="sl-day10-segment-map" ref="fig-segment-map">
-    <caption>Yesterday's map, for reference: the segment names are the order the bits are in. Today is the wiring behind them.</caption>
-    <note>Ten seconds, as a reminder — they wrote a digit's byte with this yesterday. Do not re-teach it. The colon's two LEDs are D5 and D6 here.</note>
-</slide>
-
             <slide xml:id="sl-day10-grid" ref="fig-four-digit-wiring" stack="yes" room="yes">
     <ul>
-        <li><term>Common cathode.</term> Within one digit, all eight LEDs share a cathode, brought out on the pin marked (COM). Across digits, all four <c>a</c> anodes are tied together, all four <c>b</c> anodes, and so on.</li>
-        <li>So: <term>how do you turn on the <c>a</c> segment of digit 2?</term></li>
-        <li>And then: <term>how do you turn on <c>a</c> of digit 2 <em>and</em> <c>b</c> of digit 3, at the same instant?</term></li>
+        <li><term>Common cathode.</term> Within one digit, all eight LEDs share a cathode, brought out on the pin marked (COM), for <em>common</em>. Across digits, all four <c>a</c> anodes are tied together, all four <c>b</c> anodes, and so on.</li>
+        <li><term>How do you turn on the <c>a</c> segment of digit 2?</term></li>
+        <li><term>How do you turn on <c>a</c> of digit 2 <em>and</em> <c>b</c> of digit 3, at the same instant?</term></li>
     </ul>
     <caption>Five cathode pins and nine anode pins — 14 wires for 34 LEDs. Now find the path to one LED.</caption>
 </slide>
 
             <slide xml:id="sl-day10-grid-answer">
-    <p><term>The grid can light one digit at a time, which is what the sweep is for.</term></p>
+    <p><term>The grid can light one digit at a time, and the sweep is how all four get shown.</term></p>
     <ul>
         <li><c>a</c> of digit 2: drive the shared <c>a</c> anode high and pull digit 2's common cathode low. Current has a path through exactly one LED, because that is the only place an energized anode meets an energized cathode.</li>
         <li><c>a</c> of digit 2 <em>and</em> <c>b</c> of digit 3: you would energize both anodes and both cathodes &#8212; which also lights <c>b</c> of digit 2 and <c>a</c> of digit 3. <term>A grid cannot do arbitrary patterns at one instant.</term></li>
@@ -1982,12 +1988,12 @@ void tim14_init(void) {
 
 
             <slide xml:id="sl-day10-pov">
-    <p><term>Your display looks steady. It is not.</term> At every instant most of it is dark &#8212; and you can catch it, two ways, in about a minute.</p>
+    <p><term>Your display looks steady, but at every instant most of it is dark.</term> There are two ways to see the sweep:</p>
     <ul>
         <li><term>Wave it.</term> Pick the breadboard up and move the lit display briskly side to side. A light that is genuinely on all the time smears into a <term>continuous band</term>; one that is being switched leaves <term>separate images with gaps</term> between them.</li>
         <li><term>Or film it.</term> Phone camera, slow-motion mode, then step through the clip. A short enough exposure catches the display part-way through a sweep instead of averaged over one.</li>
-        <li>Which is the answer to a question nobody has asked out loud yet: <term>why does a display need its own chip?</term> Because the image only exists while something is redrawing it, thousands of times a second, and it never gets to stop.</li>
-        <li>If that something were <term>your program</term>, everything else you wanted the STM32C031C6 to do would have to fit around a refresh loop whose deadline never ends. The backpack is what takes that job.</li>
+        <li>And that is the reason the display has a chip of its own. The image exists only while something redraws it, thousands of times a second, and that job never stops &#8212; if <term>your program</term> did it, everything else you wanted the STM32C031C6 to do would have to fit around a refresh loop whose deadline never ends.</li>
+        <li>So the display is wired to a backpack: the HT16K33 does the <term>multiplexing</term> and the decoding, and talks to the processor over I2C.</li>
     </ul>
     <note>OPEN — see the note in the book at this point. The HT16K33's scan rate is not in the repo, so neither route is claimed to work at a stated shutter speed; try one before class. A figure for this beat does not exist.</note>
 </slide>
@@ -2149,8 +2155,9 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
             <title>Part 5: The Display RAM, and the Byte That Is Always Zero</title>
             <p>
                 Commands configure the chip.  Getting a pattern onto the display
-                means writing its <term>display RAM</term>, and the layout of
-                that RAM is the one thing on the datasheet worth reading slowly
+                means writing its <term>display RAM</term>, and we'll read that
+                RAM's layout off the datasheet slowly, because everything in the
+                rest of the session is built on it
                 (<xref ref="fig-display-ram-map"/>).
             </p>
             <figure xml:id="fig-display-ram-map">
@@ -2516,7 +2523,7 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
 ]]></code></program>
     <ul>
         <li><c>AFR[1]</c>, not <c>AFR[0]</c>, for the same reason <c>EXTICR[1]</c> was not <c>EXTICR[2]</c> this week: two registers, pins 0&#8211;7 and pins 8&#8211;15. The manual calls the second one <c>GPIOx_AFRH</c>.</li>
-        <li>The four <c>TIMINGR</c> lines we leave alone: they set how long SCL is HIGH, how long it is LOW, and how long the peripheral waits around the edges, and these are the values this board needs at 100 kHz. The Reference section works out where each came from.</li>
+        <li><term>The four <c>TIMINGR</c> lines we leave alone.</term> <c>PRESC</c> divides <c>I2CCLK</c> down to 4 MHz for the rest of the counters, so ours is 12/4 &#8722; 1 = 2; <c>SCLL</c> and <c>SCLH</c> are how long SCL is LOW and HIGH, and <c>SDADEL</c> and <c>SCLDEL</c> are how long the peripheral waits around the edges before changing or sampling SDA. These are the values this board needs at 100 kHz, and the Reference section derives all five.</li>
     </ul>
     <note>Abridged: PB9's MODER and AFR lines are dropped so the function fits legibly. The book carries the full version — say so.
     TIMINGR is deliberately not taught (Petra, 2026-08-07). If somebody asks where 0x2 comes from, the one-line answer is that the prescaler divides I2CCLK down to 4 MHz and 12/4 − 1 = 2; the derivation and the three RM0490 tables are in Reference.</note>
@@ -2542,20 +2549,27 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
                     </p>
                 </introduction>
                 <task xml:id="act-i2c-five-t1">
-                    <statement><p>List the operations a program needs in order
-                    to use this bus.  Aim for the smallest set that covers
-                    everything you saw on the trace, and say for each one why it
-                    cannot be built out of the others.</p></statement>
+                    <statement><p>Open your own <c>helloDisplay.c</c>.  Three of
+                    the operations are already in it.  Name them from the calls
+                    you can see, and for each one write down what the program had
+                    to tell it.</p></statement>
                 </task>
                 <task xml:id="act-i2c-five-t1b">
-                    <statement><p>Then take your own capture and check the list
-                    against it: which of your operations produced the START, the
-                    address, the ACK, the data byte and the STOP?  Looking only
-                    at the trace, could you tell a one-byte write from a
-                    multi-byte one?</p></statement>
+                    <statement><p>Now your own capture from yesterday.  Which of
+                    those three calls produced the START, the address, the ACK,
+                    the data byte and the STOP you marked on it?  Looking only at
+                    the trace, could you tell a one-byte write from a multi-byte
+                    one?</p></statement>
                 </task>
                 <task xml:id="act-i2c-five-t2">
-                    <statement><p>One of them has nothing to do with any
+                    <statement><p>Two are missing.  Name something a program
+                    might want to do with a device on this bus that
+                    <c>helloDisplay.c</c> cannot do, and say why it cannot be
+                    built out of the three calls that program already
+                    has.</p></statement>
+                </task>
+                <task xml:id="act-i2c-five-t3">
+                    <statement><p>One of the five has nothing to do with any
                     particular device.  Which, and what does it have to set
                     up?</p></statement>
                 </task>
@@ -2644,9 +2658,10 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
         <subsection xml:id="subsec-day9x-bytewrite">
             <title>Part 7b: Opening i2c1_byteWrite()</title>
             <p>
-                Five functions is the interface.  This is the one that produced
-                the trace you captured yesterday, and it is short enough to read
-                in full.  Here is its sending half:
+                Those five functions are the interface, and now we'll open one
+                of them.  <c>i2c1_byteWrite()</c> is the one that produced the
+                trace you captured yesterday, and it is short enough to read in
+                full.  Here is its sending half:
             </p>
             <program language="c"><code><![CDATA[
     // Ping target address for writing 1 byte, use "=" to ensure all other bits are cleared
@@ -2781,7 +2796,7 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
         <subsection xml:id="subsec-day10-layers">
             <title>Part 8a: Layers, and What You Are Replacing</title>
             <p>
-                Stand back from the code for a moment
+                We'll stand back from the code for a moment
                 (<xref ref="fig-firmware-layers"/>).  Underneath everything are
                 the machine registers — <c>I2C1->CR2</c>, <c>GPIOB->MODER</c> —
                 which belong to the STM32C031C6 and to nothing else.  Above them
@@ -2845,20 +2860,14 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
 
             <slide xml:id="sl-day10-layers" ref="fig-firmware-layers" stack="yes">
     <ul>
-        <li>Bottom the <term>machine registers</term>; above them the <term>interface drivers</term>, the only files allowed to touch one.</li>
-        <li>Then the <term>device drivers</term>, and on top <c>main()</c>, which has no idea there is a bus involved.</li>
+        <li>Bottom the <term>machine registers</term>; above them the <term>interface drivers</term> &#8212; <c>uart.c</c>, <c>adc.c</c>, <c>i2c.c</c> &#8212; the only files allowed to touch one. Then the <term>device drivers</term>, and on top <c>main()</c>, which has no idea there is a bus involved.</li>
+        <li>The device-driver layer is the one with the rule. <c>SevenSegPartial.c</c>, the file you are about to open, knows <term>one device</term>: its commands, its addresses, its quirks. It may call <c>i2c1_byteWrite()</c> as often as it likes, and may not touch <c>I2C1-&gt;CR2</c> once.</li>
+        <li>Somebody has written both of these layers for this exact chip already &#8212; if you have met it, that is <c>Adafruit_LEDBackpack.h</c> over <c>Wire</c> &#8212; from the same datasheet pages you read earlier today.</li>
+        <li>What writing it yourself buys is not performance. It is that when the display shows nothing you have <term>a bus you can put a scope on</term>, a command table you can check the bytes against, and four functions you can read &#8212; instead of a library whose failure mode is that it did not work.</li>
     </ul>
     <caption>Today you write the third layer up — the first one in this course that has been yours.</caption>
-</slide>
-
-            <slide xml:id="sl-day10-layers-rule">
-    <p><term>The device-driver layer is the one with the rule.</term></p>
-    <ul>
-        <li><c>SevenSegPartial.c</c> &#8212; the file you are about to open &#8212; knows <term>one device</term>: its commands, its addresses, its quirks. It does not know how the bytes get there. It may call <c>i2c1_byteWrite()</c> as often as it likes, and may not touch <c>I2C1-&gt;CR2</c> once.</li>
-        <li>The point is not tidiness. The same display driver runs <term>unchanged</term> on any board whose I2C library offers those five functions.</li>
-        <li>And the day you move to a different microcontroller, you rewrite <c>i2c.c</c> and nothing else. That is what the rule buys.</li>
-        <li>It is called <term>Partial</term> because it arrives unfinished. Finished, it becomes <c>SevenSeg.c</c> in <c>mylib</c> beside <c>i2c.c</c> &#8212; which is where Lab 5 looks for it, and what tonight's homework asks you to do.</li>
-    </ul>
+    <note>The layering argument is the part of this beat that is not cuttable: the same driver runs unchanged on any board whose I2C library offers those five functions, and the day you move to a different microcontroller you rewrite i2c.c and nothing else.
+    The file is called Partial because it arrives unfinished. Finished, it becomes SevenSeg.c in mylib beside i2c.c, which is where Lab 5 looks for it — that is tonight's housekeeping, and it is worth saying out loud here as well as in Part 10.</note>
 </slide>
 
         </subsection>
@@ -3009,6 +3018,9 @@ void SevenSeg_init() {
             <slide xml:id="sl-day10-skeleton">
     <p><term>writeFirstDigit.c</term>, given. One byte into one address of the display RAM, over and over.</p>
     <program language="c"><code><![CDATA[
+#include "ES28.h"
+#include "i2c.h"
+#include "SevenSegPartial.h"      // HT16K33_ADDR and the command names live here
 int main(void) {
     uint8_t display_addr = HT16K33_ADDR;
     uint8_t display_subaddr = 0;      // 0, 2, 4, 6, 8 - depending on the digit
@@ -3028,7 +3040,7 @@ int main(void) {
     </ul>
 </slide>
 
-            <slide xml:id="sl-day10-skeleton-init">
+            <slide xml:id="sl-day10-skeleton-init" ref="fig-segment-map" stack="yes">
     <p><term>It calls SevenSeg_init(), which does not exist yet.</term> <c>SevenSegPartial.c</c> is the file your driver goes in: four empty functions, signatures already written. Fill in the first one now; the other three come next.</p>
     <program language="c"><code><![CDATA[
 void SevenSeg_init() {
@@ -3039,10 +3051,7 @@ void SevenSeg_init() {
 
 }
 ]]></code></program>
-    <ul>
-        <li>Then move the <c>E</c>: digit 2, 3, 4. Then change it: <c>S</c>, <c>2</c>, <c>8</c>, derived from the segment map rather than guessed.</li>
-        <li>Then set <c>display_subaddr</c> to 1 and <term>predict what happens before you flash it</term>.</li>
-    </ul>
+    <caption>The map is here because the tasks ask you to derive <c>S</c>, <c>2</c> and <c>8</c> from it rather than guess them.</caption>
 </slide>
 
             <slide xml:id="sl-day10-init-answer">
@@ -3068,8 +3077,8 @@ void SevenSeg_init() {
                 <c>SevenSegPartial.c</c> has three functions left in it, and
                 their prototypes are already in the header.  Two are warm-ups
                 that rehearse the one-byte write you used in
-                <c>SevenSeg_init()</c>; the third is the one that puts the whole
-                display up, and it is the crucial step of the session.
+                <c>SevenSeg_init()</c>.  The third writes the whole display, and
+                it is today's crucial step.
             </p>
             <program language="c"><code><![CDATA[
 void SevenSeg_init();                           // Initialize the display
@@ -3213,7 +3222,7 @@ int main(void) {
             </p>
 
             <slide xml:id="sl-day10-driver-todo">
-    <p><term>Three functions left, and their prototypes are already in the header.</term> Two rehearse the one-byte write you used in <c>SevenSeg_init()</c>. The third puts the whole display up, and it is today's crucial step.</p>
+    <p><term>Three functions left, and their prototypes are already in the header.</term> Two rehearse the one-byte write you used in <c>SevenSeg_init()</c>. The third writes the whole display, and it is today's crucial step.</p>
     <program language="c"><code><![CDATA[
 void SevenSeg_blink(uint8_t rate) {
     // TODO 2 -- one byte: display-setup command, display-on bit, rate
@@ -3230,6 +3239,8 @@ void SevenSeg_write(uint8_t *display_buffer) {
 ]]></code></program>
     <ul>
         <li>Mask each argument to the bits its command actually has &#8212; <c>0x6</c> for blink, <c>0xf</c> for brightness &#8212; so a caller passing something out of range cannot corrupt the command itself.</li>
+        <li><c>HT16K33_ADDR_PTR</c> is the header's name for display RAM address 0, and <c>HT16K33_NBUF</c> is the number of digit-and-colon positions &#8212; 5 &#8212; so the buffer is <c>2*HT16K33_NBUF</c> bytes.</li>
+        <li>And a fifth prototype is in the header, which is tonight's: <c>void SevenSeg_number(uint16_t num, uint8_t *display_buffer);</c> &#8212; it fills a buffer with the segment patterns for a number's digits.</li>
     </ul>
 </slide>
 
@@ -3280,7 +3291,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
     <ul>
         <li>1 &#8212; Does <c>writeFirstDigit.c</c> still put an <c>E</c> up? If yes, the bus, the init and the RAM addressing are all fine and the fault is in <c>SevenSeg_write()</c> or in how the buffer was filled.</li>
         <li>2 &#8212; Four garbled characters usually means the buffer is right but <term>shifted</term>: check you sent <c>2*HT16K33_NBUF</c> bytes and started at <c>HT16K33_ADDR_PTR</c>, before suspecting the segment patterns.</li>
-        <li>3 &#8212; Nothing at all, and <c>writeFirstDigit.c</c> also shows nothing: back to Part 2. The bus, then the oscillator.</li>
+        <li>3 &#8212; Nothing at all, and <c>writeFirstDigit.c</c> also shows nothing: does the program keep running, or does it stop on its first I2C call? <term>Stopped means nobody acknowledged</term> &#8212; that is the bus, and the wires. <term>Still running means the bus answered</term>, and the suspect is the oscillator command.</li>
         <li>4 &#8212; Been through all three and still nothing? <term>Flag it. We're here to help!</term></li>
     </ul>
     <caption>Each step rules out a layer — start at the one you know worked.</caption>
@@ -3291,15 +3302,10 @@ void SevenSeg_write(uint8_t *display_buffer) {
         <subsection xml:id="subsec-day10-breakit">
             <title>Part 9: Break It on Purpose</title>
             <p>
-                Two one-line changes to a program that works, and a capture of
-                each.  The point is not either failure on its own; it is that
-                they look completely different on the wire and identical on the
-                display, which is what makes a scope worth reaching for.
-            </p>
-            <p>
-                Put the AD2 back on SDA and SCL as you had it yesterday, in
-                oscilloscope mode, and work on a copy of
-                <c>helloDisplay.c</c> so that your driver project stays intact.
+                We'll make two one-line changes to a program that works, and
+                capture each of them.  Both give a blank display, and what makes
+                the pair worth doing is that they look nothing like each other on
+                the wire.
             </p>
             <figure xml:id="fig-i2c-scope-noack">
                 <caption>One I2C transaction that got no answer, with SDA in
@@ -3315,13 +3321,22 @@ void SevenSeg_write(uint8_t *display_buffer) {
             </figure>
             <activity xml:id="act-i2c-wrong-address">
                 <title>Two Ways to Get a Blank Display</title>
+                <introduction>
+                    <p>
+                        Put the AD2 back on SDA and SCL as you had it yesterday,
+                        in oscilloscope mode, and work on a copy of
+                        <c>helloDisplay.c</c> so that your driver project stays
+                        intact.
+                    </p>
+                </introduction>
                 <task xml:id="act-i2c-wrong-t1">
                     <statement><p>Change <c>HT16K33_ADDR</c> to <c>0x60</c>,
                     rebuild, flash, and capture a single sweep.  You will have to
                     arm the sweep first and then press the Nucleo's black reset
-                    button — the paragraph after this activity says why.  Find
-                    the NACK and the STOP, and check the capture against
-                    <xref ref="fig-i2c-scope-noack"/>.</p></statement>
+                    button — we'll come back to why at the end of this part.
+                    Find the NACK and the STOP: nine clock pulses, SDA HIGH on
+                    the ninth, then a STOP
+                    (<xref ref="fig-i2c-scope-noack"/>).</p></statement>
                 </task>
                 <task xml:id="act-i2c-wrong-t4">
                     <statement><p>Put the address back to <c>0x70</c>.  Now
@@ -3365,9 +3380,8 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 manual gives for doing it without that hole.
             </p>
             <p>
-                <em>The missing oscillator command.</em>  This one is the
-                interesting case, and it is the reason this part exists.  The
-                display is blank — the same blank as a wrong address, the same
+                <em>The missing oscillator command.</em>  This is the case this
+                part exists for.  The display is blank — the same blank as a wrong address, the same
                 blank as a wire that fell out.  The trace is
                 <term>perfect</term>: every transaction is there, every address
                 byte is 0xE0, every ninth pulse comes back LOW because the
@@ -3386,24 +3400,16 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 chapter was about.
             </p>
 
-            <slide xml:id="sl-day10-breakit" room="compressed">
-    <p><term>Two one-line changes to a program that works, and a capture of each.</term></p>
+            <slide xml:id="sl-day10-breakit-answer" ref="fig-i2c-scope-noack" stack="yes">
+    <p><term>A perfect trace and a blank display.</term> The two failures look <term>identical on the display</term> and completely different on the wire &#8212; which is what makes a scope worth reaching for, and what makes it not enough.</p>
     <ul>
-        <li>The point is not either failure on its own. It is that the two look <term>completely different on the wire</term> and <term>identical on the display</term> &#8212; which is what makes a scope worth reaching for, and what makes it not enough.</li>
-        <li>Set up: AD2 back on SDA and SCL in oscilloscope mode, as you had it yesterday, and work on a <term>copy</term> of <c>helloDisplay.c</c> so your driver project stays intact.</li>
-    </ul>
-    <note>Do not let the prediction in the second task be skipped &#8212; it is the whole beat. Almost everyone predicts a broken trace for case 2.</note>
-</slide>
-
-            <slide xml:id="sl-day10-breakit-answer">
-    <p><term>A perfect trace and a blank display.</term></p>
-    <ul>
-        <li><term>Case 1</term> is visible on the wire: nine clock pulses, SDA HIGH on the ninth, then a STOP. And the program <term>stops</term> after one transaction &#8212; which is why the reset button was needed.</li>
+        <li><term>Case 1</term> is visible on the wire, and the figure here is what it looks like: nine clock pulses, SDA HIGH on the ninth, then a STOP. And the program <term>stops</term> after one transaction &#8212; which is why the reset button was needed.</li>
         <li><term>Case 2</term> shows nothing wrong at all. Every transaction is there, every address byte is 0xE0, every ninth pulse comes back LOW: the HT16K33 is powered, listening and <term>acknowledging every byte you send it</term>. It is just not driving anything, because nothing told its oscillator to run.</li>
         <li>So <term>the bus can be flawless and the device still do nothing</term>, and no amount of staring at SDA and SCL will tell you that.</li>
         <li>A scope answers <q>did my bytes arrive?</q>, completely. It cannot answer <q>were they the right bytes?</q> &#8212; that is a datasheet question, and the instrument for it is the command table.</li>
     </ul>
-    <note>The two-question split is the takeaway to say out loud. It is the debugging chapter's "which tool, when", made physical.</note>
+    <note>The two-question split is the takeaway to say out loud. It is the debugging chapter's "which tool, when", made physical.
+    Do not let the prediction in the second task be skipped — it is the whole beat, and almost everyone predicts a broken trace for case 2. Which is why nothing before this slide says the two traces differ.</note>
 </slide>
 
             <slide xml:id="sl-day10-hang">
