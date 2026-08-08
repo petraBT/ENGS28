@@ -36,8 +36,8 @@
             The second day is everything underneath.  At the far end of the bus
             is the display's controller chip, the HT16K33, whose datasheet is
             four pages of command table and RAM map; at our end is the
-            STM32C031C6's I2C1 peripheral, its two pins and its timing
-            register.  By the end of that hour you have written the
+            STM32C031C6's I2C1 peripheral and the two pins it reaches the wires
+            through.  By the end of that hour you have written the
             <term>device driver</term> that turns those datasheet pages into
             four functions the rest of your program can call.  That is the layer
             this course has been handing you all term — <c>uart.c</c>,
@@ -54,9 +54,8 @@
                     with UART, and what it costs.</li>
                 <li>Name the five operations an I2C library has to provide, and
                     say why those five.</li>
-                <li>Read the <c>I2C_TIMINGR</c> settings for a given peripheral
-                    clock out of RM0490 §23.4.10, and say what PRESC is
-                    for.</li>
+                <li>Say why an I2C pin has to be open-drain, and what would
+                    happen on the wire if it were not.</li>
                 <li>Given a datasheet that states a device address ambiguously,
                     work out what to pass to <c>i2c1_byteWrite()</c>.</li>
                 <li>Explain why a four-digit display needs 14 wires and
@@ -1507,8 +1506,8 @@ on the wire:      1 1 1 0 0 0 0    0
                 It is a long session, and it goes in that order: the display and
                 its controller first, because that is where yesterday's
                 unanswered questions are; then the STM32C031C6's own I2C1
-                peripheral, its two pins and its timing register; then the five
-                operations an I2C library has to provide, and
+                peripheral and the two pins it reaches the wires through; then
+                the five operations an I2C library has to provide, and
                 <c>i2c1_byteWrite()</c> opened up.
             </p>
             <p>
@@ -2313,7 +2312,7 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
 </slide>
         </subsection>
         <subsection xml:id="subsec-day9x-pins">
-            <title>Part 6a: The Pins, and Why They Must Be Open-Drain</title>
+            <title>Part 6: The Pins, and Why They Must Be Open-Drain</title>
             <p>
                 A peripheral inside the chip has to reach the outside world
                 through pins, and which pins it can use is not up to us
@@ -2405,156 +2404,13 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
                 line to get back up before the next clock edge.
                 <xref ref="subsec-i2c-ref-opendrain"/> does that arithmetic.
             </p>
-
-            <slide xml:id="sl-day9x-pins" ref="fig-i2c-pins" stack="yes">
-    <ul>
-        <li>I2C1's SCL and SDA come out on several pin pairs; ours is <term>PB8 for SCL and PB9 for SDA</term>, boxed here &#8212; D15 and D14 on the header, where every Arduino-shaped board puts its I2C bus.</li>
-        <li>Getting the peripheral onto the pins is the alternate-function mechanism from the UART: alternate-function mode in <c>MODER</c>, then <em>which</em> one in <c>AFR</c>.</li>
-        <li>The number is in the <term>datasheet</term>, not the reference manual: DS13867 Table 15, <em>Port B alternate function mapping</em>. The PB8 and PB9 rows both name I2C1 under <term>AF6</term>.</li>
-    </ul>
-    <caption>Find PB8 and PB9 in the boxed pair, then find their AF6 column in Table 15.</caption>
-</slide>
-
-            <slide xml:id="sl-day9x-opendrain" room="yes">
-    <p><term>And one thing that is new: both pins have to be open-drain.</term> <c>GPIOx_OTYPER</c>, RM0490 &#167;6.4.2 &#8212; 1 is open-drain, 0 (the reset value) is push-pull.</p>
-    <program language="c"><code><![CDATA[
-GPIOB->OTYPER |= (GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9);
-
-push-pull:    writing 1 drives the pin to 3.3 V, 0 drives it to 0 V
-open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
-              external pull-up sets the level
-]]></code></program>
-    <ul>
-        <li>On this bus that is not a preference: <term>SDA changes hands every ninth bit</term>, and the two ends do not always agree about what it should be.</li>
-        <li><term>Before we look: if both ends were push-pull for that one moment, one driving HIGH and one driving LOW &#8212; what is across that wire?</term></li>
-    </ul>
-</slide>
-
-            <slide xml:id="sl-day9x-opendrain-fig" ref="fig-open-drain">
-    <caption>A short circuit. Left: both ends push-pull — 3.3 V straight to ground through two transistors, and nothing decides the level. Right: the same disagreement open-drain — the only path from the supply is the pull-up, and the wire reads LOW.</caption>
-</slide>
-
-            <slide xml:id="sl-day9x-opendrain-more">
-    <p><term>What else that buys, and the one number it leaves you.</term></p>
-    <ul>
-        <li>The strongest thing any device can do is pull the line LOW, so two devices disagreeing is never worse than a LOW &#8212; and a device that releases and then reads LOW knows somebody else is pulling. Two more features rest on exactly that, and the Reference section has both: <term>several controllers</term> sharing one bus and sorting out who wins, and a device <term>holding SCL LOW</term> to ask for more time.</li>
-        <li>Pull-ups are typically 5 k&#8486; to 10 k&#8486;, and we fit none &#8212; both devices this course uses carry their own. The value is squeezed from both ends: <term>too small</term> and the device pulling LOW cannot sink enough current to hold the line below threshold; <term>too large</term> and the resistor charges the bus capacitance too slowly to get back up before the next clock edge.</li>
-    </ul>
-</slide>
-
-        </subsection>
-        <subsection xml:id="subsec-day9x-timingr">
-            <title>Part 6b: I2C_TIMINGR, and What PRESC Is For</title>
             <p>
-                The last thing the peripheral needs is the clock: how long SCL
-                spends HIGH, how long it spends LOW, and how long to wait around
-                the edges before changing or sampling SDA.  All of it lives in
-                one register, <c>I2C_TIMINGR</c>, in five fields — <c>PRESC</c>,
-                <c>SCLL</c>, <c>SCLH</c>, <c>SDADEL</c> and <c>SCLDEL</c>.
-            </p>
-            <p>
-                You are not expected to compute those from the I2C
-                specification's timing requirements.  The reference manual has
-                already done it, for a set of common peripheral clock
-                frequencies, in <em>RM0490 §23.4.10, I2C_TIMINGR register
-                configuration examples</em> — three tables, one per clock
-                frequency, reproduced in
-                <xref ref="fig-i2c-timing-tables"/>.  Our peripheral clock is
-                12 MHz, which is where the interesting part starts.
-            </p>
-            <figure xml:id="fig-i2c-timing-tables">
-                <caption>The three worked examples in RM0490 §23.4.10: Table 94
-                for a peripheral clock of 8 MHz, Table 95 for 16 MHz and Table 96
-                for 48 MHz.  Read down the Standard-mode 100 kHz column of each.
-                SCLL is 0x13, SCLH is 0xF, SDADEL is 0x2 and SCLDEL is 0x4 in all
-                three; the only field that changes with the clock is PRESC, which
-                is 0x1, 0x3 and 0xB.  There is no table for 12 MHz.</caption>
-                <image source="images/Day09X-I2C/i2c_timing_8mhz.png" width="88%"/>
-                <image source="images/Day09X-I2C/i2c_timing_16mhz.png" width="88%"/>
-                <image source="images/Day09X-I2C/i2c_timing_48mhz.png" width="88%"/>
-            </figure>
-            <activity xml:id="act-i2c-timingr">
-                <title>Find Our Row — Except There Isn't One</title>
-                <introduction>
-                    <p>
-                        Open RM0490 §23.4.10, or read the three tables in
-                        <xref ref="fig-i2c-timing-tables"/>.  Our peripheral
-                        clock is 12 MHz and we want Standard mode, 100 kHz.
-                    </p>
-                </introduction>
-                <task xml:id="act-i2c-timingr-t1">
-                    <statement><p>Read the 100 kHz column of all three tables.
-                    Which of the five fields are the same in every table, and
-                    which one is not?</p></statement>
-                </task>
-                <task xml:id="act-i2c-timingr-t2">
-                    <statement><p>PRESC is 0x1 at 8 MHz, 0x3 at 16 MHz and 0xB
-                    at 48 MHz.  The prescaler divides the peripheral clock by
-                    PRESC + 1.  Work out what each of those three settings
-                    divides its clock down to.</p></statement>
-                </task>
-                <task xml:id="act-i2c-timingr-t3">
-                    <statement><p>Now write down the five values for a 12 MHz
-                    peripheral clock, and say where each one came
-                    from.</p></statement>
-                </task>
-                <task xml:id="act-i2c-timingr-t4">
-                    <statement><p>The 100 kHz column of Table 94 says
-                    <c>t_SCLL</c> is 20 × 250 ns and <c>t_SCLH</c> is
-                    16 × 250 ns.  Where does 250 ns come from, and why is it the
-                    same number in all three tables?</p></statement>
-                </task>
-                <task xml:id="act-i2c-timingr-t5">
-                    <statement><p>Now check it against the bus you already have
-                    running.  Put the AD2's cursors on two adjacent SCL rising
-                    edges in your capture and read the period off.  Write down
-                    what you measured, and whether it matches what you just
-                    derived.</p></statement>
-                </task>
-            </activity>
-            <p>
-                Working it through: 8 MHz divided by (0x1 + 1) is 4 MHz;
-                16 MHz divided by (0x3 + 1) is 4 MHz; 48 MHz divided by
-                (0xB + 1) — that is 12 — is 4 MHz.  Every row of every table
-                divides its clock down to the same 4 MHz, and 250 ns is that
-                clock's period.  Everything after the prescaler is counted in
-                units of 250 ns, which is exactly why the other four fields do
-                not change: 20 of them LOW and 16 of them HIGH is 5.0 µs and
-                4.0 µs whatever clock the chip started from.  Those two do not
-                quite add to the 10 µs a 100 kHz clock needs, and the table says
-                why — its own <c>t_SCL</c> row reads <q>~10 µs</q>, footnoted
-                <q>t_SCL is greater than t_SCLL + t_SCLH due to SCL internal
-                detection delay</q>.  The missing microsecond is the peripheral
-                synchronizing to its own clock line, and 10 µs is what you will
-                measure.
-            </p>
-            <p>
-                So PRESC is not a magic constant belonging to a board.  It is
-                <m>f_\text{I2CCLK} / 4\,\text{MHz} - 1</m>, and for our 12 MHz
-                clock it is 2.  There is no 12 MHz table, and we did not need
-                one:
-            </p>
-            <program language="c"><code><![CDATA[
-  // Timing settings: Standard mode (100kHz) with 12MHz I2CCLK
-  I2C1->TIMINGR &= 0x0; // clear timing register
-  I2C1->TIMINGR |= (0x2  << I2C_TIMINGR_PRESC_Pos);
-  I2C1->TIMINGR |= (0x4  << I2C_TIMINGR_SCLDEL_Pos) | (0x2 << I2C_TIMINGR_SDADEL_Pos);
-  I2C1->TIMINGR |= (0xf << I2C_TIMINGR_SCLH_Pos) | (0x13 << I2C_TIMINGR_SCLL_Pos);
-]]></code></program>
-            <p>
-                If you ever move this code to a board running at a different
-                speed, that is the one number to change — and now you know how
-                to work it out rather than looking for a table that may not
-                exist.  The measurement you can make to check it is the one in
-                <xref ref="fig-waveforms-setup"/>: put the cursors on two
-                adjacent SCL rising edges and read 10 µs.
-            </p>
-            <p>
-                That is the whole of initialization.  Pins first, then the
-                peripheral, and one ordering detail in the middle: the timing
-                register may only be written while the peripheral is disabled,
-                so <c>PE</c> is cleared before <c>TIMINGR</c> is touched and set
-                again afterwards.
+                All of that is <c>i2c1_init()</c>, which you have been calling
+                since yesterday.  Pins first, then the peripheral, with one
+                ordering detail in the middle: the timing register may only be
+                written while the peripheral is disabled, so <c>PE</c> is
+                cleared before <c>TIMINGR</c> is touched and set again
+                afterwards.
             </p>
             <program language="c"><code><![CDATA[
 void i2c1_init(void){
@@ -2593,53 +2449,52 @@ void i2c1_init(void){
                 one.  The reference manual calls it <c>GPIOx_AFRH</c>, which is
                 why the field names read <c>GPIO_AFRH_AFSEL8</c>.
             </p>
+            <p>
+                The four <c>TIMINGR</c> lines we will leave alone.  They set how
+                long SCL spends HIGH, how long it spends LOW, and how long the
+                peripheral waits around the edges before it changes or samples
+                SDA, and the values are the ones this board needs at 100 kHz.
+                <xref ref="subsec-i2c-ref-timingr"/> works out where each of them
+                came from, which is worth reading the day you move this code to a
+                board whose clock runs at a different speed.
+            </p>
 
-            <slide xml:id="sl-day9x-timingr-intro">
+            <slide xml:id="sl-day9x-pins" ref="fig-i2c-pins" stack="yes">
     <ul>
-        <li>The last thing the peripheral needs is the clock: how long SCL is HIGH, how long it is LOW, and how long to wait around the edges before changing or sampling SDA. One register, <c>I2C_TIMINGR</c>, five fields: <c>PRESC</c>, <c>SCLL</c>, <c>SCLH</c>, <c>SDADEL</c>, <c>SCLDEL</c>.</li>
-        <li>You are not expected to compute those from the I2C specification's timing requirements. RM0490 &#167;23.4.10 has done it &#8212; three worked examples, one per peripheral clock: 8 MHz, 16 MHz, 48 MHz.</li>
-        <li><term>Our peripheral clock is 12 MHz.</term> There is no table for it. Read the Standard-mode 100 kHz column of all three and work out what to write.</li>
+        <li>I2C1's SCL and SDA come out on several pin pairs; ours is <term>PB8 for SCL and PB9 for SDA</term>, boxed here &#8212; D15 and D14 on the header, where every Arduino-shaped board puts its I2C bus.</li>
+        <li>Getting the peripheral onto the pins is the alternate-function mechanism from the UART: alternate-function mode in <c>MODER</c>, then <em>which</em> one in <c>AFR</c>.</li>
+        <li>The number is in the <term>datasheet</term>, not the reference manual: DS13867 Table 15, <em>Port B alternate function mapping</em>. The PB8 and PB9 rows both name I2C1 under <term>AF6</term>.</li>
     </ul>
+    <caption>Find PB8 and PB9 in the boxed pair, then find their AF6 column in Table 15.</caption>
 </slide>
 
-            <slide xml:id="sl-day9x-timing-tables" ref="fig-i2c-timing-tables">
-    <caption>Tables 94, 95 and 96 — 8, 16 and 48 MHz. Open RM0490 §23.4.10 on your own screen; read the 100 kHz column of each and see what does and does not change.</caption>
-    <note>Three tables stacked will not project legibly at this size, so send them to RM0490 §23.4.10 rather than reading them off the wall. The point is only that there are three of them and none says 12 MHz.</note>
-</slide>
-
-            <slide xml:id="sl-day9x-presc" room="yes">
-    <p><term>Only one field changes.</term> Read the 100 kHz column of each table:</p>
+            <slide xml:id="sl-day9x-opendrain" room="yes">
+    <p><term>And one thing that is new: both pins have to be open-drain.</term> <c>GPIOx_OTYPER</c>, RM0490 &#167;6.4.2 &#8212; 1 is open-drain, 0 (the reset value) is push-pull.</p>
     <program language="c"><code><![CDATA[
-                8 MHz     16 MHz    48 MHz     12 MHz (ours)
-   PRESC        0x1       0x3       0xB            ?
-   SCLL         0x13      0x13      0x13
-   SCLH         0xF       0xF       0xF
-   SDADEL       0x2       0x2       0x2
-   SCLDEL       0x4       0x4       0x4
+GPIOB->OTYPER |= (GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9);
+
+push-pull:    writing 1 drives the pin to 3.3 V, 0 drives it to 0 V
+open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
+              external pull-up sets the level
 ]]></code></program>
     <ul>
-        <li>The prescaler divides the peripheral clock by <term>PRESC + 1</term>. Work out what each of those three settings divides its clock down to.</li>
-        <li>Then: what is PRESC for 12 MHz &#8212; and where did the other four numbers come from, given that they are the same in every table?</li>
+        <li>On this bus that is not a preference: <term>SDA changes hands every ninth bit</term>, and the two ends do not always agree about what it should be.</li>
+        <li><term>Before we look: if both ends were push-pull for that one moment, one driving HIGH and one driving LOW &#8212; what is across that wire?</term></li>
     </ul>
 </slide>
 
-            <slide xml:id="sl-day9x-presc-answer">
-    <p><term>Every table divides down to the same 4 MHz.</term></p>
-    <program language="c"><code><![CDATA[
-   8 MHz / (0x1 + 1) =  8/2  = 4 MHz     -> tick = 250 ns
-  16 MHz / (0x3 + 1) = 16/4  = 4 MHz     -> tick = 250 ns
-  48 MHz / (0xB + 1) = 48/12 = 4 MHz     -> tick = 250 ns
-  12 MHz / (0x2 + 1) = 12/3  = 4 MHz        PRESC = 0x2
+            <slide xml:id="sl-day9x-opendrain-fig" ref="fig-open-drain">
+    <caption>A short circuit. Left: both ends push-pull — 3.3 V straight to ground through two transistors, and nothing decides the level. Right: the same disagreement open-drain — the only path from the supply is the pull-up, and the wire reads LOW.</caption>
+</slide>
 
-  SCLL = 0x13 -> 20 x 250 ns = 5.0 us    SCL LOW
-  SCLH = 0xF  -> 16 x 250 ns = 4.0 us    SCL HIGH    9.0 us ... plus ~1 us
-]]></code></program>
+            <slide xml:id="sl-day9x-opendrain-more">
+    <p><term>What else that buys, and the one number it leaves you.</term></p>
     <ul>
-        <li>Everything after the prescaler is counted in <term>units of 250 ns</term>, which is why the other four fields never change: 20 ticks LOW and 16 HIGH is the same 9.0 µs whatever clock the chip started from.</li>
-        <li>9.0 is not 10 &#8212; and the table says why. Its <c>t_SCL</c> row reads <q>~10 µs</q>, footnoted <q>greater than t_SCLL + t_SCLH due to SCL internal detection delay</q>. That missing microsecond is the peripheral synchronizing to its own clock line, and 10 µs is what you measure.</li>
-        <li>So PRESC is not a constant belonging to a board: it is <term>f_I2CCLK / 4 MHz &#8722; 1</term>. Move this code to a faster board and that is the one number to change.</li>
+        <li>The strongest thing any device can do is pull the line LOW, so two devices disagreeing is never worse than a LOW &#8212; and a device that releases and then reads LOW knows somebody else is pulling. Two more features rest on exactly that, and the Reference section has both: <term>several controllers</term> sharing one bus and sorting out who wins, and a device <term>holding SCL LOW</term> to ask for more time.</li>
+        <li>Pull-ups are typically 5 k&#8486; to 10 k&#8486;, and we fit none &#8212; both devices this course uses carry their own. The value is squeezed from both ends: <term>too small</term> and the device pulling LOW cannot sink enough current to hold the line below threshold; <term>too large</term> and the resistor charges the bus capacitance too slowly to get back up before the next clock edge.</li>
     </ul>
 </slide>
+
 
             <slide xml:id="sl-day9x-init-code" room="compressed">
     <p><term>i2c1_init()</term> &#8212; the pins first, then the peripheral:</p>
@@ -2662,8 +2517,10 @@ void i2c1_init(void){
 ]]></code></program>
     <ul>
         <li><c>AFR[1]</c>, not <c>AFR[0]</c>, for the same reason <c>EXTICR[1]</c> was not <c>EXTICR[2]</c> this week: two registers, pins 0&#8211;7 and pins 8&#8211;15. The manual calls the second one <c>GPIOx_AFRH</c>.</li>
+        <li>The four <c>TIMINGR</c> lines we leave alone: they set how long SCL is HIGH, how long it is LOW, and how long the peripheral waits around the edges, and these are the values this board needs at 100 kHz. The Reference section works out where each came from.</li>
     </ul>
-    <note>Abridged: PB9's MODER and AFR lines are dropped so the function fits legibly. The book carries the full version — say so.</note>
+    <note>Abridged: PB9's MODER and AFR lines are dropped so the function fits legibly. The book carries the full version — say so.
+    TIMINGR is deliberately not taught (Petra, 2026-08-07). If somebody asks where 0x2 comes from, the one-line answer is that the prescaler divides I2CCLK down to 4 MHz and 12/4 − 1 = 2; the derivation and the three RM0490 tables are in Reference.</note>
 </slide>
         </subsection>
         <subsection xml:id="subsec-day9x-library">
@@ -3833,6 +3690,66 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 still uses <q>master</q> and <q>slave</q> where this course says
                 controller and target, so <c>SADD</c> is documented as the
                 <q>slave address</q> field.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-i2c-ref-timingr">
+            <title>Where the TIMINGR Numbers Come From</title>
+            <p>
+                <c>i2c1_init()</c> writes four values into <c>I2C_TIMINGR</c> and
+                Day 10 takes them as given.  This is where they come from, for
+                anyone moving the code to a board whose clock runs at a different
+                speed.
+            </p>
+            <p>
+                The register holds five fields — <c>PRESC</c>, <c>SCLL</c>,
+                <c>SCLH</c>, <c>SDADEL</c> and <c>SCLDEL</c> — and between them
+                they set how long SCL spends HIGH, how long it spends LOW, and
+                how long the peripheral waits around the edges before changing or
+                sampling SDA.  You are not expected to compute them from the I2C
+                specification's timing requirements: the reference manual has
+                already done it, for a set of common peripheral clock
+                frequencies, in <em>RM0490 §23.4.10, I2C_TIMINGR register
+                configuration examples</em>
+                (<xref ref="fig-i2c-timing-tables"/>).  Ours is 12 MHz, and
+                there is no table for it.
+            </p>
+            <figure xml:id="fig-i2c-timing-tables">
+                <caption>The three worked examples in RM0490 §23.4.10: Table 94
+                for a peripheral clock of 8 MHz, Table 95 for 16 MHz and Table 96
+                for 48 MHz.  Read down the Standard-mode 100 kHz column of each.
+                SCLL is 0x13, SCLH is 0xF, SDADEL is 0x2 and SCLDEL is 0x4 in all
+                three; the only field that changes with the clock is PRESC, which
+                is 0x1, 0x3 and 0xB.  There is no table for 12 MHz.</caption>
+                <image source="images/Day09X-I2C/i2c_timing_8mhz.png" width="88%"/>
+                <image source="images/Day09X-I2C/i2c_timing_16mhz.png" width="88%"/>
+                <image source="images/Day09X-I2C/i2c_timing_48mhz.png" width="88%"/>
+            </figure>
+            <p>
+                The prescaler divides the peripheral clock by <c>PRESC</c> + 1,
+                so 8 MHz divided by (0x1 + 1) is 4 MHz; 16 MHz divided by
+                (0x3 + 1) is 4 MHz; and 48 MHz divided by (0xB + 1) — that is 12
+                — is 4 MHz.  Every table divides its clock down to the same
+                4 MHz, and 250 ns is that clock's period.  Everything after the
+                prescaler is counted in units of 250 ns, which is why the other
+                four fields do not change from table to table: 20 of them LOW and
+                16 of them HIGH is 5.0 µs and 4.0 µs whatever clock the chip
+                started from.
+            </p>
+            <p>
+                Those two do not quite add to the 10 µs a 100 kHz clock needs,
+                and the table says why — its own <c>t_SCL</c> row reads
+                <q>~10 µs</q>, footnoted <q>t_SCL is greater than t_SCLL +
+                t_SCLH due to SCL internal detection delay</q>.  The missing
+                microsecond is the peripheral synchronizing to its own clock
+                line, and 10 µs is what the AD2 measures between two adjacent SCL
+                rising edges.
+            </p>
+            <p>
+                So <c>PRESC</c> is not a constant belonging to a board.  It is
+                <m>f_\text{I2CCLK} / 4\,\text{MHz} - 1</m>, which for a 12 MHz
+                clock is 2 — and that is the one number to change if this code
+                moves.  The other four are copied from any of the three tables.
             </p>
         </subsection>
 
