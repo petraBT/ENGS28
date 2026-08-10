@@ -1896,8 +1896,17 @@ void tim14_init(void) {
                 internal RC (resistor-capacitor) oscillator and timing generator sweep that grid from
                 the RAM, continuously and without any further instruction.  The
                 key-scan and key-data blocks belong to the chip's other features,
-                reading a keypad matrix, which we do not use.</caption>
-                <image source="images/Day10-I2C(2)/ht16k33_block.svg" width="70%"/>
+                reading a keypad matrix, which we do not use.
+                The annotations name four groups.  In blue on the left, the two
+                I2C pins.  In magenta, the display RAM — the data registers, two
+                bytes of eight bits for each COM line.  In orange, the control
+                registers, which are what the command table configures: display
+                or keypad, digits or LED matrix, brightness and blinking.  And in
+                dark red on the right, the pins our display actually uses — five
+                COM outputs, four for the digits and one for the colon, and eight
+                ROW outputs, seven digit segments and the decimal
+                point.</caption>
+                <image source="images/Day10-I2C(2)/ht16k33_block_annotated.png" width="95%"/>
             </figure>
 
             <slide xml:id="sl-day10-grid" ref="fig-four-digit-wiring" stack="yes">
@@ -1999,17 +2008,18 @@ void tim14_init(void) {
                     </p>
                 </introduction>
                 <task xml:id="act-i2c-cmd-t1">
-                    <statement><p>System setup is <c>0b0010XXXS</c>.  What byte
-                    turns the oscillator on?</p></statement>
+                    <statement><p>System setup is <c>0b0010 X X X S</c>.  What
+                    byte turns the oscillator on?</p></statement>
                 </task>
                 <task xml:id="act-i2c-cmd-t2">
-                    <statement><p>Display setup is <c>0b1000XB1B0D</c>.  What
-                    byte turns the display on and not blinking?  What byte would
-                    turn it on and blinking at 1 Hz?</p></statement>
+                    <statement><p>Display setup is
+                    <c>0b1000 X B1 B0 D</c>.  What byte turns the display on and
+                    not blinking?  What byte would turn it on and blinking at
+                    1 Hz?</p></statement>
                 </task>
                 <task xml:id="act-i2c-cmd-t3">
-                    <statement><p>Dimming set is <c>0b1110P3P2P1P0</c>.  What
-                    byte gives full brightness?  Half?</p></statement>
+                    <statement><p>Dimming set is <c>0b1110 P3 P2 P1 P0</c>.
+                    What byte gives full brightness?  Half?</p></statement>
                 </task>
                 <task xml:id="act-i2c-cmd-t4">
                     <statement><p>All three are one-byte writes to the device.
@@ -2103,8 +2113,26 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 means writing its <term>display RAM</term>, and we'll read that
                 RAM's layout off the datasheet slowly, because everything in the
                 rest of the session is built on it
-                (<xref ref="fig-display-ram-map"/>).
+                (<xref ref="fig-display-ram-map"/>).  Before that,
+                <xref ref="fig-backpack-com-row"/> is the piece that connects the
+                display we took apart in the last part to the bytes we are about
+                to send: which of the chip's outputs each digit and each segment
+                is wired to.
             </p>
+            <figure xml:id="fig-backpack-com-row">
+                <caption>How the display's fourteen pins reach the HT16K33, and
+                what that means for the buffer you fill in.  Every LED sits where
+                one COM line crosses one ROW line: the COM line is which digit,
+                and the ROW line is which segment.  Our display uses COM0 through
+                COM4 — digit 1, digit 2, the colon, digit 3, digit 4 — and ROW0
+                through ROW7, which are <c>a</c> through <c>g</c> and the decimal
+                point.  So bit <m>k</m> of the byte at display RAM address
+                <m>2n</m> is the LED where COM<m>n</m> crosses ROW<m>k</m>.  The
+                colon is the one row that is not a full digit: its two dots share
+                a single anode, which the breakout board ties to ROW1, the same
+                line the <c>b</c> segments use.</caption>
+                <image source="images/Day10-I2C(2)/backpack_com_row_map.svg" width="100%"/>
+            </figure>
             <figure xml:id="fig-display-ram-map">
                 <caption>The HT16K33's display RAM, from its datasheet: sixteen
                 bytes, two per common line.  The left column names the common
@@ -2117,13 +2145,16 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 gives the bit order within a byte: the upper row is the even
                 address, D7 down to D0 mapping to ROW7 down to ROW0, and the
                 lower one is the odd address, mapping to ROW15 down to ROW8.
-                The box around COM0's
-                pair is digit 1's two bytes, and the box around the 6 marks bit 6,
-                which is segment <c>g</c>.  A seven-segment digit uses only the first
+                The arrows mark which COM line
+                is which position on the display, and the box around COM0's pair
+                is digit 1's two bytes.  A seven-segment digit uses only the first
                 eight rows, so for us the second byte of every pair is always 0 —
-                and so only the even addresses 0x00, 0x02, 0x04, 0x06 and 0x08 are the
-                five that carry anything.</caption>
-                <image source="images/Day10-I2C(2)/display_ram_map.svg" width="55%"/>
+                and so only the even addresses 0x00, 0x02, 0x04, 0x06 and 0x08 are
+                the five that carry anything.  The segment map on the left is the
+                same one you used yesterday, with <c>g</c> highlighted to match
+                the boxed 6 in the bit-order table: bit 6 of a digit's byte is
+                segment <c>g</c>.</caption>
+                <image source="images/Day10-I2C(2)/ht16k33_ram_map_annotated_cropped.png" width="100%"/>
             </figure>
             <p>
                 Note the name clash before going further: the datasheet's
@@ -2179,12 +2210,55 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 <c>display_buffer[2]</c>.
             </p>
             <p>
-                Two questions the paper exercise raises.  <em>What lights the
-                colon?</em>  It is the pair at address 4, and which bit within it
-                is not on the datasheet pages we have — that one is worth
-                finding by experiment, and the clock in tonight's homework needs
-                it.  And <em>why send the zeros at all,</em> if the second byte
-                of every pair does nothing?
+                That leaves two questions.  The first is <em>what lights the
+                colon?</em>  We know it is the pair at address 4, because that is
+                COM2, but which bit within that byte is not on the datasheet
+                pages we have.  It is worth two minutes of experiment, and
+                tonight's clock needs the answer.
+            </p>
+            <activity xml:id="act-i2c-find-colon">
+                <title>Find the Colon Bit</title>
+                <introduction>
+                    <p>
+                        Work on a copy of <c>writeFirstDigit.c</c>, with
+                        <c>display_subaddr</c> set to 4.
+                    </p>
+                </introduction>
+                <task xml:id="act-i2c-colon-t1">
+                    <statement><p>Before you flash anything: the colon has two
+                    dots and they always light together, so the display brings
+                    them out on one anode pin.  That pin has to be tied to one of
+                    the eight the backpack drives.  Which of <c>a</c> through
+                    <c>DP</c> would you bet on, and why?</p></statement>
+                </task>
+                <task xml:id="act-i2c-colon-t2">
+                    <statement><p>Now find it.  Set <c>digit_data</c> to
+                    <c>0b00000001</c>, flash, and look; then <c>0b00000010</c>,
+                    then <c>0b00000100</c>, and so on up.  Which bit lights the
+                    colon?</p></statement>
+                </task>
+                <task xml:id="act-i2c-colon-t3">
+                    <statement><p>Write down the number you would put in
+                    <c>display_buffer[4]</c> to show the colon, and keep it —
+                    tonight's clock is <c>MM:SS</c>.</p></statement>
+                </task>
+            </activity>
+            <instructor>
+                <p>
+                    The colon is <term>bit 1</term> of the byte at address 4, so
+                    <c>display_buffer[4] = 0b00000010;</c> lights it.  The reason
+                    is worth giving once they have found it: the display's colon
+                    anode is tied to the same backpack output as the <c>b</c>
+                    segments, ROW1, which is why the bit that lights the colon is
+                    the bit that would light <c>b</c> in a digit.  The Adafruit
+                    backpack's schematic shows the joint; the HT16K33 datasheet
+                    on its own cannot, because the tie is on the breakout board
+                    rather than in the chip.
+                </p>
+            </instructor>
+            <p>
+                The second question is <em>why send the zeros at all,</em> if the
+                second byte of every pair does nothing?
             </p>
             <p>
                 The answer to the second question lies in the structure of the display RAM of
@@ -2220,6 +2294,11 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 9.  Each byte is acknowledged, and one STOP ends the whole transaction.</caption>
                 <image source="images/Day10-I2C(2)/ht16k33_page_write.svg" width="95%"/>
             </figure>
+
+            <slide xml:id="sl-day10-com-row" ref="fig-backpack-com-row">
+    <caption>Every LED sits where one COM line crosses one ROW line. COM is which digit; ROW is which segment. So bit k of the byte at address 2n is the LED where COMn crosses ROWk.</caption>
+    <note>This is the bridge from the display's own wiring to the buffer they are about to fill. The colon row is the one worth pointing at: one LED pair, on ROW1, which is why finding its bit is an experiment rather than a lookup.</note>
+</slide>
 
             <slide xml:id="sl-day10-ram" ref="fig-display-ram-map">
     <ul>
@@ -2501,7 +2580,6 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
             <activity xml:id="act-i2c-five-operations">
                 <title>What Five Things Does the Library Have to Do?</title>
                 <introduction>
-                    <!-- check-rules: allow L-1  (Petra's own wording, 2026-08-08 hand pass) -->
                     <p>
                         Work individually first, then compare your list with your table group.  Think about
                         what a transaction consists of and what a program has
@@ -2654,6 +2732,24 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
                 <xref ref="fig-i2c-cr2"/> shows where those five fields sit in
                 the register.
             </p>
+            <figure xml:id="fig-i2c-cr2">
+                <caption>I2C control register 2, from RM0490 §23.7.2, with the
+                five fields the course's library writes boxed.  In the lower row,
+                <c>SADD[9:0]</c> holds the address; <c>RD_WRN</c> is the transfer
+                direction, 0 for a write and 1 for a read; and <c>START</c> is
+                the bit whose being written is what puts a START condition on the
+                wire.  In the upper row, <c>NBYTES[7:0]</c> is how many data
+                bytes this transaction will carry, and <c>AUTOEND</c> makes the
+                hardware issue the STOP by itself once they have gone.  The
+                remaining fields — <c>NACK</c>, <c>HEAD10R</c>, <c>ADD10</c>,
+                <c>RELOAD</c> and <c>PECBYTE</c> — belong to target mode, 10-bit
+                addressing, transfers longer than 255 bytes, and SMBus, none of
+                which this course uses.  <c>STOP</c> is the exception: it is a
+                controller bit, and it is how software ends a transfer itself
+                when <c>AUTOEND</c> is clear.</caption>
+                <image source="images/Day09X-I2C/i2c_cr2.svg" width="95%"/>
+            </figure>
+
             <p>
                 Notice the <c>=</c>, and the comment on it.  The habit from the
                 timer chapter —
@@ -2731,6 +2827,11 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
         <li>Five fields describe the <term>entire transaction before any of it happens</term>: <em>who</em> (the address, shifted into SADD), <em>which direction</em> (RD_WRN, 0 here), <em>how many bytes</em> (NBYTES), <em>what to do at the end</em> (AUTOEND), and <em>go</em> (START).</li>
         <li>Writing that last bit is what puts the START on the wire. Everything you watched on the oscilloscope followed from this one line.</li>
     </ul>
+</slide>
+
+            <slide xml:id="sl-day10-cr2-fig" ref="fig-i2c-cr2">
+    <caption>The five boxed fields are the whole of that one assignment. SADD holds the address in bits 7 down to 1, which is what the <c>&lt;&lt;1</c> is for; RD_WRN is the direction; NBYTES is how many data bytes; AUTOEND lets the hardware send the STOP; and writing START is what starts the transaction.</caption>
+    <note>Worth pausing on SADD: the address sits in bits 7:1 and bit 0 is a don't-care here, because the direction comes from RD_WRN rather than from the bottom bit. That is the register-level version of the 0x70-vs-0xE0 thing they worked out yesterday.</note>
 </slide>
 
             <slide xml:id="sl-day10-cr2-assign">
@@ -3843,25 +3944,10 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
             <p>
                 One assignment to <c>I2C_CR2</c> describes an entire
                 transaction, which is why it is the register the library writes
-                most (<xref ref="fig-i2c-cr2"/>).
+                most.  The register is drawn in <xref ref="fig-i2c-cr2"/>, beside
+                the code that writes it; what follows here is the detail that
+                would not fit there.
             </p>
-            <figure xml:id="fig-i2c-cr2">
-                <caption>I2C control register 2, from RM0490 §23.7.2, with the
-                five fields the course's library writes boxed.  In the lower row,
-                <c>SADD[9:0]</c> holds the address; <c>RD_WRN</c> is the transfer
-                direction, 0 for a write and 1 for a read; and <c>START</c> is
-                the bit whose being written is what puts a START condition on the
-                wire.  In the upper row, <c>NBYTES[7:0]</c> is how many data
-                bytes this transaction will carry, and <c>AUTOEND</c> makes the
-                hardware issue the STOP by itself once they have gone.  The
-                remaining fields — <c>NACK</c>, <c>HEAD10R</c>, <c>ADD10</c>,
-                <c>RELOAD</c> and <c>PECBYTE</c> — belong to target mode, 10-bit
-                addressing, transfers longer than 255 bytes, and SMBus, none of
-                which this course uses.  <c>STOP</c> is the exception: it is a
-                controller bit, and it is how software ends a transfer itself
-                when <c>AUTOEND</c> is clear.</caption>
-                <image source="images/Day09X-I2C/i2c_cr2.svg" width="95%"/>
-            </figure>
             <p>
                 <c>SADD</c> is the field with the trap in it.  The manual is
                 exact: in 7-bit addressing mode, <q>SADD[7:1] must be written
@@ -3983,8 +4069,10 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
             </p>
             <p>
                 <c>i2c1_memWrite()</c> and <c>i2c1_memRead()</c> follow the
-                same pattern with a larger <c>NBYTES</c> and the register address
-                sent first.  Worth knowing what <c>i2c1_memRead()</c> does
+                same pattern with the register address sent first — which is why
+                <c>i2c1_memWrite()</c> programs <c>NBYTES</c> as
+                <c>nbytes + 1</c>, counting the register address as one of the
+                bytes it is about to send.  Worth knowing what <c>i2c1_memRead()</c> does
                 <em>not</em> do: both of its <c>I2C_CR2</c> writes set
                 <c>AUTOEND</c>, so the register address is followed by a STOP and
                 the read begins with a fresh START, rather than with the repeated

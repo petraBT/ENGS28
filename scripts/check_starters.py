@@ -15,6 +15,13 @@ commentary can grow freely and a real edit to one side cannot drift silently.
 
 Add a pair by listing it in STARTERS: the starter file, the chapter, and a
 snippet that appears in the matching <program> block (and nowhere earlier).
+
+Some starters are LIBRARIES the book only ever quotes in part -- i2c.c is
+printed as i2c1_init() in full and as the sending half of i2c1_byteWrite().
+Those go in FRAGMENTS instead, which compares one function of the file against
+one <program> block.  This exists because a claim about i2c1_memRead() reached
+a committee review having been reconstructed from a 2023 lecture deck rather
+than read off the file, and was wrong.
 """
 
 import re
@@ -42,6 +49,31 @@ STARTERS = [
     ("assets/starters/SevenSegPartial.c", "source/ch-i2c.ptx",
      "TODO 4 -- one call."),
 ]
+
+# (starter file, function name in it, chapter, marker in the <program> block)
+# For libraries the book quotes function by function rather than whole.
+FRAGMENTS = [
+    ("assets/starters/i2c.c", "i2c1_init", "source/ch-i2c.ptx",
+     "RCC->IOPENR |= RCC_IOPENR_GPIOBEN;"),
+]
+
+
+def function_body(text, name):
+    """The lines of one C function definition, brace-matched."""
+    m = re.search(r"^[A-Za-z_][\w \*]*\b" + re.escape(name) + r"\s*\([^)]*\)\s*\{",
+                  text, flags=re.M)
+    if not m:
+        return None
+    depth, i = 0, m.end() - 1
+    while i < len(text):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[m.start():i + 1]
+        i += 1
+    return None
 
 
 def code_only(text):
@@ -85,6 +117,32 @@ def main():
 
         problems += 1
         print(f"  DRIFT  {rel_starter} vs {rel_chapter}")
+        import difflib
+        for line in difflib.unified_diff(want, got, "book", "starter",
+                                         lineterm="", n=1):
+            if line.startswith(("+", "-")) and not line.startswith(("+++", "---")):
+                print(f"        {line}")
+
+    for rel_starter, func, rel_chapter, marker in FRAGMENTS:
+        starter = os.path.join(REPO, rel_starter)
+        chapter = os.path.join(REPO, rel_chapter)
+        if not os.path.exists(starter):
+            print(f"  MISSING  {rel_starter}")
+            problems += 1
+            continue
+        block = listing(open(chapter).read(), marker)
+        real = function_body(open(starter).read(), func)
+        if block is None or real is None:
+            print(f"  NO LISTING  {rel_starter}:{func}()")
+            problems += 1
+            continue
+        want, got = code_only(block), code_only(real)
+        if want == got:
+            print(f"  ok  {rel_starter}:{func}()  ({len(got)} code lines match "
+                  f"{os.path.basename(rel_chapter)})")
+            continue
+        problems += 1
+        print(f"  DRIFT  {rel_starter}:{func}() vs {rel_chapter}")
         import difflib
         for line in difflib.unified_diff(want, got, "book", "starter",
                                          lineterm="", n=1):

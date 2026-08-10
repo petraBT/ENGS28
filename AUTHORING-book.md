@@ -611,7 +611,7 @@ them; ask.
 
 | ID | Rule |
 | --- | --- |
-| **L-1** | Never write "working in pairs", "work individually", or "before you leave". Grouping is given verbally. |
+| **L-1** | Never write "working in pairs", "with your partner", or "before you leave". *Assigning* a grouping is given verbally, and so is end-of-class timing. Sequencing a student's own work is fine and is hers: "Work individually first, then compare your list with your table group" (2026-08-10). |
 | **L-2** | No `%f` in printf examples — float printing is off by default and the STM32C031C6 has no floating-point hardware (Lab 4 Appendix A shows the setting that enables it). Scale to integers and print with `%d`. Where the caveat itself is being taught, mark the element `check-rules: allow L-2`. |
 | **L-3** | No "gate" language for clocks. "Enable the clock", "until its clock is enabled" — not "open the gate". |
 | **L-4** | "Prototypes", never "forward declarations". |

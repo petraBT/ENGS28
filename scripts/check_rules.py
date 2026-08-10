@@ -25,7 +25,10 @@ NUMBER_WORDS = {
 
 # (id, regex, message, severity)
 RULES = [
-    ("L-1", r"\bworking in pairs\b|\bwork individually\b|\bbefore you leave\b",
+    # L-1 narrowed 2026-08-10: Petra keeps "Work individually first, then
+    # compare", which sequences the student's OWN work.  What stays banned is
+    # assigning a grouping, and end-of-class timing.
+    ("L-1", r"\bworking in pairs\b|\bwith your (partner|pair)\b|\bbefore you leave\b",
      "grouping/timing language — given verbally, never written", "error"),
     ("L-2", r"%[-+ #0-9.]*f\b",
      "%f in printf — the course printf has no floating point; scale to int and use %d",
