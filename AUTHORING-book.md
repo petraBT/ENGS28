@@ -113,10 +113,22 @@ progression**. This is a legitimate, intended divergence between the two.
 
 ### P-10 An instructor solution for every coded activity
 
-Every activity that asks students to write code has a corresponding solution
-authored as an instructor-only slide (`"instructor": true`). No exceptions —
-including open-ended design activities, which get a *worked example* solution even
-though student answers will differ.
+Every activity that asks students to write code has a corresponding solution. No
+exceptions — including open-ended design activities, which get a *worked example*
+solution even though student answers will differ.
+
+**The solution is never in the student book.** There are two places it may live,
+and they are not interchangeable:
+
+| Where | How | For |
+| --- | --- | --- |
+| the deck | a `<slide>` whose deck entry is `"instructor": true` | a reveal projected in class after the activity |
+| the book | inside an `<instructor>` element | the worked answer, for your own copy — see *Instructor-only content in the book* at the end of this file |
+
+Code a student or a lab is meant to produce goes in `<instructor>` **even when
+the class works through it together**, because the book outlives the hour. A
+derivation the room does jointly — building `0x21` out of the command table — is
+teaching, not a solution, and stays.
 
 ### P-11 Datasheet literacy is an early, recurring thread
 
