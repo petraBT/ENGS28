@@ -12,37 +12,30 @@
     <title>I2C: A Two-Wire Bus, and a Display Driver</title>
     <introduction>
         <p>
+            The goal of this chapter is to communicate with and control a four-digit seven-segment display via our microcontroller.
             A four-digit seven-segment display has 34 LEDs in it.  Wiring one
             pin to each is not an option on a board whose Arduino headers carry
-            22 pins in total, and one of those is already committed to the
-            potentiometer.  The way out is a bus: two wires, shared by every
-            device on them, with each device answering to an address.  That bus
-            is <term>I2C</term> — Inter-Integrated Circuit, also written I<sup>2</sup>C
+            22 pins in total. The answer is to use a communication protocol that uses fewer wires and is still able to address all of the LEDs. A common such protocol is <term>I2C</term> — Inter-Integrated Circuit, also written I<sup>2</sup>C
             and also called TWI, the Two-Wire Interface — and it is how a
             microcontroller talks to most of the small parts around it.
+            This protocol uses only two wires, shared by every
+            device on them, with each device answering to an address. 
         </p>
         <p>
             This chapter covers two class days.  We'll use the display first
-            and build its driver afterwards, which is the order this course
-            usually takes.  The first day is the shorter one, and it starts
-            with wiring: your own display is showing characters, driven from
-            your own board over two wires, before the protocol is explained at
-            all.  The rest of that day is spent working out what those two
-            wires carried, with an oscilloscope on them.  The protocol is built in
-            class, and written out afterwards in
-            <xref ref="sec-i2c-reference"/>.
+            and build its driver afterwards. We'll start by wiring the display and flashing a short program to the microcontroller that'll show some characters on the display.
+            We'll then use the AD2 oscilloscope to analyze the signals those two
+            wires carried in order to understand the I2C protocol. Section
+            <xref ref="sec-i2c-reference"/> contains details on the I2C protocol.
         </p>
         <p>
-            The second day is everything underneath.  At the far end of the bus
-            is the display's controller chip, the HT16K33, whose datasheet is
-            four pages of command table and RAM map; at our end is the
-            STM32C031C6's I2C1 peripheral and the two pins it reaches the wires
-            through.  By the end of that hour you have written the
+            The second day is dedicated to understanding how the seven-segment display, and in particular the controller chip, the HT16K33, that comes with it, takes commands.  We'll look at the controller's datasheet, which shows both a command table and a RAM map; we'll also look at the
+            STM32C031C6's I2C1 peripheral and the two pins through which it reaches the wires.  You'll write the
             <term>device driver</term> that turns those datasheet pages into
-            four functions the rest of your program can call.  It is the same
-            kind of layer this course has been handing you all term, except that
-            <c>uart.c</c> and <c>adc.c</c> are interface drivers and this one
-            sits on top of them — and this is the one you write yourself.  The
+            four functions the rest of your program can call to control the display.  It is the same
+            kind of layer we have been handing you all term, except that
+            <c>uart.c</c> and <c>adc.c</c> are interface drivers (as is <c>i2c.c</c>) and this one
+            sits on top of them.  The
             chapter's one reading comes between the two days, and covers the
             display.
         </p>
@@ -59,9 +52,8 @@
                     happen on the wire if it were not.</li>
                 <li>Given a datasheet that states a device address ambiguously,
                     work out what to pass to <c>i2c1_byteWrite()</c>.</li>
-                <li>Explain why a four-digit display needs 14 wires and
-                    time-division multiplexing, and what the backpack does with
-                    them.</li>
+                <li>Explain how a four-digit seven-segment display can be operated via 14 wires and
+                    time-division multiplexing, and how the backpack controller chip accomplishes this.</li>
                 <li>Construct the HT16K33's initialization bytes from its
                     command table, and write a byte pattern that produces a
                     chosen character.</li>
@@ -92,10 +84,7 @@
             </p>
             <p>
                 The program we'll flash calls three functions out of a library
-                we have not read, and we'll go through what they do tomorrow.
-                We do this deliberately: we ran Blinky before we explained a
-                single register, and using a thing before opening it up works
-                well as long as we do open it up afterwards.
+                we'll hand to you and we'll go through what they do tomorrow.
             </p>
         </introduction>
 
@@ -105,7 +94,7 @@
                 <xref ref="fig-display-photo"/> is the display we are going to
                 drive: four digits, each with seven segments and a decimal
                 point, plus a colon between the middle two.  Before reading on,
-                write down two numbers.  How many LEDs is that?  And if each one
+                write down two numbers.  How many LEDs are in this display?  And if each one
                 had its own pin on the STM32C031C6, how many pins would that
                 take?
             </p>
@@ -123,7 +112,7 @@
             <p>
                 The count is 4 × 7 segments = 28, plus one decimal point per
                 digit = 32, plus the colon's two dots = <term>34 LEDs</term>.
-                One pin each is 34 pins.  The Nucleo's Arduino headers carry <term>22</term> pins &#8212; more are available via the morpho connectors, but using up 34 pins is clearly not a viable solution.
+                One pin each, except the two dots in the colon which share a pin, comes to 33 pins.  The Nucleo's Arduino headers carry <term>22</term> pins &#8212; more are available via the morpho connectors, but using up 33 pins is clearly not a viable solution.
             </p>
             <p>
                 We'll wire the display with just <term>four wires</term>: power, ground, and the two wires of an I2C (Inter-Integrated Circuit) bus.  A separate chip on the
@@ -144,10 +133,10 @@
 </slide>
 
             <slide xml:id="sl-day9x-count-answer">
-    <p><term>Each LED needs a pin and a ground wire, and the board does not have 34 pins to spare.</term></p>
+    <p><term>Each LED needs a pin and a ground wire, and the board does not have 33 pins to spare.</term></p>
     <ul>
-        <li>4 digits &#215; 7 segments = 28, plus one decimal point per digit = 32, plus the colon's two dots = <term>34</term>.</li>
-        <li>The Nucleo's Arduino headers carry <term>22</term> pins &#8212; more are available via the morpho connectors, but using up 34 pins is clearly not a viable solution.</li>
+        <li>4 digits &#215; 7 segments = 28, plus one decimal point per digit = 32, plus the colon's two dots = <term>34</term> LEDs. The two dots for the colon are always lit together, so they can share a wire, reducing the total to 33 needed pins.</li>
+        <li>The Nucleo's Arduino headers carry <term>22</term> pins &#8212; more are available via the morpho connectors, but using up 33 pins is clearly not a viable solution.</li>
         <li>We'll wire the display with just <term>four wires</term>: power, ground, and the two wires of an I2C (Inter-Integrated Circuit) bus. A separate chip underneath the display &#8212; a <term>backpack</term> &#8212; takes commands from the STM32C0 over those two I2C wires via a special protocol and drives all 34 LEDs itself.</li>
         <li>We'll talk about the I2C protocol today and will examine how to talk to the backpack chip tomorrow.</li>
     </ul>
@@ -167,11 +156,7 @@
                 <c>C</c> (<xref ref="fig-backpack-pins"/>).  The backpack's pin
                 header plugs into the breadboard, so each of the four wires goes
                 into the breadboard column that pin lands in.  <c>+</c> goes to
-                the Nucleo's <term>3.3 V</term> pin, not the 5 V pin beside it.
-                The backpack's pull-up resistors tie SDA (serial data) and SCL
-                (serial clock) to <em>whatever you feed its <c>+</c> pin</em>,
-                so its supply is also the voltage that ends up on the two
-                signal wires, and this bus is built to sit at 3.3 V throughout.
+                your breadboard's power rail (which is fed by the Nucleo's 3.3 V pin), <c>-</c> to ground.
             </p>
             <p>
                 I2C needs pull-up resistors on SCL and SDA.  The backpack has
@@ -204,9 +189,8 @@
                 D15 on the Arduino header.  We'll see tomorrow why those two
                 pins and not others.
                 <xref ref="fig-display-wiring"/> also shows the AD2 tapping the
-                same two wires; leave that until
-                <xref ref="subsec-day9x-protocol"/> and get the four wires in
-                first.
+                same two wires; we'll use the AD2 later in
+                <xref ref="subsec-day9x-protocol"/>.
             </p>
             <figure xml:id="fig-display-wiring">
                 <caption>The full setup: Nucleo, display backpack and AD2 on one
@@ -221,7 +205,7 @@
             </figure>
             <p>
                 The program is <c>helloDisplay.c</c>, and it is short because
-                everything hard is inside the library.  Read it before you flash
+                it uses the <c>i2c.c</c> library that we'll provide.  Read it before you flash
                 it to see its shape — we'll go through every line on Thursday.
                 It sends the display three commands to wake it up, then ten
                 bytes of data, and then a loop keeps one short transaction
@@ -272,9 +256,7 @@ int main(void) {
 }
 ]]></code></program>
             <p>
-                The three one-byte writes are commands to the HT16K33, and they
-                are given here rather than derived, because deriving them needs
-                the datasheet's command table, which we'll open on Thursday.  What is
+                The three one-byte writes before the loop are commands to the HT16K33 (we'll understand them in more detail tomorrow).  What is
                 worth knowing now is the order.  The first of the three turns
                 the chip's oscillator on, and until it is running the HT16K33
                 accepts everything you send it and drives nothing at all — a
@@ -291,7 +273,7 @@ int main(void) {
             <p>
                 Then the loop, whose job is not to change anything.  The display
                 is already showing what it is going to show; the loop just keeps
-                something on the bus to look at.  I2C has no way to address a
+                something on the bus for us to look at with the oscilloscope.  I2C has no way to address a
                 device without also sending it something, so the shortest thing
                 you can put on the wire is a one-byte write, and the value does
                 not matter here.  The <c>delay_ms(250)</c> makes that happen once
@@ -312,7 +294,7 @@ int main(void) {
                     <c>mylib</c> folder, beside <c>uart.c</c>.</p></statement>
                 </task>
                 <task xml:id="act-i2c-hello-t3">
-                    <statement><p>Copy <c>TemplateProject</c> to a new project
+                    <statement><p>Copy your <c>TemplateProject</c> to a new project
                     named <c>SevenSegI2CFirstSteps</c>, put
                     <c>helloDisplay.c</c> in its <c>Src</c> folder, and build
                     and flash.  If the build fails, double-check that you have <c>i2c.c</c> and <c>i2c.h</c> in
@@ -332,7 +314,7 @@ int main(void) {
             <ol>
                 <li>The four wires.  Re-seat all of them against
                     <xref ref="fig-display-wiring"/>: <c>+</c> on the
-                    <term>3.3 V</term> pin and not the 5 V pin beside it,
+                    3.3 V pin,
                     <c>−</c> on GND, <c>D</c> on PB9 and <c>C</c> on PB8.
                     <c>D</c> and <c>C</c> swapped is the one that is hardest to
                     see and easiest to do.</li>
@@ -340,11 +322,11 @@ int main(void) {
                     <c>i2c1_byteWrite()</c> waits for a flag the hardware does
                     not set when nobody acknowledges, so the very first call
                     never returns and none of the rest of the program runs.
-                    From where you are sitting that looks the same as a display
-                    that was never sent anything — which is why the wires come
-                    first and the code does not.
+                    This will look the same as a display
+                    that was never sent anything — which is why correct wiring is the
+                    first thing to check.
                     <xref ref="subsec-i2c-ref-library"/> has the detail, and on
-                    Thursday we'll make it happen on purpose.</li>
+                    Thursday we'll observe what actually happens when you try to talk to a device that's not answering.</li>
                 <li>Still stuck?  We're here to help!</li>
             </ol>
 
@@ -426,7 +408,7 @@ int main(void) {
                 to read afterwards.
             </p>
             <p>
-                Start with the one you have met before.  The UART sends a byte
+                Recall the UART, which is another communication protocol that uses 2 wires only.  The UART sends a byte
                 down a wire, and the receiver recovers the bits by starting a
                 timer at the start bit and sampling on a schedule <em>both ends
                 were configured for in advance</em> — the baud rate.  Nothing on
@@ -434,12 +416,12 @@ int main(void) {
                 end and the frame comes out as garbage.
             </p>
             <p>
-                I2C spends a wire to make that agreement go away
+                I2C uses up one of the two wires to make that agreement go away
                 (<xref ref="fig-uart-vs-i2c"/>).  The controller drives a
                 <term>clock</term> line, <term>SCL</term>, alongside the data
                 line, <term>SDA</term>, and every device on the bus reads SDA
                 while SCL is HIGH.  No device has to know in advance how fast
-                the bits will arrive, because the wire tells it.  That is what
+                the bits will arrive, because the clock wire tells it.  That is what
                 <term>synchronous</term> means here: the clock is shared, not
                 reconstructed independently at each receiver.
             </p>
@@ -483,7 +465,7 @@ int main(void) {
                 target only speaks when spoken to.
             </p>
             <p>
-                That address is the <c>HT16K33_ADDR</c> you have just flashed,
+                Our target is the display's backpack chip, and its address is <c>HT16K33_ADDR</c> (0x70),
                 and it is the first thing you will find on the wire.
             </p>
             <p>
@@ -574,19 +556,17 @@ int main(void) {
 
             <p>
                 One question is left: if SDA is the line carrying the bits, how
-                does a device tell a START from an ordinary 1 going by?
+                does a device tell a START from an ordinary 0 going by?
             </p>
             <p>
-                There is one rule:
-                <term>SDA is allowed to change only while SCL is LOW</term> —
-                the only exceptions being the START and STOP conditions
-                described below.
-                That is when no receiver is sampling it; while SCL is HIGH, SDA
-                holds still and is read.  The protocol then takes the one thing
+                There is one rule: With the exception of START and STOP conditions,
+                <term>SDA is allowed to change only while SCL is LOW</term>.
+                So while SCL is HIGH, SDA 
+                holds still and is read by devices sampling the line.  The protocol then takes the one thing
                 that rule forbids and uses it to mark the edges of a
-                transaction.  A <term>START condition</term> is SDA going HIGH to
+                transaction.  A <term>START condition</term> is SDA going from HIGH to
                 LOW <em>while SCL is HIGH</em>; a <term>STOP condition</term> is
-                SDA going LOW to HIGH while SCL is HIGH.  Neither can occur
+                SDA going from LOW to HIGH while SCL is HIGH.  Neither can occur
                 during normal data transfer, so neither can be mistaken for a
                 bit, and every device on the bus recognizes them immediately.
             </p>
@@ -633,7 +613,7 @@ int main(void) {
             <p>
                 The loop in <c>helloDisplay.c</c> is putting one of those on the
                 wire four times a second, so all six parts of that diagram are
-                on your breadboard right now.  Go and find them.
+                visible when using an oscilloscope, which is what we'll do now.
             </p>
             <figure xml:id="fig-scope-setup">
                 <caption>The AD2 in oscilloscope mode, set up for this capture.
@@ -728,8 +708,7 @@ int main(void) {
                 clock pulses: nine for the address byte and its ACK, nine for the
                 data byte and its ACK, with the START before them and the STOP
                 after.  Keep the eight values you read off the address
-                phase — <xref ref="subsec-day9x-addressing"/> asks you for
-                them.
+                phase — you'll need them in <xref ref="subsec-day9x-addressing"/>.
             </p>
             <figure xml:id="fig-i2c-scope-ack">
                 <caption>One write to address 0x70, captured on the AD2 in
@@ -746,15 +725,14 @@ int main(void) {
             <p>
                 The ACK is the part worth slowing down on, because it is the
                 only moment in the transaction where the wire changes hands.
-                After the eighth bit the controller keeps clocking and lets go
-                of SDA.  The display then pulls
-                it LOW sometime during the clock's LOW phase, so that when SCL
+                After the eighth bit (in the address case this is the R/W bit) the controller keeps clocking and lets go
+                of SDA.  The display, having recognized its address, then pulls SDA
+                LOW sometime during the clock's LOW phase, so that when SCL
                 rises, SDA is stable and LOW.  On the next LOW phase the display
                 lets go again and the controller takes over.  That second
-                handover is the short HIGH excursion visible just after each ACK
+                handover is the short HIGH spike visible just after each ACK
                 in <xref ref="fig-i2c-scope-ack"/> — and there is no matching one
-                before the ACK, because the last address bit is a 0, so the line
-                was already LOW and never had a chance to rise.  Either way it is
+                before the ACK, because the handover was so fast.  Either way it is
                 harmless: nothing is read while SCL is LOW.
             </p>
             <p>
@@ -820,17 +798,13 @@ int main(void) {
         <subsection xml:id="subsec-day9x-addressing">
             <title>Part 4: The Number on the Wire</title>
             <p>
-                Go back to the eight bits you wrote down off your own trace,
-                before reading on.  Your program says <c>0x70</c>.  Read your
-                eight values as a byte and say what number you got.
+                Go back to the eight bits you wrote down for the address bits off your own trace. Convert that 8-bit number to hexadecimal. 
+                Your program says <c>0x70</c> for the I2C address of the chip.  Is that what you got?
             </p>
             <activity xml:id="act-i2c-on-the-wire">
                 <title>Which Number Is on the Wire?</title>
                 <task xml:id="act-i2c-wire-t1">
-                    <statement><p>Write <c>0x70</c> in binary, eight bits.  Now
-                    write the eight bits you read off your trace.  They are not
-                    the same number — by how much, and in which
-                    direction?</p></statement>
+                    <statement><p>Convert <c>0x70</c> to a binary eight-bit number and compare to the 8 bits you read off your trace. They are not the same - but can you tell in which way they differ from each other?</p></statement>
                 </task>
                 <task xml:id="act-i2c-wire-t2">
                     <statement><p>The program passed 0x70 and the wire carries
@@ -840,10 +814,7 @@ int main(void) {
                     <c>i2c1_byteWrite()</c>?</p></statement>
                 </task>
                 <task xml:id="act-i2c-wire-t3">
-                    <statement><p>Eight bits went out but the address is seven.
-                    Which one is left over, and — thinking about what a
-                    transaction has to say before any data moves — what is it
-                    likely to be for?</p></statement>
+                    <statement><p>Eight bits were sent out by the I2C hardware of our STM32C0, but <c>0x70</c> is actually a 7-bit address. What is the 8th bit that was sent out? Why?</p></statement>
                 </task>
             </activity>
             <figure xml:id="fig-i2c-scope-decoded">
@@ -852,20 +823,20 @@ int main(void) {
                 still HIGH.  The eight bits that follow are
                 1 1 1 0 0 0 0 and then 0: seven address bits, which are 0x70,
                 and then the bit circled in red — the R/W bit, 0 for a write.
-                The device's <c>Ack</c> comes on the pulse after that.  Read all
-                eight as a single byte and you get 0xE0, which is the number on
+                The device's <c>Ack</c> comes on the pulse after that.  If you read all
+                eight as a single byte you get 0xE0, which is the number on
                 the wire rather than the number in the program.</caption>
                 <image source="images/Day09X-I2C/scope_ping_ack_4.png" width="95%"/>
             </figure>
             <p>
-                The byte on the wire is <c>0xE0</c>.  0x70 is a
-                <em>seven-bit</em> number, 0b1110000, and what goes onto SDA is
+                The byte on the wire is <c>0xE0</c>.  0x70 is the
+                <em>seven-bit</em> address of the backpack chip, 0b1110000, and what goes onto SDA is
                 those seven bits followed by one more: the R/W bit, 0 to write
-                to the device and 1 to read from it.  Read all eight as a byte
-                and you get 0xE0.  Nothing is wrong — the address is in the top
+                to the device and 1 to read from it.  If you read all eight as a byte
+                you get 0xE0.  Nothing is wrong — the address is in the top
                 seven bits and the bottom bit is the direction — and
                 <c>i2c1_byteWrite()</c> did the shift on your behalf, which is a
-                line of it you will read on Thursday.
+                line of it we will look at on Thursday.
             </p>
             <p>
                 <xref ref="fig-ht16k33-addr-frame"/> is the HT16K33
@@ -891,15 +862,14 @@ int main(void) {
                 <image source="images/Day10-I2C(2)/ht16k33_command_transaction.svg" width="95%"/>
             </figure>
             <p>
-                One caution, because it costs people time.  Datasheets are not
+                One word of caution:  Datasheets are not
                 consistent about which of the two numbers they print: some give
                 the 7-bit address and some give it already shifted left by one.
                 A 7-bit address is at most <c>0x7F</c>, so any address quoted
                 above that — <c>0xE0</c>, say — cannot be the 7-bit form and
                 must be the shifted one.  Shift it back before you
-                <c>#define</c> it.  Get that backwards and the device never
-                answers, which looks exactly like a wiring fault.  It has
-                happened to this course, once.
+                <c>#define</c> it.  If you mix up the 7-bit and the 8-bit address, the device never
+                answers, which looks exactly like a wiring fault.  
             </p>
             <p>
                 <c>i2c1_byteWrite()</c> and its relatives take the
@@ -908,16 +878,13 @@ int main(void) {
                 7-bit form.
             </p>
             <p>
-                Two things to take from a failed transaction.  The first is that
-                a NACK is not an error message from the device — it is the
+                A few notes about a failed transaction: If you use an incorrect address, the 
+                NACK you receive is not an error message from the device — it is the
                 <em>absence</em> of an answer, and it looks exactly the same
                 whether the address is wrong, the device has no power, or the
-                SDA wire is not connected.  The second is that the controller
-                kept clocking anyway.  It sent all nine pulses and the STOP
-                without knowing, until the ninth, whether anyone was there at
-                all.  On Thursday we'll produce this capture ourselves, and a
-                second one where the bus is flawless and the display stays
-                blank.
+                SDA wire is not connected.  Also note that the controller will 
+                keep clocking anyway until it has sent all nine pulses 
+                since it doesn't know until the ninth pulse whether anyone responded.  On Thursday we'll look at this on the oscilloscope to deepen our understanding.
             </p>
 
             <slide xml:id="sl-day9x-decoded" ref="fig-i2c-scope-decoded">
@@ -948,12 +915,12 @@ on the wire:      1 1 1 0 0 0 0    0
         <subsection xml:id="subsec-day9x-one-digit">
             <title>Part 5: Write One Digit Yourself</title>
             <p>
-                The display is showing four characters that somebody else chose.
-                Now we'll put your own character there.  The only thing you need
+                Your display is currently showing four characters that we chose when writing the <c>helloDisplay.c</c> program.
+                Next we'll put your own character there.  The only thing you need
                 first is what a byte of <c>display_buffer</c> means.
             </p>
             <p>
-                Each digit is seven bar-shaped LEDs and a round one, and they
+                Each digit consists of seven bar-shaped LEDs and a round one, and they
                 have names: <c>a</c> at the top, then <c>b</c> and <c>c</c> down
                 the right, <c>d</c> along the bottom, <c>e</c> and <c>f</c> up
                 the left, <c>g</c> across the middle, and <c>DP</c> for the
@@ -963,7 +930,7 @@ on the wire:      1 1 1 0 0 0 0    0
                 <c>g</c>, and bit 7 is the decimal point.  Written as a binary
                 literal a digit's byte therefore reads
                 <c>0b</c> DP <c>g f e d c b a</c>, most significant bit first —
-                which is why the <c>H</c> in the program is
+                which is why the <c>H</c> in the <c>helloDisplay.c</c> program is
                 <c>0b01110110</c>: bits 1, 2, 4, 5 and 6, so <c>b c e f g</c>.
             </p>
             <figure xml:id="fig-segment-map">
@@ -973,8 +940,7 @@ on the wire:      1 1 1 0 0 0 0    0
                 <c>e</c> and <c>f</c> up the left side, <c>g</c> across the
                 middle, and <c>DP</c> for the decimal point.  The colon between
                 digits 2 and 3 is two more LEDs, called <c>D5</c> and <c>D6</c>
-                here.  Four digits of eight, plus the colon's two, is 34
-                LEDs.</caption>
+                here.  </caption>
                 <image source="images/Day10-I2C(2)/seven_seg_segment_map.svg" width="85%"/>
             </figure>
             <p>
@@ -1082,20 +1048,14 @@ on the wire:      1 1 1 0 0 0 0    0
                 we'll open tomorrow by reviewing it.
             </p>
             <p>
-                <term>Leave the display wired.</term>  On Thursday we'll start
-                by flashing <c>helloDisplay.c</c> again to check the bus
-                survived the night, and then spend the rest of the class on
-                everything that was given to you today: the chip at the far end
-                of the two wires — its command table and its display RAM — and
-                the peripheral at our end, its two pins and its timing register.
-                Then you write the device driver yourself.
+                <term>Leave the display wired.</term>  On Thursday we'll look at the chip on the backpack more carefully and learn about the commands it can be given via the I2C protocol. We'll derive these from the chip's command table and its display RAM which are described in the chip's datasheet. We'll also look at the I2C peripheral on our STM32C0, its two pins and its configuration.
+                Then you will write the device driver for the backpack chip yourself.
             </p>
             <p>
-                Two things were given to you today rather than explained, both
-                deliberately.  You called <c>i2c1_byteWrite()</c> and
+                Today you were given the I2C library without much explanation of the code therein.  We used <c>i2c1_byteWrite()</c> and
                 <c>i2c1_memWrite()</c> without knowing what either does, and we'll
-                open both tomorrow.  And you sent three command bytes that were
-                handed to you rather than derived; we'll take those out of the
+                rectify that tomorrow.  We also sent three command bytes to the backpack chip that were
+                handed to you rather than derived; we'll look at those in the
                 datasheet tomorrow as well.
             </p>
 
@@ -1107,22 +1067,16 @@ on the wire:      1 1 1 0 0 0 0    0
         <title>Before Class: The Display, and the Bus You Have Used</title>
         <introduction>
             <p>
-                This is the chapter's one reading, and it comes after a class
-                rather than before one.  It has two jobs.  The first is the
-                display itself — the thing at the far end of the two wires,
-                which the next class takes apart and writes a driver for, and
-                which nothing so far has explained.  That is what the two
-                subsections below are.
+                This reading has two jobs. The first is to get ready to understand communication with the display itself via the backpack chip. You'll write a device driver for the display in class tomorrow and this reading will help prepare you for this task.
             </p>
             <p>
-                The second is to consolidate the protocol you worked out on an
-                oscilloscope in class.  There is nothing new in it, and you do
-                not need to read it again if it stuck — but the reading
+                The second is to consolidate the protocol you worked out with the
+                oscilloscope in class.  There is nothing new in it, and if everything is clear to you this section can be safely skipped for now — but the reading
                 questions cover it as well as the display, because the next
                 class opens the peripheral and the library that produce it, and
                 both are much harder to follow if START, ACK and STOP are still
-                vague.  The written version is at the top of the
-                <xref ref="sec-i2c-reference"/> section: four short
+                vague.  The written version is at the top of
+                <xref ref="sec-i2c-reference"/>: four short
                 subsections, beginning with
                 <xref ref="subsec-i2c-physical-reality"/>.
             </p>
@@ -1496,27 +1450,18 @@ on the wire:      1 1 1 0 0 0 0    0
         <title>Day 10 In-Class: The HT16K33 and Its Device Driver</title>
         <introduction>
             <p>
-                Yesterday you used a bus, and today we'll open up everything
-                that was handed to you: the chip at the far end of the two wires,
-                the peripheral at our end, and the library call in between.  The
-                wiring is the wiring you left in place and the program is the
-                program you flashed.
+                Yesterday we used the I2C bus to light up the 7-segment display. Today we'll look at the backpack chip that is driving the display and to which we are talking via I2C as well as the I2C peripheral on the STM32C0. We'll also look at the I2C library we handed you yesterday. For now we'll continue with the same program we flashed yesterday.
             </p>
             <p>
-                We'll go in that order.  The display and its controller first,
-                because that is where yesterday's unanswered questions are; then
-                the STM32C031C6's own I2C1 peripheral and the two pins it reaches
-                the wires through; then the five operations an I2C library has to
-                provide, and <c>i2c1_byteWrite()</c> opened up.
+                We'll start with the display and its controller, then we'll focus on
+                the STM32C031C6's I2C1 peripheral and the two pins through which it reaches
+                the wires. Next we'll look at the I2C library.
             </p>
             <p>
-                By the end of the session your own display shows <c>ES.28</c>,
+                By the end of today your own display will show <c>ES.28</c>,
                 written out of a ten-byte buffer by a
                 <term>device driver</term> you wrote.  It sits one layer above
-                the <c>uart.c</c> and <c>adc.c</c> this course has been handing
-                you all term, and it is the first layer of the stack that has
-                been yours.  That function is what Lab 5 asks you for, and this
-                is where it comes from.
+                <c>i2c.c</c>.  You'll use this device driver in Lab 5.
             </p>
         </introduction>
 
@@ -1526,9 +1471,7 @@ on the wire:      1 1 1 0 0 0 0    0
                 Tuesday's homework was <c>counterResetButtonIntTimer.c</c>: the
                 button-reset counter with <c>delay_ms()</c> replaced by a
                 one-second timer interrupt, so that the program has two
-                interrupt sources and blocks on neither.  If yours is not
-                running, take the working copy from Canvas before we start — this
-                part is about reading code, not about whose homework built.
+                interrupt sources and blocks on neither. 
             </p>
             <p>
                 Both of the programs below are answers to that assignment,
@@ -1655,18 +1598,15 @@ void pb4_exti_init(void) {
                 <title>Would You Revise Your Solution?</title>
                 <introduction>
                     <p>
-                        Pick one of the two.  Answer the first three questions in
-                        writing, on your own, before anybody talks.
+                        With your group, pick one of the two and study it.  Answer the following questions — first individually, then compare:
                     </p>
                 </introduction>
                 <task xml:id="act-i2c-ai-t0">
-                    <statement><p>First, a measurement, because the rest of this
-                    depends on it.  Your own program prints once a second: time
+                    <statement><p>First, complete a measurement.  Your own program prints once a second: time
                     ten prints against a stopwatch and write down what you got.
                     Then write down the <c>PSC</c> and <c>ARR</c> your program
-                    uses, and from those three numbers work out what clock this
-                    board is running at.  Neither listing below tells you, and
-                    neither can be judged without it.</p></statement>
+                    uses, and from those three numbers work out what clock speed your
+                    board is running at. </p></statement>
                 </task>
                 <task xml:id="act-i2c-ai-t1">
                     <statement><p>What does it do better than yours?  There is
@@ -1674,8 +1614,7 @@ void pb4_exti_init(void) {
                 </task>
                 <task xml:id="act-i2c-ai-t2">
                     <statement><p>Find at least two things you would change, and
-                    for each one say what would go wrong on a real board — not
-                    that it is bad style, but what a user would see.  For at
+                    why.  For at
                     least one of them, say what would happen on <em>your</em>
                     board, using the interval you just timed and the
                     <c>PSC</c> and <c>ARR</c> you just wrote
@@ -1683,7 +1622,7 @@ void pb4_exti_init(void) {
                 </task>
                 <task xml:id="act-i2c-ai-t3">
                     <statement><p>Having read it: would you revise your own
-                    solution?  One sentence, either way.</p></statement>
+                    solution?  </p></statement>
                 </task>
                 <task xml:id="act-i2c-ai-t4">
                     <statement><p>Now compare with the others at your table, and
@@ -1816,40 +1755,20 @@ void tim14_init(void) {
         <subsection xml:id="subsec-day10-verify">
             <title>Part 2: Does the Bus Still Work?</title>
             <p>
-                Before anything else, we'll flash <c>helloDisplay.c</c>,
-                unchanged from yesterday, and confirm the display lights.  Four
-                wires is four chances for one to be out, and a wire that came out
-                is much easier to find now than later, in the middle of debugging
-                a driver you have just written.
+                Make sure your display is still connected properly via its four wires. Re-flash <c>helloDisplay.c</c> if you have other code running at this time and confirm the display still lights.  
             </p>
             <p>
                 Whatever your buffer ended on yesterday should still be there,
                 and it is a strong test whatever it says, because the program that
-                puts it up exercises the whole path: the two pins, the bus, the
-                three setup commands and a ten-byte write.  <term>Blank</term> is
-                the failure — wrong or missing digits are just where you left
-                it.
+                puts it up uses the whole path: the two pins, the bus, the
+                three setup commands and a ten-byte write. A <term>blank display</term> likely means something went wrong with your wiring whereas wrong or missing digits are just where you left
+                it yesterday in your code.
             </p>
             <p>
-                A blank display is a wiring problem and not a code problem — the
-                code is a file that worked yesterday.  Worth knowing what is
-                happening underneath, because it is why the wires come first: a
-                display that never answers also stops the program, since
-                <c>i2c1_byteWrite()</c> waits on a flag the hardware never sets
-                when nobody acknowledges, so the very first call never returns.
-                From where you are sitting that looks the same as a display that
-                was never sent anything, and neither one gives you anything to
-                look at — which is why we check the wiring rather than the code.
-            </p>
-            <p>
-                So re-seat all four wires against
+                So if your display is blank, re-seat all four wires against
                 <xref ref="fig-display-wiring"/>: <c>+</c> on 3.3 V and not the
                 5 V pin beside it, <c>−</c> on GND, <c>D</c> on PB9 and <c>C</c>
-                on PB8.  <c>D</c> and <c>C</c> swapped is the one that is hardest
-                to see and easiest to do.  Still blank after that?  Raise your
-                hand and keep going — nothing in the next four parts needs your
-                own display, and we'll have you at a working one before you write
-                the driver.
+                on PB8.  
             </p>
 
             <slide xml:id="sl-day10-verify">
@@ -1871,12 +1790,11 @@ void tim14_init(void) {
                 You already know the segment names and the bit order they map to
                 (<xref ref="fig-segment-map"/>), because you wrote a digit's byte
                 with them yesterday.  Now we'll look at the wiring behind them:
-                how 34 LEDs are reached with 14 pins, and why the display needs a
-                chip of its own.
+                how the 34 LEDs of the display are reached with the 14 backpack pins, and why the display needs a
+                chip of its own. We'll get to communicating with the chip via the 2 I2C wires later today.
             </p>
             <p>
-                The grid is drawn in <xref ref="fig-four-digit-wiring"/>, which
-                is the display's own datasheet.  It is a
+                The 34 LEDs are wired up in a grid which you can see in <xref ref="fig-four-digit-wiring"/> (from the display's datasheet).  It is a
                 <term>common cathode</term> arrangement: within one digit, all
                 eight LEDs have their cathodes tied together and brought out on a
                 single pin — the ones marked <c>(COM)</c>, for
@@ -1886,7 +1804,7 @@ void tim14_init(void) {
             </p>
             <figure xml:id="fig-four-digit-wiring">
                 <caption>The internal wiring of the four-digit display, from its
-                datasheet.  Every segment is an LED.  Reading down: the eight
+                datasheet.  Every segment of the display is an LED.  Reading down: the eight
                 LEDs of each digit share one cathode, brought out on the pin
                 marked (COM) above that digit — pins 14, 11, 10 and 6, with pin 7
                 serving the colon's two LEDs.  Reading across: all four
@@ -1956,29 +1874,29 @@ void tim14_init(void) {
             <p>
                 Either way, what you are seeing is the sweep — and, as the
                 reading put it, that job never stops.  Which is why the display is
-                wired to a backpack: the HT16K33 does the multiplexing and the
-                decoding, and talks to the processor over I2C.
+                wired to a backpack: the HT16K33 chip on the backpack does the multiplexing and the
+                decoding, and it continuously sweeps through the four digits to make them all appear lit up at the same time. The chip also talks to the processor over I2C.
             </p>
             <p>
-                <xref ref="fig-ht16k33-block"/> is the HT16K33 from the inside.
+                <xref ref="fig-ht16k33-block"/> shows the HT16K33's block diagram (from the chip's datasheet).
                 The I2C interface is on the left; the display RAM in the middle
                 holds which LEDs are on; the row and common drivers on the right
-                are eight COM outputs and sixteen ROW outputs, of which fourteen
-                are wired to our display; and the internal RC
+                are eight COM outputs (of which the display is only wired to five) and sixteen ROW outputs (of which the display uses nine); and the internal RC
                 (resistor-capacitor) oscillator with the timing generator is what
                 runs the sweep.
-                That oscillator is off when the chip powers up, which is the
-                first thing our driver will have to fix.
+                That oscillator is off when the chip powers up, and so the
+                first thing our driver has to do is turn it on.
             </p>
             <figure xml:id="fig-ht16k33-block">
                 <caption>The HT16K33's block diagram, from its datasheet.  SDA
                 and SCL enter the I2C controller on the left, which is the only
-                way your program reaches it.  The display RAM — 16 bytes of it — holds
-                which LEDs are lit, and the common-scan and row-driver outputs on
+                way your program reaches it. 
+                The display RAM is where the individual bit patterns are stored for the segments you are currently lighting up. Each digit is stored as a 16-bit number (2 8-bit numbers); in the case of the 7-segment display we only use the first of these two bytes for each segment. We still need to send both bytes though (so we send a '0' after each 'real' piece of data). The controller can also control dot-matrix displays, keypads and more. That's why it has more capabilities than we need and in particular more storage in the display memory than we need.
+                The common-scan and row-driver outputs on
                 the right are the pins that go to the display's grid.  The
                 internal RC (resistor-capacitor) oscillator and timing generator sweep that grid from
                 the RAM, continuously and without any further instruction.  The
-                key-scan and key-data blocks belong to the chip's other job,
+                key-scan and key-data blocks belong to the chip's other features,
                 reading a keypad matrix, which we do not use.</caption>
                 <image source="images/Day10-I2C(2)/ht16k33_block.svg" width="70%"/>
             </figure>
@@ -2024,9 +1942,10 @@ void tim14_init(void) {
             <title>Part 4: Reading the Command Table</title>
             <p>
                 Now we'll read the HT16K33's own command table and build the
-                three bytes <c>helloDisplay.c</c> has been sending since
-                yesterday.  Most I2C devices have registers inside them, and reach
-                them through commands the datasheet defines.  The HT16K33's commands
+                three command bytes we have been sending to the chip at the start of our program
+                <c>helloDisplay.c</c>.   Most I2C devices have registers inside them that control their behavior, 
+                and you program them through commands the datasheet defines and which you send via I2C.  
+                The HT16K33's commands
                 are one byte each, sent as the data of an ordinary write —
                 exactly what the three given lines at the top of
                 <c>helloDisplay.c</c> were doing, except that this
@@ -2040,7 +1959,8 @@ void tim14_init(void) {
                 the command's identity; a column with a name in it — <c>S</c>,
                 <c>D</c>, <c>B1</c>, <c>P3</c> — is an option you fill in; and a
                 column marked <c>X</c> is a don't-care, which we write as 0.
-                Three rows are all we need
+                For now we mostly care about the rows named <em>System setup</em>, <em>Display setup</em>
+                and <em>Dimming set</em>
                 (<xref ref="fig-ht16k33-cmd-table"/>).
             </p>
             <figure xml:id="fig-ht16k33-cmd-table">
@@ -2094,7 +2014,7 @@ void tim14_init(void) {
                 </task>
                 <task xml:id="act-i2c-cmd-t4">
                     <statement><p>All three are one-byte writes to the device.
-                    Which library function sends one, and what are its two
+                    Which I2C library function sends one, and what are its two
                     arguments?</p></statement>
                 </task>
             </activity>
@@ -2107,29 +2027,28 @@ void tim14_init(void) {
                 because 1 Hz is B1 B0 = 1 0.  Half brightness needs the
                 encoding read carefully, because it counts from one rather than
                 zero — 0000 is 1/16 and 1111 is 16/16 — so eight sixteenths is
-                P3–P0 = 0111 and the byte is <c>0xE7</c>.  Which is worth a
-                second look, because <c>0xE7</c> is the byte
-                <c>helloDisplay.c</c> has been sending since yesterday: the
+                P3–P0 = 0111 and the byte is <c>0xE7</c>.  Note that <c>0xE7</c> is the byte
+                we have been sending in <c>helloDisplay.c</c> and so the
                 display you have been watching has been running at half
-                brightness the whole time.  And each of them goes out with
+                brightness the whole time.  Each command is sent to the backpack chip via
                 <c>i2c1_byteWrite(HT16K33_ADDR, ...)</c> — one function call per
                 command, one transaction on the wire per call
                 (<xref ref="fig-ht16k33-addr-frame"/>).
             </p>
             <p>
                 Rather than writing those three numbers into your code, the
-                header you are given names their pieces:
+                header file you are given for the seven segment driver names their pieces:
                 <c>HT16K33_SYSTEM_CMD</c> and <c>HT16K33_OSC_ON</c> for the
                 first, <c>HT16K33_DISPLAY_CMD</c>, <c>HT16K33_DISPLAY_ON</c>,
                 <c>HT16K33_BLINK_OFF</c> and <c>HT16K33_BLINK_1HZ</c> for the
                 second, <c>HT16K33_BRIGHT_CMD</c> for the third.  Each name is
                 one field of the table, so a line of driver code reads the way
-                the datasheet row does: the command, ORed with its options.  That
+                the datasheet row does: the command, OR'ed with its options.  That
                 is the structure to copy the next time you write one of these —
                 the datasheet's own layout becomes the header file's layout.
             </p>
             <p>
-                Those three bytes are the first function of your driver.  It has
+                Sending the three command bytes is the first function of your seven segment driver.  It has
                 to run before the display will show anything at all, and it is
                 three calls long.  You write it in <xref ref="subsec-day10-first-digit"/>.
             </p>
@@ -2191,17 +2110,19 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 <caption>The HT16K33's display RAM, from its datasheet: sixteen
                 bytes, two per common line.  The left column names the common
                 line — the chip drives eight of them, COM0 to COM7, of which our
-                display uses five — and the two addresses beside each hold that
+                display uses the first five: COM0 for the first digit, COM1 for the second digit,
+                COM2 for the colon, COM3 for the third and COM4 for the fourth digit.
+                The two hexadecimal addresses beside each COM entry hold that
                 line's sixteen possible LEDs, ROW0 to ROW7 in
                 the first byte and ROW8 to ROW15 in the second.  The lower table
                 gives the bit order within a byte: the upper row is the even
                 address, D7 down to D0 mapping to ROW7 down to ROW0, and the
                 lower one is the odd address, mapping to ROW15 down to ROW8.
-                Two annotations were left on this crop: the box around COM0's
+                The box around COM0's
                 pair is digit 1's two bytes, and the box around the 6 marks bit 6,
                 which is segment <c>g</c>.  A seven-segment digit uses only the first
                 eight rows, so for us the second byte of every pair is always 0 —
-                and the even addresses 0x00, 0x02, 0x04, 0x06 and 0x08 are the
+                and so only the even addresses 0x00, 0x02, 0x04, 0x06 and 0x08 are the
                 five that carry anything.</caption>
                 <image source="images/Day10-I2C(2)/display_ram_map.svg" width="55%"/>
             </figure>
@@ -2213,8 +2134,8 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 us — the HT16K33 can drive sixteen LEDs per common line and our
                 digits use eight.  The first byte is the segments, in the same
                 order you used yesterday — <c>0b</c> DP <c>g f e d c b a</c>,
-                most significant bit first, so that a <c>0</c> is
-                <c>0b00111111</c>.
+                most significant bit first. For example, to light a <c>0</c> you'd put
+                <c>0b00111111</c> in the D7-D0 byte.
             </p>
             <p>
                 Five pairs, at addresses 0, 2, 4, 6 and 8: digit 1, digit 2, the
@@ -2225,7 +2146,7 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 <title>Make a Pattern</title>
                 <introduction>
                     <p>
-                        On paper, before any of this is code.  The buffer is ten
+                        Start on paper, not by writing code.  The buffer is ten
                         bytes, <c>display_buffer[0]</c> through
                         <c>display_buffer[9]</c>.
                     </p>
@@ -2249,7 +2170,8 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
             <p>
                 Every segment of every digit is <c>0b11111111</c> in bytes 0, 2,
                 6 and 8; every other byte, including the colon's pair at 4 and 5,
-                is 0.  <c>0 1 2 3</c> is
+                is 0.  
+                To produce <c>0 1 2 3</c> on the display you put
                 <c>0b00111111</c>, <c>0b00000110</c>, <c>0b01011011</c>,
                 <c>0b01001111</c> in the same four places — worth deriving once
                 by hand, after which you will use the <c>numbertable[]</c> array
@@ -2266,17 +2188,17 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 of every pair does nothing?
             </p>
             <p>
-                That second one has a real answer, and without it <q>always
-                write 0</q> is just a rule to memorize.  The HT16K33 has one
-                pointer into its display RAM.  You set it once, at the start of
-                the transaction, and it <term>advances by one every time a byte
-                arrives</term> — that is what the datasheet means by the display
+                The answer to the second question lies in the structure of the display RAM of
+                the HT16K33 and how it is addressed. To write to the display RAM you use a
+                pointer that holds the address of the RAM to which you'd like to write. When we 
+                write the entire display, we set the pointer to the start of the display RAM,
+                and each write operation that is part of the same I2C transaction <term>automatically advances the pointer to the next byte</term>. This is what the datasheet means by the display
                 data address pointer, and it is why writing ten bytes from
                 address 0 fills addresses 0 through 9.  The zeros are not
                 decoration; they are what moves the pointer past the odd
                 addresses so that the next real byte lands on the next digit.
                 Leave them out and the second digit's pattern goes to address 1,
-                which is the top half of digit 1.
+                which is the top (unused) half of digit 1.
             </p>
             <p>
                 All ten bytes go in <em>one</em> transaction
@@ -2296,8 +2218,7 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 command byte of 0x00 means <q>start at display RAM address 0</q>.
                 Every data byte after it is stored where the pointer is and moves
                 the pointer on by one, so ten data bytes fill addresses 0 through
-                9.  Each byte is acknowledged, and one STOP ends the whole
-                thing.</caption>
+                9.  Each byte is acknowledged, and one STOP ends the whole transaction.</caption>
                 <image source="images/Day10-I2C(2)/ht16k33_page_write.svg" width="95%"/>
             </figure>
 
@@ -2351,11 +2272,12 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
         <subsection xml:id="subsec-day10-pins">
             <title>Part 6: The Pins, and Why They Must Be Open-Drain</title>
             <p>
-                Now we'll look at our end of the two wires.  A peripheral inside
+                Now we'll look at the STM32C0 peripheral which sits at the other end of the two wires.  A peripheral inside
                 the chip has to reach the outside world through pins, and which
                 pins it can use is not up to us
-                (<xref ref="fig-i2c-pins"/>).  I2C1's SCL and SDA signals are
-                available on several pairs, and the pair we use is
+                (<xref ref="fig-i2c-pins"/>).  Even though we only have one I2C peripheral on our STM32C0 chip,
+                it's referred to as I2C1 for reasons of software compatibility with more capable chips. I2C1's SCL and SDA signals are
+                available on several pin pairs, and the pair we use is
                 <term>PB8 for SCL and PB9 for SDA</term>, because those two are
                 the Nucleo's Arduino-standard I2C pins — D15 and D14 on the
                 header — and every Arduino-shaped board puts I2C there.
@@ -2374,30 +2296,34 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
                 mechanism you first used for the UART: put the pin in alternate
                 function mode with <c>MODER</c>, then choose <em>which</em>
                 alternate function with <c>AFR</c>.  The number to choose is in
-                the datasheet, not the reference manual — <em>DS13867 Table 15,
-                Port B alternate function mapping</em>, where the PB8 row and the
+                the datasheet, not the reference manual —
+                <url href="external/stm32c031_datasheet.pdf">DS13867</url>
+                Table 15, <em>Port B alternate function mapping</em>, where the PB8 row and the
                 PB9 row both name I2C1 under <term>AF6</term>.
             </p>
             <p>
-                Then one thing that is new.  Both pins have to be configured
-                <term>open-drain</term>, through the GPIO output type register
+                One thing that is new is that rather than being in push-pull mode, 
+                both pins have to be configured
+                <term>open-drain</term>. This is accomplished via the GPIO output type register
                 <c>GPIOx_OTYPER</c> (RM0490 §6.4.2), where a 1 in bit
                 <m>y</m> means <q>pin <m>y</m> is open-drain</q> and 0 — the
                 reset value — means push-pull.  A push-pull output has two
                 transistors, one pulling the pin up to 3.3 V and one pulling it
-                down, and it always drives the pin to one rail or the other.  An
+                down, and it always drives the pin to one rail or the other. We made use of this type
+                of behavior when driving LED's, for example. An
                 open-drain output has only the pull-down: writing a 0 pulls the
                 pin LOW, and writing a 1 turns the transistor off and leaves the
                 pin floating, so the external pull-up sets the level.
             </p>
             <p>
-                On this bus that is not a preference.  SDA changes hands every
-                ninth bit — on a write the controller drives eight bits and the
+                This behavior is necessary on the I2C bus:  SDA changes hands every
+                ninth bit — on a write the controller drives eight bits then lets go of the
+                data line and the
                 device drives the acknowledge, on a read it is the other way
-                round — and the two ends do not always agree about what it should
-                be.  <xref ref="fig-open-drain"/> is what that
-                moment looks like in the two arrangements.  If both ends were
-                push-pull, one driving HIGH and one driving LOW puts a transistor
+                round. Letting go of the data line means to let the line float, not to force
+                it to ground or 3.3 V. <xref ref="fig-open-drain"/> is what that
+                moment looks like.  If both ends were
+                push-pull, one driving HIGH and one driving LOW would put a transistor
                 from 3.3 V and a transistor to ground both switched on across the
                 same wire — a short circuit, limited only by what the two output
                 stages can survive.  With open-drain outputs there is no such
@@ -2407,7 +2333,7 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
                 LOW.
             </p>
             <figure xml:id="fig-open-drain">
-                <caption>The same disagreement, wired two ways.  On the left, two
+                <caption>A disagreement between controller and device, wired two ways.  On the left, two
                 push-pull outputs on one wire: each has a transistor to 3.3 V and
                 one to ground, and when one drives HIGH while the other drives
                 LOW both are switched on across the same wire and current runs
@@ -2422,32 +2348,32 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
                 <image source="images/Day09X-I2C/open_drain_vs_push_pull.svg" width="95%"/>
             </figure>
             <p>
-                Which is also why the pull-up matters.  The ACK works because of this, and so
-                do two features this course does not use but the protocol
-                depends on: several controllers sharing one bus, and a device
-                holding SCL LOW to ask for more time.
-                <xref ref="subsec-i2c-ref-opendrain"/> has those two.
+                This is also why the pull-up matters.  The ACK works because of the pull-up and the open-drain configuration,
+                and so do two other features: several controllers can share one bus (we will see this soon), and a device
+                can hold SCL LOW to ask for more time (we will not be using this feature). You can read more about this in
+                <xref ref="subsec-i2c-ref-opendrain"/>.
             </p>
             <p>
-                The pull-ups themselves are typically 5 kΩ to 10 kΩ, and on this
-                bus we do not fit any: both devices this course uses come on
+                The pull-ups themselves are typically 5 kΩ to 10 kΩ, and for the devices we
+                use in this class we do not need to install any since both come on
                 breakout boards that carry their own.  That is worth checking on
-                the datasheet of anything you add.  With no pull-up anywhere the
-                line can never be released HIGH — nothing on an open-drain bus
-                drives HIGH, as the paragraph above says, so the level is simply
-                undefined.  The reason the value is a range rather than a number
+                the datasheet of anything you add.  If there were no pull-up anywhere then the
+                line could never be released HIGH — nothing on an open-drain bus
+                drives HIGH, as the paragraph above explains, so the level is simply
+                undefined.  The reason that the value for the pull-up resistor is a range rather than a number
                 is that it is squeezed from both ends: too small and the device
                 pulling LOW has to sink more current than it can while still
                 holding the line below the receiver's threshold; too large and
                 the resistor charges the bus's own capacitance too slowly for the
-                line to get back up before the next clock edge.
-                <xref ref="subsec-i2c-ref-opendrain"/> does that arithmetic.
+                line to get back up before the next clock edge. If you are interested in reading about finding a good
+                value for your setup, go on to 
+                <xref ref="subsec-i2c-ref-opendrain"/>.
             </p>
             <p>
-                All of that is <c>i2c1_init()</c>, which you have been calling
-                since yesterday.  Pins first, then the peripheral, with one
+                The pin configurations happen in <c>i2c1_init()</c>, which we used yesterday already.  
+                In that function, we configure the pins first, then the peripheral, with one
                 ordering detail in the middle: the timing register may only be
-                written while the peripheral is disabled, so <c>PE</c> is
+                written while the peripheral is disabled, so <c>PE</c>, which enables the peripheral, is
                 cleared before <c>TIMINGR</c> is touched and set again
                 afterwards.
             </p>
@@ -2481,12 +2407,11 @@ void i2c1_init(void){
 }
 ]]></code></program>
             <p>
-                <c>AFR[1]</c> rather than <c>AFR[0]</c>, and it is a different
-                index trap from Day 9's <c>EXTICR</c> one: there the reference
-                manual's names started at 1 and C's array indices started at 0.
-                Here the alternate-function selection is simply two 32-bit
-                registers, one for pins 0–7 and one for pins 8–15, and PB8 and
-                PB9 are in the second one — the same split you met on the UART.  The reference manual calls it <c>GPIOx_AFRH</c>, which is
+                The alternate function selection consists of two 32-bit
+                registers (<c>AFR[0]</c> and <c>AFR[1]</c>), the first one for pins 0–7 
+                and the second one for pins 8–15. So PB8 and
+                PB9 are configured in <c>AFR[1]</c>.
+                The reference manual calls this register for the higher-numbered pins <c>GPIOx_AFRH</c>, which is
                 why the field names read <c>GPIO_AFRH_AFSEL8</c>.
             </p>
             <p>
@@ -2571,46 +2496,39 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
         <subsection xml:id="subsec-day10-library">
             <title>Part 7a: What an I2C Library Has to Provide</title>
             <p>
-                You watched the protocol run on an oscilloscope yesterday, and
-                you have called three of these functions since without reading
-                one of them.  Before we open the library, work out what has to be
-                in it.  A program using a device on this bus needs a small number
-                of operations, and you can derive the list from what you saw on
-                the screen rather than from anybody's API.
+                We observed the I2C protocol on the AD2 oscilloscope yesterday. Before we open the I2C library, try to work out what functions need to be in it. A program talking to a device on the I2C bus needs a small number of operations, and you can derive the list from what you know at this point.
             </p>
             <activity xml:id="act-i2c-five-operations">
                 <title>What Five Things Does the Library Have to Do?</title>
                 <introduction>
+                    <!-- check-rules: allow L-1  (Petra's own wording, 2026-08-08 hand pass) -->
                     <p>
-                        Write your list down before we compare.  Think about
+                        Work individually first, then compare your list with your table group.  Think about
                         what a transaction consists of and what a program has
                         to be able to do with a device.
                     </p>
                 </introduction>
                 <task xml:id="act-i2c-five-t1">
                     <statement><p>Open your own <c>helloDisplay.c</c>.  Three of
-                    the operations are already in it.  Name them from the calls
+                    the operations needed of an I2C library can be seen in this program.  Name them from the calls
                     you can see, and for each one write down what the program had
-                    to tell it.</p></statement>
+                    to pass to the function in order to call it.</p></statement>
                 </task>
                 <task xml:id="act-i2c-five-t1b">
-                    <statement><p>Now your own capture from yesterday.  Which of
+                    <statement><p>Recall your own capture on the AD2 yesterday.  Which of
                     those three calls produced the START, the address, the ACK,
-                    the data byte and the STOP you marked on it?  Looking only at
+                    the data byte and the STOP you captured?  Looking only at
                     the trace, could you tell a one-byte write from a multi-byte
                     one?</p></statement>
                 </task>
                 <task xml:id="act-i2c-five-t2">
-                    <statement><p>Two are missing.  Your capture from yesterday
+                    <statement><p>Two operations needed of an I2C library are still missing.  Your capture from yesterday
                     shows one acknowledge per byte and never a byte coming back to
-                    you — from <em>that trace</em> rather than from what you know
-                    about I2C in general, what can this program not do, and why
-                    can it not be built out of the three calls it already
-                    has?</p></statement>
+                    you. What I2C operations cannot be built out of the three calls we have seen in <c>helloDisplay.c</c>?</p></statement>
                 </task>
                 <task xml:id="act-i2c-five-t3">
-                    <statement><p>One of the five has nothing to do with any
-                    particular device.  Which, and what does it have to set
+                    <statement><p>One of the five things needed of an I2C library has nothing to do with any
+                    particular device.  What is it and what does it have to set
                     up?</p></statement>
                 </task>
             </activity>
@@ -2619,8 +2537,8 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
                 <term>initialization</term>, which happens once and belongs to
                 the bus rather than to any device: claim the pins, set the clock
                 rate, switch the peripheral on.  Then <term>write one byte</term>
-                to a device and <term>read one byte</term> from it, which is
-                everything the ping did.  Then <term>write several bytes</term>
+                to a device and <term>read one byte</term> from it, which is all
+                the loop at the end of <c>helloDisplay.c</c> ever does.  Then <term>write several bytes</term>
                 and <term>read several bytes</term> in a single transaction — and
                 those two carry one extra argument, because a device with more
                 than one thing inside it needs to be told <em>where</em> the
@@ -2650,18 +2568,19 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
                 calls to <c>i2c1_byteWrite()</c> the bus goes back to idle, with
                 a STOP after the first and a fresh START before the second.
                 Some devices treat that as two unrelated instructions rather
-                than one longer one, and you have already met one of them: the
-                display takes its ten bytes in a single transaction, and
-                <xref ref="subsec-day10-ram"/> is why ten separate writes would
-                not do the same thing.
+                than one longer one, and the seven-segment display is one of them: the
+                display takes its ten bytes in a single transaction, see 
+                <xref ref="subsec-day10-ram"/>.
             </p>
             <p>
-                Reading a <em>numbered register</em> is the one that is not a
-                loop either: it takes a write of the register number and then the
-                read, and the protocol's own answer is to join the two with a
+                Reading a byte from a target can be accomplished in one I2C transaction, and this
+                is what happens in <c>i2c1_byteRead()</c>. <em>Reading one or more registers</em> from a device 
+                takes two steps: first
+                a write transaction to the device that tells it from which of its registers to
+                read, then the read transaction. The I2C protocol's answer is to join the two with a
                 repeated START instead of a STOP, so that nothing else can get
-                onto the bus in between.
-                <xref ref="subsec-i2c-ref-transfer-pattern"/> draws exactly that.
+                onto the bus in between, see also
+                <xref ref="subsec-i2c-ref-transfer-pattern"/>.
                 Our <c>i2c1_memRead()</c> does not go that far — it sends the
                 register address, lets the transaction end, and starts a second
                 one — which works on a bus with one controller on it, and is
@@ -2685,7 +2604,7 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
 ]]></code></program>
     <ul>
         <li><term>Initialization</term> happens once and belongs to the bus, not to any device: claim the pins, set the clock rate, switch the peripheral on.</li>
-        <li><term>One byte out</term> and <term>one byte in</term> are everything the ping did.</li>
+        <li><term>One byte out</term> and <term>one byte in</term> are all the loop at the end of <c>helloDisplay.c</c> ever does.</li>
     </ul>
 </slide>
 
@@ -2702,8 +2621,8 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
         <subsection xml:id="subsec-day10-bytewrite">
             <title>Part 7b: Opening i2c1_byteWrite()</title>
             <p>
-                Those five functions are the interface, and now we'll open one
-                of them.  <c>i2c1_byteWrite()</c> is the one that produced the
+                Those five functions are the interface with the I2C hardware; we'll now investigate one
+                of them in more detail.  <c>i2c1_byteWrite()</c> is the one that produced the
                 trace you captured yesterday, and it is short enough to read in
                 full.  Here is its sending half:
             </p>
@@ -2732,6 +2651,8 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
                 on its own), and <em>go</em> (<c>START</c>).  Writing that last
                 bit is what puts the START condition on the wire; everything you
                 watched on the oscilloscope followed from this one line.
+                <xref ref="fig-i2c-cr2"/> shows where those five fields sit in
+                the register.
             </p>
             <p>
                 Notice the <c>=</c>, and the comment on it.  The habit from the
@@ -2745,21 +2666,22 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
                 count from the previous transaction are all still sitting in it,
                 and <c>|=</c> cannot clear a bit — so an <c>|=</c> here would
                 leave the old address ORed with the new one.  Assigning the whole
-                mask states the transaction completely, every time.
+                mask overwrites every bit and therefore fills in the desired transaction completely.
             </p>
             <p>
-                The two waits are the peripheral talking back.
-                <c>I2C_ISR_BUSY</c> comes up when the START has actually
-                appeared on the bus, and <c>I2C_ISR_TXIS</c> — transmit
+                The two waits (blocking while loops) are there to ensure the peripheral is ready for
+                the next step. The
+                <c>I2C_ISR_BUSY</c> flag comes up when the START has actually
+                appeared on the bus, and <c>I2C_ISR_TXIS</c> flag — transmit
                 interrupt status — comes up when the transmit register is empty
                 and the hardware is ready for the byte, which happens after the
                 address has been sent and acknowledged.
                 <xref ref="fig-i2c-master-tx"/> is the reference manual's own
-                picture of that sequence, with the flags on the timeline where
-                they occur.  Reading a byte is the same shape with three changes:
-                <c>I2C_CR2_RD_WRN</c> set, a wait on <c>I2C_ISR_RXNE</c> instead
-                of <c>TXIS</c>, and <c>*data = I2C1->RXDR;</c> instead of the
-                write.
+                picture of that sequence, albeit for sending two bytes rather than one. 
+                Reading a byte has a similar shape with three changes:
+                <c>I2C_CR2_RD_WRN</c> needs to be set, we need to wait on <c>I2C_ISR_RXNE</c> instead
+                of <c>TXIS</c>, and we take the data out of the receive data register 
+                via <c>*data = I2C1->RXDR;</c> instead of the write.
             </p>
             <figure xml:id="fig-i2c-master-tx">
                 <caption>RM0490's transfer diagram for a controller writing two
@@ -2769,24 +2691,21 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
                 and the R/W bit on the wire and collects the ACK.  TXIS rises
                 once per byte, each time the transmit data register is free —
                 that is the flag <c>i2c1_byteWrite()</c> waits on before writing
-                <c>I2C1->TXDR</c>.  TXE below it is the plain level — the
-                transmit register is empty — where TXIS additionally means
-                <em>and a byte is expected</em>, which is why a NACK sets one and
-                not the other.  NBYTES holds the programmed count —
+                <c>I2C1->TXDR</c>.  NBYTES holds the programmed count —
                 2 for the whole of this transfer — and once that many bytes have
-                gone, AUTOEND puts the STOP on the wire without any further help
+                gone out, AUTOEND puts the STOP on the wire without any further help
                 from the program.</caption>
-                <image source="images/Day09X-I2C/i2c_master_tx_sequence.svg" width="95%"/>
+                <image source="images/Day09X-I2C/i2c_master_tx_sequence.svg" width="100%"/>
             </figure>
             <p>
-                Everything below <c>I2C1->CR2</c> is done by a state machine in
-                silicon.  Nothing in this library counts clock edges or times a
+                Everything below <c>I2C1->CR2</c> is done by the I2C hardware.  
+                Nothing in this library counts clock edges or times a
                 pulse; it sets up a transaction, and the peripheral shifts the
                 bits out, generates the START and the STOP, releases SDA for the
                 ACK slot and reports what came back.  What is left for software
                 is describing the transaction and reading the flags —
                 <xref ref="subsec-i2c-ref-hardware"/> has the peripheral's own
-                block diagram, if you want to see what that state machine is made
+                block diagram, if you want to see what the peripheral's state machine is made
                 of.
             </p>
 
@@ -2842,35 +2761,26 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
         <subsection xml:id="subsec-day10-layers">
             <title>Part 8a: Layers, and What You Are Replacing</title>
             <p>
-                We'll stand back from the code for a moment
-                (<xref ref="fig-firmware-layers"/>).  Underneath everything are
+                Let's step back from the code for a moment
+                (<xref ref="fig-firmware-layers"/>).  Imagine you'd like to write a program
+                that takes some measurements via the ADC and then puts those onto the seven-segment
+                display. To communicate with the display (or with the ADC for that matter) you wouldn't
+                really want to have to program
                 the machine registers — <c>I2C1->CR2</c>, <c>GPIOB->MODER</c> —
-                which belong to the STM32C031C6 and to nothing else.  Above them
-                sit the <term>interface drivers</term>: <c>uart.c</c>,
+                which belong to the STM32C031C6, from your main program.  Rather, we have
+                <term>interface drivers</term>: <c>uart.c</c>,
                 <c>adc.c</c>, <c>i2c.c</c>.  From here on those are the only
                 files that should touch a machine register, and each one turns one
                 peripheral into a handful of functions.
             </p>
-            <figure xml:id="fig-firmware-layers">
-                <caption>The four layers of a firmware design, with the two
-                middle ones labeled by their rule as well as their name.  At the
-                bottom, the microcontroller's own registers.  Above them the
-                interface drivers, the only code that reaches a machine register:
-                <c>i2c.c</c>, <c>uart.c</c> and <c>adc.c</c> here, with
-                <c>stdio.c</c> sitting on <c>uart.c</c> so that <c>printf()</c>
-                works.  The device-driver box is drawn generically, as
-                <c>device.c</c>; yours is the file this part is about.  Above those the
-                device drivers, which reach a device's registers only through an
-                interface driver and never touch a machine register — the layer
-                you are writing today, over the I2C bus, for a device with its own
-                registers at the far end of it.  And on top, <c>main()</c>, which
-                calls devices through their drivers and knows about neither kind
-                of register.</caption>
-                <image source="images/Day10-I2C(2)/firmware_layers.svg" width="85%"/>
-            </figure>
+            <p> 
+                But there is another layer yet: When programming the seven-segment display, it would be
+                much more convenient to use commands such as <c>SevenSeg_blink()</c> and <c>SevenSeg_dim()</c>
+                rather than having to think about all necessary I2C commands to accomplish these. That's where another layer
+                comes in, the so-called <term>device drivers</term>.
+            </p>
             <p>
-                Above <em>those</em> are <term>device drivers</term>, and that is
-                the layer with the interesting rule.  A device driver knows about
+                A <term>device driver</term> knows about
                 one device: its commands, its addresses, its quirks.  It does not
                 know how the bytes get there.  <c>SevenSegPartial.c</c>, which is
                 the file you are about to open, may call
@@ -2886,26 +2796,32 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
                 <c>SevenSeg_write()</c> and has no idea there is a bus involved
                 at all.
             </p>
-            <p>
-                It arrives called <c>SevenSegPartial.c</c> because it arrives
-                unfinished.  When it is done it becomes <c>SevenSeg.c</c> and
-                moves into <c>mylib</c> beside <c>i2c.c</c>, so that it is ready
-                for Lab 5; tonight's homework is where you do that.
-            </p>
-            <p>
-                Somebody else has written both of those layers for this exact
-                chip already (if you have met it, that is
-                <c>Adafruit_LEDBackpack.h</c> over <c>Wire</c>), from the same
-                datasheet pages you read earlier today.
-            </p>
-            <p>
-                What writing it yourself buys is not performance.  It is that
-                when the display shows nothing, you have a bus you can put a
-                scope on, a command table you can check the bytes against, and
-                four functions you can read — instead of a library whose failure
-                mode is that it did not work.
-            </p>
+            <figure xml:id="fig-firmware-layers">
+                <caption>The four layers of a firmware design.  At the
+                bottom, the microcontroller's own registers.  Above them the
+                interface drivers, the only code that reaches a machine register:
+                <c>i2c.c</c>, <c>uart.c</c> and <c>adc.c</c> here. Above those the
+                device drivers, which reach a device's registers only through an
+                interface driver and never touch a machine register. For example,
+                <c>stdio.c</c> is a device driver that uses the interface driver <c>uart.c</c>.
+                Without <c>stdio.c</c> we wouldn't have a <c>printf()</c> function.
+                At the very top we have <c>main()</c>, which
+                calls devices through their drivers and knows about neither kind
+                of register.
 
+                The box labeled <c>device.c</c> in this image is what you
+                will be working on for the seven-segment display. You'll communicate
+                with the display via its backpack chip over I2C, but only through the <c>i2c.c</c>
+                interface driver.</caption>
+                <image source="images/Day10-I2C(2)/firmware_layers.svg" width="85%"/>
+            </figure>           
+            <p>
+                You are given parts of the device driver in a file called <c>SevenSegPartial.c</c> 
+                - as the name suggests, this file is
+                unfinished.  When it is done you will rename it <c>SevenSeg.c</c> and
+                move it into <c>mylib</c> beside <c>i2c.c</c>, so that it is ready
+                for Lab 5.
+            </p>
             <slide xml:id="sl-day10-layers" ref="fig-firmware-layers" stack="yes">
     <ul>
         <li>Bottom the <term>machine registers</term>; above them the <term>interface drivers</term> &#8212; <c>uart.c</c>, <c>adc.c</c>, <c>i2c.c</c> &#8212; the only files allowed to touch one. Then the <term>device drivers</term>, and on top <c>main()</c>.</li>
@@ -2922,10 +2838,11 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
             <title>Part 8b: SevenSeg_init(), and One Digit</title>
             <p>
                 You put a character on a digit yesterday, using a program that
-                had the three setup commands written into it.  Now write those
-                three yourself, as the first function of the driver, and prove
-                them with the smallest program that needs them.
-                <c>writeFirstDigit.c</c> is that program.  It is given to you,
+                had the three setup commands written into it for you.  Now you will
+                package versions of these three commands into an initialization function,
+                which is the first function of the device driver you need to write.
+                You can test your function with the following program 
+                <c>writeFirstDigit.c</c>.  It is given to you,
                 and it will do nothing at all until
                 <c>SevenSeg_init()</c> exists.
             </p>
@@ -2952,10 +2869,12 @@ int main(void) {
                 naming, because they are the same three every time.
                 <c>display_addr</c> is who — the device on the bus.
                 <c>display_subaddr</c> is where inside it — the display RAM
-                address the pointer starts at.  And <c>1</c> is how many bytes
-                follow, with <c>&amp;digit_data</c> being where to get them.
-                The <c>0b01111001</c> is an <c>E</c>: bits 0, 3, 4, 5 and 6, so
-                <c>a d e f g</c>.
+                address the pointer starts at (so where in the display RAM we start
+                writing).  The <c>1</c> (in this case) is how many bytes
+                follow, with <c>&amp;digit_data</c> being where those bytes are stored.
+                Because we are only writing one digit here, we use the number <c>1</c>.
+                The <c>0b01111001</c> is an <c>E</c>: bits 0, 3, 4, 5 and 6 are on, so 
+                that lights up LED segments <c>a d e f g</c>.
             </p>
             <p>
                 It also calls <c>SevenSeg_init()</c>, which does not exist yet.
@@ -3038,8 +2957,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 <task xml:id="act-i2c-first-t3">
                     <statement><p>Change what it says: make the digit show an
                     <c>S</c>, then a <c>2</c>, then an <c>8</c>.  Derive each
-                    pattern from <xref ref="fig-segment-map"/> rather than
-                    guessing.</p></statement>
+                    pattern from <xref ref="fig-segment-map"/>.</p></statement>
                 </task>
                 <task xml:id="act-i2c-first-t4">
                     <statement><p>Now set <c>display_subaddr</c> to 4 and
@@ -3049,6 +2967,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
                     whatever you find.</p></statement>
                 </task>
             </activity>
+            <instructor>
             <p>
                 <c>SevenSeg_init()</c>, filled in:
             </p>
@@ -3059,18 +2978,17 @@ void SevenSeg_init() {
     i2c1_byteWrite(HT16K33_ADDR, HT16K33_BRIGHT_CMD | 0xf);
 }
 ]]></code></program>
+            </instructor>
             <p>
                 Three transactions, not one: each is a separate command, and the
                 HT16K33 wants each one addressed to it in its own right.  The
-                oscillator command is the one that has to arrive: until the
-                oscillator is running the chip drives nothing at all.  We send it
-                first out of habit, and Part 9 asks you what happens if it goes
-                last.
+                oscillator command is the one that has to come first: until the oscillator is running the chip drives nothing at all. Part 9 asks you what happens if this command goes
+                last instead.
             </p>
             <p>
-                <em>Nothing lights up?</em>  The bus was proved when you flashed
-                <c>helloDisplay.c</c> at the start of class, so the
-                fault is above it: check that <c>SevenSeg_init()</c> is actually
+                <em>Nothing lights up?</em>  If
+                <c>helloDisplay.c</c> worked at the start of class, the
+                fault is in your code, not your wiring: check that <c>SevenSeg_init()</c> is actually
                 called, and that the oscillator command is in it — see above.
             </p>
 
@@ -3142,10 +3060,9 @@ void SevenSeg_init() {
             <title>Part 8c: The Rest of the Driver</title>
             <p>
                 <c>SevenSegPartial.c</c> has three functions left in it, and
-                their prototypes are already in the header.  Two are warm-ups
-                that rehearse the one-byte write you used in
-                <c>SevenSeg_init()</c>.  <c>SevenSeg_write()</c> puts all ten
-                bytes into the display RAM in one transaction.
+                their prototypes are already in the header.  Two use the one-byte write style you used in
+                <c>SevenSeg_init()</c> in order to send commands to the display.  <c>SevenSeg_write()</c> puts all ten
+                display bytes into the display RAM in one transaction.
             </p>
             <program language="c"><code><![CDATA[
 void SevenSeg_init();                           // Initialize the display
@@ -3165,9 +3082,10 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
                 cannot corrupt the command itself.
             </p>
             <p>
-                <c>SevenSeg_write()</c> is where the display RAM map turns
-                into code.  It receives a pointer to the caller's ten-byte
-                buffer, and it has to get all ten into the display RAM starting
+                <c>SevenSeg_write()</c> is where the entire display RAM is written.  
+                The function receives a pointer to a ten-byte
+                buffer which holds the desired LED pattern, and it has to get all ten bytes
+                into the display RAM starting
                 at address 0, in one transaction.  Everything needed for that is
                 in <c>i2c1_memWrite()</c>'s four arguments; the function is one
                 line.
@@ -3176,12 +3094,16 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
                 <title>Finish the Driver and Show ES.28</title>
                 <introduction>
                     <p>
-                        In <c>SevenSegPartial.c</c>.  The header defines
-                        <c>HT16K33_ADDR</c>, the command names you derived,
-                        <c>HT16K33_ADDR_PTR</c> for the display RAM's starting
-                        address, and <c>HT16K33_NBUF</c> for the number of
-                        digit-and-colon positions, so the buffer is
-                        <c>2*HT16K33_NBUF</c> bytes.
+                        You'll work in <c>SevenSegPartial.c</c>.  Its header
+                        file defines everything you need.  <c>HT16K33_ADDR</c> is
+                        the display's I2C address, and the command names are the
+                        ones you derived from the command table.
+                        <c>HT16K33_ADDR_PTR</c> is the address of the first byte
+                        of the display RAM, which is where a full write starts.
+                        <c>HT16K33_NBUF</c> is the number of digit-and-colon
+                        positions on the display, which is five; since each
+                        position takes two bytes, the buffer you send is
+                        <c>2*HT16K33_NBUF</c> bytes long.
                     </p>
                 </introduction>
                 <task xml:id="act-i2c-sevenseg-t1">
@@ -3190,7 +3112,7 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
                 </task>
                 <task xml:id="act-i2c-sevenseg-t2">
                     <statement><p>Write <c>SevenSeg_write()</c>.  Before you
-                    write the line, write down — not just say — what each of
+                    write the line, write down what each of
                     <c>i2c1_memWrite()</c>'s four arguments has to be, and why
                     each one is that and not something else.</p></statement>
                 </task>
@@ -3204,14 +3126,8 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
                     them a second time; for the <c>2</c> and the <c>8</c> use
                     <c>numbertable[]</c>.</p></statement>
                 </task>
-                <task xml:id="act-i2c-sevenseg-t4">
-                    <statement><p>Done early?  What happens if the ten bytes go
-                    as ten separate <c>i2c1_byteWrite()</c> calls instead of one
-                    <c>i2c1_memWrite()</c>?  Predict in writing first, then try
-                    it, and say what the display tells you about where each byte
-                    landed.</p></statement>
-                </task>
             </activity>
+            <instructor>
             <p>
                 The three functions, complete:
             </p>
@@ -3232,6 +3148,8 @@ void SevenSeg_write(uint8_t *display_buffer) {
     i2c1_memWrite(HT16K33_ADDR, HT16K33_ADDR_PTR, 2*HT16K33_NBUF, display_buffer);
 }
 ]]></code></program>
+            </instructor>
+            <instructor>
             <p>
                 And the program that drives them, which is the answer to the last
                 two tasks:
@@ -3264,6 +3182,7 @@ int main(void) {
     return 1;
 }
 ]]></code></program>
+            </instructor>
             <p>
                 Three things about that listing.  The odd-numbered bytes are the
                 zeros from the RAM map.  They carry nothing; they are sent
@@ -3287,8 +3206,7 @@ int main(void) {
                 buffer is right but shifted — check that you sent
                 <c>2*HT16K33_NBUF</c> bytes and started at
                 <c>HT16K33_ADDR_PTR</c>, not that you got the segment patterns
-                wrong.  And if you have been through all of that and still have
-                nothing, raise your hand.
+                wrong.  
             </p>
 
             <slide xml:id="sl-day10-driver-todo">
@@ -3373,9 +3291,8 @@ void SevenSeg_write(uint8_t *display_buffer) {
             <title>Part 9: Break It on Purpose</title>
             <p>
                 We'll make two one-line changes to a program that works, and
-                capture each of them.  Both give a blank display, and what makes
-                the pair worth doing is that they look nothing like each other on
-                the wire.
+                capture each resulting I2C transaction with the AD2.  Both yield a blank display, but they look nothing like each other on
+                the oscilloscope.
             </p>
             <figure xml:id="fig-i2c-scope-noack">
                 <caption>One I2C transaction that got no answer, with SDA in
@@ -3393,8 +3310,11 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 <title>Two Ways to Get a Blank Display</title>
                 <introduction>
                     <p>
-                        Put the AD2 on SDA and SCL in oscilloscope mode, and
-                        work on a copy of <c>helloDisplay.c</c> so that your
+                        Put the AD2 on SDA and SCL in <term>logic analyzer</term>
+                        mode with the I2C decoder on, as you set it up yesterday
+                        (<xref ref="fig-waveforms-setup"/>) — the decoded bytes are
+                        what makes the difference between the two cases visible.
+                        Work on a copy of <c>helloDisplay.c</c> so that your
                         driver project stays intact.  Before each of the two
                         captures, unplug the USB cable and plug it back in — the
                         display holds its RAM and keeps sweeping while it has
@@ -3415,7 +3335,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
                     <statement><p>Put the address back to <c>0x70</c>.  Now
                     comment out the <em>first</em> of the three command writes —
                     the system-setup one that turns the oscillator on — and
-                    predict, in writing, what you will see on the display and
+                    predict, what you will see on the display and
                     what you will see on the trace.  Then flash it and
                     capture.</p></statement>
                 </task>
@@ -3438,8 +3358,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 <em>The wrong address.</em>  With <c>0x60</c> the program stops
                 after one transaction rather than repeating four times a second,
                 so there is nothing for the scope to catch unless you arm it and
-                then restart the board.  The reason is in the library, and it is
-                worth knowing before you meet it in Lab 5.
+                then restart the board.  The reason is in the library:
                 <c>i2c1_byteWrite()</c> checks for a NACK once, immediately after
                 setting START — long before the ninth clock pulse, so the check
                 always passes — and then waits for the peripheral to say it is
@@ -3532,9 +3451,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
                 <task xml:id="act-i2c-hw-t3">
                     <statement><p>A clock, <c>MM:SS</c>, counting up from zero.
                     This one needs the colon, so it needs you to have found
-                    which bit in <c>display_buffer[4]</c> lights it — two
-                    minutes with the buffer and a rebuild will
-                    settle it.</p></statement>
+                    which bit in <c>display_buffer[4]</c> lights it.</p></statement>
                 </task>
                 <task xml:id="act-i2c-hw-t4">
                     <statement><p>Optional, and worth doing before Lab 5: drive
@@ -3572,7 +3489,7 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
 </slide>
 
             <p>
-                Lab 5 is due Tuesday 10 February.  It asks for a modular ADC
+                Lab 5 is due Tuesday.  It asks for a modular ADC
                 driver, an ADC reading taken on a timer interrupt rather than a
                 delay, and a seven-segment display driver — and it says to use
                 the code you developed in class today as the basis for the last
@@ -3587,13 +3504,9 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
         <title>Reference: The Protocol, the I2C Peripheral, and the HT16K33</title>
         <introduction>
             <p>
-                Lookup material for the two class days.  Nothing here is new;
-                it is the same information arranged for the moment you come back
-                needing one fact, plus the things the hours did not have room
-                for.  It opens with the protocol in full — the written version of
-                what the first of the two days works through on an
-                oscilloscope — because that is the part you are most likely to
-                come back to.
+                Lookup material for all of the I2C material we studied.  Nothing here is new;
+                it is the same information arranged in a fashion more suitable for a quick
+                look-up, plus some additional information in case you are curious.
             </p>
         </introduction>
 

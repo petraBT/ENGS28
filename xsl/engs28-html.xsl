@@ -40,6 +40,33 @@
      number to the unknown element (which errors under the stock stylesheet). -->
 <xsl:param name="deck.slides" select="'strip'"/>
 
+<!-- What to do with <instructor> blocks in this build:
+       'strip'  (default: the reading "web" target, the PDF, and the deck) —
+                emit NOTHING, not even in page source. A student who reads the
+                HTML source must not find the answer there.
+       'render' (the "web-instructor" target) — emit the block, boxed and
+                labelled, for the instructor's own copy.
+     Use it for anything that hands over work a student or a lab is supposed to
+     do: a filled-in driver function, a completed program, an activity's worked
+     answer. Reveals that are the class's own teaching — a derivation the room
+     does together — are NOT instructor material and should stay in the book. -->
+<xsl:param name="book.solutions" select="'strip'"/>
+
+<!-- Instructor-only content, stripped from the student book.
+       <instructor>
+         <p>...</p> <program>...</program>
+       </instructor>
+     Same contract as <slide>: a matching template always exists, so PreTeXt
+     does not try to number the unknown element under the stock stylesheet. -->
+<xsl:template match="instructor">
+    <xsl:if test="$book.solutions = 'render'">
+        <div class="instructor-only">
+            <div class="instructor-only-label">Instructor only</div>
+            <xsl:apply-templates/>
+        </div>
+    </xsl:if>
+</xsl:template>
+
 <!-- Inline coloured text for slides: <clr c="orange">Channel 1</clr> ->
      <span class="deck-clr-orange">. Colours are styled in the deck player
      (assets/class.html). Meant for slide bullets that mirror a colour in the
@@ -48,6 +75,29 @@
 <xsl:template match="clr">
     <span class="deck-clr-{@c}"><xsl:apply-templates/></span>
 </xsl:template>
+
+<!-- Keep <slide> and <instructor> out of the SEARCH INDEX as well as off the
+     page.  PreTeXt builds lunr-pretext-search-index.js in its own modes, which
+     walk the source tree rather than the rendered HTML - so the templates above
+     are not consulted, and without the four templates below the student book's
+     search index carries every presenter note and every worked solution even
+     though no page displays them.  A student searching "SevenSeg_write" got the
+     finished function back.  Verified by grepping the built index; see the note
+     in AUTHORING-book.md under "Instructor-only content". -->
+<xsl:template match="slide" mode="search-node-text">
+    <xsl:if test="$deck.slides = 'render'">
+        <xsl:apply-templates select="node()" mode="search-node-text"/>
+    </xsl:if>
+</xsl:template>
+<xsl:template match="instructor" mode="search-node-text">
+    <xsl:if test="$book.solutions = 'render'">
+        <xsl:apply-templates select="node()" mode="search-node-text"/>
+    </xsl:if>
+</xsl:template>
+<!-- ... and stop them generating search documents of their own: a <p> with a
+     <term> inside a slide would otherwise become its own indexed block. -->
+<xsl:template match="slide|instructor" mode="search-block-docs-textbook"/>
+<xsl:template match="slide|instructor" mode="search-block-docs-reference"/>
 
 <!-- The condensed in-class slide form of the surrounding content.
        <slide xml:id="sl-..."  ref="fig-...optional">

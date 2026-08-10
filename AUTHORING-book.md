@@ -420,12 +420,18 @@ These are the quality rules.
 - **S-8 The deck arc.** Title → brief review / where we're headed → agenda → timed
   `Part N` sections → recap or looking ahead.
 
-### S-11 … S-21 — the voice
+### S-11 … S-28 — the voice
 
-Derived from Petra's own hand rewrite of the Day 8 deck and the Day 8 pre-class
-video, frozen at `plans/day8-voice-reference.diff`. That diff is the
-specification; these are its summary, and each carries one of her actual
-before → after pairs, because the examples are what make the rules usable.
+Derived from Petra's own hand rewrites, frozen as three specimens. **The
+specimens are the specification; these rules are their summary**, and each
+carries one of her actual before → after pairs, because the examples are what
+make the rules usable.
+
+| Specimen | What it covers |
+| --- | --- |
+| `plans/day8-voice-reference.diff` | the Day 8 deck and pre-class video — slide register, S-11…S-19 |
+| `plans/day9x-voice-reference.md` | Day 9x prose — S-20, S-21, the count rule |
+| `plans/day10-voice-reference.diff` | **Day 10 and its reading, 692 lines, 2026-08-08 — S-22…S-28.** The largest of the three, and the only one that is a full prose pass over a finished draft rather than a deck. Read it first when writing prose. |
 
 These are slide rules, but the voice reads the same in the book's prose, and a
 `<slide>` block and the paragraph it condenses should not sound like different
@@ -505,6 +511,84 @@ people (B-7, 5b).
   `plans/day9x-voice-reference.md`: where the count is the *only* content, the
   sentence goes entirely rather than getting a colon.
 
+---
+
+**S-22 … S-28 come from the Day 10 pass** (`plans/day10-voice-reference.diff`),
+which is the first full prose pass she has made over a finished draft. Where
+they overlap with S-11…S-21 they are stronger, because that draft had already
+been swept against S-11…S-21 and she still changed 692 lines.
+
+- **S-22 Open a unit on its goal, plainly.** She *added* a sentence to the head
+  of the chapter, before any hook or motivation: "The goal of this chapter is to
+  communicate with and control a four-digit seven-segment display via our
+  microcontroller." Say what we are trying to achieve, then why it is hard.
+- **S-23 The book does not explain its own teaching strategy to the student.**
+  Cut pedagogical self-justification wherever it appears.
+  ~~"We do this deliberately: we ran Blinky before we explained a single
+  register, and using a thing before opening it up works well as long as we do
+  open it up afterwards."~~ → deleted whole; ~~"Two things were given to you
+  today rather than explained, both deliberately."~~ → "Today you were given the
+  I2C library without much explanation of the code therein."; ~~"which is the
+  order this course usually takes"~~ → deleted; ~~"what makes the pair worth
+  doing is that they look nothing like each other on the wire"~~ → "but they look
+  nothing like each other on the oscilloscope."
+- **S-24 No course lore and no war stories.**
+  ~~"Get that backwards and the device never answers, which looks exactly like a
+  wiring fault. It has happened to this course, once."~~ → "If you mix up the
+  7-bit and the 8-bit address, the device never answers, which looks exactly like
+  a wiring fault." The anecdote goes; the fact stays.
+- **S-25 No classroom management in student-facing text.** Her instruction:
+  *"you should never refer to any of that classroom management stuff."* That
+  covers spare hardware, what to do if your homework did not build, who to ask,
+  what to do while you wait, and how long a step takes. Deleted in this pass:
+  the entire Part 2 rescue passage, ~~"If yours is not running, take the working
+  copy from Canvas before we start"~~, ~~"and if you have been through all of
+  that and still have nothing, raise your hand"~~, ~~"two minutes with the buffer
+  and a rebuild will settle it"~~.
+  **The one surviving form in the corpus is `Still stuck?  We're here to help!`**
+  — five words, and nothing after them. It survived her pass in `ch-i2c.ptx`.
+  Treat `ch-gpio-interrupts.ptx:382` and `ch-debugging.ptx:603`, which each carry
+  a longer version, as **outliers to be cleaned up, not as precedent** — a Gate 2
+  synthesis used them to overrule `checker-voice` on exactly this point, and her
+  pass shows `checker-voice` was right.
+- **S-26 Name the referent; do not point at it.**
+  ~~"How many LEDs is that?"~~ → "How many LEDs are in this display?";
+  ~~"the `H` in the program"~~ → "the `H` in the `helloDisplay.c` program";
+  ~~"Which library function sends one"~~ → "Which I2C library function sends
+  one"; ~~"Start with the one you have met before."~~ → "Recall the UART, which
+  is another communication protocol that uses 2 wires only."
+- **S-27 Supply the causal middle.** S-14 says give the reason with the rule;
+  this is the same move inside an explanation, and it is what most of her
+  insertions do. "the display then pulls it LOW" → "**the display, having
+  recognized its address, then pulls SDA LOW**"; "`PE` is cleared before
+  `TIMINGR`" → "**`PE`, which enables the peripheral,** is cleared before
+  `TIMINGR`"; "the display data address pointer" → "**a pointer that holds the
+  address of the RAM to which you'd like to write**". Where the draft names a
+  mechanism, she says what it does.
+- **S-28 Delete a count-armature; do not repair it.** S-21 said a colon is
+  usually the fix. Her pass goes further and removes the frame.
+  ~~"Two things to take from a failed transaction. The first is… The second
+  is…"~~ → "A few notes about a failed transaction: …"; ~~"Three rows are all we
+  need"~~ → "For now we mostly care about the rows named *System setup*, *Display
+  setup* and *Dimming set*."
+
+**Two calibrations that matter as much as the rules.**
+
+**Her register is plain and explanatory, not terse.** Many of her replacements
+are *longer* than what they replace — the `fig-firmware-layers` caption gained a
+whole second paragraph, and the `fig-ht16k33-block` caption gained four
+sentences explaining why the RAM is bigger than we need. Drafts keep compressing
+toward the aphoristic; that is the wrong direction. Long, plain, fully-explained
+sentences are hers. Clipped ones are not.
+
+**"We" is the course, including for everything the course supplies.**
+~~"a library we have not read"~~ → "a library **we'll hand to you**";
+~~"this course has been handing you all term"~~ → "**we** have been handing you
+all term"; ~~"the three bytes `helloDisplay.c` has been sending"~~ → "the three
+command bytes **we have been sending**"; ~~"four characters that somebody else
+chose"~~ → "four characters that **we** chose when writing the `helloDisplay.c`
+program". "You" stays for what the student personally does.
+
 **Not covered by these rules.** Petra's Day 8 pass made a few changes no rule
 explains — see the end of `AUTHORING-slides.md`. Do not invent a rule to cover
 them; ask.
@@ -547,3 +631,52 @@ fastest. Depth is added at the top, not removed from the middle.
 
 Where a conflict cannot be resolved this way, the committee synthesizer states the
 trade-off explicitly and Petra decides. It does not get silently averaged away.
+
+---
+
+## Instructor-only content in the book
+
+Anything that hands over work a student or a lab is supposed to do — a filled-in
+driver function, a completed program, an activity's worked answer — goes inside
+an `<instructor>` element:
+
+```xml
+<instructor>
+    <p>The three functions, complete:</p>
+    <program language="c"><code><![CDATA[ ... ]]></code></program>
+</instructor>
+```
+
+It is **stripped** from the reading book (`web`), the authoring preview
+(`web-edit`), the deck build (`web-deck`) and the PDF — not hidden with CSS,
+*stripped*, so it is not in the page source either. It is rendered, boxed and
+labelled, in one target only:
+
+```bash
+pretext build web-instructor     # or ./scripts/build-all.sh, which does all four
+```
+
+**Do not deploy `output/web-instructor` beside the student book.**
+
+Two things to know.
+
+**A reveal is not automatically a solution.** A derivation the class does
+together — working `0x21`, `0x81` and `0xEF` out of the command table — is
+teaching and stays in the book. What goes in `<instructor>` is the thing whose
+value is that the student produced it: the finished `SevenSeg_init()`, the
+finished driver, the answer program.
+
+**The search index is a separate leak, and it was a real one.** PreTeXt builds
+`lunr-pretext-search-index.js` in its own XSL modes, which walk the *source*
+tree rather than the rendered HTML — so stripping an element from the page does
+not remove it from the index. Before this was fixed the student book's search
+index carried every `<slide>` presenter note and, once solutions were wrapped,
+would have carried every solution: searching `SevenSeg_write` returned the
+finished function. `xsl/engs28-html.xsl` now has four templates
+(`search-node-text` and the two `search-block-docs-*` modes) that suppress both
+elements. **If you add another strip-by-default element, it needs the same four
+templates**, and the way to check is to grep the built index, not the page:
+
+```bash
+grep -c 'The three functions, complete' output/web/lunr-pretext-search-index.js
+```

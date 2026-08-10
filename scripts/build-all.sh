@@ -4,6 +4,7 @@
 # The book has four of them and they are separate output directories:
 #
 #   web       reading book              ./build.sh              :8353
+#   web-instructor  the same book WITH solutions, for you only
 #   web-edit  authoring preview         ./scripts/build-edit.sh :8931
 #   web-deck  the classroom deck player ./preview-slides.sh     :8351 / :8352
 #   print     the PDF
@@ -20,7 +21,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
-TARGETS=(web web-edit web-deck)
+TARGETS=(web web-edit web-deck web-instructor)
 if [ "$1" = "--with-print" ]; then
     TARGETS+=(print)
 fi
