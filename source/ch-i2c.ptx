@@ -1772,11 +1772,10 @@ void tim14_init(void) {
             </p>
 
             <slide xml:id="sl-day10-verify">
-    <p>Before anything else: flash yesterday's helloDisplay.c, unchanged. Four wires is four chances for one to be out.</p>
+    <p>Make sure your display is still connected properly via its four wires, and re-flash <c>helloDisplay.c</c> if you have other code running.</p>
     <ul>
-        <li>A wire that came out is much easier to find now than later, in the middle of debugging a driver you have just written.</li>
-        <li>Whatever your buffer ended on yesterday is a <term>strong test</term> whatever it says: that program exercises the two pins, the bus, the three setup commands and a ten-byte write. <term>Blank</term> is the failure &#8212; wrong or missing digits are just where you left it.</li>
-        <li>A blank display is a <term>wiring</term> problem, not a code problem &#8212; the code is a file that worked yesterday. And a display that never answers also <term>stops the program</term>: <c>i2c1_byteWrite()</c> waits on a flag the hardware never sets when nobody acknowledges, so the first call never returns. From where you are sitting that looks exactly like a display that was never sent anything &#8212; which is why we check the wiring and not the code.</li>
+        <li>Whatever your buffer ended on yesterday should still be there, and it is a strong test whatever it says: that program uses the whole path &#8212; the two pins, the bus, the three setup commands and a ten-byte write.</li>
+        <li>A <term>blank display</term> likely means something went wrong with your wiring. Wrong or missing digits are just where you left it yesterday in your code.</li>
         <li>So re-seat all four against yesterday's wiring figure: <c>+</c> on 3.3 V and not the 5 V pin beside it, <c>&#8722;</c> on GND, <c>D</c> on PB9, <c>C</c> on PB8. <c>D</c> and <c>C</c> swapped is the hardest to see and the easiest to do.</li>
         <li>Still blank after that? <term>Raise your hand and keep going</term> &#8212; nothing in the next four parts needs your own display, and we'll have you at a working one before you write the driver.</li>
     </ul>
@@ -1933,7 +1932,7 @@ void tim14_init(void) {
 </slide>
 
             <slide xml:id="sl-day10-block" ref="fig-ht16k33-block">
-    <caption>The HT16K33 from the inside: I2C in on the left, display RAM in the middle, the COM and ROW drivers on the right — fourteen of them wired to our display — and an internal oscillator that is off at power-up.</caption>
+    <caption>The HT16K33 from the inside: I2C in on the left, display RAM in the middle, and on the right eight COM outputs (our display uses five) and sixteen ROW outputs (our display uses nine) — plus an internal oscillator that is off at power-up.</caption>
     <note>That last one is the point: the oscillator running the sweep starts off, so the first thing the driver does is turn it on. The key-scan blocks are the chip's other job, reading a keypad matrix, which we do not use.</note>
 </slide>
         </subsection>
@@ -2226,9 +2225,10 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
     <ul>
         <li>Sixteen bytes, <term>two per common line</term>: ROW0&#8211;ROW7 in the first and ROW8&#8211;ROW15 in the second. A seven-segment digit uses only the first eight rows, so <term>the second byte of every pair is always 0 for us</term>.</li>
         <li>That leaves five even addresses carrying anything: <c>0x00</c>, <c>0x02</c>, <c>0x04</c>, <c>0x06</c>, <c>0x08</c> &#8212; digit 1, digit 2, <term>the colon</term>, digit 3, digit 4. The colon sits in the middle because that is where it sits on the display.</li>
-        <li>Within a digit's byte: bit 0 is <c>a</c>, up to bit 6 for <c>g</c>, and bit 7 is the decimal point. Written as a binary literal that reads <c>0b</c> DP g f e d c b a, so a <c>0</c> &#8212; every segment but <c>g</c> &#8212; is <c>0b00111111</c>.</li>
+        <li>Within a digit's byte, the same order you used yesterday: <c>0b</c> DP g f e d c b a. To light a <c>0</c> you put <c>0b00111111</c> in the D7&#8211;D0 byte.</li>
     </ul>
-    <caption>Two bytes per position, and we write the odd one as 0 every time. The next slide says why it has to be written at all.</caption>
+    <caption>Two bytes per position, and we write the odd one as 0 every time.</caption>
+    <note>Do not re-derive the bit order here — they wrote a digit's byte with it yesterday. The beat is the SECOND byte: sixteen LEDs per common line, a seven-segment digit uses eight. Why it still has to be sent comes three slides on.</note>
 </slide>
 
             <slide xml:id="sl-day10-pattern" ref="fig-segment-map" room="yes">
@@ -2824,11 +2824,11 @@ I2C1->CR2 |= (deviceAddr<<1) | ... ;    // ORs it onto the LAST one
             </p>
             <slide xml:id="sl-day10-layers" ref="fig-firmware-layers" stack="yes">
     <ul>
-        <li>Bottom the <term>machine registers</term>; above them the <term>interface drivers</term> &#8212; <c>uart.c</c>, <c>adc.c</c>, <c>i2c.c</c> &#8212; the only files allowed to touch one. Then the <term>device drivers</term>, and on top <c>main()</c>.</li>
-        <li>The device-driver layer has the rule. <c>SevenSegPartial.c</c> knows <term>one device</term> and may not touch <c>I2C1-&gt;CR2</c> once.</li>
-        <li>Somebody has written both layers for this chip already (<c>Adafruit_LEDBackpack.h</c> over <c>Wire</c>). What writing it yourself buys is not performance: when the display shows nothing you have <term>a bus you can scope</term>, a command table to check the bytes against, and four functions you can read.</li>
+        <li>Say you want to read the potentiometer and put the number on the display. You would rather not program <c>I2C1-&gt;CR2</c> and <c>GPIOB-&gt;MODER</c> from <c>main()</c> to do it &#8212; which is what the <term>interface drivers</term> are for: <c>uart.c</c>, <c>adc.c</c>, <c>i2c.c</c>, the only files that should touch a machine register.</li>
+        <li>And you would rather write <c>SevenSeg_blink()</c> than work out the I2C commands behind it. That is the next layer up, the <term>device drivers</term>, and it is the one you write today.</li>
+        <li>A device driver knows <term>one device</term> &#8212; its commands, its addresses, its quirks &#8212; and does not know how the bytes get there. It may call <c>i2c1_byteWrite()</c> as often as it likes, and may not touch <c>I2C1-&gt;CR2</c> once.</li>
     </ul>
-    <caption>Today you write the third layer up — the first one in this course that has been yours.</caption>
+    <caption>The box drawn device.c is the one you are about to write, for the seven-segment display.</caption>
     <note>The layering argument is the part of this beat that is not cuttable: the same driver runs unchanged on any board whose I2C library offers those five functions, and the day you move to a different microcontroller you rewrite i2c.c and nothing else.
     The file is called Partial because it arrives unfinished. Finished, it becomes SevenSeg.c in mylib beside i2c.c, ready for Lab 5 — that is tonight's housekeeping, and it is worth saying out loud here as well as in Part 10.</note>
 </slide>
