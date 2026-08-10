@@ -459,3 +459,22 @@ gates fail, so there is no edit UI and no write endpoint to reach.
 - `scripts/edit-server.py` — finds and rewrites the source behind a click:
   `/locate` + `/patch` for `<slide>` text, `/open-slide` for a block by
   `xml:id`, `/open-deck` + `/patch-deck` for the deck JSON.
+
+### S-29 A slide's lead line is a sentence, not a banner
+
+Petra, 2026-08-08, on a deck where most slides opened with a fully bold line:
+*"I really don't like those. Can these become regular bullets?"*
+
+`<p><term>…</term></p>` renders the whole line bold. Use `<term>` for what it is
+for — marking a **term** — not for a lead line that happens to be first.
+
+- A **short noun-phrase label** may stay bold: `<term>Common cathode.</term>`
+  followed by the explanation.
+- A **whole sentence is ordinary text**. ~~`<p><term>Your display looks steady,
+  but at every instant most of it is dark.</term> There are two ways…</p>`~~ →
+  `<p>Your display looks steady, but at every instant most of it is dark. There
+  are two ways…</p>`
+
+Rule of thumb: if the bold runs past about four words, or ends in a full stop or
+a question mark, it is a sentence and should not be bold. Twenty-five leads in
+Day 10 broke this.
