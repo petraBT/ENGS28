@@ -3545,7 +3545,9 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
                 Because every device hears every bit, the protocol needs a way
                 to reach one device without disturbing the rest.  Every I2C
                 device has a 7-bit <term>address</term>, fixed by its
-                manufacturer and printed in its datasheet.  At the start of
+                manufacturer and printed in its datasheet — sometimes with two or
+                three of its low bits selectable on the board, which is how eight
+                identical parts can share one bus.  At the start of
                 every transaction the controller broadcasts that address plus a
                 single read/write bit — eight bits, clocked out one at a time on
                 SDA — and every device on the bus compares the address it hears
@@ -3581,12 +3583,12 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
         <subsection xml:id="subsec-i2c-start-stop">
             <title>The Protocol: START and STOP Conditions</title>
             <p>
-                SDA is allowed to change only while SCL is LOW.  That is when
-                the receiver is not sampling it; while SCL is HIGH,
-                SDA holds still and is read.  The protocol then takes the one
-                thing that rule forbids and uses it to mark the edges of a
-                transaction, which is why a START can never be mistaken for
-                data.
+                With the exception of the START and STOP conditions, SDA is
+                allowed to change only while SCL is LOW.  That is when the
+                receiver is not sampling it; while SCL is HIGH, SDA holds still
+                and is read.  The protocol then takes the one thing that rule
+                forbids and uses it to mark the edges of a transaction, which is
+                why a START can never be mistaken for data.
             </p>
             <p>
                 A <term>START condition</term> is SDA going from HIGH to LOW
@@ -3603,7 +3605,7 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
                 Both are in <xref ref="fig-i2c-frame-diagram"/>.  The SDA
                 transitions at the START and STOP markers happen while SCL is
                 HIGH; every other SDA edge in the diagram happens while SCL is
-                LOW.  That contrast is the whole framing mechanism.
+                LOW.  That contrast is what lets a device tell the two apart.
             </p>
 
         </subsection>
@@ -3725,10 +3727,10 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
         <subsection xml:id="subsec-i2c-ref-timingr">
             <title>Where the TIMINGR Numbers Come From</title>
             <p>
-                <c>i2c1_init()</c> writes four values into <c>I2C_TIMINGR</c> and
-                Day 10 takes them as given.  This is where they come from, for
-                anyone moving the code to a board whose clock runs at a different
-                speed.
+                <c>i2c1_init()</c> writes four values into <c>I2C_TIMINGR</c>,
+                and in class we take them as given.  This is where they come
+                from, for anyone moving the code to a board whose clock runs at a
+                different speed.
             </p>
             <p>
                 The register holds five fields — <c>PRESC</c>, <c>SCLL</c>,
@@ -3740,8 +3742,11 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
                 already done it, for a set of common peripheral clock
                 frequencies, in <em>RM0490 §23.4.10, I2C_TIMINGR register
                 configuration examples</em>
-                (<xref ref="fig-i2c-timing-tables"/>).  Ours is 12 MHz, and
-                there is no table for it.
+                (<xref ref="fig-i2c-timing-tables"/>).  Ours is 12 MHz — after
+                reset the STM32C031C6 runs from HSI48 with <c>HSIDIV</c> at its
+                reset value of divide-by-four (RM0490 §5.4.3), and
+                <c>RCC_CCIPR</c> resets with <c>I2C1SEL</c> selecting PCLK — and
+                there is no table for 12 MHz.
             </p>
             <figure xml:id="fig-i2c-timing-tables">
                 <caption>The three worked examples in RM0490 §23.4.10: Table 94
@@ -3822,14 +3827,14 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
                 <image source="images/Day09X-I2C/i2c_hardware_block.svg" width="70%"/>
             </figure>
             <p>
-                Two things on it are worth knowing about even though we never
-                configure them.  The <term>noise filters</term> are why a short
+                The <term>noise filters</term> are why a short
                 spike on SDA does not become a bit: an analog filter is on by
                 default and suppresses pulses up to 50 ns, which is what the I2C
                 specification requires.  And the shift register is the reason
-                <c>I2C_TXDR</c> is one byte wide rather than a buffer — the
+                <c>I2C_TXDR</c> is one byte wide rather than a buffer: the
                 peripheral holds exactly one byte in hand while it clocks the
                 previous one out, which is what <c>TXIS</c> is telling you.
+                Neither is anything we configure.
             </p>
         </subsection>
 
@@ -3930,8 +3935,37 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer) {
                 leaves on whichever comes first.  Writing it that way costs a few
                 lines and gives the caller a way to find out that nobody
                 answered, which matters as soon as a program has to do something
-                about a device that is not there.  Worth knowing when you build
-                on this library rather than just using it.
+                about a device that is not there.  In this library's own terms the
+                change is small:
+            </p>
+            <program language="c"><code><![CDATA[
+    I2C1->ICR = I2C_ICR_NACKCF;                  // clear a NACK left by an
+                                                 //   earlier failed transaction
+    I2C1->CR2 = (deviceAddr<<1)
+                | (1U << I2C_CR2_NBYTES_Pos)
+                | I2C_CR2_AUTOEND
+                | I2C_CR2_START;
+
+    // Leave on whichever the hardware raises first, rather than on TXIS alone
+    while( !(I2C1->ISR & (I2C_ISR_TXIS | I2C_ISR_NACKF)) );
+
+    if( I2C1->ISR & I2C_ISR_NACKF ) {            // nobody answered; the hardware
+        I2C1->ICR = I2C_ICR_NACKCF;              //   has already sent the STOP
+        return;
+    }
+    I2C1->TXDR = data;
+]]></code></program>
+            <p>
+                Two details make it work.  The wait leaves on <em>either</em>
+                flag, so the NACK that used to arrive too late to be seen is now
+                the thing that ends the wait.  And <c>NACKF</c> is cleared
+                <em>before</em> the transaction rather than after: it is a sticky
+                flag, so a NACK left over from an earlier failure would otherwise
+                make the next call return without sending anything.  What the
+                function still cannot do is tell its caller what happened, since
+                it returns <c>void</c> — giving it a return value means changing
+                every call site, which is a decision about the whole library
+                rather than about this function.
             </p>
             <p>
                 The narrower lesson is worth stating in general, because the
