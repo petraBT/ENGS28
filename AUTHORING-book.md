@@ -660,12 +660,56 @@ an `<instructor>` element:
 ```
 
 It is **stripped** from the reading book (`web`), the authoring preview
-(`web-edit`), the deck build (`web-deck`) and the PDF — not hidden with CSS,
+(`web-edit`), the student deck (`web-deck`) and the PDF — not hidden with CSS,
 *stripped*, so it is not in the page source either. It is rendered, boxed and
-labelled, in one target only:
+labelled, in the two instructor targets (`web-instructor` and
+`web-deck-instructor`):
 
 ```bash
-pretext build web-instructor     # or ./scripts/build-all.sh, which does all four
+pretext build web-instructor     # or ./scripts/build-all.sh, which does all five
+```
+
+### Two axes, and they are not the same question
+
+There are two ways a thing can be instructor-only, because they answer different
+questions:
+
+| | `<instructor>` element | `instructor="yes"` on a `<slide>` |
+|---|---|---|
+| Question | does this render *at all*? | does this slide exist in the *student deck*? |
+| Param | `book.solutions` | `deck.solutions` |
+| Rendered in | `web-instructor`, `web-deck-instructor` | `web-deck-instructor` |
+| You project it | only if a deck refs it | yes — that is the point |
+
+The deck JSON's `"instructor": true` is a **third** thing: it drives the player,
+not the build — the badge in the instructor view, and dropping the slide from
+`?student`. It must agree with the source marker, and `scripts/check_deck.py`
+fails when it does not. Disagree one way and the student deck lists a slide
+whose markup was stripped; disagree the other and it ships an answer.
+
+A deck may ref an `<instructor>` block **directly** by its `xml:id`, instead of a
+`<slide>` repeating the same answer next to it. Prefer that: two copies of one
+solution drift, and the drift is invisible until you project the stale one.
+
+### The student deck is built with a script, not a bare target
+
+```bash
+./scripts/build-deck.sh          # web-deck + filter its deck list
+```
+
+`pretext build web-deck` alone is **not** enough. The XSL strips instructor
+slides from the pages, but PreTeXt copies `assets/decks/` verbatim into
+`external/`, so the deck list beside those stripped pages still names all 29 of
+them — the player fails on each, and the titles ("Solution — blink, dim, write")
+are readable in the JSON. `scripts/filter_student_decks.py` fixes that up, and
+`build-deck.sh` is the two steps as one command.
+
+This is not hypothetical: a `watch.py web-deck` left running from an older
+`preview-slides.sh` put the unfiltered list straight back on every save. Check a
+built student deck with:
+
+```bash
+python3 scripts/filter_student_decks.py --check output/web-deck
 ```
 
 **Do not deploy `output/web-instructor` beside the student book.**

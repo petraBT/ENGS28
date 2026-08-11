@@ -90,16 +90,26 @@ def main():
     index = build()
     text = json.dumps(index, ensure_ascii=False, indent=2) + "\n"
 
+    try:
+        with open(INDEX, encoding="utf-8") as handle:
+            current = handle.read()
+    except OSError:
+        current = None
+
     if "--check" in sys.argv:
-        try:
-            with open(INDEX, encoding="utf-8") as handle:
-                current = handle.read()
-        except OSError:
-            current = None
         if current != text:
             print("assets/decks/index.json is out of date — "
                   "run: python3 scripts/make_deck_index.py")
             return 1
+        return 0
+
+    # Only write when the content actually changed. This file lives in
+    # assets/decks/, which watch.py watches, so an unconditional write makes
+    # every build that regenerates the index retrigger every running watcher —
+    # and a watcher's rebuild racing a build-all on the same output/<target>/
+    # fails it outright with "rm: Directory not empty".
+    if current == text:
+        print(f"{os.path.relpath(INDEX, PROJECT)} already up to date — {len(index['decks'])} decks")
         return 0
 
     with open(INDEX, "w", encoding="utf-8") as handle:

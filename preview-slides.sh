@@ -1,9 +1,15 @@
 #!/bin/bash
 set -e
 
-# Builds "web-deck" and serves the classroom deck player locally FOR AUTHORING,
-# so a slide can be fixed from the projector view instead of by hunting through
-# source/ and decks/:
+# Builds "web-deck-instructor" and serves the classroom deck player locally FOR
+# AUTHORING, so a slide can be fixed from the projector view instead of by
+# hunting through source/ and decks/:
+#
+# The -instructor target, not plain "web-deck": web-deck is the STUDENT deck,
+# which strips instructor-only slides at BUILD time rather than leaving them in
+# the page source for the player to hide. You author and teach from this one -
+# it has every slide, and the bar badges the instructor-only ones. Add &student
+# to see what students would get.
 #
 #   alt-click       a slide -> opens its source in your editor
 #   alt-shift-click a slide -> edit it here; cmd-enter to save
@@ -59,8 +65,8 @@ python3 scripts/make_deck_index.py
 
 # Same macOS permission workaround as build.sh: shutil.copy2 preserves source
 # permissions, which can leave the copies read-only and break the next build.
-rm -rf output/web-deck/external/
-pretext build web-deck
+rm -rf output/web-deck-instructor/external/
+pretext build web-deck-instructor
 
 # Everything this script starts goes in here and is torn down together.
 STARTED=()
@@ -94,7 +100,7 @@ fi
 # Rebuilds on every .ptx save, so an edit made in your editor - or in place on
 # a slide - shows up after a refresh instead of needing a manual build.
 if [ "$WATCH" = "yes" ]; then
-  python3 watch.py web-deck &
+  python3 watch.py web-deck-instructor &
   STARTED+=($!)
   echo "  - file watcher (rebuilds on save)"
 else
@@ -113,6 +119,6 @@ echo ""
 echo "Ctrl-C stops everything."
 echo ""
 
-python3 -m http.server "$PORT" --directory output/web-deck &
+python3 -m http.server "$PORT" --directory output/web-deck-instructor &
 STARTED+=($!)
 wait

@@ -52,17 +52,52 @@
      does together — are NOT instructor material and should stay in the book. -->
 <xsl:param name="book.solutions" select="'strip'"/>
 
+<!-- What to do with INSTRUCTOR-ONLY SLIDES — a <slide instructor="yes">, or a
+     deck ref pointing straight at an <instructor> block:
+       'strip'  (default, the "web-deck" target the students may be given) —
+                emit NOTHING. Until this existed the slide was rendered and the
+                player merely filtered it out of the student VIEW, so the answer
+                sat in the page source of a deck a student could open.
+       'render' (the "web-deck-instructor" target you teach from) — emit it.
+     The deck JSON's "instructor": true still drives the player: the badge in
+     the instructor view, and dropping the slide from ?student. That flag and
+     this one must agree, or the student deck loses a slide it should have kept
+     (or keeps one it should not) — scripts/check_deck.py enforces it. -->
+<xsl:param name="deck.solutions" select="'strip'"/>
+
 <!-- Instructor-only content, stripped from the student book.
-       <instructor>
+       <instructor xml:id="inst-...">              (xml:id optional)
          <p>...</p> <program>...</program>
+         <caption>shown only when a deck slide refs this block</caption>
        </instructor>
      Same contract as <slide>: a matching template always exists, so PreTeXt
-     does not try to number the unknown element under the stock stylesheet. -->
+     does not try to number the unknown element under the stock stylesheet.
+
+     The @xml:id becomes the div's id so a deck can ref this block DIRECTLY,
+     instead of a <slide> repeating the same answer beside it — two copies of
+     one solution drift, and the drift is invisible until you project the stale
+     one. The deck build that renders such a ref is web-deck-instructor, which
+     sets book.solutions=render for exactly this reason. -->
 <xsl:template match="instructor">
     <xsl:if test="$book.solutions = 'render'">
         <div class="instructor-only">
+            <xsl:if test="@xml:id">
+                <xsl:attribute name="id">
+                    <xsl:value-of select="@xml:id"/>
+                </xsl:attribute>
+            </xsl:if>
             <div class="instructor-only-label">Instructor only</div>
-            <xsl:apply-templates/>
+            <xsl:apply-templates select="node()[not(self::caption)]"/>
+            <!-- Same class the player reads off a <slide>, for parity. In the
+                 instructor book it reads as the block's closing line, which is
+                 where it actually shows: the player only places a caption on a
+                 slide that also has @ref, so like the 22 other caption-without-
+                 @ref slides in this book it is not projected. -->
+            <xsl:if test="caption">
+                <div class="deck-slide-caption">
+                    <xsl:apply-templates select="caption/node()"/>
+                </div>
+            </xsl:if>
         </div>
     </xsl:if>
 </xsl:template>
@@ -85,7 +120,13 @@
      finished function back.  Verified by grepping the built index; see the note
      in AUTHORING-book.md under "Instructor-only content". -->
 <xsl:template match="slide" mode="search-node-text">
-    <xsl:if test="$deck.slides = 'render'">
+    <!-- Same gate as the page template, and it has to be repeated here rather
+         than inherited: PreTeXt builds lunr-pretext-search-index.js in its own
+         modes, which walk the SOURCE tree, so a slide stripped from the HTML is
+         still indexed unless it is stripped here too. That is how the presenter
+         notes leaked the first time. -->
+    <xsl:if test="$deck.slides = 'render' and
+                  not(@instructor = 'yes' and $deck.solutions != 'render')">
         <xsl:apply-templates select="node()" mode="search-node-text"/>
     </xsl:if>
 </xsl:template>
@@ -108,8 +149,16 @@
      bullets, so its image is never duplicated - the player resolves it. The
      block is hidden in the reading view; only the deck player reveals it. -->
 <xsl:template match="slide">
-    <xsl:if test="$deck.slides = 'render'">
+    <xsl:if test="$deck.slides = 'render' and
+                  not(@instructor = 'yes' and $deck.solutions != 'render')">
         <div class="deck-slide" hidden="hidden">
+            <!-- Marks the block for the player, which badges it in the
+                 instructor view. It only ever reaches the HTML in a build that
+                 renders instructor slides at all; the student deck does not
+                 have this element to badge. -->
+            <xsl:if test="@instructor = 'yes'">
+                <xsl:attribute name="data-deck-instructor">yes</xsl:attribute>
+            </xsl:if>
             <xsl:attribute name="id">
                 <xsl:value-of select="@xml:id"/>
             </xsl:attribute>

@@ -799,9 +799,37 @@
             refBody.setAttribute('data-edit-origin', isSlideBlock ? 'slide' : 'book-direct')
             refBody.setAttribute('data-edit-id', slide.slide)
 
+            /* Badge instructor-only slides from the MARKUP as well as from the
+               deck JSON's "instructor": true, which render() has already
+               applied. Two sources because they answer different questions and
+               can disagree: the JSON decides whether ?student drops the slide,
+               the markup decides whether the slide exists in this build at all
+               (web-deck strips it, web-deck-instructor renders it). A ref
+               straight to an <instructor> block is the case that would
+               otherwise show no badge at all — the block is not a .deck-slide,
+               so it takes the book-direct path above.
+               Only ever ADDS the badge: if the JSON says instructor and the
+               markup somehow doesn't, the more cautious answer wins.
+               check_deck.py fails the build when the two disagree. */
+            var instructorMarkup = block.classList.contains('instructor-only') ||
+              block.getAttribute('data-deck-instructor') === 'yes'
+            if (instructorMarkup && !studentView) {
+              document.getElementById('bar').classList.add('instr')
+            }
+
             var body = block.querySelector('.deck-slide-body') || block
             var bodyClone = body.cloneNode(true)
             strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone); demath(bodyClone)
+            /* An <instructor> block is its own body — there is no
+               .deck-slide-body to narrow to — so the clone still carries the
+               book's "Instructor only" label and, if it has one, its caption.
+               The label is already said by the badge in the bar. The caption is
+               dropped for the same reason a <slide>'s is not in its body: it is
+               placed by placeMedia, and so (like every caption on a slide with
+               no @ref) it does not project at all. */
+            ;[].forEach.call(bodyClone.querySelectorAll('.instructor-only-label, .deck-slide-caption'), function (el) {
+              if (el.parentNode) el.parentNode.removeChild(el)
+            })
             // An activity shown as a slide may embed figures, code listings or a
             // board simulator that are already shown on their own slides — drop
             // them so the slide shows just the tasks and doesn't overflow. (Only

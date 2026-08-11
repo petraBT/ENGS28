@@ -10,9 +10,10 @@ conventions, learned building Day 3.
 
 1. **`<slide>` blocks in the book** — the condensed, in-class form of a piece of
    content, authored right next to the full prose it condenses. Rendered as a
-   hidden `<div class="deck-slide">` in the `web-deck` build (stripped from the
+   hidden `<div class="deck-slide">` in the deck builds (stripped from the
    `web`/`web-edit`/`print` reading builds), which the player extracts by
-   `xml:id`.
+   `xml:id`. A slide carrying an answer takes `instructor="yes"`, which keeps it
+   out of the **student** deck build entirely — see below.
 2. **The deck JSON** — an ordered list of slides: `ref` slides that point at a
    `<slide>` block (or any book element) by page + `xml:id`, plus inline "glue"
    slides (title, section dividers, agenda, …). No content lives in the JSON
@@ -21,10 +22,21 @@ conventions, learned building Day 3.
 ## Build & preview
 
 ```bash
-pretext build web-deck                       # renders <slide> blocks (hidden) for the player
-cd output/web-deck && python3 -m http.server 8351
+pretext build web-deck-instructor            # the deck you TEACH from: every slide
+cd output/web-deck-instructor && python3 -m http.server 8351
 # open  http://localhost:8351/external/class.html?deck=<id>
 ```
+
+Or just `./preview-slides.sh`, which builds that target, serves it on 8352 and
+adds the Alt-click editing tools.
+
+**Two deck targets.** `web-deck-instructor` has every slide; the bar badges the
+instructor-only ones. `web-deck` is the **student** deck — instructor slides are
+stripped at build time, not merely hidden by the player — and is the one you
+would publish. Build it with `./scripts/build-deck.sh`, never a bare
+`pretext build web-deck`: the deck *list* has to be filtered to match the
+stripped pages, and that is a second step. See *Instructor-only content in the
+book* in `AUTHORING-book.md`.
 
 - `web`, `web-edit`, `print` **strip** `<slide>` blocks entirely (the reading
   book shows full prose, never the condensed form or instructor notes).

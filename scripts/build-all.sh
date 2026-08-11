@@ -7,7 +7,9 @@
 #   web-edit  authoring preview         ./scripts/build-edit.sh :8931
 #   web-instructor  the same book WITH solutions, for you only  :8932
 #             built and served alongside web-edit by preview-edit.sh
-#   web-deck  the classroom deck player ./preview-slides.sh     :8351 / :8352
+#   web-deck-instructor  the deck you TEACH from  ./preview-slides.sh  :8352
+#   web-deck  the STUDENT deck: same player, instructor slides stripped at
+#             build time (not just hidden). The one you would publish.
 #   print     the PDF
 #
 # Building one does not touch the others, which is the trap: edit a figure,
@@ -22,7 +24,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
-TARGETS=(web web-edit web-deck web-instructor)
+TARGETS=(web web-edit web-deck web-deck-instructor web-instructor)
 if [ "$1" = "--with-print" ]; then
     TARGETS+=(print)
 fi
@@ -30,6 +32,13 @@ fi
 for t in "${TARGETS[@]}"; do
     echo ""
     echo "─── building $t ─────────────────────────────────────────"
+    # web-deck is the STUDENT deck, and building it is two steps, not one — the
+    # deck list has to be filtered to match the stripped pages. build-deck.sh
+    # owns that pairing so it cannot be half-done here.
+    if [ "$t" = "web-deck" ]; then
+        ./scripts/build-deck.sh
+        continue
+    fi
     # See build.sh: stale external/ copies can be read-only and break the copy.
     rm -rf "output/$t/external/"
     pretext build "$t"

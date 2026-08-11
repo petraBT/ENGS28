@@ -10,16 +10,39 @@ xml:ids all exist, and the slide simply renders blank in class.
 
     python3 scripts/check_deck.py assets/decks/day7.json
 """
-import json, os, re, subprocess, sys
+import glob, json, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BUILD = os.path.join(REPO, "output", "web-deck")
+# The INSTRUCTOR deck build, because it is the only one with every slide in it.
+# Resolving against plain web-deck would report each instructor-only slide as a
+# missing id — that build strips them on purpose.
+BUILD = os.path.join(REPO, "output", "web-deck-instructor")
+
+
+def source_instructor_ids():
+    """Every id the SOURCE marks instructor-only: <slide instructor="yes"> and
+    <instructor xml:id="...">, which a deck may ref directly instead of copying
+    the answer into a slide beside it."""
+    ids = set()
+    for path in glob.glob(os.path.join(REPO, "source", "*.ptx")):
+        src = open(path, encoding="utf-8").read()
+        for tag in re.finditer(r"<slide\b([^>]*)>", src):
+            attrs = tag.group(1)
+            xml_id = re.search(r'xml:id="([^"]+)"', attrs)
+            if xml_id and re.search(r'instructor="yes"', attrs):
+                ids.add(xml_id.group(1))
+        for tag in re.finditer(r"<instructor\b([^>]*)>", src):
+            xml_id = re.search(r'xml:id="([^"]+)"', tag.group(1))
+            if xml_id:
+                ids.add(xml_id.group(1))
+    return ids
 
 
 def main():
     if len(sys.argv) < 2:
         sys.exit("usage: check_deck.py <deck.json> [more.json ...]")
     bad = 0
+    marked = source_instructor_ids()
     for deck_path in sys.argv[1:]:
         # index.json is the contents page's deck list, not a deck. It is in this
         # directory (and so in a *.json glob), but has no slides to check —
@@ -34,6 +57,25 @@ def main():
         refs = [s for s in deck["slides"] if s.get("type") == "ref"]
         print(f"\n{os.path.basename(deck_path)} — {len(deck['slides'])} slides, {len(refs)} refs")
         for s in refs:
+            # The deck JSON and the source must agree about instructor-only.
+            # They drive different halves: the JSON decides the player's badge
+            # and whether ?student drops the slide, the source attribute decides
+            # whether the slide is in the student BUILD at all. Disagree one way
+            # and the student deck lists a slide whose markup was stripped;
+            # disagree the other and it ships an answer the player then hides.
+            flagged, in_source = bool(s.get("instructor")), s["slide"] in marked
+            if flagged and not in_source:
+                print(f"  NOT STRIPPED  {s['slide']} is \"instructor\": true here, but its source"
+                      f" is not marked")
+                print(f"                (add instructor=\"yes\" to the <slide>, or ref an"
+                      f" <instructor> block by its xml:id)")
+                bad += 1
+            elif in_source and not flagged:
+                print(f"  NOT FLAGGED   {s['slide']} is instructor-only in the source, but this"
+                      f" deck entry has no \"instructor\": true")
+                print(f"                (the student build drops the slide; this deck would"
+                      f" still list it)")
+                bad += 1
             page = os.path.join(BUILD, s["page"])
             if not os.path.exists(page):
                 print(f"  MISSING PAGE  {s['page']}  ({s['slide']})"); bad += 1; continue
