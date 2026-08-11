@@ -99,10 +99,12 @@ A `<sim>` embedded in an **activity** is dropped when that activity is projected
 like the figures and code listings an activity embeds — the students already have it in
 the book, and the slide should show the tasks.
 
-**Instructive caption** (short line under the figure): add a `<caption>…</caption>`
-child. The player shows THIS under the image and **hides the book figure's full
-caption** — slide captions are a one-line "what to notice," not the textbook
-caption. See the educational patterns below.
+**Instructive caption** (short closing line): add a `<caption>…</caption>` child
+to any `<slide>` (or `<instructor>` block). On a slide that refs a figure the
+player shows it under the image and **hides the book figure's full caption** —
+slide captions are a one-line "what to notice," not the textbook caption. On a
+slide with no `@ref` it closes the body, under the bullets or the code listing.
+See the educational patterns below.
 
 **Presenter note** (instructor-only, never projected): add a `<note>…</note>`
 child to any `<slide>`. Add **`?notes`** to the player URL to see them (and a
@@ -181,7 +183,10 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   "what to notice / what this shows / what to do" (e.g. *"CH1 on the button, CH2
   on the LED; minus leads to GND"*), NOT the book's full figure caption. Author it
   as the slide's `<caption>`; the book's own figcaption is hidden on slides. Keep
-  it to a line or two.
+  it to a line or two. A caption is not figure-only: on a bullet or code slide it
+  is the closing takeaway (*"Five writes, run once. After this, the timer needs
+  nothing from the CPU."*). Don't restate the body — if the caption only names
+  what the slide already says, drop it.
 - **Diagram slides are image-dominant** (no bullets) so the figure is large
   enough to explain. Don't cram a complex diagram beside bullets.
 - **Multiple annotated views of one diagram = multiple figures + multiple

@@ -824,9 +824,9 @@
                .deck-slide-body to narrow to — so the clone still carries the
                book's "Instructor only" label and, if it has one, its caption.
                The label is already said by the badge in the bar. The caption is
-               dropped for the same reason a <slide>'s is not in its body: it is
-               placed by placeMedia, and so (like every caption on a slide with
-               no @ref) it does not project at all. */
+               dropped HERE only so it is not shown twice: capBlock below reads
+               it off the original block and places it deliberately, the same as
+               for a <slide>. */
             ;[].forEach.call(bodyClone.querySelectorAll('.instructor-only-label, .deck-slide-caption'), function (el) {
               if (el.parentNode) el.parentNode.removeChild(el)
             })
@@ -883,9 +883,25 @@
               task.classList.add('titled-task')
             })
 
-            // The slide's own short, instructive caption (shown under the figure
-            // instead of the book figure's full caption).
+            /* The slide's own short, instructive caption. Where it lands depends
+               on what else is on the slide: under the image on a figure slide
+               (so it reads as the figure's caption, replacing the book's full
+               one), otherwise as the closing line of the body. Every slide that
+               carries one gets it — the two placeMedia calls below cover the
+               @ref cases, and the fallback after mediaStep covers a slide whose
+               caption closes bullets or a code listing with no ref at all. */
             var capBlock = block.querySelector('.deck-slide-caption')
+            var capPlaced = false
+            function placeCaption(container, url) {
+              if (!capBlock) return
+              var capClone = capBlock.cloneNode(true)
+              strip(capClone); absolutize(capClone, url); demath(capClone)
+              capClone.className = 'slide-caption'
+              capClone.setAttribute('data-edit-origin', 'caption')
+              capClone.setAttribute('data-edit-id', slide.slide)
+              container.appendChild(capClone)
+              capPlaced = true
+            }
 
             var refId = block.getAttribute('data-deck-ref')
             function placeMedia(doc, url) {
@@ -909,14 +925,7 @@
                     if (el.parentNode) el.parentNode.removeChild(el)
                   })
                   refMedia.appendChild(mediaClone)
-                  if (capBlock) {
-                    var capClone = capBlock.cloneNode(true)
-                    strip(capClone); absolutize(capClone, res.url); demath(capClone)
-                    capClone.className = 'slide-caption'
-                    capClone.setAttribute('data-edit-origin', 'caption')
-                    capClone.setAttribute('data-edit-id', slide.slide)
-                    refMedia.appendChild(capClone)
-                  }
+                  placeCaption(refMedia, res.url)
                   if (refBody.textContent.trim() === '') {
                     refEl.classList.remove('single'); refEl.classList.add('figure-focus')
                   } else if (block.getAttribute('data-deck-stack')) {
@@ -931,14 +940,7 @@
                   refBody.appendChild(mediaClone)
                   // Non-image refs (e.g. a table) still get the slide's own
                   // instructive caption — shown below, in the body column.
-                  if (capBlock) {
-                    var capCloneB = capBlock.cloneNode(true)
-                    strip(capCloneB); absolutize(capCloneB, res.url); demath(capCloneB)
-                    capCloneB.className = 'slide-caption'
-                    capCloneB.setAttribute('data-edit-origin', 'caption')
-                    capCloneB.setAttribute('data-edit-id', slide.slide)
-                    refBody.appendChild(capCloneB)
-                  }
+                  placeCaption(refBody, res.url)
                 }
               }
             }
@@ -957,6 +959,15 @@
             } else mediaStep = Promise.resolve(placeMedia(res.doc, res.url))
 
             mediaStep.then(function () {
+
+            /* A caption on a slide with no @ref — or one whose @ref resolved to
+               nothing — closes the body instead. Without this it was built into
+               the HTML and silently dropped, which cost 21 slides and one
+               <instructor> block their closing line (Days 8, 9, 9X, 10 and the
+               ADC registers pair). Runs after mediaStep so the two placements
+               inside placeMedia get first refusal: a figure slide's caption
+               belongs under its image, not under the bullets beside it. */
+            if (!capPlaced) placeCaption(refBody, res.url)
 
             /* The presenter <note>, last of all (?notes only). Deliberately
                after the layout decisions above: it is not slide content, and

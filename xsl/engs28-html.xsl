@@ -89,10 +89,9 @@
             <div class="instructor-only-label">Instructor only</div>
             <xsl:apply-templates select="node()[not(self::caption)]"/>
             <!-- Same class the player reads off a <slide>, for parity. In the
-                 instructor book it reads as the block's closing line, which is
-                 where it actually shows: the player only places a caption on a
-                 slide that also has @ref, so like the 22 other caption-without-
-                 @ref slides in this book it is not projected. -->
+                 instructor book it reads as the block's closing line, and the
+                 player projects it in the same place — a caption with no figure
+                 to sit under closes the body. -->
             <xsl:if test="caption">
                 <div class="deck-slide-caption">
                     <xsl:apply-templates select="caption/node()"/>
@@ -201,9 +200,9 @@
             <div class="deck-slide-body">
                 <xsl:apply-templates select="*[not(self::note) and not(self::caption)]"/>
             </div>
-            <!-- A slide's own short, instructive caption for the figure it shows
-                 (the deck player uses this INSTEAD of the book figure's full
-                 caption). -->
+            <!-- A slide's own short, instructive caption. On a slide that refs a
+                 figure the player shows it under the image, INSTEAD of the book
+                 figure's full caption; on any other slide it closes the body. -->
             <xsl:for-each select="caption">
                 <div class="deck-slide-caption">
                     <xsl:apply-templates/>
