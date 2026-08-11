@@ -1685,62 +1685,147 @@ void pb4_exti_init(void) {
             </p>
 
             <slide xml:id="sl-day10-ai-chatgpt" room="compressed">
-    <p>ChatGPT's answer to Tuesday's assignment. It compiles.</p>
+    <p>ChatGPT's answer to Tuesday's assignment, in full. It compiles.</p>
     <program language="c"><code><![CDATA[
+/* counterResetButtonIntTimer.c -- ChatGPT */
+#include <stdio.h>
+#include "ES28.h"
+#include "uart.h"
+#define MAXCOUNT 100
+void pb4_exti_init(void);
+void tim14_init(void);
+volatile int buttonPushed;
+volatile int timerElapsed;
+
+int main(void) {
+  int counter = 0;
+  uart2_init();
+  printf("Counter demo\r\n");
+  printf("Hex \tDecimal\r\n");
+  pb4_exti_init();
+  tim14_init();
+  buttonPushed = 0;
+  timerElapsed = 0;
   while (1) {
     if (timerElapsed) {
       timerElapsed = 0;
       printf("%x\t%d\r\n", counter, counter);
-      if (buttonPushed)                 { counter = 0; buttonPushed = 0; }
-      else if (counter == MAXCOUNT - 1) { counter = 0; }
-      else                              { counter++; }
+      if (buttonPushed) {
+        counter = 0;
+        buttonPushed = 0;
+      } else if (counter == MAXCOUNT - 1) {
+        counter = 0;
+      } else {
+        counter++;
+      }
     }
   }
-void TIM14_IRQHandler(void) {
-  if (TIM14->SR & TIM_SR_UIF) { TIM14->SR &= ~TIM_SR_UIF; timerElapsed = 1; }
+  return 1;
 }
+
+void TIM14_IRQHandler(void) {
+    if (TIM14->SR & TIM_SR_UIF) {
+        TIM14->SR &= ~TIM_SR_UIF;      // Clear PR flag
+        timerElapsed = 1;
+    }
+}
+
 void tim14_init(void) {
-  RCC->APBENR2 |= RCC_APBENR2_TIM14EN;  TIM14->PSC = 48000 - 1;
-  TIM14->ARR = 1000 - 1;                TIM14->SR &= ~TIM_SR_UIF;
-  TIM14->DIER |= TIM_DIER_UIE;          NVIC_EnableIRQ(TIM14_IRQn);
-  TIM14->CR1 |= TIM_CR1_CEN;   }
+    RCC->APBENR2 |= RCC_APBENR2_TIM14EN;
+    TIM14->PSC = 48000 - 1;
+    TIM14->ARR = 1000 - 1;
+    TIM14->SR &= ~TIM_SR_UIF;
+    TIM14->DIER |= TIM_DIER_UIE;
+    NVIC_EnableIRQ(TIM14_IRQn);
+    TIM14->CR1 |= TIM_CR1_CEN;
+}
+
+void EXTI4_15_IRQHandler(void){
+    // unchanged from our code
+}
+
+void pb4_exti_init(void) {
+    // unchanged from our code
+}
 ]]></code></program>
-    <note>Abridged for the slide: the includes, the prototypes, the volatile declarations and main()'s opening are dropped, and pb4_exti_init() and the EXTI handler are marked "unchanged from our code" in the original. The book has the full listing.
-    Equipment today: the display still wired from yesterday and verified in Part 2, and the AD2 — needed in Part 9, and the debugging instrument if a write does not land earlier. No new components.
-    110 minutes. The parts as budgeted sum to 106, plus 2 settling, so there are 2 minutes of slack — the first this day has had. Re-timed 2026-08-08 after two rounds of cuts: the Arduino material (4 slides) and the I2C_TIMINGR beat (Part 6b, 5 slides). Part 8c took most of what those freed, 17 to 19 minutes, because the crucial step is in it.
-    If it runs long, cut in this order: Part 9, which is the stretch; then Part 1 from 9 to 6, by dropping the group comparison and keeping the individual written answer and the measurement that opens it. NOT cuttable: Part 8c, and Part 8a's layering argument.</note>
+    <note>The whole program, so nothing has to be taken on trust — scroll the listing to reach tim14_init(), which is where two of the five findings are. The two stubs at the bottom are marked "unchanged from our code" by the assistant itself; that is its text, not an abridgement.</note>
 </slide>
 
             <slide xml:id="sl-day10-ai-gemini" room="compressed">
-    <p>And Gemini's. Also compiles. <em>Both listings are abridged: includes, prototypes and the <c>volatile</c> declarations only. Nothing else is missing from either program.</em></p>
+    <p>And Gemini's answer to the same assignment, in full. Also compiles.</p>
     <program language="c"><code><![CDATA[
+/* counterResetButtonIntTimer.c -- Gemini */
+#include <stdio.h>
+#include "ES28.h"
+#include "uart.h"
+#define MAXCOUNT 100
+void pb4_exti_init(void);
+void tim14_init(void);
+volatile int buttonPushed;
+
+int main(void) {
+  int counter = 0;
+  // Initialize peripherals
+  uart2_init();
+  pb4_exti_init();
+  tim14_init();
+  buttonPushed = 0;
+  printf("Counter ...\r\n");
+  printf("Hex \tDecimal\r\n");
   while(1) {
     if (TIM14->SR & TIM_SR_UIF) {
-      TIM14->SR &= ~TIM_SR_UIF;
+      TIM14->SR &= ~TIM_SR_UIF;        // Clear PR flag
       printf("%x\t%d\r\n", counter, counter);
-      if (buttonPushed) { counter = 0; buttonPushed = 0; }
-      else if (counter >= MAXCOUNT - 1) { counter = 0; }
-      else { counter++; }
+      // Logic for counting and button reset
+      if (buttonPushed) {
+        counter = 0;
+        buttonPushed = 0;
+      } else if (counter >= MAXCOUNT - 1) {
+        counter = 0;
+      } else {
+        counter++;
+      }
     }
   }
+  return 1;
+}
+
 void tim14_init(void) {
-  RCC->APBENR2 |= RCC_APBENR2_TIM14EN;  TIM14->PSC = 16000 - 1;
-  TIM14->ARR = 1000 - 1;                TIM14->EGR |= TIM_EGR_UG;
-  TIM14->CR1 |= TIM_CR1_CEN;   }
+    RCC->APBENR2 |= RCC_APBENR2_TIM14EN;
+    TIM14->PSC = 16000 - 1;
+    TIM14->ARR = 1000 - 1;
+    TIM14->EGR |= TIM_EGR_UG;
+    TIM14->CR1 |= TIM_CR1_CEN;
+}
+
+void EXTI4_15_IRQHandler(void){
+    // unchanged from our code
+}
+
+void pb4_exti_init(void) {
+    // unchanged from our code
+}
 ]]></code></program>
-    <caption>Pick one of the two. Write your answers before anybody talks.</caption>
-    <note>Same abridgement as the previous slide. A working reference copy is on Canvas and goes to the whole room before groups form, so that a student whose homework did not run has something to compare against and never has to say so out loud.</note>
+    <note>Also complete. This one is shorter than ChatGPT's for a reason the room is meant to find: there is no TIM14_IRQHandler in it anywhere, and no UIE and no NVIC_EnableIRQ in tim14_init(). Both listings stay reachable while the groups work, so nobody has to remember a line.
+    A working reference copy is on Canvas and goes to the whole room before groups form, so that a student whose homework did not run has something to compare against and never has to say so out loud.</note>
 </slide>
 
             <slide xml:id="sl-day10-ai-findings" instructor="yes">
-    <p>Your list may have more; these are the ones that change what the board does.</p>
+    <p>Your list may have more; these are the ones that change what the board does. Three of them are in both programs.</p>
     <ul>
-        <li><term>The clock speed is wrong in both.</term> <c>PSC = 48000-1</c> assumes a 48 MHz clock and <c>16000-1</c> assumes 16 MHz; ours is 12 MHz. The <q>one second</q> comes out at four seconds and one and a third. Nothing warns you &#8212; you have to know the clock.</li>
-        <li><term>Both check the button only when the timer fires.</term> The test is inside <c>if (timerElapsed)</c>, so a press waits for the next tick and two presses in one second become one. That is what the interrupt was for. Two independent <c>if</c>s: a press and a tick are unrelated events.</li>
+        <li><term>The clock speed is wrong in both.</term> <c>PSC = 48000-1</c> assumes 48 MHz and <c>16000-1</c> assumes 16 MHz; ours runs at 12 MHz, so the first ticks every 4 ms and the second every 1.33 ms. The <c>ARR = 1000-1</c> meant to make one second makes four seconds, and one and a third. Nothing warns you &#8212; you have to know the clock.</li>
+        <li><term>Both check the button only when the timer fires.</term> The test sits inside the once-a-second branch &#8212; ChatGPT's <c>if (timerElapsed)</c>, Gemini's <c>if (TIM14-&gt;SR &amp; TIM_SR_UIF)</c> &#8212; so a press is acted on at the next tick rather than when it happens, and the count on the screen stays stale until it comes round. That is what the interrupt was for: a press and a tick are unrelated events.</li>
         <li><term>Both clear the flag with <c>&amp;=</c>.</term> Harmless on <c>TIM14_SR</c>, which is <c>rc_w0</c> &#8212; but the habit is what protects you on the registers where it is not.</li>
-        <li><term>ChatGPT never zeroes <c>TIM14-&gt;CNT</c>,</term> so the first interval is however far the counter had already got. Our own <c>tim14_ms_interrupt_init()</c> does.</li>
-        <li><term>Gemini's program does not use the timer interrupt at all.</term> No <c>UIE</c>, no <c>NVIC_EnableIRQ()</c>, no ISR &#8212; the loop polls <c>TIM14-&gt;SR</c>. It works, it is not what was asked for, and the output looks identical.</li>
     </ul>
+</slide>
+
+            <slide xml:id="sl-day10-ai-findings-gemini" instructor="yes">
+    <p>And two that are Gemini's alone &#8212; one of them a thing it does better than we do.</p>
+    <ul>
+        <li><term>Gemini does one thing neither ChatGPT nor our own code does.</term> <c>TIM14-&gt;EGR |= TIM_EGR_UG;</c> forces an update event before the timer starts, which is what loads <c>PSC</c> into the prescaler's working copy &#8212; the buffered register the timers chapter drew. Without an update event the prescaler is still at its reset value of 1 when <c>CEN</c> is set, so the very first interval is 1000 counts of a 12 MHz clock: 83 µs, not a second. One short interval, once, at startup &#8212; and our own <c>tim14_ms_interrupt_init()</c> has it too.</li>
+        <li><term>Gemini's program does not use the timer interrupt at all.</term> Look at its <c>tim14_init()</c>: no <c>TIM_DIER_UIE</c>, no <c>NVIC_EnableIRQ()</c>, and no timer ISR &#8212; the only handler in the file is the button's <c>EXTI4_15_IRQHandler</c>. The main loop polls <c>TIM14-&gt;SR</c> instead, which is the <em>polled</em> version we started from. It works, it is not what was asked for, and reading the code is the only way to notice: on the screen only the printing rate gives it away.</li>
+    </ul>
+    <note>This is the pair that answers task 2 ("what does it do better than yours?") — the EGR|UG line is the honest answer, and it is worth saying that an AI found something our own code does not do. The second bullet is the one nobody spots from the output.</note>
 </slide>
         </subsection>
 
@@ -2054,7 +2139,7 @@ void tim14_init(void) {
             </p>
 
             <slide xml:id="sl-day10-cmd-table" ref="fig-ht16k33-cmd-table">
-    <caption>The HT16K33's command table, datasheet pp. 24&#8211;25. The eight middle columns are the bits of a one-byte command, D15 down to D8: a 0 or 1 is the command's identity, a name is your option, and an X is a don't-care that we write as 0. Three of these rows are all we need.</caption>
+    <caption>The HT16K33's command table, datasheet pp. 24&#8211;25. The eight middle columns are the bits of a one-byte command, D15 down to D8: a 0 or 1 is the command's identity, a name is your option, and an X is a don't-care that we write as 0. For now we mostly care about the rows named <em>System setup</em>, <em>Display setup</em> and <em>Dimming set</em>.</caption>
     <note>Figure-focus deliberately: three stacked datasheet crops share one figure box, and with bullets above them the bit cells project at three or four pixels. The two points that were bullets here are now in the caption, and the next slide reprints all three bit layouts at full size, which is what students actually derive from.</note>
 </slide>
 
@@ -2091,8 +2176,8 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
 ]]></code></program>
     <ul>
         <li>The header names every field of the table: <c>HT16K33_SYSTEM_CMD</c>, <c>HT16K33_OSC_ON</c>, <c>HT16K33_DISPLAY_CMD</c>, <c>HT16K33_DISPLAY_ON</c>, <c>HT16K33_BLINK_OFF</c>, <c>HT16K33_BLINK_1HZ</c>, <c>HT16K33_BRIGHT_CMD</c>.</li>
-        <li>So a line of driver code reads the way the datasheet row does: <term>the command, ORed with its options</term>. That is the structure to copy the next time you write one of these &#8212; the datasheet's layout becomes the header file's layout.</li>
-        <li>Those three bytes are the first function of your driver, <c>SevenSeg_init()</c>, and you write it yourself once we have looked at the display RAM and the pins.</li>
+        <li>So a line of driver code reads the way the datasheet row does: <term>the command, OR'ed with its options</term>. That is the structure to copy the next time you write one of these — the datasheet’s own layout becomes the header file’s layout.</li>
+        <li>Sending the three command bytes is the first function of your seven segment driver, <c>SevenSeg_init()</c>. It has to run before the display will show anything at all. You will write it yourself once we have looked at the display RAM and the pins.</li>
     </ul>
 </slide>
         </subsection>
@@ -2293,9 +2378,9 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
 
             <slide xml:id="sl-day10-ram" ref="fig-display-ram-map">
     <ul>
-        <li>Sixteen bytes, <term>two per common line</term>: ROW0&#8211;ROW7 in the first and ROW8&#8211;ROW15 in the second. A seven-segment digit uses only the first eight rows, so <term>the second byte of every pair is always 0 for us</term>.</li>
-        <li>That leaves five even addresses carrying anything: <c>0x00</c>, <c>0x02</c>, <c>0x04</c>, <c>0x06</c>, <c>0x08</c> &#8212; digit 1, digit 2, <term>the colon</term>, digit 3, digit 4. The colon sits in the middle because that is where it sits on the display.</li>
-        <li>Within a digit's byte, the same order you used yesterday: <c>0b</c> DP g f e d c b a. To light a <c>0</c> you put <c>0b00111111</c> in the D7&#8211;D0 byte.</li>
+        <li>The display RAM holds sixteen bytes, <term>two per common line</term>: ROW0&#8211;ROW7 in the first and ROW8&#8211;ROW15 in the second. A seven-segment digit uses only the first eight bits (called rows here) of each common line, so <term>the second byte of every pair is always 0 for us</term>.</li>
+        <li>That leaves five even addresses carrying anything: <c>0x00</c>, <c>0x02</c>, <c>0x04</c>, <c>0x06</c>, <c>0x08</c> &#8212; digit 1, digit 2, <term>the colon</term>, digit 3, digit 4. The colon sits in the middle because that is where it is located on the display.</li>
+        <li>Within a digit's byte, the LED segments are listed in same order you used yesterday: <c>0b</c> DP g f e d c b a. To light a <c>0</c> you put <c>0b00111111</c> in the D7&#8211;D0 byte.</li>
     </ul>
     <caption>Two bytes per position, and we write the odd one as 0 every time.</caption>
     <note>Do not re-derive the bit order here — they wrote a digit's byte with it yesterday. The beat is the SECOND byte: sixteen LEDs per common line, a seven-segment digit uses eight. Why it still has to be sent comes three slides on.</note>
@@ -2331,7 +2416,7 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
             <slide xml:id="sl-day10-pointer" ref="fig-ht16k33-page-write" stack="yes">
     <ul>
         <li><term>Why send the zeros at all,</term> if the second byte of each pair does nothing? Because the HT16K33 has <term>one pointer</term> into its display RAM. You set it once, in the command byte at the start of the transaction, and it <term>advances by one every time a byte arrives</term>.</li>
-        <li>So ten bytes from address 0 fill addresses 0 through 9. Leave the zeros out and the second digit's pattern lands at address 1, which is the top half of digit 1.</li>
+        <li>So ten bytes from address 0 fill addresses 0 through 9. Leave the zeros out and the second digit's pattern lands at address 1, which is the top (unused) half of digit 1.</li>
         <li>And all ten go in <term>one</term> transaction: a STOP ends the transaction, and after a STOP the next write starts over at whatever address its own command byte names.</li>
         <li>The library call for <q>address the device, say where inside it, send this many bytes</q> is <c>i2c1_memWrite()</c> &#8212; the one you called yesterday without knowing what it did, and this is what it was for.</li>
     </ul>
@@ -2529,8 +2614,8 @@ open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
             <slide xml:id="sl-day10-opendrain-more">
     <p>What else that buys, and the one number it leaves you.</p>
     <ul>
-        <li>The strongest thing any device can do is pull the line LOW, so two devices disagreeing is never worse than a LOW &#8212; and a device that releases and then reads LOW knows somebody else is pulling. Two more features rest on exactly that, and the Reference section has both: <term>several controllers</term> sharing one bus and sorting out who wins, and a device <term>holding SCL LOW</term> to ask for more time.</li>
-        <li>Pull-ups are typically 5 k&#8486; to 10 k&#8486;, and we fit none &#8212; both devices this course uses carry their own. The value is squeezed from both ends: <term>too small</term> and the device pulling LOW cannot sink enough current to hold the line below threshold; <term>too large</term> and the resistor charges the bus capacitance too slowly to get back up before the next clock edge.</li>
+        <li>The strongest thing any device can do is pull the line LOW, so two devices disagreeing is never worse than a LOW &#8212; and a device that releases and then reads LOW knows somebody else is pulling. Two more features rest on exactly that: <term>several controllers</term> can share one bus, which we will see soon, and a device can <term>hold SCL LOW</term> to ask for more time, which we will not be using. The Reference section has both.</li>
+        <li>Pull-ups are typically 5 k&#8486; to 10 k&#8486;, and we fit none, because both devices this course uses come on breakout boards that carry their own &#8212; worth checking on the datasheet of anything you add. The value is squeezed from both ends: <term>too small</term> and the device pulling LOW cannot sink enough current to hold the line below threshold; <term>too large</term> and the resistor charges the bus capacitance too slowly to get back up before the next clock edge.</li>
     </ul>
 </slide>
 
@@ -3351,7 +3436,7 @@ void SevenSeg_write(uint8_t *display_buffer) {
         <li>1 &#8212; Does <c>writeFirstDigit.c</c> still put an <c>E</c> up? If yes, the bus, the init and the RAM addressing are all fine and the fault is in <c>SevenSeg_write()</c> or in how the buffer was filled.</li>
         <li>2 &#8212; Four garbled characters usually means the buffer is right but <term>shifted</term>: check you sent <c>2*HT16K33_NBUF</c> bytes and started at <c>HT16K33_ADDR_PTR</c>, before suspecting the segment patterns.</li>
         <li>3 &#8212; Nothing at all, and <c>writeFirstDigit.c</c> also shows nothing: does the program keep running, or does it stop on its first I2C call? Neither is visible from the outside, so pause it in the debugger and see where it is. <term>Stopped inside <c>i2c1_byteWrite()</c> means nobody acknowledged</term> &#8212; the wires, the power, or the address you passed. <term>Still looping means the bus answered</term>, so the fault is above it: check that <c>SevenSeg_init()</c> is called, and that its three commands are the ones you derived.</li>
-        <li>4 &#8212; Been through all three and still nothing? <term>Raise your hand.</term></li>
+        <li>4 &#8212; Still stuck?  We're here to help!</li>
     </ul>
     <caption>Each step rules out a layer — start at the one you know worked.</caption>
     <note>Stays up for all of Part 8c.</note>
