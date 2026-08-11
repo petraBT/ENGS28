@@ -729,6 +729,27 @@ teaching and stays in the book. What goes in `<instructor>` is the thing whose
 value is that the student produced it: the finished `SevenSeg_init()`, the
 finished driver, the answer program.
 
+**The PDF was a separate leak, and it was a real one.** A strip-by-default
+element needs a template in **both** stylesheets. `xsl/engs28-latex.xsl` had one
+for `<slide>` and `<sim>` but not for `<instructor>`, so PreTeXt's stock
+fallback recursed into the children and typeset every solution into the PDF —
+*without* the "Instructor only" label, which only the HTML template produces, so
+it read as ordinary book prose. Fixed 2026-08-11.
+
+It hid for so long because the print build **dies on an SVG in Chapter 3** and
+never reaches Chapter 9, where the blocks are — while still reporting
+`Success! Built requested target(s) without errors`. Do not verify the print
+strip by reading the PDF. Verify the generated LaTeX, which is fast and
+complete: add a `latex` target temporarily and grep `main.tex`.
+
+```xml
+<target name="latex-check" format="latex" xsl="engs28-latex.xsl" output-dir="latex-check" />
+```
+
+```bash
+pretext build latex-check && grep -c 'The three functions, complete' output/latex-check/main.tex   # expect 0
+```
+
 **The search index is a separate leak, and it was a real one.** PreTeXt builds
 `lunr-pretext-search-index.js` in its own XSL modes, which walk the *source*
 tree rather than the rendered HTML — so stripping an element from the page does
@@ -738,7 +759,9 @@ would have carried every solution: searching `SevenSeg_write` returned the
 finished function. `xsl/engs28-html.xsl` now has four templates
 (`search-node-text` and the two `search-block-docs-*` modes) that suppress both
 elements. **If you add another strip-by-default element, it needs the same four
-templates**, and the way to check is to grep the built index, not the page:
+templates** — plus a template in `engs28-latex.xsl`, per the PDF note above.
+Three places, and only the page is obvious. The way to check the index is to
+grep the built file, not the page:
 
 ```bash
 grep -c 'The three functions, complete' output/web/lunr-pretext-search-index.js
