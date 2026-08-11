@@ -7,6 +7,19 @@ set -e
 #   alt-click       a paragraph -> opens it in your text editor
 #   alt-shift-click a paragraph -> edit the text in place, cmd-enter to save
 #
+# It also builds "web-instructor" and serves it on the NEXT port, so the book
+# you are writing and the book with the solutions in it are both one click
+# away and always the same save:
+#
+#   :8931  student book    web-edit        Alt-click editing
+#   :8932  instructor book web-instructor  every <instructor> block, boxed
+#
+# Two ports rather than one server because they are two output directories and
+# `python3 -m http.server` serves exactly one. Keeping them physically separate
+# is also the point: nothing under output/web-edit can serve a solution even by
+# accident. The instructor book has no ptx-edit.js, so editing happens on :8931
+# — but a save rebuilds both, so :8932 is never behind.
+#
 # One command for the whole setup: it starts scripts/edit-server.py - which
 # finds and rewrites the source behind those clicks - as well as the page
 # server, and Ctrl-C stops both. See scripts/README-editing.md.
@@ -20,6 +33,8 @@ set -e
 # script that talks to a server able to rewrite source files.
 #
 # Usage: ./preview-edit.sh [port] [--no-watch]   (port defaults to 8931)
+#
+# The instructor book is served on port+1, so a custom port moves both.
 #
 # --no-watch skips the rebuild-on-save watcher, for when you want the preview
 # held still at a known build.
@@ -35,11 +50,12 @@ for arg in "$@"; do
     *) PORT="$arg" ;;
   esac
 done
+INSTRUCTOR_PORT=$((PORT + 1))
 
-# Same macOS permission workaround as build.sh: shutil.copy2 preserves source
-# permissions, which can leave the copies read-only and break the next build.
-rm -rf output/web-edit/external/
-pretext build web-edit
+# Builds web-edit AND web-instructor (and does the macOS external/ permission
+# workaround for each). Same script the Launchpad's Rebuild button runs, so the
+# two cannot drift apart.
+./scripts/build-edit.sh
 
 # Everything this script starts goes in here and is torn down together.
 STARTED=()
@@ -72,18 +88,38 @@ fi
 
 # Rebuilds on every .ptx save, so an edit made in your editor - or in place in
 # the preview - shows up after a refresh instead of needing a manual build.
+#
+# --command, not a target name: watch.py takes ONE positional target, so
+# `watch.py web-edit web-instructor` would silently watch only the first and
+# the instructor book would sit at the build from when this started. The script
+# builds both, and is what Rebuild runs too.
 if [ "$WATCH" = "yes" ]; then
-  python3 watch.py web-edit &
+  python3 watch.py --command ./scripts/build-edit.sh &
   STARTED+=($!)
-  echo "  - file watcher (rebuilds on save)"
+  echo "  - file watcher (rebuilds both books on save)"
 else
   echo "  - file watcher off (--no-watch); rebuild with ./preview-edit.sh"
 fi
 
+# The instructor book. Same lsof guard as the edit server above: this port is
+# only ever ours, so anything on it is an orphan from a previous run - say so
+# rather than letting python fail into the log and leave the link dead.
+if lsof -ti tcp:"$INSTRUCTOR_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "  ! instructor book: port $INSTRUCTOR_PORT is already in use - not starting another."
+  echo "    (Orphan from an earlier run? lsof -ti tcp:$INSTRUCTOR_PORT | xargs kill)"
+else
+  python3 -m http.server "$INSTRUCTOR_PORT" --directory output/web-instructor &
+  STARTED+=($!)
+  echo "  - instructor book on port $INSTRUCTOR_PORT"
+fi
+
 echo ""
-echo "Book:  http://localhost:$PORT/   <- open this one"
+echo "Book:        http://localhost:$PORT/   <- open this one"
 echo "  alt-click a paragraph       -> opens it in your editor"
 echo "  alt-shift-click a paragraph -> edit in place, cmd-enter to save"
+echo ""
+echo "Instructor:  http://localhost:$INSTRUCTOR_PORT/   <- same book, solutions rendered"
+echo "  read-only (no Alt-click); never deploy output/web-instructor"
 echo ""
 echo "Ctrl-C stops everything."
 echo ""

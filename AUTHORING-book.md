@@ -670,6 +670,13 @@ pretext build web-instructor     # or ./scripts/build-all.sh, which does all fou
 
 **Do not deploy `output/web-instructor` beside the student book.**
 
+You rarely build it by hand. `./preview-edit.sh` builds and serves both books
+side by side — the student book on **:8931** (with Alt-click editing) and the
+instructor book on **:8932** — and its file watcher rebuilds *both* on every
+save, so the solutions view is never a build behind the page you are writing.
+Both are one click apart on the Launchpad's ENGS 28 Author tile. Editing only
+happens on :8931; `web-instructor` carries no `ptx-edit.js`.
+
 Two things to know.
 
 **A reveal is not automatically a solution.** A derivation the class does

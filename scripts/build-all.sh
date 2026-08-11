@@ -4,8 +4,9 @@
 # The book has four of them and they are separate output directories:
 #
 #   web       reading book              ./build.sh              :8353
-#   web-instructor  the same book WITH solutions, for you only
 #   web-edit  authoring preview         ./scripts/build-edit.sh :8931
+#   web-instructor  the same book WITH solutions, for you only  :8932
+#             built and served alongside web-edit by preview-edit.sh
 #   web-deck  the classroom deck player ./preview-slides.sh     :8351 / :8352
 #   print     the PDF
 #
@@ -13,7 +14,7 @@
 # rebuild the target you are not reading, and conclude the change did not take.
 # Run this when you want certainty rather than speed.
 #
-#   ./scripts/build-all.sh              # web, web-edit, web-deck
+#   ./scripts/build-all.sh              # web, web-edit, web-deck, web-instructor
 #   ./scripts/build-all.sh --with-print # ... and the PDF (slow)
 
 set -e
