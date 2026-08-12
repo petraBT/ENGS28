@@ -2105,9 +2105,16 @@ void pb4_exti_init(void) {
                 The four bits to the left of the magenta line are the command
                 itself and never change; the four to the right are the options,
                 and the only one that means anything here is S, the oscillator.
-                Write each half as its own byte and OR them together:
+                Write each half as its own byte and OR them together.  You do not
+                have to invent names for the two halves: <c>SevenSegPartial.h</c>,
+                the header that comes with the driver, already has a
+                <c>#define</c> for every field of the table.
             </p>
             <program language="c"><code><![CDATA[
+  in SevenSegPartial.h, which you are given:
+      #define HT16K33_SYSTEM_CMD   0x20      // System setup
+      #define HT16K33_OSC_ON       0x01      //   S = 1, oscillator on
+
   system setup      0 0 1 0 | X X X S      the row, and its magenta line
                     command | options
 
@@ -2152,9 +2159,9 @@ void pb4_exti_init(void) {
                 (<xref ref="fig-ht16k33-addr-frame"/>).
             </p>
             <p>
-                Every name used above comes from the header file you are given for
-                the seven segment driver, and every one of them is one field of
-                the command table.  That is why a line of driver code reads the
+                Every name used above is a <c>#define</c> in
+                <c>SevenSegPartial.h</c>, and every one of them is one field of
+                the command table — which is why a line of driver code reads the
                 way the datasheet row does: the command, OR'ed with its options.
                 That is the structure to copy the next time you write one of these
                 — the datasheet's own layout becomes the header file's layout.
@@ -2190,8 +2197,12 @@ void pb4_exti_init(void) {
 </slide>
 
             <slide xml:id="sl-day10-cmd-answer">
-    <p>Take the first one all the way through. The four bits left of the magenta line are the command and never change; the four to the right are the options, and the only one that means anything here is S, the oscillator. Write each half as its own byte and OR them together.</p>
+    <p>Let's look more closely at the first one, turning on the oscillator. The four bits left of the magenta line are the command and never change; the four to the right are the options, and the only one that means anything here is S, the oscillator. Write each half as its own byte and OR them together &#8212; and you do not have to invent the names, because <c>SevenSegPartial.h</c> already has a <c>#define</c> for every field of the table.</p>
     <program language="c"><code><![CDATA[
+  in SevenSegPartial.h, which you are given:
+      #define HT16K33_SYSTEM_CMD   0x20      // System setup
+      #define HT16K33_OSC_ON       0x01      //   S = 1, oscillator on
+
   system setup      0 0 1 0 | X X X S      the row, and its magenta line
                     command | options
 
@@ -2206,8 +2217,9 @@ void pb4_exti_init(void) {
 </slide>
 
             <slide xml:id="sl-day10-cmd-answer-rest">
-    <p>The other two are built the same way, and changing an option moves only the bottom bits.</p>
+    <p>The other two are built the same way, out of the same header's <c>#define</c>s, and changing an option moves only the bottom bits.</p>
     <program language="c"><code><![CDATA[
+  ... and the rest of SevenSegPartial.h, one name per field:
   display setup     0b1000 0000 = 0x80     HT16K33_DISPLAY_CMD
     display on      0b0000 0001 = 0x01     HT16K33_DISPLAY_ON
     not blinking    0b0000 0000 = 0x00     HT16K33_BLINK_OFF
@@ -2218,14 +2230,13 @@ void pb4_exti_init(void) {
     full, 16/16     0b0000 1111 = 0x0f     P3 P2 P1 P0 all set
                 OR  -------------------
                     0b1110 1111 = 0xEF
-
   blinking at 1 Hz  0b1000 0101 = 0x85     HT16K33_BLINK_1HZ, B1 B0 = 1 0
   half brightness   0b1110 0111 = 0xE7     0111 -> 7 -> (7+1)/16 = 8/16
 ]]></code></program>
     <ul>
-        <li>Watch the duty cycle: it counts from one and not zero, so half is P3&#8211;P0 = 0111 and not 1000. And <c>0xE7</c> is the byte <c>helloDisplay.c</c> has been sending &#8212; the display you have been watching has been at <term>half brightness</term> all along.</li>
-        <li>Sending the three command bytes is the first function of your seven segment driver, <c>SevenSeg_init()</c>. It has to run before the display will show anything at all. You will write it yourself once we have looked at the display RAM and the pins.</li>
+        <li>Watch the duty cycle: it counts from one and not zero, so half is <c>0111</c> and not <c>1000</c>. And <c>0xE7</c> is what <c>helloDisplay.c</c> has been sending &#8212; the display you have been watching has been at <term>half brightness</term> all along.</li>
     </ul>
+    <caption>These three bytes are the first function of your driver, <c>SevenSeg_init()</c>, which you write once we have looked at the display RAM and the pins.</caption>
 </slide>
 
             <slide xml:id="sl-day10-cmd-wire" ref="fig-ht16k33-addr-frame" refPage="subsec-day9x-addressing.html">
@@ -2271,9 +2282,12 @@ void pb4_exti_init(void) {
                 through ROW7, which are <c>a</c> through <c>g</c> and the decimal
                 point.  So bit <m>k</m> of the byte at display RAM address
                 <m>2n</m> is the LED where COM<m>n</m> crosses ROW<m>k</m>.  The
-                colon is the one row that is not a full digit: its two dots share
-                a single anode, which the breakout board ties to ROW1, the same
-                line the <c>b</c> segments use.</caption>
+                colon is the one line that is not a full digit: its two dots
+                always light together, so they share a single anode, and that
+                anode is tied to one of the eight ROW lines the backpack drives.
+                Which one is not in the datasheet, and finding it is the
+                experiment in <xref ref="act-i2c-find-colon"/> — so the eight
+                crossings on that line are all drawn the same here.</caption>
                 <image source="images/Day10-I2C(2)/backpack_com_row_map.svg" width="100%"/>
             </figure>
             <figure xml:id="fig-display-ram-map">
@@ -2441,7 +2455,7 @@ void pb4_exti_init(void) {
 
             <slide xml:id="sl-day10-com-row" ref="fig-backpack-com-row">
     <caption>Every LED sits where one COM line crosses one ROW line: the COM line is which digit, and the ROW line is which segment. So bit k of the byte at display RAM address 2n is the LED where COMn crosses ROWk. The chip says ROW because it is built to drive a rectangular matrix; on our display <term>ROW means segment</term>, and they are arranged around a figure eight rather than in a row of anything.</caption>
-    <note>Say the ROW warning out loud here — it is the one name on this chip that actively misleads, and it comes back in the RAM map and in the dimming command's "pulse width of ROW". The colon row is the other thing worth pointing at: one LED pair, on ROW1, which is why finding its bit is an experiment rather than a lookup.</note>
+    <note>Say the ROW warning out loud here — it is the one name on this chip that actively misleads, and it comes back in the RAM map and in the dimming command's "pulse width of ROW". The colon line is the other thing worth pointing at, but do NOT say which ROW it is on: the figure leaves all eight crossings open on purpose, because finding it is their experiment a few slides from now. The answer is in the book's instructor block if you need it.</note>
 </slide>
 
             <slide xml:id="sl-day10-ram" ref="fig-display-ram-map">
@@ -2833,7 +2847,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr,
             </p>
 
             <slide xml:id="sl-day10-five-ops">
-    <p>The I2C library we handed you yesterday has five functions in it, and you have already called three of them in <c>helloDisplay.c</c> &#8212; open it and find them.</p>
+    <p>The I2C library we handed you yesterday has five functions in it, three of which we used in <c>helloDisplay.c</c>.</p>
     <program language="c"><code><![CDATA[
 void i2c1_init(void);                                     // pins, bus speed
 
@@ -2846,9 +2860,9 @@ void i2c1_memRead (uint8_t deviceAddr, uint8_t registerAddr,
                    uint8_t nbytes, uint8_t *data);        // several bytes in
 ]]></code></program>
     <ul>
-        <li>There is <term>initialization</term>, which happens once and belongs to the bus rather than to any device: claim the pins, set the clock rate, switch the peripheral on.</li>
-        <li>Then <term>write one byte</term> to a device and <term>read one byte</term> from it, which is all the loop at the end of <c>helloDisplay.c</c> ever does.</li>
-        <li>Then <term>write several bytes</term> and <term>read several bytes</term> in a single transaction &#8212; and those two carry one extra argument, because a device with more than one thing inside it needs to be told <em>where</em> the bytes are going.</li>
+        <li>The first function is the <term>initialization</term>, which happens once and gets the bus ready on the STM32C0's I2C peripheral: claim the pins, set the clock rate, switch the peripheral on.</li>
+        <li>The next two are <term>write one byte</term> to a device and <term>read one byte</term> from it, which is all the loop at the end of <c>helloDisplay.c</c> ever does.</li>
+        <li>The last two are <term>write several bytes</term> and <term>read several bytes</term> in a single transaction &#8212; and those two carry one extra argument, because a device with more than one thing inside it needs to be told <em>where</em> the bytes are going.</li>
     </ul>
 </slide>
 
