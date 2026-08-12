@@ -2108,15 +2108,15 @@ void pb4_exti_init(void) {
                 Write each half as its own byte and OR them together.  You do not
                 have to invent names for the two halves: <c>SevenSegPartial.h</c>,
                 the header that comes with the driver, already has a
-                <c>#define</c> for every field of the table.
+                <c>#define</c> for every field of that table.
             </p>
             <program language="c"><code><![CDATA[
-  in SevenSegPartial.h, which you are given:
+  the HT16K33 command table, datasheet pp. 24-25:
+    system setup    0 0 1 0 | X X X S      the row, and its magenta line
+                    command | options
+  SevenSegPartial.h, the header you are given:
       #define HT16K33_SYSTEM_CMD   0x20      // System setup
       #define HT16K33_OSC_ON       0x01      //   S = 1, oscillator on
-
-  system setup      0 0 1 0 | X X X S      the row, and its magenta line
-                    command | options
 
   the command             0b0010 0000 = 0x20     HT16K33_SYSTEM_CMD
   the option, S = 1       0b0000 0001 = 0x01     HT16K33_OSC_ON
@@ -2173,20 +2173,20 @@ void pb4_exti_init(void) {
             </p>
 
             <slide xml:id="sl-day10-cmd-table" ref="fig-ht16k33-cmd-table">
-    <caption>The eight middle columns are the bits of a one-byte command, D15 down to D8, and the magenta line divides them: left of it the fixed bits that are the <term>command</term>, right of it the <term>options</term> you fill in. An X is a don't-care that we write as 0. The display pointer row below is for writing to the display RAM. The chip has more commands than these, but they are for scanning a keypad and we will not be sending any of them.</caption>
+    <caption>The HT16K33's command table, on <term>pages 24&#8211;25 of its datasheet</term>. The eight middle columns are the bits of a one-byte command, D15 down to D8, and the magenta line divides them: left of it the fixed bits that are the <term>command</term>, right of it the <term>options</term> you fill in. An X is a don't-care that we write as 0. The display pointer row below is for writing to the display RAM. The chip has more commands than these, but they are for scanning a keypad and we will not be sending any of them.</caption>
     <note>Figure-focus deliberately: the bit cells have to be readable from the back. The command/options divide is the whole idea of the part — the header file's names are those two halves, and the next two slides do nothing but exploit it.</note>
 </slide>
 
             <slide xml:id="sl-day10-cmd-derive">
-    <p>Work these out as binary and then write them as hex. All three are in the command table.</p>
+    <p>Work these out as binary and then write them as hex. All three rows are in the HT16K33's command table, pages 24&#8211;25 of its datasheet.</p>
     <program language="c"><code><![CDATA[
    system setup     0b0010 X X X S        S = oscillator on/off
    display setup    0b1000 X B1 B0 D      D = display on;  B1 B0 = blink rate
    dimming set      0b1110 P3 P2 P1 P0    duty cycle in sixteenths:
                                           0000 is 1/16, 1111 is 16/16
 
-   fixed 0 or 1 = the command's identity;  a name = your option;  X = don't
-   care, write 0
+   fixed 0 or 1 = the command identity;  a name = your option;
+   X = ignored, write it as 0
 ]]></code></program>
     <ul>
         <li>System setup is <c>0b0010 X X X S</c>. What byte turns the <term>oscillator on</term>?</li>
@@ -2197,14 +2197,14 @@ void pb4_exti_init(void) {
 </slide>
 
             <slide xml:id="sl-day10-cmd-answer">
-    <p>Let's look more closely at the first one, turning on the oscillator. The four bits left of the magenta line are the command and never change; the four to the right are the options, and the only one that means anything here is S, the oscillator. Write each half as its own byte and OR them together &#8212; and you do not have to invent the names, because <c>SevenSegPartial.h</c> already has a <c>#define</c> for every field of the table.</p>
+    <p>Let's look more closely at the first one, turning on the oscillator. The four bits left of the magenta line are the command and never change; the four to the right are the options, and the only one that means anything here is S, the oscillator. Write each half as its own byte and OR them together &#8212; and you do not have to invent the names, because <c>SevenSegPartial.h</c> already has a <c>#define</c> for every field of that table.</p>
     <program language="c"><code><![CDATA[
-  in SevenSegPartial.h, which you are given:
+  the HT16K33 command table, datasheet pp. 24-25:
+    system setup    0 0 1 0 | X X X S      the row, and its magenta line
+                    command | options
+  SevenSegPartial.h, the header you are given:
       #define HT16K33_SYSTEM_CMD   0x20      // System setup
       #define HT16K33_OSC_ON       0x01      //   S = 1, oscillator on
-
-  system setup      0 0 1 0 | X X X S      the row, and its magenta line
-                    command | options
 
   the command             0b0010 0000 = 0x20     HT16K33_SYSTEM_CMD
   the option, S = 1       0b0000 0001 = 0x01     HT16K33_OSC_ON
@@ -3327,7 +3327,7 @@ void SevenSeg_init() {
     digits 1..4      display_subaddr = 0, 2, 6, 8      (4 is the colon)
     S  0b01101101    a c d f g          2  0b01011011    a b d e g
     8  0b01111111    all seven          E  0b01111001    a d e f g
-    display_subaddr = 4  ->  the colon's pair.  Which bit lights it is not on
+    display_subaddr = 4  ->  the colon pair.  Which bit lights it is not on
                              the datasheet pages we have -- that is the point.
 ]]></code></program>
 </slide>
