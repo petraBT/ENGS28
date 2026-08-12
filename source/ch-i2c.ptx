@@ -858,8 +858,10 @@ int main(void) {
                 the device's ACK; then the command byte, D15 down to D8; then a
                 second ACK and the STOP.  Note that the address occupies seven
                 bit positions and the direction bit is separate — the datasheet
-                is being explicit about something many are not.</caption>
-                <image source="images/Day10-I2C(2)/ht16k33_command_transaction.svg" width="95%"/>
+                is being explicit about something many are not.  The red box is
+                the seven address bits that make up <c>0x70</c>, and the blue
+                labels mark the START and the STOP.</caption>
+                <image source="images/Day10-I2C(2)/ht16k33_command_write_annotated.png" width="95%"/>
             </figure>
             <p>
                 One word of caution:  Datasheets are not
@@ -2174,6 +2176,11 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
         <li>Sending the three command bytes is the first function of your seven segment driver, <c>SevenSeg_init()</c>. It has to run before the display will show anything at all. You will write it yourself once we have looked at the display RAM and the pins.</li>
     </ul>
 </slide>
+
+            <slide xml:id="sl-day10-cmd-wire" ref="fig-ht16k33-addr-frame" refPage="subsec-day9x-addressing.html">
+    <caption>And this is one of those calls on the wire &#8212; the transaction you captured yesterday, with the byte you have just derived sitting in the command-code field. START, the seven address bits that are <c>0x70</c>, the write bit, the display's ACK, the one command byte, a second ACK, STOP.</caption>
+    <note>Close Part 4 on this. They captured this exact shape yesterday without knowing what the command byte said, and they have now worked out all three. It is also the picture Part 7b opens i2c1_byteWrite() against, so they will have seen it three times by then.</note>
+</slide>
         </subsection>
 
         <subsection xml:id="subsec-day10-ram">
@@ -2374,8 +2381,11 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
                 command byte of 0x00 means <q>start at display RAM address 0</q>.
                 Every data byte after it is stored where the pointer is and moves
                 the pointer on by one, so ten data bytes fill addresses 0 through
-                9.  Each byte is acknowledged, and one STOP ends the whole transaction.</caption>
-                <image source="images/Day10-I2C(2)/ht16k33_page_write.svg" width="95%"/>
+                9.  Each byte is acknowledged, and one STOP ends the whole transaction.
+                It is the same transaction as the single command in
+                <xref ref="fig-ht16k33-addr-frame"/>, annotated the same way, with
+                the data bytes added after the command byte.</caption>
+                <image source="images/Day10-I2C(2)/ht16k33_page_write_annotated.png" width="98%"/>
             </figure>
 
             <slide xml:id="sl-day10-com-row" ref="fig-backpack-com-row">
@@ -2420,14 +2430,18 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
     </ul>
 </slide>
 
-            <slide xml:id="sl-day10-pointer" ref="fig-ht16k33-page-write" stack="yes">
+            <slide xml:id="sl-day10-pointer">
     <ul>
         <li>The second question is <term>why send the zeros at all,</term> if the second byte of every pair does nothing? To write to the display RAM you use <term>a pointer that holds the address of the RAM to which you'd like to write</term>. We set it to the start of the display RAM, and each write operation that is part of the same I2C transaction <term>automatically advances the pointer to the next byte</term>. This is what the datasheet means by the display data address pointer.</li>
         <li>It is why writing ten bytes from address 0 fills addresses 0 through 9. The zeros are not decoration; they are what moves the pointer past the odd addresses so that the next real byte lands on the next digit. Leave them out and the second digit's pattern goes to address 1, which is the top (unused) half of digit 1.</li>
         <li>All ten bytes go in <term>one</term> transaction, and they have to: a STOP ends the transaction, and after a STOP the next write starts over with a new address.</li>
         <li>The library call for <q>address the device, say where inside it, and send this many bytes</q> is <c>i2c1_memWrite()</c> &#8212; the multi-byte function you have already called without knowing what it did, and this is what it was for.</li>
     </ul>
-    <caption>One command byte says where to start; every data byte after it moves the pointer on by one.</caption>
+</slide>
+
+            <slide xml:id="sl-day10-pointer-fig" ref="fig-ht16k33-page-write">
+    <caption>The same transaction as the single command in Part 4, with the data bytes added after the command byte: START, <c>0x70</c>, write, ACK, then the one command byte that says <em>start at address 0</em>, then ten data bytes each acknowledged, then one STOP. One command byte says where to start; every data byte after it moves the pointer on by one.</caption>
+    <note>Put this beside the Part 4 picture in their heads — same START, same address, same command-byte slot, and then it keeps going. That is the whole difference between byteWrite and memWrite, drawn.</note>
 </slide>
         </subsection>
         <subsection xml:id="subsec-day10-pins">
@@ -2460,8 +2474,22 @@ decimal point after digit 2:  set bit 7 of display_buffer[2]
                 the datasheet, not the reference manual —
                 <url href="external/stm32c031_datasheet.pdf">DS13867</url>
                 Table 15, <em>Port B alternate function mapping</em>, where the PB8 row and the
-                PB9 row both name I2C1 under <term>AF6</term>.
+                PB9 row both name I2C1 under <term>AF6</term>
+                (<xref ref="fig-stm32-af-pb8-pb9"/>).
             </p>
+            <figure xml:id="fig-stm32-af-pb8-pb9">
+                <caption>Table 15 of the STM32C031 datasheet,
+                <url href="external/stm32c031_datasheet.pdf">DS13867</url>,
+                <em>Port B alternate function mapping</em>.  The lookup is two
+                rows and one column: find PB8 and PB9 down the left, run across to
+                the AF6 column, and <c>I2C1_SCL</c> and <c>I2C1_SDA</c> are what is
+                written where they meet.  That is where the 6 in <c>GPIO_AF6</c>
+                comes from.  PB6 and PB7 carry I2C1 on AF6 too, which is the
+                <q>several pin pairs</q> of <xref ref="fig-i2c-pins"/> seen from
+                the table's side.  The reference manual does not carry this
+                table; only the datasheet does.</caption>
+                <image source="images/Day10-I2C(2)/stm32_af6_pb8_pb9_annotated.png" width="95%"/>
+            </figure>
             <p>
                 One thing that is new is that rather than being in push-pull mode, 
                 both pins have to be configured
@@ -2599,35 +2627,10 @@ void i2c1_init(void){
     </ul>
 </slide>
 
-<!--
-            WAITING ON AN IMAGE FROM PETRA (2026-08-12).  She has an annotated
-            screenshot of DS13867 Table 15 with the PB8 and PB9 rows marked.
-            Save it as:
-
-                assets/images/Day10-I2C(2)/stm32_af6_pb8_pb9_annotated.png
-
-            Then uncomment the figure and the slide below, and add the slide to
-            day10.json right after sl-day10-af6:
-
-              { "type": "ref", "page": "subsec-day10-pins.html",
-                "slide": "sl-day10-af6-table",
-                "title": "DS13867 Table 15: the PB8 and PB9 rows" }
-
-            <figure xml:id="fig-stm32-af-pb8-pb9">
-                <caption>Table 15 of the STM32C031 datasheet, DS13867, Port B
-                alternate function mapping, with the PB8 and PB9 rows marked.
-                Run across either row to the AF6 column and I2C1_SCL and
-                I2C1_SDA are what is written there.  This is the table to come
-                back to for any peripheral on any pin; the reference manual does
-                not carry it.</caption>
-                <image source="images/Day10-I2C(2)/stm32_af6_pb8_pb9_annotated.png" width="95%"/>
-            </figure>
-
             <slide xml:id="sl-day10-af6-table" ref="fig-stm32-af-pb8-pb9">
-    <caption>DS13867 Table 15, Port B alternate function mapping. Find the PB8 and PB9 rows, run across to the AF6 column, and I2C1_SCL and I2C1_SDA are what is written there. That is the whole lookup, and it is the one to repeat for any peripheral you put on any pin.</caption>
-    <note>Show them the lookup rather than the answer: the row, then across to the column. This is the datasheet-literacy beat for the day — pin functions live in the datasheet, and the reference manual will not tell you this.</note>
+    <caption>Two rows in red, one column in red, and the answer is where they meet. This is the whole lookup, and it is the one to repeat for any peripheral you want on any pin. Note that PB6 and PB7 carry I2C1 on AF6 as well &#8212; the pinout figure's several pin pairs, in table form.</caption>
+    <note>Show the lookup, not the answer: the row first, then across to the column, then read the cell. Pin functions live in the datasheet and the reference manual will not tell you this, which is the datasheet-literacy beat for the day.</note>
 </slide>
--->
 
 
             <slide xml:id="sl-day10-opendrain" room="yes">
