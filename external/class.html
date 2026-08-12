@@ -49,7 +49,12 @@
         margin: 0 0 .6em 0; font-size: 3.1vmin; font-size: 3.1cqmin; font-weight: 600;
         letter-spacing: .01em; color: #256abf; text-transform: uppercase;
       }
-      #glue .big { font-size: 4.6vmin; font-size: 4.6cqmin; font-weight: 600; line-height: 1.25; margin: 0 0 .5em 0; }
+      /* Prompt/notice body. Large so it reads from the back, but NOT bold:
+         a whole paragraph at weight 600 reads as shouting (Petra, 2026-08-08,
+         "everything is bold faced ... I really don't like those"). Emphasis
+         inside the body still works, because <b> and <term> set their own
+         weight. */
+      #glue .big { font-size: 4.6vmin; font-size: 4.6cqmin; font-weight: 400; line-height: 1.3; margin: 0 0 .5em 0; }
       #glue .sub { font-size: 2.8vmin; font-size: 2.8cqmin; color: #52514e; margin: .2em 0 0 0; }
       #glue ul { margin: 0; padding: 0; list-style: none; }
       #glue li {
@@ -125,6 +130,18 @@
       #ref .ref-body.roomy > p > ol > li,
       #ref .ref-body.roomy > p > ul > li,
       #ref .ref-body.roomy .task { margin-bottom: 2.7em; }
+      /* The opposite setting (room="compressed" / "room": "compressed"): tighten
+         the gaps between items so a long activity fits on one slide without any
+         of its content being cut. Type size is untouched — only the spacing —
+         so this buys room without making anything harder to read from the back
+         of the room. Use it instead of deleting tasks (S-9). */
+      #ref .ref-body.compressed p,
+      #ref .ref-body.compressed .para { margin-bottom: .3em; }
+      #ref .ref-body.compressed ul > li { margin-bottom: .35em; }
+      #ref .ref-body.compressed ol > li { margin-bottom: .18em; }
+      #ref .ref-body.compressed .task { margin-bottom: .25em; }
+      #ref .ref-body.compressed .task > p:last-child,
+      #ref .ref-body.compressed p:last-child { margin-bottom: 0; }
       #ref code { font-family: "SFMono-Regular", Consolas, Menlo, monospace; font-size: .9em; background: #f0efec; padding: .1em .35em; border-radius: 4px; }
       /* Extracted activity/exercise markup (arrives without the book stylesheet). */
       #ref .activity, #ref article, #ref .exercise-like { margin: 0; }
@@ -136,12 +153,27 @@
       /* Each task's (a)/(b) label sits in a reserved left gutter (hanging indent),
          so the task's content — a paragraph OR a bulleted list — always starts to
          its right and never overlaps a list bullet. */
-      #ref .task { position: relative; padding-left: 1.9em; margin: 0 0 .8em 0; }
+      #ref .task { position: relative; padding-left: 2.9em; margin: 0 0 .95em 0; }
       #ref .task > .heading {
         position: absolute; left: 0; top: 0; margin: 0; font-weight: 600; color: #256abf;
         font-size: 3vmin; font-size: 3cqmin; line-height: 1.6;
+        /* The gutter has to clear the widest label plus a real gap, or "(a)" runs
+           straight into the first word of the task. */
+        width: 2.5em; padding-right: .4em; box-sizing: border-box;
       }
       #ref .task > .heading .codenumber { color: #256abf; }
+      /* A <task> with its own <title> renders "(a) Trace." into that same heading,
+         and a title does not fit a 2.5em gutter — it wrapped underneath the label
+         and printed straight through the task's text. renderRef folds the label and
+         title into the front of the task's first paragraph instead, which reads the
+         way the book does and costs no vertical space. */
+      #ref .task.titled-task { padding-left: 0; }
+      #ref .task-lead { color: #256abf; font-weight: 600; }
+      /* Math variables (see mathify): italic head + real subscript, so V_BE and
+         h_FE read as symbols rather than as identifiers with an underscore. */
+      #ref .mvar { font-style: italic; }
+      #ref .mvar + sub { font-size: .68em; font-style: italic; line-height: 0; vertical-align: baseline;
+                         position: relative; bottom: -.28em; padding-left: .04em; }
       #ref pre.program {
         font-family: "SFMono-Regular", Consolas, Menlo, monospace;
         font-size: 2.3vmin; font-size: 2.3cqmin; line-height: 1.55; margin: .3em 0;
@@ -172,9 +204,28 @@
       #ref .ref-media figure, #ref .ref-media .figure-like { margin: 0; text-align: center; }
       /* Fill the available column with the figure. The book sizes images small
          (e.g. width:55%) for the reading page; on a slide we want them as large
-         as the space allows, so override that and let the image use the column. */
-      #ref .ref-media .image-box { width: 100% !important; margin: 0 !important; }
-      #ref .ref-media img { width: 100%; max-width: 100%; max-height: 72cqh; object-fit: contain; }
+         as the space allows, so override that and let the image use the column.
+
+         The figure has to be a flex COLUMN that stretches to the media box, and
+         the image-box the flex item that absorbs what the caption does not use.
+         Without this the figure is shrink-to-fit (`.ref-media` centres its
+         children on the cross axis), so the image renders at its intrinsic
+         pixel size: too small on a wide slide, and — because `.ref-media` is
+         `overflow: hidden` — silently CROPPED whenever the bullets above leave
+         it less room than the image's natural height. That is the crop that
+         reads as zero on every overflow measurement, and it ate the "Message"
+         label off the top of `i2c_message_frame.svg` at 1280x720. With the
+         image sized by the box instead, `object-fit: contain` letterboxes it
+         and it can never be cut. */
+      #ref .ref-media > figure,
+      #ref .ref-media > .figure-like {
+        width: 100%; height: 100%; min-height: 0;
+        display: flex; flex-direction: column; justify-content: center;
+      }
+      #ref .ref-media .image-box { width: 100% !important; margin: 0 !important;
+                                   flex: 1 1 auto; min-height: 0; display: flex; }
+      #ref .ref-media img { width: 100%; max-width: 100%; height: 100%;
+                            max-height: 72cqh; object-fit: contain; }
       /* Guard against any figure spilling past the slide, and re-enable the CSS
          grid a PreTeXt <sidebyside> uses (without the book stylesheet its panels
          would stack and overflow instead of sitting in a row). */
@@ -252,9 +303,175 @@
       #title { color: #f2f2f2; font-weight: 600; }
       #instr-badge { display: none; margin-left: 12px; color: #d9a441; font-weight: 600; }
       #bar.instr #instr-badge { display: inline; }
+
+      /* --- pen annotation + laser ---------------------------------------- */
+      /* Both canvases sit over the whole stage, under #bar (which follows them
+         in the DOM, so the bar wins both paint and hit-testing). Neither
+         intercepts input — pen strokes are picked up on #stage itself, so the
+         slide underneath stays fully interactive — except when ✎ Draw arms the
+         ink canvas so a mouse can draw; only then does it cover the slide.
+         width/height are not redundant with inset: a canvas is a replaced
+         element, so inset:0 alone leaves width:auto resolving to the intrinsic
+         backing-store size (stage x dpr) and every stroke lands off-stage. */
+      #ink, #laser {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        pointer-events: none;
+      }
+      #ink.armed { pointer-events: auto; touch-action: none; cursor: crosshair; }
+      #ink.armed.erasing { cursor: cell; }
+      #stage.laser-on { cursor: none; }
+      #stage.laser-on #bar { cursor: auto; }
+      /* Undo/Clear need existing ink (bar.inking); the pen tools — swatches and
+         the eraser — show once drawing is plausible: a stylus has been seen,
+         mouse drawing is armed, or the slide already has ink (bar.inkable). */
+      #bar .ink-pen, #bar .ink-tool { display: none; }
+      #bar.inkable .ink-pen { display: inline-block; }
+      #bar.inking .ink-tool { display: inline-block; }
+      #bar #swatches { white-space: nowrap; }
+      #bar .swatch {
+        width: 15px; height: 15px; padding: 0; margin: 0 1px; border-radius: 50%;
+        border: 1px solid #6a6a66; vertical-align: middle; cursor: pointer;
+      }
+      #bar .swatch.active { box-shadow: 0 0 0 2px #0d0d0d, 0 0 0 3px #d9d9d9; }
+      #bar button.active { background: #e7e5df; color: #1a1a19; border-color: #cbc9c0; }
+      #note { color: #86847c; }
+      #note.warn { color: #ffab91; }
+
+      /* --- contents (class.html with no ?deck) ---------------------------- */
+      /* A menu, not a slide: it escapes the 16:9 stage and scrolls like an
+         ordinary page, because a list of thirteen decks letterboxed into a
+         projector box would be unreadable and unscrollable. */
+      body.contents { overflow: auto; background: #f4f3ef; }
+      body.contents #stage-wrap, body.contents #bar { display: none; }
+      #contents { display: none; max-width: 54em; margin: 0 auto; padding: 4vh 5vw 8vh; }
+      body.contents #contents { display: block; }
+      #contents h1 {
+        margin: 0 0 .15em 0; font-size: 1.9rem; font-weight: 700; color: #1a1a19;
+        letter-spacing: -.01em;
+      }
+      #contents .lede { margin: 0 0 2em 0; color: #6b6a67; font-size: .95rem; line-height: 1.5; }
+      #contents ol { list-style: none; margin: 0; padding: 0; }
+      #contents li { margin-bottom: .5em; }
+      /* The whole row is the link — a bigger target than the title alone, which
+         matters when this is opened one-handed at the podium. */
+      #contents a.deck {
+        display: flex; align-items: baseline; gap: .9em;
+        padding: .8em 1.1em; border: 1px solid #e0ded7; border-radius: 8px;
+        background: #fff; text-decoration: none; color: inherit;
+        transition: border-color .12s, box-shadow .12s;
+      }
+      #contents a.deck:hover { border-color: #2a78d6; box-shadow: 0 1px 6px rgba(42,120,214,.14); }
+      #contents .day {
+        flex: none; min-width: 5.2em; font-weight: 700; color: #256abf;
+        font-size: .95rem; text-transform: uppercase; letter-spacing: .03em;
+      }
+      #contents .name { flex: 1; font-size: 1.05rem; line-height: 1.35; color: #1a1a19; }
+      #contents .count { flex: none; color: #86847c; font-size: .82rem; white-space: nowrap; }
+      #contents .badge {
+        flex: none; font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+        text-transform: uppercase; padding: .2em .5em; border-radius: 4px;
+        background: #efe6d3; color: #7a6220;
+      }
+      /* A video deck is watched at home, so it reads as a sub-entry of its day
+         rather than as another lecture. */
+      #contents li.video { margin-left: 2.2em; }
+      #contents li.video a.deck { background: #faf9f6; }
+      #contents a.swap {
+        margin-left: .5em; color: #2a78d6; text-decoration: none;
+        border-bottom: 1px solid rgba(42,120,214,.35);
+      }
+      #contents a.swap:hover { border-bottom-color: #2a78d6; }
+      #contents .foot { margin-top: 2.5em; font-size: .82rem; color: #86847c; line-height: 1.6; }
+
+      /* --- presenter notes (?notes) --------------------------------------- */
+      /* A <slide>'s <note> is instructor-only and never projected, so it is
+         hidden unless the URL asks for it — and never in the student view.
+         This is the surface the authoring guide calls the "?notes view"; it is
+         also what makes a note clickable, and so editable, at all. */
+      #ref .deck-slide-note, #glue .presenter-note { display: none; }
+      body.notes-on #ref .deck-slide-note, body.notes-on #glue .presenter-note {
+        display: block; flex: none;
+        margin: .8em 0 0 0; padding: .5em .9em;
+        border-left: 3px solid #d9a441; background: #fdf8ee;
+        font-size: 2vmin; font-size: 2.1cqmin; line-height: 1.45; color: #6b5a33;
+      }
+      body.notes-on #ref .deck-slide-note p, body.notes-on #glue .presenter-note p { margin: 0; font-size: inherit; }
+
+      /* --- authoring affordance (localhost + edit-server only) ------------- */
+      /* Everything below is inert unless the edit-server answers: the script at
+         the end of this file wires up nothing otherwise, so a student, the
+         deployed deck on gh-pages, and a plain preview all see none of it.
+
+         Holding Alt outlines what a click would reach, in two colours that
+         encode where the write would LAND:
+           green solid  — slide-owned text; editing writes the slide only
+           amber dashed — real book content behind a direct ref; Alt-click
+                          opens its source, but editing it here is refused,
+                          because it would change the reading too. */
+      .deck-edit-armed [data-edit-origin="slide"] > *,
+      .deck-edit-armed [data-edit-origin="caption"],
+      .deck-edit-armed #glue.on,
+      .deck-edit-armed #ref.on .deck-title {
+        outline: 2px solid rgba(43, 138, 62, .55); outline-offset: 3px; cursor: pointer;
+      }
+      .deck-edit-armed [data-edit-origin="book"],
+      .deck-edit-armed [data-edit-origin="book-direct"] {
+        outline: 2px dashed rgba(217, 164, 65, .8); outline-offset: 3px; cursor: alias;
+      }
+      /* A nested book ref must not also wear the green of the slide body it
+         sits inside (a table/activity ref is appended into .ref-body). */
+      .deck-edit-armed [data-edit-origin="slide"] > [data-edit-origin] { outline-color: rgba(217, 164, 65, .8); }
+      .deck-edit-active {
+        outline: 2px solid #2b8a3e !important; outline-offset: 3px;
+        background: #f2fbf4; border-radius: 3px;
+      }
+      .deck-edit-toast {
+        position: fixed; left: 50%; bottom: 52px; transform: translateX(-50%);
+        z-index: 30; max-width: 60ch; padding: .55em 1em; border-radius: 6px;
+        font-size: 13px; line-height: 1.45; color: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.3);
+      }
+      .deck-edit-toast-ok { background: #2b8a3e; }
+      .deck-edit-toast-error { background: #c92a2a; }
+      .deck-edit-toast-info { background: #343a40; }
+
+      /* Per-slide form editor (alt-shift-click a glue slide, or a ref slide's
+         title bar). Covers the stage while open. */
+      #slideedit {
+        position: absolute; inset: 0; z-index: 20; display: none;
+        background: #fff; padding: 4% 6%; overflow: auto;
+      }
+      #slideedit.on { display: block; }
+      #slideedit h2 { margin: 0 0 .1em 0; font-size: 3.2cqmin; font-weight: 600; color: #256abf; }
+      #slideedit .sub { margin: 0 0 1em 0; font-size: 2cqmin; color: #52514e; }
+      #slideedit .se-field { margin-bottom: 1.1cqmin; }
+      #slideedit label {
+        display: block; font-size: 1.9cqmin; font-weight: 600; color: #52514e;
+        margin-bottom: .25em; text-transform: uppercase; letter-spacing: .04em;
+      }
+      #slideedit input, #slideedit textarea {
+        width: 100%; font: inherit; font-size: 2.1cqmin; line-height: 1.5;
+        padding: .45em .6em; border: 1px solid #cbc9c0; border-radius: 5px;
+        background: #fdfdfc; color: #1a1a19; resize: vertical;
+      }
+      /* Tall enough that a five-bullet agenda — the common case — is visible
+         without scrolling the field. */
+      #slideedit textarea { min-height: 15cqmin; }
+      #slideedit input:focus, #slideedit textarea:focus { outline: 2px solid #256abf; outline-offset: -1px; border-color: #256abf; }
+      #slideedit .ed-foot { display: flex; align-items: center; gap: .8em; margin-top: 1.4cqmin; }
+      #slideedit button {
+        font: inherit; font-size: 2cqmin; padding: .4em 1.1em; cursor: pointer;
+        border: 1px solid #cbc9c0; border-radius: 5px; background: #f2f1ed; color: #1a1a19;
+      }
+      #slideedit #se-save { background: #256abf; border-color: #256abf; color: #fff; font-weight: 600; }
+      #slideedit button:hover { filter: brightness(.97); }
+      #slideedit #se-status { font-size: 1.9cqmin; }
+      #slideedit #se-status.ok { color: #2b8a3e; }
+      #slideedit #se-status.err { color: #c92a2a; }
     </style>
   </head>
   <body>
+    <!-- Table of contents, shown when class.html is opened with no ?deck. -->
+    <div id="contents"></div>
     <div id="stage-wrap">
       <div id="stage">
         <div id="glue" class="slide"></div>
@@ -266,10 +483,36 @@
           </div>
         </div>
         <div id="err" class="slide"></div>
+        <!-- Authoring only. Inert markup on the deployed deck: nothing reveals
+             it unless the edit-server answers (see the script at the end). -->
+        <div id="slideedit">
+          <h2>Edit slide — <span id="se-type"></span></h2>
+          <p class="sub">Writes the deck's JSON entry. ⌘⏎ saves, Esc cancels.</p>
+          <div id="se-fields"></div>
+          <div class="ed-foot">
+            <button id="se-save" type="button">Save</button>
+            <button id="se-cancel" type="button">Cancel</button>
+            <span id="se-status"></span>
+          </div>
+        </div>
+        <canvas id="ink"></canvas>
+        <canvas id="laser"></canvas>
         <div id="bar">
           <span id="title"></span>
           <span id="instr-badge">✎ instructor only — hidden from students</span>
           <span class="spacer"></span>
+          <span id="note"></span>
+          <span id="swatches" class="ink-pen">
+            <button type="button" class="swatch" data-color="#d92b2b" style="background:#d92b2b" title="Red"></button>
+            <button type="button" class="swatch" data-color="#1a1a19" style="background:#1a1a19" title="Black"></button>
+            <button type="button" class="swatch" data-color="#2158a8" style="background:#2158a8" title="Blue"></button>
+            <button type="button" class="swatch" data-color="#1a7f37" style="background:#1a7f37" title="Green"></button>
+          </span>
+          <button id="erase" class="ink-pen" type="button" title="Eraser — drag over a mark to remove it (E)">Erase</button>
+          <button id="undo" class="ink-tool" type="button" title="Undo last stroke">Undo</button>
+          <button id="clear" class="ink-tool" type="button" title="Erase this slide's ink">Clear</button>
+          <button id="draw" type="button" title="Draw with the mouse — a stylus always draws (D)">✎ Draw</button>
+          <button id="laser-btn" type="button" title="Laser pointer (L)"><span style="color:#e5484d">●</span> Laser</button>
           <span id="pos"></span>
           <button id="prev" type="button">&larr;</button>
           <button id="next" type="button">&rarr;</button>
@@ -286,6 +529,11 @@
         // (solutions, reveals) are dropped. The plain URL is the in-class /
         // instructor version and shows everything.
         var studentView = params.has('student') || params.get('audience') === 'student'
+        // ?notes shows each slide's instructor-only <note> / presenterNote.
+        // Never in the student view, and never on the projector unless asked
+        // for — but it is also what makes a note clickable, and so editable.
+        var notesOn = params.has('notes') && !studentView
+        if (notesOn) document.body.classList.add('notes-on')
 
         var glueEl = document.getElementById('glue')
         var refEl = document.getElementById('ref')
@@ -377,24 +625,52 @@
           return out
         }
 
+        /* Served from localhost, the book and the decks are being rebuilt
+           underneath this page, so a cached copy is a stale copy — that is the
+           authoring guide's "cache gotcha", where an edit appears not to have
+           landed because the browser answered from its own store. Bypass it
+           locally; a deployed deck is static and wants normal caching. */
+        var LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+        var FETCH_OPTS = LOCAL ? { cache: 'no-store' } : undefined
+
         // Book pages, fetched once and cached (several slides can share a page).
+        //
+        // NOT cached on localhost. The book gets rebuilt underneath a running
+        // player all day while authoring, and a memoized document would keep
+        // serving the pre-rebuild slide: cache:'no-store' above stops the
+        // BROWSER holding a stale copy, but not this map. Changing the hash does
+        // not reload the page, so "rebuild, press →" would show old content with
+        // nothing to suggest it was old. Costs one local re-fetch per slide.
+        // Deployed decks keep the cache — their pages cannot change underneath.
         var pageCache = {}
         function fetchPage(page) {
-          if (pageCache[page]) return pageCache[page]
+          if (!LOCAL && pageCache[page]) return pageCache[page]
           var url = new URL('../' + page, location.href).href
-          pageCache[page] = fetch(url)
+          var pending = fetch(url, FETCH_OPTS)
             .then(function (r) { return r.ok ? r.text() : null })
             .then(function (t) { return t == null ? null : { doc: new DOMParser().parseFromString(t, 'text/html'), url: url } })
             .catch(function () { return null })
-          return pageCache[page]
+          if (!LOCAL) pageCache[page] = pending
+          return pending
         }
 
         // Relative URLs in extracted markup (image src, etc.) are relative to the
         // BOOK PAGE, but we render inside external/class.html, so re-resolve them
         // against the page's own URL or they 404.
+        // Authoring only: bust the browser's image cache so an edited figure
+        // shows up on the next reload. Book PAGES are already fetched with
+        // cache:'no-store' on localhost, but an <img> injected afterwards is an
+        // ordinary subresource — even a hard refresh can serve the cached copy,
+        // because the request is made by script after the reload. So a figure
+        // could be rebuilt correctly on disk and still look unchanged on the
+        // slide. Deployed decks are untouched: they want normal caching.
+        var IMG_BUST = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+          ? String(Date.now()) : ''
         function absolutize(root, baseUrl) {
           ;[].forEach.call(root.querySelectorAll('img[src]'), function (img) {
-            img.src = new URL(img.getAttribute('src'), baseUrl).href
+            var u = new URL(img.getAttribute('src'), baseUrl)
+            if (IMG_BUST) u.searchParams.set('_r', IMG_BUST)
+            img.src = u.href
           })
           ;[].forEach.call(root.querySelectorAll('a[href]'), function (a) {
             a.href = new URL(a.getAttribute('href'), baseUrl).href
@@ -441,12 +717,57 @@
           })
         }
 
+        /* Typeset the subscript convention this book writes math in.
+           demath() flattens <m>V_{BE}</m> to "V_BE", and slides written without
+           <m> (S-6) use the same "V_BE" / "h_FE" / "R_lim" spelling by hand — so
+           one pass over the text makes both look alike: an italic variable with a
+           real subscript, the way it reads in a datasheet.
+
+           The head is a SINGLE letter, which is what keeps names out that must
+           stay verbatim (L-6). Every variable the book actually uses is one
+           letter -- V_BE, I_C, R_lim, h_FE, T_on, f_APB, β_min -- while the
+           things that must not be touched have two-letter heads: rc_w0 and rc_w1
+           (RM access types) and CK_CNT / CK_PSC (RM signal names). Identifiers
+           are excluded by the word boundary as well: in LED_PIN,
+           GPIO_MODER_MODE5_Msk, delay_ms or TIM14_IRQn there is no boundary in
+           front of the character before the underscore. Code is skipped outright
+           regardless. */
+        var MATHVAR = /\b([A-Za-zΑ-Ωα-ω])_(\{[^}]{1,12}\}|[A-Za-z0-9]{1,6})/g
+        function mathify(root) {
+          if (!root) return
+          var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode: function (n) {
+              if (!n.nodeValue || n.nodeValue.indexOf('_') < 0) return NodeFilter.FILTER_REJECT
+              for (var p = n.parentNode; p && p !== root; p = p.parentNode) {
+                var tag = p.nodeName
+                if (tag === 'CODE' || tag === 'PRE' || tag === 'SUB' || tag === 'SUP') return NodeFilter.FILTER_REJECT
+              }
+              return NodeFilter.FILTER_ACCEPT
+            }
+          })
+          var hits = [], n
+          while ((n = walker.nextNode())) if (MATHVAR.test(n.nodeValue)) { MATHVAR.lastIndex = 0; hits.push(n) }
+          hits.forEach(function (node) {
+            var frag = document.createDocumentFragment(), last = 0, m
+            MATHVAR.lastIndex = 0
+            while ((m = MATHVAR.exec(node.nodeValue))) {
+              if (m.index > last) frag.appendChild(document.createTextNode(node.nodeValue.slice(last, m.index)))
+              var v = document.createElement('i'); v.className = 'mvar'; v.textContent = m[1]
+              var s = document.createElement('sub'); s.textContent = m[2].replace(/[{}]/g, '')
+              frag.appendChild(v); frag.appendChild(s)
+              last = m.index + m[0].length
+            }
+            if (last < node.nodeValue.length) frag.appendChild(document.createTextNode(node.nodeValue.slice(last)))
+            node.parentNode.replaceChild(frag, node)
+          })
+        }
+
         function renderRef(slide) {
           refTitle.innerHTML = html(slide.title || '')
           titleEl.innerHTML = html(slide.title || '')
           refBody.innerHTML = ''
           refMedia.innerHTML = ''
-          refBody.classList.remove('roomy', 'has-sim')
+          refBody.classList.remove('roomy', 'compressed', 'has-sim')
           refEl.classList.remove('figure-focus', 'stacked')
           refEl.classList.add('single')
           showOnly(refEl)
@@ -454,12 +775,61 @@
             if (!res) { fail('Could not load ' + slide.page); return }
             var block = res.doc.getElementById(slide.slide)
             if (!block) { fail('Slide "' + slide.slide + '" not found on ' + slide.page); return }
-            // Practice slides leave writing room after each item (set via the slide's
-            // room="yes" attribute, or "room": true on the deck ref).
-            if (slide.room || block.getAttribute('data-deck-room')) refBody.classList.add('roomy')
+            // Spacing between items, set via the slide's room attribute or "room"
+            // on the deck ref. "yes"/true leaves writing room after each item on a
+            // predict/practice slide; "compressed" tightens the gaps so a long
+            // activity fits without cutting content.
+            var roomVal = slide.room || block.getAttribute('data-deck-room')
+            if (roomVal === 'compressed') refBody.classList.add('compressed')
+            else if (roomVal) refBody.classList.add('roomy')
+
+            /* Where did this markup come from? A deck ref resolves EITHER to a
+               <slide> block authored for the projector, OR straight to real
+               book content (an <activity> / <task> by its own xml:id) — and the
+               difference decides whether an edit here would also change what
+               students read tonight. Only a <slide> block renders as
+               .deck-slide, so that class is the test, and the answer is stamped
+               onto the DOM as it is cloned in: one rendered slide can mix
+               slide-owned and book-owned markup (a table ref lands INSIDE the
+               body it is framed by), so provenance has to travel with the
+               nodes rather than be guessed from the container afterwards.
+               The authoring layer at the end of this file reads these; they are
+               inert otherwise. */
+            var isSlideBlock = block.classList.contains('deck-slide')
+            refBody.setAttribute('data-edit-origin', isSlideBlock ? 'slide' : 'book-direct')
+            refBody.setAttribute('data-edit-id', slide.slide)
+
+            /* Badge instructor-only slides from the MARKUP as well as from the
+               deck JSON's "instructor": true, which render() has already
+               applied. Two sources because they answer different questions and
+               can disagree: the JSON decides whether ?student drops the slide,
+               the markup decides whether the slide exists in this build at all
+               (web-deck strips it, web-deck-instructor renders it). A ref
+               straight to an <instructor> block is the case that would
+               otherwise show no badge at all — the block is not a .deck-slide,
+               so it takes the book-direct path above.
+               Only ever ADDS the badge: if the JSON says instructor and the
+               markup somehow doesn't, the more cautious answer wins.
+               check_deck.py fails the build when the two disagree. */
+            var instructorMarkup = block.classList.contains('instructor-only') ||
+              block.getAttribute('data-deck-instructor') === 'yes'
+            if (instructorMarkup && !studentView) {
+              document.getElementById('bar').classList.add('instr')
+            }
+
             var body = block.querySelector('.deck-slide-body') || block
             var bodyClone = body.cloneNode(true)
             strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone); demath(bodyClone)
+            /* An <instructor> block is its own body — there is no
+               .deck-slide-body to narrow to — so the clone still carries the
+               book's "Instructor only" label and, if it has one, its caption.
+               The label is already said by the badge in the bar. The caption is
+               dropped HERE only so it is not shown twice: capBlock below reads
+               it off the original block and places it deliberately, the same as
+               for a <slide>. */
+            ;[].forEach.call(bodyClone.querySelectorAll('.instructor-only-label, .deck-slide-caption'), function (el) {
+              if (el.parentNode) el.parentNode.removeChild(el)
+            })
             // An activity shown as a slide may embed figures, code listings or a
             // board simulator that are already shown on their own slides — drop
             // them so the slide shows just the tasks and doesn't overflow. (Only
@@ -471,19 +841,83 @@
               if (el.parentNode) el.parentNode.removeChild(el)
             })
             while (bodyClone.firstChild) refBody.appendChild(bodyClone.firstChild)
+            // Apply the slide's declared <col width="..."/> values. PreTeXt drops
+            // them from its HTML, so a slide table sizes its columns by content —
+            // two columns both declared 50% came out 422px and 755px. Inject the
+            // colgroup PreTeXt did not, and switch the table to a fixed layout so
+            // the widths are actually obeyed.
+            var colw = block.getAttribute('data-deck-colwidths')
+            if (colw) {
+              var tbl = refBody.querySelector('table.tabular')
+              if (tbl && !tbl.querySelector('colgroup')) {
+                var widths = colw.split(',')
+                var cg = document.createElement('colgroup')
+                widths.forEach(function (w) {
+                  var c = document.createElement('col')
+                  if (w.trim()) c.style.width = w.trim()
+                  cg.appendChild(c)
+                })
+                tbl.insertBefore(cg, tbl.firstChild)
+                tbl.style.tableLayout = 'fixed'
+                tbl.style.width = '100%'
+              }
+            }
             // A demo slide (its body is a board simulator) gets the whole slide.
             refBody.classList.toggle('has-sim', !!refBody.querySelector('.sim-embed'))
+            // PreTeXt puts a <task>'s own <title> inside the same .heading as its
+            // (a)/(b) label, but the CSS lays that heading out as a narrow absolute
+            // gutter sized for "(a)" alone — so a title wrapped underneath and printed
+            // through the task's text. Fold the label and title into the front of the
+            // first paragraph, which reads like the book and adds no height.
+            ;[].forEach.call(refBody.querySelectorAll('.task > .heading'), function (h) {
+              if (!h.querySelector('.title')) return
+              var task = h.parentNode
+              var first = task.querySelector('.para, p')
+              if (!first) return
+              var lead = document.createElement('span')
+              lead.className = 'task-lead'
+              while (h.firstChild) lead.appendChild(h.firstChild)
+              task.removeChild(h)
+              first.insertBefore(document.createTextNode(' '), first.firstChild)
+              first.insertBefore(lead, first.firstChild)
+              task.classList.add('titled-task')
+            })
 
-            // The slide's own short, instructive caption (shown under the figure
-            // instead of the book figure's full caption).
+            /* The slide's own short, instructive caption. Where it lands depends
+               on what else is on the slide: under the image on a figure slide
+               (so it reads as the figure's caption, replacing the book's full
+               one), otherwise as the closing line of the body. Every slide that
+               carries one gets it — the two placeMedia calls below cover the
+               @ref cases, and the fallback after mediaStep covers a slide whose
+               caption closes bullets or a code listing with no ref at all. */
             var capBlock = block.querySelector('.deck-slide-caption')
+            var capPlaced = false
+            function placeCaption(container, url) {
+              if (!capBlock) return
+              var capClone = capBlock.cloneNode(true)
+              strip(capClone); absolutize(capClone, url); demath(capClone)
+              capClone.className = 'slide-caption'
+              capClone.setAttribute('data-edit-origin', 'caption')
+              capClone.setAttribute('data-edit-id', slide.slide)
+              container.appendChild(capClone)
+              capPlaced = true
+            }
 
             var refId = block.getAttribute('data-deck-ref')
-            if (refId) {
-              var target = res.doc.getElementById(refId)
+            function placeMedia(doc, url) {
+              var target = doc.getElementById(refId)
               if (target) {
+                var res = { doc: doc, url: url }   // shadowed on purpose: the body below reads res.url
                 var mediaClone = target.cloneNode(true)
-                strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone)
+                // demath here too: a ref'd table (or a figure caption) can carry
+                // <m>, and without this it reached the projector as raw LaTeX --
+                // "\(R_{\text{lim}}\)" on the BJT-vs-MOSFET table.
+                strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone); demath(mediaClone)
+                // Resolved from the BOOK (a figure, a table): its source is the
+                // reading, not this slide. Tagged so the authoring layer opens
+                // it read-only rather than offering to rewrite it.
+                mediaClone.setAttribute('data-edit-origin', 'book')
+                mediaClone.setAttribute('data-edit-id', refId)
                 if (mediaClone.querySelector('img')) {
                   // A figure. Drop its book caption — slides carry their own
                   // instructive one. Bullets → two-column; none → image-dominant.
@@ -491,12 +925,7 @@
                     if (el.parentNode) el.parentNode.removeChild(el)
                   })
                   refMedia.appendChild(mediaClone)
-                  if (capBlock) {
-                    var capClone = capBlock.cloneNode(true)
-                    strip(capClone); absolutize(capClone, res.url)
-                    capClone.className = 'slide-caption'
-                    refMedia.appendChild(capClone)
-                  }
+                  placeCaption(refMedia, res.url)
                   if (refBody.textContent.trim() === '') {
                     refEl.classList.remove('single'); refEl.classList.add('figure-focus')
                   } else if (block.getAttribute('data-deck-stack')) {
@@ -511,15 +940,52 @@
                   refBody.appendChild(mediaClone)
                   // Non-image refs (e.g. a table) still get the slide's own
                   // instructive caption — shown below, in the body column.
-                  if (capBlock) {
-                    var capCloneB = capBlock.cloneNode(true)
-                    strip(capCloneB); absolutize(capCloneB, res.url)
-                    capCloneB.className = 'slide-caption'
-                    refBody.appendChild(capCloneB)
-                  }
+                  placeCaption(refBody, res.url)
                 }
               }
             }
+            /* A slide's @ref names an element by id, and normally that element
+               is on the slide's own built page. "refPage" on the deck entry lets
+               it name a figure that lives elsewhere in the book — e.g. an
+               in-class review slide showing a figure from the Before Class
+               reading — without duplicating the figure into a second section. */
+            var mediaStep
+            if (!refId) mediaStep = Promise.resolve()
+            else if (slide.refPage && slide.refPage !== slide.page) {
+              mediaStep = fetchPage(slide.refPage).then(function (r2) {
+                if (r2) placeMedia(r2.doc, r2.url)
+                else fail('Could not load refPage ' + slide.refPage)
+              })
+            } else mediaStep = Promise.resolve(placeMedia(res.doc, res.url))
+
+            mediaStep.then(function () {
+
+            /* A caption on a slide with no @ref — or one whose @ref resolved to
+               nothing — closes the body instead. Without this it was built into
+               the HTML and silently dropped, which cost every such slide across
+               Days 8, 9, 9X, 10 and the ADC pair its closing line, including
+               instructions the room never got. Runs after mediaStep so the two
+               placements inside placeMedia get first refusal: a figure slide's
+               caption belongs under its image, not under the bullets beside it. */
+            if (!capPlaced) placeCaption(refBody, res.url)
+
+            /* The presenter <note>, last of all (?notes only). Deliberately
+               after the layout decisions above: it is not slide content, and
+               appending it earlier would make a bullet-free figure slide look
+               like it has a body and cost it its image-dominant layout. It
+               inherits .ref-body's slide-owned provenance, so it edits in place
+               like any other slide text. */
+            var noteBlock = notesOn && block.querySelector('.deck-slide-note')
+            if (noteBlock) {
+              var noteClone = noteBlock.cloneNode(true)
+              strip(noteClone); absolutize(noteClone, res.url); demath(noteClone)
+              refBody.appendChild(noteClone)
+            }
+
+            // Last, once every piece of text is in place: typeset V_BE, h_FE,
+            // R_lim and friends as italic variables with real subscripts.
+            mathify(refEl)
+            })
           })
         }
 
@@ -548,6 +1014,12 @@
             }
             if (slide.note) parts.push('<p class="note">' + html(slide.note) + '</p>')
           }
+          // The instructor-only timing/cue line (?notes). Unlike a prompt's
+          // `note`, which is deliberately visible sub-text, this is never
+          // projected — same rule as a <slide>'s <note>.
+          if (notesOn && slide.presenterNote) {
+            parts.push('<div class="presenter-note">' + html(slide.presenterNote) + '</div>')
+          }
           glueEl.innerHTML = parts.join('')
         }
 
@@ -558,27 +1030,641 @@
           // Flag instructor-only slides in the instructor view so it's obvious
           // which ones the student version drops.
           document.getElementById('bar').classList.toggle('instr', !studentView && !!slide && !!slide.instructor)
+          syncInk()
           if (!slide) return
           if (slide.type === 'ref') renderRef(slide)
           else renderGlue(slide)
+        }
+
+        /* --- pen annotation ------------------------------------------------
+           Ported from the ENGS 20 player (C-Programming assets/class.html).
+           Every slide here is inkable: this player extracts ref slides inline
+           rather than iframing book pages, so there is no frame for the canvas
+           to sit over. The one exception is an embedded <sim> iframe, which
+           pen events cannot reach (they land in the sim's own document) — arm
+           ✎ Draw to write over a sim.
+
+           Annotations are the viewer's OWN. localStorage is per-browser, so a
+           student's ink never leaves their machine and the instructor's is
+           never shown to anyone — the static player has no channel it could
+           travel by, and that is the requirement, not a limitation.
+
+           Strokes are points normalized 0-1 against #stage, never pixels or
+           images: the same slide is a different pixel size on a phone, a
+           laptop and the projector, and normalized points redraw correctly on
+           all of them. That holds because slide type is sized against the
+           stage too (the cqmin units above) — normalized coordinates survive
+           rescaling, but nothing survives text reflowing underneath. It also
+           keeps the stored form small against the ~5MB origin quota.
+
+           Input model ("hybrid"): a stylus ALWAYS draws. The ink canvas never
+           captures input (pointer-events:none); pen events land on the slide
+           content, bubble up to #stage, and are drawn from there — so mouse
+           and finger always interact normally (scroll a long code slide,
+           click, drive a sim). The ✎ Draw button arms the canvas so the
+           podium MOUSE can draw too; arming necessarily covers the slide, so
+           it is a mode you toggle back out of (D or Esc). */
+
+        // THE assumption this rests on: iPadOS Safari reports an Apple Pencil
+        // as pointerType 'pen'. Confirmed on hardware for ENGS 20 (2026-07-20:
+        // writing works, finger and palm correctly do not draw). Isolated here
+        // so a different answer is a one-line change.
+        var PEN_POINTER_TYPES = { pen: true }
+        // Dev escape hatch for a machine with no stylus: ?ink=all lets mouse
+        // and finger draw without arming. Not for classroom use — it costs the
+        // palm rejection that filtering to 'pen' gives for free.
+        if (params.get('ink') === 'all') PEN_POINTER_TYPES = { pen: true, mouse: true, touch: true }
+        function isPen(e) { return PEN_POINTER_TYPES[e.pointerType] === true }
+
+        var stage = document.getElementById('stage')
+        // getBoundingClientRect forces a layout flush, and drawing wants one
+        // per sampled point, at the rate a Pencil samples. The stage only
+        // changes size with the window (a fixed 16:9 box in a page that does
+        // not scroll), so measure once and invalidate on resize / rotation.
+        var stageRect = null
+        function rect() {
+          // Never cache a zero-size measurement (a not-yet-laid-out page):
+          // normalizing against it turns every coordinate into Infinity, and
+          // nothing would invalidate it until the next window resize.
+          if (!stageRect || !stageRect.width) stageRect = stage.getBoundingClientRect()
+          return stageRect
+        }
+        var ink = document.getElementById('ink')
+        var inkCtx = ink.getContext('2d')
+        var bar = document.getElementById('bar')
+        var strokes = {}          // runtime slide number -> array of strokes (cache)
+        var live = null           // stroke in progress
+
+        /* Persistence: localStorage, keyed by deck + the slide's position in
+           the FULL deck (`_ink`, assigned at load BEFORE the ?student filter
+           drops instructor-only slides) — so ink never walks between the
+           instructor and the student view of the same deck, this player's
+           version of ENGS 20's announcement-shift trap. The in-memory cache
+           keys by runtime index, which is stable within one load. */
+        var INK_NS = 'deck:ink:'
+        function inkKey(n) {
+          var s = deck && deck.slides[n - 1]
+          if (!s || s._ink == null) return null
+          return INK_NS + deckId + ':' + s._ink
+        }
+
+        function loadInk(n) {
+          if (strokes[n]) return strokes[n]
+          var list = []
+          var key = inkKey(n)
+          if (key) {
+            try {
+              var raw = localStorage.getItem(key)
+              if (raw) { var p = JSON.parse(raw); if (Array.isArray(p)) list = p }
+            } catch (e) { /* private mode, disabled storage, corrupt JSON */ }
+          }
+          strokes[n] = list
+          return list
+        }
+
+        // Set when a write has been refused for want of room. Annotations keep
+        // working in memory — losing the current stroke because the quota is
+        // full would be worse than losing it at the end of the session.
+        var inkFull = false
+
+        function saveInk(n) {
+          if (savePending === n) { savePending = null; clearTimeout(saveTimer); saveTimer = null }
+          var key = inkKey(n)
+          if (!key) { updateNote(); return }
+          var list = strokes[n] || []
+          try {
+            if (!list.length) localStorage.removeItem(key)
+            else localStorage.setItem(key, JSON.stringify(list))
+            inkFull = false
+          } catch (e) {
+            inkFull = true
+          }
+          updateNote()
+        }
+
+        /* Saving is debounced (learned the hard way in ENGS 20): localStorage
+           is synchronous, and stringifying the whole slide's ink on pen-lift
+           runs at the exact moment the next letter starts — handwriting became
+           "pause between symbols", worse as the slide filled up. So coalesce
+           the writes and flush on the way out: pagehide is the reliable event
+           on iOS Safari (unload is not), visibilitychange covers
+           app-switching, which is how an iPad usually leaves a page. */
+        var saveTimer = null
+        var savePending = null
+
+        function saveInkSoon(n) {
+          // Changing slide with a write still pending would otherwise cancel
+          // it and save the new slide instead, losing the old slide's ink.
+          if (savePending != null && savePending !== n) flushInk()
+          savePending = n
+          clearTimeout(saveTimer)
+          saveTimer = setTimeout(flushInk, 500)
+        }
+
+        function flushInk() {
+          clearTimeout(saveTimer)
+          saveTimer = null
+          if (savePending == null) return
+          var n = savePending
+          savePending = null
+          saveInk(n)
+        }
+
+        window.addEventListener('pagehide', flushInk)
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'hidden') flushInk()
+        })
+
+        // Stroke width is normalized too (a fraction of stage height), so a
+        // line drawn on an iPad is the same visual weight on the projector.
+        var PEN_WIDTH = 0.004
+        var PEN_COLOR = '#d92b2b'
+        // The active pen colour (each stroke stores its own, so changing this
+        // never recolours what is already drawn) and the mode flags.
+        var inkColor = PEN_COLOR
+        var eraseMode = false
+        var erasing = false      // an eraser drag is in progress
+        var eraseDirty = false   // that drag has removed at least one stroke
+        var mouseDraw = false    // ✎ Draw armed: the mouse may draw
+        // Once a stylus has touched the page, show the pen tools in the bar —
+        // the hybrid model has no draw toggle for the pen, so this is how the
+        // swatches and eraser become discoverable on an iPad.
+        var penSeen = params.get('ink') === 'all'
+
+        function inkEnabled() {
+          return !!deck && !!deck.slides[currentIndex() - 1]
+        }
+        // May THIS event draw? A pen always may; a mouse only when armed.
+        function canDraw(e) { return isPen(e) || (mouseDraw && e.pointerType === 'mouse') }
+
+        function sizeCanvas(c, ctx) {
+          var r = rect()
+          var dpr = window.devicePixelRatio || 1
+          var w = Math.max(1, Math.round(r.width * dpr))
+          var h = Math.max(1, Math.round(r.height * dpr))
+          if (c.width !== w || c.height !== h) { c.width = w; c.height = h }
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+          ctx.lineCap = ctx.lineJoin = 'round'
+        }
+
+        // Paint one complete stroke at the given stage size.
+        function paintStroke(s, r) {
+          var col = s.color || PEN_COLOR
+          if (s.pts.length < 2) {
+            // A tap with no movement: draw a dot, or it vanishes.
+            inkCtx.beginPath()
+            inkCtx.arc(s.pts[0][0] * r.width, s.pts[0][1] * r.height, (s.w * r.height) / 2, 0, Math.PI * 2)
+            inkCtx.fillStyle = col
+            inkCtx.fill()
+            return
+          }
+          inkCtx.strokeStyle = col
+          inkCtx.lineWidth = s.w * r.height
+          inkCtx.beginPath()
+          inkCtx.moveTo(s.pts[0][0] * r.width, s.pts[0][1] * r.height)
+          for (var i = 1; i < s.pts.length; i++) {
+            inkCtx.lineTo(s.pts[i][0] * r.width, s.pts[i][1] * r.height)
+          }
+          inkCtx.stroke()
+        }
+
+        /* A full repaint: only for what genuinely invalidates everything —
+           changing slide, resizing, undo, clear. Explicitly NOT for drawing:
+           the backing store is stage x dpr, and clearing and repainting
+           millions of pixels per sampled point is most of why handwriting
+           once needed a pause between symbols. A live stroke only ever adds
+           to the canvas, so it just draws the new segment. */
+        function redrawInk() {
+          sizeCanvas(ink, inkCtx)
+          var r = rect()
+          inkCtx.clearRect(0, 0, r.width, r.height)
+          loadInk(currentIndex()).forEach(function (s) { paintStroke(s, r) })
+        }
+
+        // Extend the stroke in progress by the points just added, drawing only
+        // the new segments. `from` is the last point already on the canvas.
+        function drawLiveSegment(s, from, r) {
+          if (s.pts.length < 2) return
+          inkCtx.strokeStyle = s.color || PEN_COLOR
+          inkCtx.lineWidth = s.w * r.height
+          inkCtx.beginPath()
+          inkCtx.moveTo(s.pts[from][0] * r.width, s.pts[from][1] * r.height)
+          for (var i = from + 1; i < s.pts.length; i++) {
+            inkCtx.lineTo(s.pts[i][0] * r.width, s.pts[i][1] * r.height)
+          }
+          inkCtx.stroke()
+        }
+
+        function syncInk() {
+          var on = inkEnabled()
+          var n = currentIndex()
+          bar.classList.toggle('inkable', on && (penSeen || mouseDraw || loadInk(n).length > 0))
+          bar.classList.toggle('inking', on && loadInk(n).length > 0)
+          if (on) redrawInk()
+          // A laser streak from the previous slide would be stale on this one.
+          laserTrail.length = 0
+          laserPos = null
+          updateNote()
+        }
+
+        function updateNote() {
+          var noteEl = document.getElementById('note')
+          if (inkFull) {
+            noteEl.textContent = 'Out of storage — new marks are not being saved.'
+            noteEl.className = 'warn'
+          } else if (inkEnabled() && loadInk(currentIndex()).length) {
+            noteEl.textContent = 'Saved in this browser only.'
+            noteEl.className = ''
+          } else {
+            noteEl.textContent = ''
+            noteEl.className = ''
+          }
+        }
+
+        // 4 decimal places is ~0.16px on a 1600px-wide stage — far finer than
+        // anyone can see, and roughly half the JSON of full float precision.
+        function r4(v) { return Math.round(v * 1e4) / 1e4 }
+        function pointIn(e, r) {
+          return [r4((e.clientX - r.left) / r.width), r4((e.clientY - r.top) / r.height)]
+        }
+        function point(e) { return pointIn(e, rect()) }
+        // Pens sample far faster than the ink needs to be described. Dropping
+        // points closer together than this loses nothing visible.
+        var MIN_STEP = 0.0015
+        function farEnough(a, b) {
+          return Math.abs(a[0] - b[0]) > MIN_STEP || Math.abs(a[1] - b[1]) > MIN_STEP
+        }
+
+        /* The eraser removes whole strokes it touches, not pixels. A stroke is
+           "touched" if the pen passes within the radius of any of its
+           SEGMENTS, not just its stored points — a straight stroke stores only
+           its endpoints, so a vertex-only test would miss the long span
+           between them. Distances are in stage pixels so the radius is round
+           rather than squashed by the 16:9 aspect. */
+        var ERASE_R = 0.03   // radius as a fraction of stage height
+        function distToSeg(qx, qy, ax, ay, bx, by) {
+          var dx = bx - ax, dy = by - ay
+          var len2 = dx * dx + dy * dy
+          var t = len2 ? ((qx - ax) * dx + (qy - ay) * dy) / len2 : 0
+          t = t < 0 ? 0 : t > 1 ? 1 : t
+          var cx = ax + t * dx, cy = ay + t * dy
+          return Math.sqrt((qx - cx) * (qx - cx) + (qy - cy) * (qy - cy))
+        }
+        function strokeNear(s, px, py, r) {
+          var R = ERASE_R * r.height
+          var qx = px * r.width, qy = py * r.height
+          var pts = s.pts
+          if (pts.length === 1) {
+            var dx = pts[0][0] * r.width - qx, dy = pts[0][1] * r.height - qy
+            return Math.sqrt(dx * dx + dy * dy) <= R
+          }
+          for (var i = 1; i < pts.length; i++) {
+            if (distToSeg(qx, qy,
+                  pts[i - 1][0] * r.width, pts[i - 1][1] * r.height,
+                  pts[i][0] * r.width, pts[i][1] * r.height) <= R) return true
+          }
+          return false
+        }
+        function eraseAt(e) {
+          var r = rect()
+          var list = loadInk(currentIndex())
+          if (!list.length) return
+          var p = pointIn(e, r)
+          var kept = [], removed = false
+          list.forEach(function (s) {
+            if (strokeNear(s, p[0], p[1], r)) removed = true
+            else kept.push(s)
+          })
+          if (removed) { strokes[currentIndex()] = kept; eraseDirty = true; redrawInk() }
+        }
+
+        /* Strokes are picked up on #stage, not the canvas — that is what lets
+           the canvas stay pointer-events:none so the slide underneath keeps
+           working (the hybrid model above). Events that start on the bar are
+           the bar's own. */
+        stage.addEventListener('pointerdown', function (e) {
+          if (e.pointerType === 'pen' && !penSeen) { penSeen = true; syncInk() }
+          if (laserOn) return                      // pointing, not writing
+          if (!inkEnabled() || !canDraw(e)) return
+          if (bar.contains(e.target)) return       // the bar's buttons stay buttons
+          e.preventDefault()
+          // Capture keeps the stroke coming to us if the pen strays; captured
+          // events retarget to #stage, where these listeners live. Not fatal
+          // if it fails, so don't let it throw away the stroke.
+          try { stage.setPointerCapture(e.pointerId) } catch (err) {}
+          if (eraseMode) { erasing = true; eraseDirty = false; eraseAt(e); return }
+          live = { w: PEN_WIDTH, color: inkColor, pts: [point(e)] }
+          loadInk(currentIndex()).push(live)
+          bar.classList.add('inking')
+        })
+
+        stage.addEventListener('pointermove', function (e) {
+          if (laserOn) { laserTrack(e); return }
+          if (eraseMode) {
+            if (!erasing || !canDraw(e)) return
+            e.preventDefault()
+            eraseAt(e)
+            return
+          }
+          if (!live || !canDraw(e)) return
+          e.preventDefault()
+          // Safari coalesces pointermove at the Pencil's higher sample rate;
+          // taking the coalesced events keeps fast strokes smooth instead of
+          // polygonal. Older engines just give back the one event.
+          var evs = (typeof e.getCoalescedEvents === 'function' && e.getCoalescedEvents().length)
+                    ? e.getCoalescedEvents() : [e]
+          // One rect for the whole batch: getBoundingClientRect forces layout,
+          // and a coalesced batch can hold a dozen points.
+          var r = rect()
+          var drawnTo = live.pts.length - 1
+          for (var i = 0; i < evs.length; i++) {
+            var p = pointIn(evs[i], r)
+            if (farEnough(p, live.pts[live.pts.length - 1])) live.pts.push(p)
+          }
+          drawLiveSegment(live, drawnTo, r)
+        })
+
+        function endStroke(e) {
+          if (erasing) {
+            erasing = false
+            if (eraseDirty) { saveInk(currentIndex()); eraseDirty = false }
+            syncInk()   // all ink erased? drop the Undo/Clear tools
+            if (e && e.pointerId != null && stage.hasPointerCapture(e.pointerId)) stage.releasePointerCapture(e.pointerId)
+            return
+          }
+          if (!live) return
+          // A stroke that never moved left nothing on the canvas, because
+          // drawLiveSegment only draws segments. Paint its dot now.
+          if (live.pts.length < 2) paintStroke(live, rect())
+          live = null
+          saveInkSoon(currentIndex())
+          if (e && e.pointerId != null && stage.hasPointerCapture(e.pointerId)) {
+            stage.releasePointerCapture(e.pointerId)
+          }
+        }
+
+        /* The Scribble workaround, carried from ENGS 20 (diagnosed on real
+           hardware): iPadOS 14+ Scribble swallows whole Pencil pointer
+           sequences on web pages while writing fast — the contact reaches the
+           glass and produces no pointer event and no touch event at all. A
+           non-passive touchmove listener that preventDefaults opts the element
+           out of the gesture path Scribble hooks; passive:false is
+           load-bearing (a passive listener may not preventDefault, and does
+           nothing, silently). Refined for this player: preventDefault only for
+           STYLUS contacts (touchType is iOS's) or while a stroke is live, so a
+           finger can still scroll a long code slide. It also keeps a Pencil
+           drag from scroll-panning that slide instead of writing on it. */
+        stage.addEventListener('touchmove', function (e) {
+          var stylus = false
+          for (var i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].touchType === 'stylus') { stylus = true; break }
+          }
+          if (stylus || live || erasing) e.preventDefault()
+        }, { passive: false })
+
+        stage.addEventListener('pointerup', endStroke)
+        stage.addEventListener('pointercancel', endStroke)
+        // A stroke dragged off the stage should end there, not resume when the
+        // pen comes back.
+        stage.addEventListener('pointerleave', function (e) {
+          laserPos = null   // the laser dot leaves with the pointer
+          endStroke(e)
+        })
+
+        document.getElementById('undo').addEventListener('click', function () {
+          var n = currentIndex()
+          var list = loadInk(n)
+          if (list.length) list.pop()
+          saveInk(n)
+          syncInk()
+        })
+        document.getElementById('clear').addEventListener('click', function () {
+          var n = currentIndex()
+          if (!loadInk(n).length) return
+          // Ink outlives the tab, so clearing destroys saved work — ask first.
+          if (!confirm('Erase everything you have written on this slide?')) return
+          strokes[n] = []
+          saveInk(n)
+          syncInk()
+        })
+
+        // Colour swatches and the eraser toggle. Each stroke stores its own
+        // colour, so switching never recolours existing ink. Picking a colour
+        // also leaves erase mode — you reached for a colour to draw.
+        var swatchWrap = document.getElementById('swatches')
+        function setErase(on) {
+          eraseMode = on
+          document.getElementById('erase').classList.toggle('active', on)
+          ink.classList.toggle('erasing', on)
+        }
+        function setColor(c) {
+          inkColor = c
+          ;[].forEach.call(swatchWrap.querySelectorAll('.swatch'), function (b) {
+            b.classList.toggle('active', b.getAttribute('data-color') === c)
+          })
+          if (eraseMode) setErase(false)
+        }
+        swatchWrap.addEventListener('click', function (e) {
+          var b = e.target.closest && e.target.closest('.swatch')
+          if (b) setColor(b.getAttribute('data-color'))
+        })
+        document.getElementById('erase').addEventListener('click', function () { setErase(!eraseMode) })
+        setColor(PEN_COLOR)   // mark the default swatch active
+
+        // ✎ Draw: arm the canvas so the podium mouse can draw. Arming covers
+        // the slide (that is what makes mouse drawing possible at all), so it
+        // and the laser are mutually exclusive modes you toggle out of.
+        var drawBtn = document.getElementById('draw')
+        function setArmed(on) {
+          mouseDraw = on
+          if (on) setLaser(false)
+          drawBtn.classList.toggle('active', on)
+          ink.classList.toggle('armed', on)
+          syncInk()
+        }
+        drawBtn.addEventListener('click', function () { setArmed(!mouseDraw) })
+
+        window.addEventListener('resize', function () {
+          stageRect = null            // the cached measurement is now stale
+          if (inkEnabled()) redrawInk()
+        })
+        // Rotating an iPad fires resize, but Safari can report the old size if
+        // asked too early, so drop the cache again on the orientation event.
+        window.addEventListener('orientationchange', function () { stageRect = null })
+
+        /* --- laser pointer -------------------------------------------------
+           A glowing dot with a short comet tail that fades, for pointing at
+           things during class. Purely local and ephemeral: the player is
+           static (nothing to sync), and the projector is the shared surface —
+           the room sees the dot because the room sees the screen. Follows any
+           pointer: the podium mouse, a Pencil, a finger. Toggle with the bar
+           button or L; Esc leaves. Never persisted. */
+        var laser = document.getElementById('laser')
+        var laserCtx = laser.getContext('2d')
+        var laserBtn = document.getElementById('laser-btn')
+        var laserOn = false
+        var laserTrail = []       // {x, y, t} normalized, newest last
+        var laserPos = null       // where the dot is right now (null: pointer left)
+        var laserRAF = null
+        var LASER_FADE = 450      // tail lifetime, ms
+
+        function setLaser(on) {
+          laserOn = on
+          if (on) setArmed(false)
+          laserBtn.classList.toggle('active', on)
+          stage.classList.toggle('laser-on', on)
+          laserTrail.length = 0
+          laserPos = null
+          ensureLaserLoop()       // runs at least once, to clear the canvas
+        }
+        laserBtn.addEventListener('click', function () { setLaser(!laserOn) })
+
+        function laserTrack(e) {
+          var p = point(e)
+          laserPos = p
+          var last = laserTrail[laserTrail.length - 1]
+          if (!last || farEnough(p, [last.x, last.y])) {
+            laserTrail.push({ x: p[0], y: p[1], t: performance.now() })
+            if (laserTrail.length > 80) laserTrail.shift()
+          }
+          ensureLaserLoop()
+        }
+
+        function ensureLaserLoop() {
+          if (laserRAF == null) laserRAF = requestAnimationFrame(laserLoop)
+        }
+        function laserLoop() {
+          laserRAF = null
+          sizeCanvas(laser, laserCtx)
+          var r = rect()
+          var now = performance.now()
+          laserCtx.clearRect(0, 0, r.width, r.height)
+          while (laserTrail.length && now - laserTrail[0].t > LASER_FADE) laserTrail.shift()
+          // The tail: each segment fades and thins with age.
+          for (var i = 1; i < laserTrail.length; i++) {
+            var a = laserTrail[i - 1], b = laserTrail[i]
+            var age = Math.max(0, (now - b.t) / LASER_FADE)
+            laserCtx.strokeStyle = 'rgba(255,60,50,' + (0.38 * (1 - age)).toFixed(3) + ')'
+            laserCtx.lineWidth = r.height * 0.008 * (1 - 0.6 * age)
+            laserCtx.beginPath()
+            laserCtx.moveTo(a.x * r.width, a.y * r.height)
+            laserCtx.lineTo(b.x * r.width, b.y * r.height)
+            laserCtx.stroke()
+          }
+          // The dot: a soft glow around a hard core, like the real thing.
+          if (laserOn && laserPos) {
+            var x = laserPos[0] * r.width, y = laserPos[1] * r.height
+            var R = r.height * 0.011
+            var g = laserCtx.createRadialGradient(x, y, 0, x, y, R * 3)
+            g.addColorStop(0, 'rgba(255,80,60,.5)')
+            g.addColorStop(1, 'rgba(255,80,60,0)')
+            laserCtx.fillStyle = g
+            laserCtx.beginPath(); laserCtx.arc(x, y, R * 3, 0, Math.PI * 2); laserCtx.fill()
+            laserCtx.fillStyle = '#ff2d1e'
+            laserCtx.beginPath(); laserCtx.arc(x, y, R, 0, Math.PI * 2); laserCtx.fill()
+            laserCtx.fillStyle = 'rgba(255,205,195,.9)'
+            laserCtx.beginPath(); laserCtx.arc(x, y, R * 0.42, 0, Math.PI * 2); laserCtx.fill()
+          }
+          if (laserOn || laserTrail.length) ensureLaserLoop()
         }
 
         window.addEventListener('hashchange', render)
         document.getElementById('prev').addEventListener('click', function () { go(currentIndex() - 1) })
         document.getElementById('next').addEventListener('click', function () { go(currentIndex() + 1) })
         document.addEventListener('keydown', function (e) {
+          if (e.metaKey || e.ctrlKey || e.altKey) return
           if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(currentIndex() + 1) }
           else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(currentIndex() - 1) }
           else if (e.key === 'Home') { e.preventDefault(); go(1) }
           else if (e.key === 'End') { e.preventDefault(); go(deck ? deck.slides.length : 1) }
+          else if (e.key === 'd' || e.key === 'D') { setArmed(!mouseDraw) }
+          else if (e.key === 'l' || e.key === 'L') { setLaser(!laserOn) }
+          else if (e.key === 'e' || e.key === 'E') { setErase(!eraseMode) }
+          else if (e.key === 'Escape') { setArmed(false); setLaser(false); setErase(false) }
         })
 
-        if (!deckId) { fail('No deck specified. Open with ?deck=<id>.'); return }
-        fetch('decks/' + encodeURIComponent(deckId) + '.json')
+        /* --- contents ------------------------------------------------------
+           Opened with no ?deck, the player lists the decks instead of showing
+           an error. The list comes from decks/index.json (written by
+           scripts/make_deck_index.py) because a static host — which is what
+           this is, deployed — cannot list a directory.
+
+           Every link inherits the flags THIS page was opened with, so
+           class.html?student is one bookmark that leads only to student views,
+           and ?notes likewise. That is also why the links are built from the
+           current params rather than hard-coded. */
+        function showContents() {
+          document.body.classList.add('contents')
+          var el = document.getElementById('contents')
+          document.title = 'ENGS 28 — Class decks'
+
+          var carry = []
+          if (studentView) carry.push('student')
+          if (params.has('notes')) carry.push('notes')
+          var suffix = carry.length ? '&' + carry.join('&') : ''
+
+          fetch('decks/index.json', FETCH_OPTS)
+            .then(function (r) { if (!r.ok) throw new Error('no decks/index.json (' + r.status + ')'); return r.json() })
+            .then(function (index) {
+              var parts = ['<h1>ENGS 28 — Class decks</h1>']
+              // One audience switch for the whole page, rather than a link per
+              // row: thirteen of those fragmented the list and made the decks
+              // themselves harder to scan, which is the one thing this page is
+              // for. Switching re-renders every link below.
+              parts.push('<p class="lede">' +
+                (studentView
+                  ? 'Student view — instructor-only slides are dropped.'
+                  : 'Instructor view — every slide, including instructor-only ones.') +
+                // Keep ?notes across the switch: losing it silently would look
+                // like the notes flag had stopped working.
+                ' <a class="swap" href="class.html' +
+                (studentView
+                  ? (params.has('notes') ? '?notes' : '')
+                  : '?student' + (params.has('notes') ? '&notes' : '')) + '">' +
+                (studentView ? 'Switch to instructor view' : 'Switch to student view') +
+                '</a></p><ol>')
+              index.decks.forEach(function (d) {
+                var href = 'class.html?deck=' + encodeURIComponent(d.id) + suffix
+                parts.push('<li class="' + d.kind + '">')
+                parts.push('<a class="deck" href="' + href + '">')
+                if (d.label) parts.push('<span class="day">' + esc(d.label) + '</span>')
+                parts.push('<span class="name">' + esc(d.name) + '</span>')
+                if (d.kind === 'video') parts.push('<span class="badge">video</span>')
+                parts.push('<span class="count">' + d.slides + ' slides</span>')
+                parts.push('</a></li>')
+              })
+              parts.push('</ol>')
+              parts.push('<p class="foot">' + (studentView
+                ? 'Arrow keys or space to move through a deck.'
+                : 'Arrow keys or space to move; <b>L</b> laser, <b>D</b> draw with the mouse, ' +
+                  '<b>E</b> erase. Add <code>&amp;notes</code> to any deck for presenter notes.') +
+                '</p>')
+              el.innerHTML = parts.join('')
+            })
+            .catch(function (e) {
+              // The fix differs by where this is running, and the wrong advice
+              // wastes real time: locally the index just needs generating,
+              // deployed it needs to be built and shipped.
+              el.innerHTML = '<h1>ENGS 28 — Class decks</h1><p class="lede">' +
+                'Could not load the deck list (' + esc(e.message) + '). ' +
+                (LOCAL
+                  ? 'Generate it with <code>python3 scripts/make_deck_index.py</code>, ' +
+                    'or open a deck directly with <code>?deck=day1</code>.'
+                  : 'This site may predate the contents page — it appears after the ' +
+                    'next deploy. A deck still opens directly with <code>?deck=day1</code>.') +
+                '</p>'
+            })
+        }
+
+        if (!deckId) { showContents(); return }
+        fetch('decks/' + encodeURIComponent(deckId) + '.json', FETCH_OPTS)
           .then(function (r) { if (!r.ok) throw new Error('no deck "' + deckId + '" (' + r.status + ')'); return r.json() })
           .then(function (d) {
             deck = d
             if (!deck.slides || !deck.slides.length) throw new Error('deck has no slides')
+            // Annotation keys by the slide's position in the FULL deck,
+            // assigned before the student filter below — see inkKey().
+            deck.slides.forEach(function (s, i) { s._ink = i + 1 })
             // Student view drops instructor-only slides. NOTE: this hides them
             // from the VIEW only — the content still lives in the built book page
             // source. A truly solutions-free student build must strip them at
@@ -590,6 +1676,454 @@
             render()
           })
           .catch(function (e) { fail('Could not load this deck. ' + e.message) })
+
+        /* --- authoring: alt-click a slide to reach its source --------------
+           Ported from the ENGS 20 deck player, but the mechanism had to change.
+           There, a 'ref' slide is an IFRAME of the book page, so ptx-edit.js
+           loads inside it and handles the book half for free. Here the player
+           EXTRACTS and clones the markup inline (renderRef above), so there is
+           no frame for ptx-edit.js to live in — which is why renderRef stamps
+           data-edit-origin onto the nodes as it clones them, and why this layer
+           reads that stamp to decide where a write would land:
+
+             glue slide          -> the deck's JSON entry
+             <slide> block text  -> source/*.ptx, via the same /locate + /patch
+                                    the book uses, scoped to the slide's xml:id
+             direct book ref     -> REFUSED for editing (it would change the
+                                    reading too); Alt-click still opens it
+
+           Local-only and self-effacing, exactly like the book's version: it
+           wires nothing up unless the edit-server (127.0.0.1:8927, started by
+           ./preview-slides.sh) actually answers, so it never appears for a
+           student, on the deployed deck, or in a plain non-authoring preview. */
+        ;(function () {
+          if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return
+          var EDIT_SERVER = 'http://127.0.0.1:8927'
+
+          // Blocks holding prose worth editing. A click bubbles up until it
+          // reaches one. .slide-caption and .deck-slide-note are divs of bare
+          // text (the XSL emits no <p> inside them), so they are listed in
+          // their own right rather than being found via a paragraph.
+          var BLOCKS = '.slide-caption, .deck-slide-note, .para, li, p, figcaption, td, th'
+
+          var editing = null
+
+          function toast (message, kind) {
+            var existing = document.getElementById('deck-edit-toast')
+            if (existing) existing.remove()
+            var node = document.createElement('div')
+            node.id = 'deck-edit-toast'
+            node.className = 'deck-edit-toast deck-edit-toast-' + (kind || 'info')
+            node.textContent = message
+            document.body.appendChild(node)
+            setTimeout(function () { if (node.parentNode) node.remove() },
+                       kind === 'error' ? 6000 : 2800)
+          }
+
+          function describe (error) {
+            return (error instanceof TypeError)
+              ? 'Edit server not running — start it with ./preview-slides.sh'
+              : error.message
+          }
+          function asJson (response) {
+            return response.json().then(function (body) {
+              if (!response.ok) throw new Error(body.error || 'request failed')
+              return body
+            })
+          }
+
+          function currentSlide () {
+            return deck && deck.slides ? deck.slides[currentIndex() - 1] : null
+          }
+          // The slide's index in the deck FILE. Assigned before the ?student
+          // filter drops instructor-only slides, so it stays correct in either
+          // view — the runtime index does not.
+          function jsonIndex (slide) { return slide._ink }
+
+          function textFor (block) {
+            return (block.innerText || block.textContent || '').replace(/\s+/g, ' ').trim()
+          }
+
+          // --- Alt-click: open the right source ---------------------------
+          function openDeckEntry (slide) {
+            fetch(EDIT_SERVER + '/open-deck?deck=' + encodeURIComponent(deckId) +
+                  '&slide=' + jsonIndex(slide))
+              .then(asJson)
+              .then(function (b) { toast('Opened ' + b.file + ':' + b.line, 'ok') })
+              .catch(function (e) { toast(describe(e), 'error') })
+          }
+          function openSlideBlock (xmlId, what) {
+            fetch(EDIT_SERVER + '/open-slide?id=' + encodeURIComponent(xmlId))
+              .then(asJson)
+              .then(function (b) { toast('Opened ' + (what || b.tag) + ' — ' + b.file + ':' + b.line, 'ok') })
+              .catch(function (e) { toast(describe(e), 'error') })
+          }
+
+          /* Open the source of book content shown on a slide, as precisely as
+             the click allows: the exact paragraph or task if one was clicked
+             (/locate matches its text), otherwise the whole element by id. The
+             fallback matters for a figure or a table, where the click may land
+             on something with no prose to match on. */
+          function openBookSource (block, bookId, slide) {
+            var text = block ? textFor(block) : ''
+            if (!text) { openSlideBlock(bookId, 'book content'); return }
+            fetch(EDIT_SERVER + '/locate?open=1' +
+                  '&text=' + encodeURIComponent(text) +
+                  '&id=' + encodeURIComponent(bookId))
+              .then(function (r) { if (!r.ok) throw new Error('no match'); return r.json() })
+              .then(function (b) { toast('Opened ' + b.file + ':' + b.line, 'ok') })
+              .catch(function () { openSlideBlock(bookId, 'book content') })
+          }
+
+          function openSource (target, slide) {
+            // A ref slide's TITLE is deck glue, not book content: it is the
+            // one bit of a ref slide written in the JSON.
+            if (slide.type !== 'ref' || target.closest('.deck-title')) {
+              return openDeckEntry(slide)
+            }
+            var origin = target.closest('[data-edit-origin]')
+            var kind = origin && origin.getAttribute('data-edit-origin')
+            if (kind === 'book' || kind === 'book-direct') {
+              // Opening is always safe — it only points an editor at a file.
+              return openSlideBlock(origin.getAttribute('data-edit-id'), 'book content')
+            }
+            openSlideBlock(slide.slide, 'slide block')
+          }
+
+          /* --- Alt-shift-click: edit in place -----------------------------
+             Ask the server whether this block can be rewritten BEFORE opening
+             it, so nobody is invited to type into text that could never be
+             saved (a slide holding math, an <xref>, or a <sim>). Same check
+             the book editing uses — see edit_status in scripts/edit-server.py. */
+          function requestEdit (block, hintId) {
+            if (editing) return
+            editing = block   // claim it now, so a second click can't race
+            var url = EDIT_SERVER + '/locate' +
+              '?text=' + encodeURIComponent(textFor(block)) +
+              '&id=' + encodeURIComponent(hintId)
+            fetch(url).then(asJson)
+              .then(function (b) {
+                if (b.editable) { beginEdit(block, hintId); return }
+                editing = null
+                toast('Can’t edit here — ' + b.blocked + '. Opening ' +
+                      b.file + ':' + b.line + ' in your editor.', 'info')
+                fetch(url + '&open=1').catch(function () {})
+              })
+              .catch(function (e) { editing = null; toast(describe(e), 'error') })
+          }
+
+          // Hand back text a failed save would otherwise discard. The clipboard
+          // needs permission and can refuse, so the console is the fallback
+          // that always works; the caller is told which happened.
+          function keepText (text, done) {
+            console.log('[deck] unsaved text:\n' + text)
+            try {
+              navigator.clipboard.writeText(text)
+                .then(function () { done(true) })
+                .catch(function () { done(false) })
+            } catch (e) { done(false) }
+          }
+
+          function beginEdit (block, hintId) {
+            var original = textFor(block)
+            var originalHTML = block.innerHTML
+            // Captured now: the save resolves later, by which time the author
+            // may have paged on to a slide from a different book page.
+            var fromPage = (currentSlide() || {}).page
+            editing = block
+            block.classList.add('deck-edit-active')
+            block.setAttribute('contenteditable', 'plaintext-only')
+            // Nothing opened here contains inline markup — the server refuses
+            // those up front and sends you to the file. An earlier version
+            // opened them with the <clr>/<c> spans set contenteditable=false,
+            // but retyping a selection deletes those spans outright, so the
+            // guard failed exactly when a whole bullet had been reworded.
+            block.focus()
+
+            function finish (save) {
+              if (editing !== block) return
+              editing = null
+              block.removeAttribute('contenteditable')
+              block.classList.remove('deck-edit-active')
+              block.removeEventListener('keydown', onKey)
+              block.removeEventListener('blur', onBlur)
+
+              var updated = textFor(block)
+              if (!save || updated === original) { block.innerHTML = originalHTML; return }
+              fetch(EDIT_SERVER + '/patch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: original, newText: updated, id: hintId })
+              })
+                .then(asJson)
+                .then(function (b) {
+                  // The built page this slide was extracted from is now stale.
+                  // Drop it so navigating back re-reads the rebuilt copy
+                  // instead of silently showing the pre-edit text again.
+                  delete pageCache[fromPage]
+                  toast('Saved to ' + b.file + ':' + b.line, 'ok')
+                })
+                .catch(function (error) {
+                  // The source is the truth, so the slide must go back. The
+                  // wording someone just spent minutes on is not the source's
+                  // to throw away though: copy it out BEFORE reverting, and
+                  // open the file, so the work survives as a paste.
+                  keepText(updated, function (kept) {
+                    block.innerHTML = originalHTML
+                    toast(describe(error) +
+                          (kept ? ' Your text is on the clipboard.' : ' Your text is in the console.') +
+                          ' Opening the file.', 'error')
+                    fetch(EDIT_SERVER + '/locate?open=1' +
+                          '&text=' + encodeURIComponent(original) +
+                          '&id=' + encodeURIComponent(hintId)).catch(function () {})
+                  })
+                })
+            }
+            function onKey (event) {
+              if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finish(false) }
+              else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault(); event.stopPropagation(); finish(true)
+              } else if (event.key === 'Enter') {
+                event.preventDefault()   // one block is one paragraph
+              } else {
+                event.stopPropagation()  // don't let typing drive the deck
+              }
+            }
+            function onBlur () { finish(true) }
+            block.addEventListener('keydown', onKey)
+            block.addEventListener('blur', onBlur)
+            toast('Editing — click out or ⌘⏎ saves, esc cancels', 'info')
+          }
+          function editHere (target, slide) {
+            if (slide.type !== 'ref' || target.closest('.deck-title')) {
+              return openSlideForm(slide)
+            }
+            var origin = target.closest('[data-edit-origin]')
+            var kind = origin && origin.getAttribute('data-edit-origin')
+            if (kind === 'book' || kind === 'book-direct') {
+              /* Book content behind a direct ref: not editable from here, for
+                 the same reason as everything else this refuses — it would
+                 change the reading, not just the slide.
+
+                 It OPENS the file rather than telling you to go and Alt-click
+                 it yourself. Being refused and being handed the file are the
+                 same moment, and the pre-flight path below has always done it
+                 that way; leaving this one branch to only talk made the tool
+                 look like it behaved differently on different slides. */
+              var refused = target.closest(BLOCKS)
+              toast('Book content (' + origin.getAttribute('data-edit-id') +
+                    ') — editing it here would change the reading too. ' +
+                    'Opening it in your editor.', 'info')
+              openBookSource(refused, origin.getAttribute('data-edit-id'), slide)
+              return
+            }
+            var block = target.closest(BLOCKS)
+            if (!block || !refEl.contains(block)) {
+              toast('Nothing editable there. Alt-shift-click a bullet, a caption, ' +
+                    'or the title bar.', 'info')
+              return
+            }
+            requestEdit(block, origin ? origin.getAttribute('data-edit-id') : slide.slide)
+          }
+
+          // --- the glue form (alt-shift-click a glue slide) ----------------
+          // Display order per type; [key, label, kind] where kind is how the
+          // field reads and writes: text = one line, area = multi-line string,
+          // lines = textarea <-> array of strings.
+          var NOTE_FIELD = ['presenterNote', 'Presenter note (never projected)', 'area']
+          var BULLETS = ['items', 'Bullets (one per line)', 'lines']
+          var FORM = {
+            title:   [['title', 'Title', 'text'], ['subtitle', 'Subtitle', 'text'], NOTE_FIELD],
+            section: [['kicker', 'Kicker (e.g. "Part 1")', 'text'], ['title', 'Title', 'text'], NOTE_FIELD],
+            agenda:  [['title', 'Title', 'text'], BULLETS, NOTE_FIELD],
+            recap:   [['title', 'Title', 'text'], BULLETS, NOTE_FIELD],
+            notice:  [['title', 'Title', 'text'], BULLETS, NOTE_FIELD],
+            prompt:  [['title', 'Title', 'text'], ['body', 'Body', 'area'],
+                      ['note', 'Note (shown on the slide)', 'area'], NOTE_FIELD],
+            // A ref slide's own JSON fields. Its CONTENT lives in the book and
+            // is edited in place, so it is deliberately not offered here.
+            ref:     [['title', 'Slide title (deck JSON)', 'text'], NOTE_FIELD]
+          }
+          var slideeditEl = document.getElementById('slideedit')
+          var seFields = document.getElementById('se-fields')
+          var seType = document.getElementById('se-type')
+          var seStatusEl = document.getElementById('se-status')
+          var curForm = null
+
+          function seStatus (message, kind) {
+            seStatusEl.textContent = message || ''
+            seStatusEl.className = kind || ''
+          }
+          function splitLines (v) {
+            return v.split('\n').map(function (s) { return s.trim() })
+                    .filter(function (s) { return s.length })
+          }
+
+          function openSlideForm (slide) {
+            var spec = FORM[slide.type]
+            if (!spec) { toast('This slide type has no form.', 'info'); return }
+            /* Populate from the FILE, not from the deck this page loaded. They
+               diverge the moment a deck is hand-edited in the editor — the
+               player only reads a deck once, at page load — and a form filled
+               from the stale copy would quietly write those old values back
+               over the newer file when saved. The fingerprint that comes with
+               it is checked on save, so even a change made while the form is
+               open is caught rather than overwritten. */
+            fetch(EDIT_SERVER + '/deck-slide?deck=' + encodeURIComponent(deckId) +
+                  '&slide=' + jsonIndex(slide))
+              .then(asJson)
+              .then(function (b) { fillSlideForm(slide, spec, b.slide, b.fingerprint) })
+              .catch(function (e) { toast(describe(e), 'error') })
+          }
+
+          function fillSlideForm (slide, spec, current, fingerprint) {
+            curForm = { type: slide.type, src: slide, fingerprint: fingerprint }
+            seType.textContent = slide.type
+            seFields.innerHTML = ''
+            // If the file disagrees with what is on screen, say so before any
+            // typing happens — the slide behind the form is the old one.
+            var drifted = spec.some(function (field) {
+              return JSON.stringify(current[field[0]] == null ? '' : current[field[0]]) !==
+                     JSON.stringify(slide[field[0]] == null ? '' : slide[field[0]])
+            })
+            if (drifted) {
+              toast('This deck changed on disk since the page loaded — the form ' +
+                    'shows the current file, which is not what the slide behind ' +
+                    'it shows. Reload to bring them back together.', 'info')
+            }
+            spec.forEach(function (field) {
+              var key = field[0], value = current[key], kind = field[2]
+              var wrap = document.createElement('div')
+              wrap.className = 'se-field'
+              var label = document.createElement('label')
+              label.textContent = field[1]
+              wrap.appendChild(label)
+              var input = document.createElement(kind === 'text' ? 'input' : 'textarea')
+              if (kind === 'text') input.type = 'text'
+              input.dataset.key = key
+              input.dataset.kind = kind
+              // Setting .value (never innerHTML) keeps any markup in the string
+              // as literal text, so a bullet's <c>…</c> round-trips untouched.
+              input.value = (kind === 'lines')
+                ? [].concat(value == null ? [] : value).join('\n')
+                : (value == null ? '' : String(value))
+              wrap.appendChild(input)
+              seFields.appendChild(wrap)
+            })
+            seStatus('')
+            ink.classList.remove('armed')   // keep the canvas off the form
+            slideeditEl.classList.add('on')
+            var first = seFields.querySelector('input, textarea')
+            if (first) first.focus()
+          }
+
+          function readSlideForm () {
+            var fields = {}
+            ;[].forEach.call(seFields.querySelectorAll('[data-key]'), function (el) {
+              var key = el.dataset.key
+              if (el.dataset.kind !== 'lines') { fields[key] = el.value; return }
+              // Keep the value's original shape: items is always a list.
+              var arr = splitLines(el.value)
+              var wasArray = key === 'items' || Array.isArray(curForm.src[key])
+              fields[key] = (wasArray || arr.length > 1) ? arr : (arr[0] || '')
+            })
+            return fields
+          }
+
+          function saveSlideForm () {
+            if (!curForm) return
+            var fields = readSlideForm()
+            seStatus('Saving…')
+            fetch(EDIT_SERVER + '/patch-deck', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                deck: deckId,
+                slide: jsonIndex(curForm.src),
+                // Both are refusals-not-overwrites: `type` catches this
+                // position becoming a different KIND of slide, `fingerprint`
+                // catches any edit to it since the form was opened.
+                type: curForm.type,
+                fingerprint: curForm.fingerprint,
+                fields: fields
+              })
+            })
+              .then(asJson)
+              .then(function (b) {
+                // Mirror into the in-memory deck so the slide shows the edit
+                // at once, without waiting on a rebuild.
+                Object.keys(fields).forEach(function (k) {
+                  var v = fields[k]
+                  if (v === '' || v === null || (Array.isArray(v) && !v.length)) delete curForm.src[k]
+                  else curForm.src[k] = v
+                })
+                seStatus('Saved to ' + b.file + ':' + b.line, 'ok')
+                render()
+                setTimeout(closeSlideForm, 700)
+              })
+              .catch(function (e) {
+                // The form stays open with the typing intact — this is the
+                // recoverable case, and closing it would throw away the very
+                // words the refusal was protecting.
+                seStatus(describe(e), 'err')
+              })
+          }
+
+          function closeSlideForm () {
+            slideeditEl.classList.remove('on')
+            curForm = null
+            syncInk()
+          }
+          document.getElementById('se-save').addEventListener('click', saveSlideForm)
+          document.getElementById('se-cancel').addEventListener('click', closeSlideForm)
+
+          /* Probe first: only wire up the affordance once the edit-server has
+             answered, so nothing shows when authoring isn't actually running (a
+             plain in-browser preview on localhost, say). A bare GET is a simple
+             cross-origin request — no CORS preflight — and the 404 it returns
+             still RESOLVES the promise; only a real network error (nothing
+             listening at all) rejects and leaves us inert. */
+          fetch(EDIT_SERVER + '/open-slide').then(function () {
+            document.addEventListener('keydown', function (e) {
+              if (e.key === 'Alt') document.body.classList.add('deck-edit-armed')
+            })
+            document.addEventListener('keyup', function (e) {
+              if (e.key === 'Alt') document.body.classList.remove('deck-edit-armed')
+            })
+            window.addEventListener('blur', function () {
+              document.body.classList.remove('deck-edit-armed')
+            })
+
+            // Capture phase, so an alt-click is claimed for editing before any
+            // control treats it as an ordinary click. (The pen layer only draws
+            // for pen input, so a mouse alt-click never leaves a stroke.)
+            document.addEventListener('click', function (e) {
+              if (!e.altKey || editing) return
+              if (e.target.closest('#bar, #slideedit, .deck-edit-toast')) return
+              var slide = currentSlide()
+              if (!slide) return
+              e.preventDefault()
+              e.stopPropagation()
+              if (e.shiftKey) editHere(e.target, slide)
+              else openSource(e.target, slide)
+            }, true)
+
+            // While the form is open it owns the keyboard, ahead of the deck's
+            // own navigation handler.
+            document.addEventListener('keydown', function (e) {
+              if (!slideeditEl.classList.contains('on')) return
+              if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSlideForm() }
+              else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault(); e.stopPropagation(); saveSlideForm()
+              } else {
+                e.stopPropagation()   // typing must not page the deck
+              }
+            }, true)
+
+            console.log('[deck] authoring enabled: alt-click opens source, ' +
+                        'alt-shift-click edits. Local only.')
+          }).catch(function () { /* edit-server not running: stay inert */ })
+        })()
       })()
     </script>
   </body>

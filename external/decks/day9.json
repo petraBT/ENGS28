@@ -1,0 +1,359 @@
+{
+  "id": "day9",
+  "title": "Day 9 — GPIO Interrupts",
+  "slides": [
+    {
+      "type": "title",
+      "title": "GPIO Interrupts",
+      "subtitle": "ENGS 28 · Day 9 — In-Class"
+    },
+    {
+      "type": "recap",
+      "title": "Review: pre-class reading",
+      "items": [
+        "Last week, the thing that interrupted the CPU was a timer. Nearly everything we discussed in this context — the NVIC admitting the request, the vector table naming the handler, the ISR staying short, the volatile flag communicating with main() — was the interrupt mechanism, and none of it changes when we look at other interrupt sources.",
+        "Today we change only the interrupt source: we'll look at a pin triggering an interrupt.",
+        "This takes one new piece of hardware (the EXTI, between the pins and the NVIC) and four registers to configure it.",
+        "We'll also discover: when an ISR and main() both touch the same variable or register, \"read it, change it, write it back\" can silently lose an update."
+      ],
+      "presenterNote": "≈ 2 min, including announcements. Safety line is on the wiring-check slide."
+    },
+    {
+      "type": "agenda",
+      "title": "Agenda",
+      "items": [
+        "Homework review: ADCPot with a heartbeat",
+        "The button press that is missed by the polled counter",
+        "Why the EXTI sits between the pin and the NVIC",
+        "Choosing the port — EXTI_EXTICR2",
+        "The edge, the mask, and the NVIC",
+        "The handler: which line fired, and how to clear it",
+        "Writing counterResetButtonInt.c",
+        "Changing data in an ISR, and GPIOx_BSRR"
+      ]
+    },
+    {
+      "type": "section",
+      "kicker": "Part 1",
+      "title": "Homework Review",
+      "presenterNote": "≈ 4 min. Table discussion, then one solution on the projector. Name the ODR line and STOP — do not explain why it gets away with it."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-homework.html",
+      "slide": "sl-day9-hw-review",
+      "title": "Last night: ADCPot with a heartbeat"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 2",
+      "title": "The Press the Polled Counter Misses",
+      "presenterNote": "≈ 9 min, and it is today's tooling bottleneck. HARD CHECKPOINT AT MINUTE 18: if the room is not mostly counting, hand out the verified-good file — and stay with them until it counts on their own board, because rung 1 of Part 6's ladder is unusable otherwise. Three failures, three rescues: a bad download or build gets the file; a dead button gets re-seated against the Day 3x photo; a student still mid-project-copy gets paired with a neighbor's project to download into."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-polled.html",
+      "slide": "sl-day9-wiring-check",
+      "refPage": "subsec-day3x-bounce.html",
+      "title": "Before any code: is the button still wired?"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-polled.html",
+      "slide": "sl-day9-polled-code",
+      "title": "A counter with a button reset — one look per second"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-polled.html",
+      "slide": "act-gpio-polled-run",
+      "title": "Watch the counter miss a press",
+      "room": "compressed"
+    },
+    {
+      "type": "ref",
+      "room": true,
+      "page": "subsec-day9-polled.html",
+      "slide": "sl-day9-missed",
+      "title": "What did the program miss?"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 3",
+      "title": "Why the EXTI Sits Between the Pin and the NVIC",
+      "presenterNote": "≈ 6 min. Opens by answering Part 2's written question: the program was inside delay_ms()."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exti-why.html",
+      "slide": "sl-day9-exti-mux",
+      "title": "Too many pins for one line each"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exti-why.html",
+      "slide": "sl-day9-exti-vector-share",
+      "title": "Sixteen lines is still too many"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exti-why.html",
+      "slide": "sl-day9-exti-vectors",
+      "title": "RM0490 §11.3, Table 40 — the three EXTI rows"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exti-why.html",
+      "slide": "sl-day9-exti-names",
+      "title": "Naming the handler from Table 40"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exti-why.html",
+      "slide": "sl-day9-exti-path",
+      "title": "The path from a button press to an IRQ"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exti-why.html",
+      "slide": "sl-day9-four-stages",
+      "title": "Four register-controlled stages between the pin and the NVIC"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 4a",
+      "title": "Choosing the Port — EXTI_EXTICR2",
+      "presenterNote": "≈ 6 min. Datasheet moment: RM0490 §12.5.6, derived not told. The array-index catch is met here on purpose rather than at minute 50."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exticr.html",
+      "slide": "sl-day9-checklist",
+      "title": "What we need to do to program a pushbutton interrupt"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exticr.html",
+      "slide": "sl-day9-exticr-generic",
+      "title": "Four registers, four fields each"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exticr.html",
+      "slide": "act-gpio-exticr-lookup",
+      "title": "Which register, which byte, which code",
+      "room": true
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exticr.html",
+      "slide": "sl-day9-exticr-answer",
+      "title": "Port B on line EXTI4"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-exticr.html",
+      "slide": "sl-day9-exticr-code",
+      "title": "Clear the field, then set it"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 4b",
+      "title": "The Edge, the Mask, and the NVIC",
+      "presenterNote": "≈ 4 min. Three single bits after Part 4a's arithmetic — this part should feel like a relief, and saying so is fine."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-ftsr-imr-nvic.html",
+      "slide": "sl-day9-ftsr",
+      "title": "Which edge — EXTI_FTSR1"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-ftsr-imr-nvic.html",
+      "slide": "sl-day9-imr",
+      "title": "Whether it may interrupt — EXTI_IMR1"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-ftsr-imr-nvic.html",
+      "slide": "sl-day9-four-switches",
+      "title": "The timer needed two switches; a pin needs four"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-ftsr-imr-nvic.html",
+      "slide": "sl-day9-init-code",
+      "title": "pb4_exti_init(), assembled"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 5",
+      "title": "The Handler: Which Line Fired, and How to Clear It",
+      "presenterNote": "≈ 5 min. The prediction is Day 8's set-piece paying out — the point is not the answer, it is that they now know the question."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-isr.html",
+      "slide": "sl-day9-fpr-predict",
+      "title": "Predict the clear"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-isr.html",
+      "slide": "sl-day9-fpr-reveal",
+      "title": "rc_w1 — cleared by writing 1"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-isr.html",
+      "slide": "sl-day9-isr-code",
+      "title": "EXTI4_15_IRQHandler"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 6",
+      "title": "Writing counterResetButtonInt.c",
+      "presenterNote": "≈ 13 min. The ladder stays up for the whole part. Entering with under 10 minutes: do TODO 1 on the projector — four lines they have seen four times — and let them write TODOs 2 and 3."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-code.html",
+      "slide": "sl-day9-skeleton",
+      "title": "Three blanks"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-code.html",
+      "slide": "act-gpio-interrupt",
+      "title": "Give the counter a button it cannot miss",
+      "room": "compressed"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-code.html",
+      "slide": "sl-day9-ladder",
+      "title": "Counter not resetting? Steps to isolate the fault"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-code.html",
+      "slide": "sl-day9-bounce",
+      "title": "Bounce, now that edges matter"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-code.html",
+      "slide": "sl-day9-stretch",
+      "title": "Done early? The blue user button"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day9-code.html",
+      "slide": "sl-day9-solution",
+      "title": "Solution — counterResetButtonInt.c"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day9-code.html",
+      "slide": "sl-day9-pc13-solution-init",
+      "title": "Solution — the stretch: initializing PC13"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day9-code.html",
+      "slide": "sl-day9-pc13-solution-isr",
+      "title": "Solution — the stretch: one handler, two buttons"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 7",
+      "title": "Changing Data in an ISR, and GPIOx_BSRR",
+      "presenterNote": "≈ 11 min. Never cut this short of its fix. If it must shrink, drop the disassembly slide and keep the two-solutions commit, the ODR generalization and BSRR. Pause for questions after the disassembly — a student with no assembly background can follow the argument but cannot check it."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-race.html",
+      "slide": "sl-day9-two-solutions",
+      "title": "Two programs, both working — which would you ship?"
+    },
+    {
+      "type": "prompt",
+      "title": "Which one would you ship?",
+      "body": "1. Which of the two would you put in a product, and why?<br><br>2. Whichever you chose: what, specifically, would have to go wrong for the other one to be the better choice?",
+      "presenterNote": "There is no right answer yet — say so. They are about to find out why the obvious one fails, and a wrong guess here is the expected outcome."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-race.html",
+      "slide": "sl-day9-disassembly",
+      "title": "counter++ is five instructions"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-race.html",
+      "slide": "sl-day9-moral",
+      "title": "Control signals and data are not the same thing"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-race.html",
+      "slide": "sl-day9-odr-race",
+      "title": "Back to last night's ISR: ODR ^= LED"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-race.html",
+      "slide": "act-gpio-bsrr",
+      "title": "Find the fix, then write it",
+      "room": true
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-race.html",
+      "slide": "sl-day9-bsrr",
+      "title": "GPIOx_BSRR — one write, no read"
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-race.html",
+      "slide": "sl-day9-bsrr-limits",
+      "title": "What BSRR does not do"
+    },
+    {
+      "type": "section",
+      "kicker": "Part 8",
+      "title": "Before Next Class",
+      "presenterNote": "≈ 2 min. The homework slide is self-serve — task, hint and due date are all on it — so losing this part to the clock costs nothing."
+    },
+    {
+      "type": "ref",
+      "page": "subsec-day9-next.html",
+      "slide": "act-gpio-homework",
+      "title": "Homework: counterResetButtonIntTimer.c",
+      "room": "compressed"
+    },
+    {
+      "type": "ref",
+      "instructor": true,
+      "page": "subsec-day9-next.html",
+      "slide": "sl-day9-hw-solution",
+      "title": "Solution — counterResetButtonIntTimer.c"
+    },
+    {
+      "type": "recap",
+      "title": "Recap",
+      "items": [
+        "A pin's interrupt goes through the EXTI first, because five ports of sixteen pins will not fit one NVIC line each.",
+        "Four switches, not the timer's two: which port is on the line (EXTICR), which edge counts (FTSR1), whether the line is unmasked (IMR1), and the NVIC. Miss any one and there is no error and no interrupt.",
+        "Twelve lines share EXTI4_15_IRQHandler, so the handler reads FPR1 to learn which line fired — and clears it by writing 1, because the access type says rc_w1.",
+        "An ISR changing data  that main() also changes can lose an update silently. An ISR setting a flag cannot corrupt one — though two presses can still merge into one.",
+        "GPIOx->BSRR sets or clears a pin with a single write and no read, so there is no window for an interrupt to land in. It has no toggle.",
+        "Tonight: the same counter, with the delay replaced by a timer interrupt."
+      ]
+    }
+  ]
+}
