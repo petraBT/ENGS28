@@ -2100,12 +2100,47 @@ void pb4_exti_init(void) {
                 </task>
             </activity>
             <p>
-                The answers are <c>0x21</c>, <c>0x81</c> and <c>0xEF</c>:
-                <c>0b00100001</c> is system setup with the oscillator bit set,
-                <c>0b10000001</c> is display setup with D set and both blink bits
-                clear, and <c>0b11101111</c> is dimming set with all four duty
-                bits set.  Blinking at 1 Hz is <c>0b10000101</c>, <c>0x85</c>,
-                because 1 Hz is B1 B0 = 1 0.  Half brightness needs the
+                Take the first one all the way through, because the other two go
+                the same way.  The <em>System setup</em> row is 0 0 1 0 X X X S.
+                The four bits to the left of the magenta line are the command
+                itself and never change; the four to the right are the options,
+                and the only one that means anything here is S, the oscillator.
+                Write each half as its own byte and OR them together:
+            </p>
+            <program language="c"><code><![CDATA[
+  system setup      0 0 1 0 | X X X S      the row, and its magenta line
+                    command | options
+
+  the command             0b0010 0000 = 0x20     HT16K33_SYSTEM_CMD
+  the option, S = 1       0b0000 0001 = 0x01     HT16K33_OSC_ON
+                      OR  -------------------
+                          0b0010 0001 = 0x21
+
+  i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
+]]></code></program>
+            <p>
+                That last line is the point of the whole part.  The <c>|</c> in it
+                is the magenta line on the table: the command name supplies the
+                top bits, the option name supplies the bottom bits, and OR merges
+                them into the single byte that goes on the wire.  You never write
+                <c>0x21</c> anywhere.
+            </p>
+            <p>
+                The other two are built the same way.  Display setup is
+                <c>HT16K33_DISPLAY_CMD</c> (<c>0x80</c>) ORed with
+                <c>HT16K33_DISPLAY_ON</c> (<c>0x01</c>) and
+                <c>HT16K33_BLINK_OFF</c> (<c>0x00</c>), which is
+                <c>0b10000001</c>, <c>0x81</c>.  Dimming set is
+                <c>HT16K33_BRIGHT_CMD</c> (<c>0xE0</c>) ORed with the four duty
+                bits, and full brightness is all four set: <c>0b11101111</c>,
+                <c>0xEF</c>.
+            </p>
+            <p>
+                Change an option and only the bottom bits move.  Blinking at 1 Hz
+                is <c>0b10000101</c>, <c>0x85</c>,
+                because 1 Hz is B1 B0 = 1 0 — that is
+                <c>HT16K33_BLINK_1HZ</c> in place of <c>HT16K33_BLINK_OFF</c>, and
+                nothing else in the byte changes.  Half brightness needs the
                 encoding read carefully, because it counts from one rather than
                 zero — 0000 is 1/16 and 1111 is 16/16 — so eight sixteenths is
                 P3–P0 = 0111 and the byte is <c>0xE7</c>.  Note that <c>0xE7</c> is the byte
@@ -2117,16 +2152,12 @@ void pb4_exti_init(void) {
                 (<xref ref="fig-ht16k33-addr-frame"/>).
             </p>
             <p>
-                Rather than writing those three numbers into your code, the
-                header file you are given for the seven segment driver names their pieces:
-                <c>HT16K33_SYSTEM_CMD</c> and <c>HT16K33_OSC_ON</c> for the
-                first, <c>HT16K33_DISPLAY_CMD</c>, <c>HT16K33_DISPLAY_ON</c>,
-                <c>HT16K33_BLINK_OFF</c> and <c>HT16K33_BLINK_1HZ</c> for the
-                second, <c>HT16K33_BRIGHT_CMD</c> for the third.  Each name is
-                one field of the table, so a line of driver code reads the way
-                the datasheet row does: the command, OR'ed with its options.  That
-                is the structure to copy the next time you write one of these —
-                the datasheet's own layout becomes the header file's layout.
+                Every name used above comes from the header file you are given for
+                the seven segment driver, and every one of them is one field of
+                the command table.  That is why a line of driver code reads the
+                way the datasheet row does: the command, OR'ed with its options.
+                That is the structure to copy the next time you write one of these
+                — the datasheet's own layout becomes the header file's layout.
             </p>
             <p>
                 Sending the three command bytes is the first function of your seven segment driver.  It has
@@ -2135,7 +2166,7 @@ void pb4_exti_init(void) {
             </p>
 
             <slide xml:id="sl-day10-cmd-table" ref="fig-ht16k33-cmd-table">
-    <caption>The eight middle columns are the bits of a one-byte command, D15 down to D8, and the magenta line divides them: left of it the fixed bits that are the <term>command</term>, right of it the <term>options</term> you fill in. An X is a don't-care that we write as 0. The pointer row below is for Part 5. The chip has more commands than these, but they are for scanning a keypad and we will not be sending any of them.</caption>
+    <caption>The eight middle columns are the bits of a one-byte command, D15 down to D8, and the magenta line divides them: left of it the fixed bits that are the <term>command</term>, right of it the <term>options</term> you fill in. An X is a don't-care that we write as 0. The display pointer row below is for writing to the display RAM. The chip has more commands than these, but they are for scanning a keypad and we will not be sending any of them.</caption>
     <note>Figure-focus deliberately: the bit cells have to be readable from the back. The command/options divide is the whole idea of the part — the header file's names are those two halves, and the next two slides do nothing but exploit it.</note>
 </slide>
 
@@ -2159,20 +2190,40 @@ void pb4_exti_init(void) {
 </slide>
 
             <slide xml:id="sl-day10-cmd-answer">
-    <p>The commands that set up the display.</p>
+    <p>Take the first one all the way through. The four bits left of the magenta line are the command and never change; the four to the right are the options, and the only one that means anything here is S, the oscillator. Write each half as its own byte and OR them together.</p>
     <program language="c"><code><![CDATA[
-0b0010 0001 = 0x21   system setup,  oscillator bit set
-0b1000 0001 = 0x81   display setup, D set, both blink bits clear
-0b1110 1111 = 0xEF   dimming set,   all four duty bits set
+  system setup      0 0 1 0 | X X X S      the row, and its magenta line
+                    command | options
 
-0b1000 0101 = 0x85   ... on, blinking at 1 Hz  (B1 B0 = 1 0)
-0b1110 0111 = 0xE7   ... half: 0111 -> 7 -> (7+1)/16 = 8/16
+  the command             0b0010 0000 = 0x20     HT16K33_SYSTEM_CMD
+  the option, S = 1       0b0000 0001 = 0x01     HT16K33_OSC_ON
+                      OR  -------------------
+                          0b0010 0001 = 0x21
 
-i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
+  i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
+]]></code></program>
+    <caption>The <c>|</c> in that call <em>is</em> the magenta line: the command name supplies the top bits, the option name supplies the bottom bits, and OR merges them into the one byte that goes on the wire. You never write <c>0x21</c> anywhere.</caption>
+</slide>
+
+            <slide xml:id="sl-day10-cmd-answer-rest">
+    <p>The other two are built the same way, and changing an option moves only the bottom bits.</p>
+    <program language="c"><code><![CDATA[
+  display setup     0b1000 0000 = 0x80     HT16K33_DISPLAY_CMD
+    display on      0b0000 0001 = 0x01     HT16K33_DISPLAY_ON
+    not blinking    0b0000 0000 = 0x00     HT16K33_BLINK_OFF
+                OR  -------------------
+                    0b1000 0001 = 0x81
+
+  dimming set       0b1110 0000 = 0xE0     HT16K33_BRIGHT_CMD
+    full, 16/16     0b0000 1111 = 0x0f     P3 P2 P1 P0 all set
+                OR  -------------------
+                    0b1110 1111 = 0xEF
+
+  blinking at 1 Hz  0b1000 0101 = 0x85     HT16K33_BLINK_1HZ, B1 B0 = 1 0
+  half brightness   0b1110 0111 = 0xE7     0111 -> 7 -> (7+1)/16 = 8/16
 ]]></code></program>
     <ul>
-        <li>The header names every field of the table: <c>HT16K33_SYSTEM_CMD</c>, <c>HT16K33_OSC_ON</c>, <c>HT16K33_DISPLAY_CMD</c>, <c>HT16K33_DISPLAY_ON</c>, <c>HT16K33_BLINK_OFF</c>, <c>HT16K33_BLINK_1HZ</c>, <c>HT16K33_BRIGHT_CMD</c>.</li>
-        <li>So a line of driver code reads the way the datasheet row does: <term>the command, OR'ed with its options</term>. That is the structure to copy the next time you write one of these — the datasheet’s own layout becomes the header file’s layout.</li>
+        <li>Watch the duty cycle: it counts from one and not zero, so half is P3&#8211;P0 = 0111 and not 1000. And <c>0xE7</c> is the byte <c>helloDisplay.c</c> has been sending &#8212; the display you have been watching has been at <term>half brightness</term> all along.</li>
         <li>Sending the three command bytes is the first function of your seven segment driver, <c>SevenSeg_init()</c>. It has to run before the display will show anything at all. You will write it yourself once we have looked at the display RAM and the pins.</li>
     </ul>
 </slide>
@@ -2425,7 +2476,7 @@ all segments:   [0] 0b11111111   [2] 0b11111111   [6] 0b11111111   [8] 0b1111111
 decimal point after digit 2:  set bit 7 of display_buffer[2]
 ]]></code></program>
     <ul>
-        <li>Worth deriving once by hand, after which you will use the <c>numbertable[]</c> array in the header, which holds the sixteen patterns for 0 through F.</li>
+        <li>This is worth deriving once by hand, after which you will use the <c>numbertable[]</c> array in the header, which holds the sixteen patterns for 0 through F.</li>
         <li>That leaves two questions. The first is <em>what lights the colon?</em> We know it is the pair at address 4, because that is COM2, but <term>which bit within that byte is not on the datasheet pages we have</term>. It is worth two minutes of experiment, and tonight's clock needs the answer.</li>
     </ul>
 </slide>
