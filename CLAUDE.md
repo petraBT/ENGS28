@@ -97,24 +97,27 @@ output/            Built targets (git-ignored)
 
 ## Chapter map
 
-| File | Chapter | Days |
-|------|---------|------|
-| ch-intro-blinky.ptx | 1: GPIO and Blinky | 1, 1x, 2 |
-| ch-switches.ptx | 2: Switches and Debouncing | 3, 3x, 4 |
-| ch-uart.ptx | 3: UART Serial Communication | 5 |
-| ch-io-datasheets.ptx | 4: Reading Component Datasheets | 5x |
-| ch-transistors.ptx | 5: BJT and MOSFET Switches | 6 |
-| ch-adc.ptx | 6: Analog-to-Digital Conversion | 7 |
-| ch-debugging.ptx | 7: Debugging | 7x |
-| ch-timers-interrupts.ptx | 8: Timers and Interrupts | 8 |
-| ch-gpio-interrupts.ptx | 9: GPIO Interrupts | 9 |
-| ch-i2c.ptx | 10: I2C and a Display Driver | 9x, 10 |
-| ch-motors.ptx | 11: DC Motor Control | 11, 11x, 12 |
-| ch-accelerometers.ptx | 12: Accelerometers | 13, 13x, 14 |
-| ch-servos.ptx | 13: Servo Motors | 15, 15x |
-| ch-photosensors.ptx | 14: Photosensors | 16 |
-| ch-ble.ptx | 15: Bluetooth Low Energy | 17 |
-| ch-power.ptx | 16: Power Management | 17x |
+| # | File | Title | Days |
+|---|------|-------|------|
+| 1 | ch-intro-blinky.ptx | GPIO and Blinky: Your First Embedded Program | 1, 1x, 2 |
+| 2 | ch-switches.ptx | Digital Inputs: Switches and Debouncing | 3, 3x, 4 |
+| 3 | ch-uart.ptx | Serial Communication: UART | 5 |
+| 4 | ch-io-datasheets.ptx | Reading Component Datasheets | 5x |
+| 5 | ch-transistors.ptx | Transistors: BJTs and MOSFETs | 6 |
+| 6 | ch-adc.ptx | Analog-to-Digital Conversion | 7 |
+| 7 | ch-debugging.ptx | Debugging Embedded Programs | 7x |
+| 8 | ch-timers-interrupts.ptx | Timers and Interrupts | 8 |
+| 9 | ch-gpio-interrupts.ptx | GPIO Interrupts | 9 |
+| 10 | ch-i2c.ptx | I2C: A Two-Wire Bus, and a Display Driver | 9x, 10 |
+| 11 | ch-motors.ptx | DC Motors and PWM | 11, 11x, 12 |
+| 12 | ch-accelerometers.ptx | Accelerometers | 13, 13x, 14 |
+| 13 | ch-servos.ptx | Servomotors | 15, 15x |
+| 14 | ch-photosensors.ptx | Photosensors and the Solar Tracker | 16 |
+| 15 | ch-ble.ptx | Bluetooth Low Energy | 17 |
+| 16 | ch-power.ptx | Power Management | 17x |
+
+Order is `source/main.ptx`; titles are the chapters' own. Day 13 lives in
+ch-accelerometers, not ch-i2c — Petra's call.
 
 **Which chapters are finished is tracked in one place** — the chapter status
 table in `CHAPTER_PROCESS.md`. Do not keep a second copy here.
