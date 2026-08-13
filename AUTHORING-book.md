@@ -131,6 +131,23 @@ project the stale one:
 | an `<instructor>` element in the book | the deck `ref`s that element **directly**, by its `xml:id`, with `"instructor": true` | **preferred** — one copy of the answer |
 | a `<slide instructor="yes">` beside the prose | an ordinary `ref`, with `"instructor": true` | for an answer shaped for the projector and nowhere else |
 
+**What is *not* a leak, and the reason the reading may look like it gives the
+answer away.** The corpus works in three layers, and all three are correct:
+
+1. the prose **teaches the mechanism** before the activity (P-1) — Day 8's
+   `TIM14->DIER |= TIM_DIER_UIE;` appears in the mini-lecture that explains UIE;
+2. the activity gives a **skeleton with `// TODO`** (P-9), which repeats every
+   given line and withholds only what the student must supply;
+3. the **instructor slide carries the fill**.
+
+So a solution's lines will legitimately appear in student-visible prose — 22 of
+`sl-day8-solution`'s 24 lines do — because they are the scaffolding, taught
+above and handed to the student in the skeleton. Only the TODO answers are
+withheld, and they are. Do not "fix" this by hiding the mini-lecture: an
+audit that greps a solution's lines against the reading will fire on every
+well-built chapter in the book. Audited 2026-08-13 across all 67 activities;
+no leak found.
+
 Two invariants, both checked by `scripts/check_deck.py`: the deck entry's
 `"instructor": true` must agree with the source marker — disagree one way and the
 student deck lists a slide whose markup was stripped, disagree the other and it
