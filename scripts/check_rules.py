@@ -162,6 +162,16 @@ def allowances(raw):
 from html import unescape as html_unescape
 
 
+def is_fragment(text):
+    """True if a list item does not end in terminal punctuation.
+
+    A trailing bracket or quote is not terminal -- "(anode to cathode)" is still
+    a fragment -- so strip those before looking at the last character.
+    """
+    t = text.rstrip().rstrip(')]}"\u201d\u2019\'')
+    return not t or t[-1] not in ".?!:;"
+
+
 def strip_block_comments(block):
     """Blank out /* ... */ spans, keeping length so offsets stay valid.
 
@@ -244,19 +254,26 @@ def check_file(path, quiet=False):
                              f"reword: {line.strip()[:60]!r}"))
 
     # L-12 (the lintable corner): a list item that ends without terminal
-    # punctuation is the one fragment signature with no false positives.
-    # A warning, not an error -- the corpus carries a backlog of these and they
-    # are judgement calls about enumerated checklists. Captions, titles and the
-    # S-29 bold label are out of scope by Petra's ruling (2026-08-12).
-    for m in re.finditer(r"<li>(.*?)</li>", raw, flags=re.S):
-        body = re.sub(r"<!\[CDATA\[.*?\]\]>", "", m.group(1), flags=re.S)
-        item = re.sub(r"<[^>]+>", "", body)
-        item = html_unescape(item).strip()
-        if not item or item[-1] in '.?!:;)"\u201d':
-            continue
-        problems.append(("warning", line_of(raw, m.start()), "L-12",
-                         "list item is a fragment (no terminal punctuation) -- "
-                         f"write a complete sentence: {' '.join(item.split())[:60]!r}"))
+    # punctuation is a fragment.  Enumerated checklists are exempt by Petra's
+    # ruling (2026-08-12), and the mechanical form of "this list is a checklist"
+    # is that most of its items are fragments -- the list's register is
+    # enumeration, not prose.  A lone fragment among sentences is the real
+    # defect, and that is what warns.  Captions, titles and the S-29 bold label
+    # are out of scope entirely.
+    for lst in re.finditer(r"<(ul|ol)\b[^>]*>(.*?)</\1>", raw, flags=re.S):
+        items = []
+        for m in re.finditer(r"<li>(.*?)</li>", lst.group(2), flags=re.S):
+            body = re.sub(r"<!\[CDATA\[.*?\]\]>", "", m.group(1), flags=re.S)
+            item = html_unescape(re.sub(r"<[^>]+>", "", body)).strip()
+            if item:
+                items.append((lst.start(2) + m.start(), item))
+        frags = [(off, t) for off, t in items if is_fragment(t)]
+        if not frags or len(frags) * 2 >= len(items):
+            continue                      # no fragments, or an enumerated checklist
+        for off, t in frags:
+            problems.append(("warning", line_of(raw, off), "L-12",
+                             "fragment in a list of sentences -- give it a "
+                             f"verb and a full stop: {' '.join(t.split())[:60]!r}"))
 
     # Images resolve on disk.
     for m in re.finditer(r'<image\s+source="([^"]+)"', text):

@@ -685,18 +685,21 @@ them; ask.
 | **L-9** | No slogan endings — "`. Always.`", "the entire point". State the requirement instead, just as strongly. Enforces S-16. |
 | **L-10** | No challenge phrasing — "Your turn", "be ready to". Enforces S-15 and S-17. |
 | **L-11** | "on Day N", never "in Day N" — or "tomorrow", since Day Nx follows Day N. |
-| **L-12** | Complete sentences, always. No fragments. Every paragraph, slide bullet, lead line, task statement and feedback line has a subject and a verb. **Out of scope, by Petra's ruling (2026-08-12):** figure and slide *captions*, which keep the conventional noun-phrase style; the short bold noun-phrase *label* S-29 permits (`<term>Common cathode.</term>` followed by the explanation); titles and headings; code comments and in-listing annotations; table cells and figure labels. |
+| **L-12** | Complete sentences, always. No fragments. Every paragraph, slide bullet, lead line, task statement and feedback line has a subject and a verb. **Out of scope, by Petra's rulings (2026-08-12):** figure and slide *captions*, which keep the conventional noun-phrase style; the short bold noun-phrase *label* S-29 permits (`<term>Common cathode.</term>` followed by the explanation); **enumerated checklists**, where terse parallel items are the point — the compiler-error list in `ch-debugging.ptx`, the register recap in `ch-adc.ptx`, the three voltages to measure in `ch-intro-blinky.ptx`; titles and headings; code comments and in-listing annotations; table cells and figure labels. |
 
 `scripts/check_rules.py` enforces L-1 … L-11, image paths, and step counts. Run it
 before every committee review.
 
 L-8 … L-11 are the *lintable corner* of the voice rules — fixed phrases only.
-L-12 is only partly lintable: `check_rules.py` **warns** on a list item that ends
-without terminal punctuation, which is the one fragment signature with no false
-positives. It is a warning and not an error because the corpus carries a backlog
-of 24 (2026-08-12), mostly enumerated checklists in `ch-debugging.ptx` and
-`ch-adc.ptx` that need Petra's ruling before they are rewritten. The rest of
-L-12 is judgment, like S-11 … S-28.
+L-12 is only partly lintable. `check_rules.py` **warns** on a list item that ends
+without terminal punctuation, but only when it is *a lone fragment among
+sentences* — if most of a list's items are fragments, the list is an enumerated
+checklist and is exempt. That is the mechanical form of the ruling above: the
+register of a checklist is enumeration, not prose, whereas one unpunctuated
+bullet in a list of sentences is somebody writing a bullet badly. A trailing
+bracket does not count as terminal punctuation, so "(anode to cathode)" is still
+a fragment. The corpus is clean under this rule (2026-08-12). The rest of L-12 is
+judgment, like S-11 … S-28.
 The rest of S-11 … S-21 needs judgment and is deliberately not linted. Each was
 validated against the corpus as it stood before the voice pass: together they
 catch 7 real violations, three of them phrases Petra deleted by hand in
