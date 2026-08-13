@@ -1198,6 +1198,53 @@ while (1) {
                     </statement>
                 </task>
             </activity>
+
+            <instructor xml:id="inst-day1x-slowtofast">
+                <p>
+                    Petra's sample solution, from the Day 1X deck.  The ramp is
+                    in the <em>off</em> time: the LED is on for one
+                    <c>MIN_WAIT</c> every blink, and off for <c>i + 1</c> of
+                    them, with <c>i</c> counting down from <c>N</c>.  The outer
+                    <c>while(1)</c> is the reset.
+                </p>
+                <program language="c"><code><![CDATA[
+#include "stm32c0xx.h"          // all the port definitions are here
+#define GPIOAEN   (1U << 0)     // bit 0 enables the clock for GPIOA
+#define LED_PIN   (1U << 5)     // bit 5 of Port A is wired to the LED
+#define MIN_WAIT  100000        // one unit of delay
+#define N         10            // blinks per ramp
+
+int main(void) {
+    RCC->IOPENR  |= GPIOAEN;        // 1. enable clock access to GPIOA
+
+    GPIOA->MODER |= (1U << 10);     // 2. configure PA5 (Port A, bit 5)
+    GPIOA->MODER &= ~(1U << 11);    //    as an output pin
+
+    while (1) {
+        for (int i = N; i > 0; i--) {
+            GPIOA->ODR |= LED_PIN;              // 3. set bit 5: LED on
+            for (int j = 0; j < MIN_WAIT; j++); // on for one unit
+
+            GPIOA->ODR &= ~LED_PIN;             // 4. clear bit 5: LED off
+            for (int k = 0; k <= i; k++) {      // off for i + 1 units
+                for (int j = 0; j < MIN_WAIT; j++);
+            }
+        }
+    }
+    return 0;                       // never reached
+}
+]]></code></program>
+                <p>
+                    Most students will arrive with the other design: a single
+                    delay bound in a variable, stepped from a starting value down
+                    to an ending one by a fixed step, and reset when it reaches
+                    the end.  That is what the homework's wording asks for, and
+                    it produces the same behavior — the ramp is linear in the
+                    delay rather than in the number of units.  Both are correct;
+                    the review task in this part is where the difference is worth
+                    drawing out.
+                </p>
+            </instructor>
         </subsection>
 
         <subsection xml:id="subsec-day1x-stretch">
