@@ -25,12 +25,10 @@ classroom deck it projects. Branch `main`. Small commits, pushed as you go.
 | **2** | **The deck** | `<slide>` blocks condensed from the text she passed, plus `assets/decks/dayNN.json` |
 
 Why the split. A slide condenses a paragraph, so a slide built from prose she has
-not passed inherits wording she is about to change. On Day 10 twenty-two of them
-did, and each then needed rewriting *and* refitting — more work than everything
-else in that session combined, all of it avoidable. Figures settle in delivery 1
-for the same reason: her annotated figures arrived after the slides had been
-built, and each one forced caption rewrites plus two figures moving to slides of
-their own.
+not passed inherits wording she is about to change: on Day 10 twenty-two of them
+did, and each then needed rewriting *and* refitting. Figures settle in delivery 1
+for the same reason — hers arrived after the slides had been built, and each one
+forced caption rewrites plus two figures moving to slides of their own.
 
 Done, for either delivery, means it has passed its committee and is ready for her
 to read as a near-final draft, not as a first attempt.
@@ -46,15 +44,16 @@ that found it, and expensive at the one that did.
 | **0 — Ground truth** | you have written `plans/dayNN-ground-truth.md` and **sent Petra your questions** |
 | **1 — The plan** | the Gate 1 panel has reviewed a one-page lesson plan **and the outline** |
 | **1.5 — Voice probe** | `checker-voice` has run on the **first** subsection of prose and its findings are applied |
-| **2 — The book, and its committee** | the prose is written, the mechanical checks pass, every Gate 2 reviewer has run into `reviews/dayNN-gate2.md`, and the synthesizer's list is applied |
+| **2 — The book's committee** | the prose is written, the mechanical checks pass, every Gate 2 reviewer has run into `reviews/dayNN-gate2.md`, and the synthesizer's list is applied |
 | **→ Petra, pass 1** | Gate 2 is done. **A draft does not reach her before the committee has run.** |
-| **3 — Slides, and the fit check** | her pass-1 edits are in the file, and the deck is condensed from *that* text |
-| **3.5 — The deck's committee** | the slide-facing reviewers have run into `reviews/dayNN-gate3.md` and their list is applied |
-| **→ Petra, pass 2** | Gate 3.5 is done |
-| **4 — Close the loop** | every general correction she made in either pass is a rule in `AUTHORING-book.md` |
+| *the slides* | her pass-1 edits are in the file, and the deck is condensed from *that* text — not a gate, but gated by her pass |
+| **3 — The deck's committee** | the slide-facing reviewers have run into `reviews/dayNN-gate3.md` and their list is applied |
+| **→ Petra, pass 2** | Gate 3 is done |
+| **Close the loop** | every general correction she made in either pass is a rule in `AUTHORING-book.md` |
 
-These numbers match the review files already on disk (`reviews/dayNN-gate1.md`,
-`reviews/dayNN-gate2.md`) and the roster in `.claude/agents/README.md`. Use them.
+The numbered gates are the committee gates, and the numbers match the review
+files on disk (`reviews/dayNN-gate1.md`, `-gate2.md`) and the roster in
+`.claude/agents/README.md`. Use them.
 
 The committee rule is not a formality. On the I2C week the committee was not run
 at all until she asked *"Are you using the committee we constructed?"*, and
@@ -142,11 +141,9 @@ because they were typed from memory (P-11).
 a short list and carry on with everything that does not depend on the answers.
 
 Ask about anything the repo cannot establish (B-11c): what students have in front
-of them, how a part mounts, whether spares exist in the room, what happens if a
-connection is reversed, how long a step takes, whether a datasheet you are citing
-is even in the repo. These read as authoritative and no reader can challenge
-them. One standing fact you need not ask: there are no lab benches — each student
-carries a portable kit and works on their own laptop, so never write "bench".
+of them, how a part mounts, whether spares exist, what happens if a connection is
+reversed, how long a step takes, whether a datasheet you are citing is even in
+the repo. These read as authoritative and no reader can challenge them.
 
 Write what you found and what is missing to `plans/dayNN-ground-truth.md`.
 
@@ -227,6 +224,8 @@ noise.
 
 ## Gate 2 — The book, in Petra's voice from the first sentence
 
+*Write it, check it, then run the book's committee on it.*
+
 Order within the day: introduction and objectives → Before Class reading and
 reading questions, *if this day has one* → `Part N` subsections matching the plan
 → Reference material at the end. **Do not write `<slide>` blocks yet** — they are
@@ -293,7 +292,7 @@ them and wrote it after.
 
 ---
 
-## Gate 3 — Slides, condensed from the text she passed
+## After her pass 1 — the slides, condensed from the text she passed
 
 Start by reading what she changed:
 
@@ -321,14 +320,11 @@ the slide was undefined — Petra: *"just pops out of nowhere."*
 
 **Never compress her sentences to make a slide fit.** Restoring her register
 *will* overflow slides — nine of them on Day 10 — and the cheapest repair is
-always to tighten her wording, which is exactly the direction the voice rules
-forbid. The legitimate levers, in order, are in `AUTHORING-book.md` under the
-S-22…S-28 calibrations: merge two bullets, delete what the code block or figure
-already states, move a closing line into the `<caption>`, drop a blank line from
-a listing, abridge the *listing* and say so in a `<note>`, or split into two
-slides **where both halves teach**. Shortening her prose is not on the list.
-`room="compressed"` tightens spacing without changing type size and is neither
-thinning nor splitting.
+always to tighten her wording, which is exactly what the voice rules forbid. Use
+one of the six legitimate levers instead: they are listed in order under the
+S-22…S-28 calibrations in `AUTHORING-book.md`, and shortening her prose is not
+among them. `room="compressed"` tightens spacing without changing type size, so
+it is neither thinning nor splitting.
 
 **Every slide must earn its place.** What does a student get from this that they
 did not get from the slide before it? Two slides survived four rounds of review
@@ -341,23 +337,16 @@ and plainer than its neighbours; she had both of Day 10's removed.
 ### The fit check
 
 Run the snippet in `AUTHORING-slides.md` **verbatim**, including the style
-injection that kills the crossfade. Waiting after setting `location.hash` is not
-enough on its own: during the transition both slides are in the DOM, so a slide
-that fits exactly comes back "311 px over". If a screenshot shows the slide's own
-text repeated below itself, that is what you are measuring.
-
-The snippet reports what is measurable and refuses to answer when it cannot —
-suspended layout in a background window reads 0 everywhere and looks exactly like
-"fits", and a `<pre>` scrolls inside itself so a listing can lose a third of every
-line while the body reports no overflow at all.
+injection that kills the crossfade — waiting after setting `location.hash` is not
+enough on its own, because during the transition both slides are in the DOM and a
+slide that fits exactly comes back "311 px over". The traps it exists to catch
+are listed beside it; it refuses to answer rather than lie when it cannot measure.
 
 **What no measurement will tell you: whether a figure is readable from the back
 of the room.** Figures letterbox now rather than cropping, so the failure mode is
 a wide diagram made *small* by a bullet-heavy slide, at zero measured overflow.
 The lever is the number of bullets, or a paired image-dominant slide carrying the
-figure at full size. **Look at every slide that carries a figure.** (An `.svg`
-with a `viewBox` and no `width`/`height` projects at 300×150 whatever room it has;
-`check_rules.py` errors on that now, B-11a.)
+figure at full size. **Look at every slide that carries a figure.**
 
 ### Then the book/slide cross-check — Step 5b
 
@@ -377,7 +366,7 @@ that no diff will show:
 
 ---
 
-## Gate 3.5 — The deck's committee
+## Gate 3 — The deck's committee
 
 The slide-facing reviewers only, per `.claude/agents/README.md`; reports to
 `reviews/dayNN-gate3.md`, then the synthesizer, then apply. `learner-in-the-room`
@@ -389,7 +378,7 @@ Then hand her the deck.
 
 ---
 
-## Gate 4 — Close the loop
+## Close the loop
 
 Anything she corrected in either pass that is **general** becomes a rule in
 `AUTHORING-book.md`, with her before → after pair beside it, because the examples
