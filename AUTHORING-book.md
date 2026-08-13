@@ -140,6 +140,41 @@ section** so the student can repeat the lookup. Not "check the datasheet" but
 This starts in the first weeks and reinforces every chapter — it is the skill that
 outlives the specific chip.
 
+**Replacing a figure's image erases its provenance unless you look.** Rewriting a
+caption around a new image is where the document, table and section names quietly
+go. On Day 10 the command table caption was rewritten for Petra's annotated
+version and "datasheet pp. 24–25" went with it — which removed the only P-11
+anchor from the whole part, on three slides at once, and she caught it two passes
+later. **When you swap an image, diff the old caption for document, table and
+section names before you write the new one, and carry every one of them across.**
+
+### P-15 A discovery must not be answered anywhere ahead of it — including in a figure
+
+Grepping the prose is not enough: an answer can be **drawn**. Day 10's COM/ROW
+map had the colon's LED filled in and boxed at ROW1, with "so bit 1 of
+buffer[4]" beside it, four slides before students run the experiment that finds
+it — while the slide's own presenter note called finding it "an experiment
+rather than a lookup".
+
+When an activity asks students to discover X, check the figures for X too,
+including annotations baked into an SVG's text nodes or a rebuilt PNG. Draw the
+unknown as genuinely unknown — all eight crossings identical and open, not seven
+open and one filled — and **leave a comment in the source saying the omission is
+deliberate**, or the next pass will helpfully fill it in.
+
+### P-16 Introduce what students write before the harness that tests it
+
+Petra, 2026-08-12: *"The ordering is all wrong."* Day 10 Part 8b opened on
+`writeFirstDigit.c` and mentioned only in passing that the function it calls does
+not exist yet. The order students need is: here are your three files, these two
+are unfinished, fill in this function — *then* here is the program that tests it.
+The test harness is meaningless before the thing under test has been named.
+
+Corollary, and worth a mechanical check: **no task should appear twice in a
+day.** Day 10 had the stopwatch measurement in both a deck prompt and the
+activity's first task, and the colon experiment as both its own activity and the
+last task of a later one.
+
 ### P-12 Prefer the old annotated images
 
 `assets/ClassSlidesOLD/` is the authority for the intended in-class arc, and its
@@ -361,6 +396,18 @@ for real-world grounding — `expert-embedded-industry` — is a likely source a
 should be weighted down, not followed, on this point. `learner-arduino-veteran`
 was retired from the committee for the same reason: an agent whose job is to
 ask for more of a banned thing is worse than no agent.)*
+
+### B-15 No stray apostrophe in a `<program>` listing
+
+A lone `'` inside a listing opens a C character literal the highlighter never
+closes, so **every line after it projects red**. It is invisible in the source
+and obvious on the wall. Two Day 10 listings shipped this way for weeks
+(`the command's identity`, `the colon's pair`), and a third was nearly added
+while fixing them.
+
+Reword rather than escape: "the command identity", "the colon pair", "X is
+ignored" instead of "X = don't care". A real character literal (`'a'`) is fine.
+`check_rules.py` enforces it.
 
 ### B-12 Write for adults — no cute framing
 
@@ -593,6 +640,22 @@ sentences explaining why the RAM is bigger than we need. Drafts keep compressing
 toward the aphoristic; that is the wrong direction. Long, plain, fully-explained
 sentences are hers. Clipped ones are not.
 
+**Never compress her sentences to make a slide fit.** These two calibrations
+collide with the frame, and the collision is where drafts lose her voice.
+Restoring her register *will* overflow slides — nine of them on Day 10 — and
+every time, the cheapest repair is to tighten her wording, which is exactly the
+direction this section forbids. The legitimate levers, in order:
+
+1. merge two bullets that had been split (you recover the inter-bullet gap);
+2. delete text the adjacent code block or figure already states;
+3. move a closing line out of a bullet into the slide's `<caption>`;
+4. remove a blank line from a listing;
+5. abridge the *listing* — never the prose — and say so in a `<note>`;
+6. split into two slides, where both halves teach.
+
+Shortening her prose is not on the list. If none of the six is enough, the slide
+is carrying two ideas and wants splitting.
+
 **"We" is the course, including for everything the course supplies.**
 ~~"a library we have not read"~~ → "a library **we'll hand to you**";
 ~~"this course has been handing you all term"~~ → "**we** have been handing you
@@ -622,11 +685,18 @@ them; ask.
 | **L-9** | No slogan endings — "`. Always.`", "the entire point". State the requirement instead, just as strongly. Enforces S-16. |
 | **L-10** | No challenge phrasing — "Your turn", "be ready to". Enforces S-15 and S-17. |
 | **L-11** | "on Day N", never "in Day N" — or "tomorrow", since Day Nx follows Day N. |
+| **L-12** | Complete sentences, always. No fragments. Every paragraph, slide bullet, lead line, task statement and feedback line has a subject and a verb. **Out of scope, by Petra's ruling (2026-08-12):** figure and slide *captions*, which keep the conventional noun-phrase style; the short bold noun-phrase *label* S-29 permits (`<term>Common cathode.</term>` followed by the explanation); titles and headings; code comments and in-listing annotations; table cells and figure labels. |
 
 `scripts/check_rules.py` enforces L-1 … L-11, image paths, and step counts. Run it
 before every committee review.
 
 L-8 … L-11 are the *lintable corner* of the voice rules — fixed phrases only.
+L-12 is only partly lintable: `check_rules.py` **warns** on a list item that ends
+without terminal punctuation, which is the one fragment signature with no false
+positives. It is a warning and not an error because the corpus carries a backlog
+of 24 (2026-08-12), mostly enumerated checklists in `ch-debugging.ptx` and
+`ch-adc.ptx` that need Petra's ruling before they are rewritten. The rest of
+L-12 is judgment, like S-11 … S-28.
 The rest of S-11 … S-21 needs judgment and is deliberately not linted. Each was
 validated against the corpus as it stood before the voice pass: together they
 catch 7 real violations, three of them phrases Petra deleted by hand in

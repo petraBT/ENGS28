@@ -157,6 +157,14 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
 - **Glue types** rendered inline by the player: `title`, `section` (+`kicker`),
   `agenda`/`recap`/`notice` (title + `items`/`body`), `prompt` (title + `body`,
   top-aligned to leave writing room).
+- **Prefer a `ref` over a `prompt`.** A `prompt` is book content retyped into
+  the JSON, so it drifts independently by construction, and it renders at a
+  larger, plainer size than the slides around it. Petra, 2026-08-12, on the two
+  in Day 10: *"the font size is larger and uglier than other slides… I actually
+  don't understand what this slide is asking students to do."* Both were
+  removed — one was a verbatim copy of a task in the activity three slides
+  later, so the room saw it twice. Ref the activity (`"room": true`) or write a
+  normal `<slide>`.
 - **`ref`** = `{page, slide, title}`. `page` is the built subsection page
   (subsections chunk to their own page); `slide` is the `xml:id` of a `<slide>`
   block **or** any element (e.g. `act-…` for an activity).
@@ -353,11 +361,32 @@ every way a slide can be cut, not just the obvious one:
 })()
 ```
 
-**Give the player time to settle.** If you walk the whole deck in a loop, wait
-~300 ms after setting `location.hash` before measuring. At 80 ms the check
-reports large phantom overflows on slides that fit exactly — it is measuring
-mid-layout, and a reload makes it worse. This is the one *false-positive* mode;
-the three below are false negatives.
+**Give the player time to settle — and kill the crossfade first.** Waiting
+~300 ms after setting `location.hash` is not enough on its own. During the
+transition **both slides are in the DOM**, so `.ref-body` measures the outgoing
+and incoming content together and reports roughly double: a slide that fits
+exactly comes back "311 px over", and one that scrolls by design comes back at
+twice its real height. Inject
+
+```js
+const st = document.createElement('style');
+st.textContent = '*,*::before,*::after{transition:none!important;animation:none!important}';
+document.head.appendChild(st);
+```
+
+before sweeping, and the numbers become stable and repeatable. Symptom to
+recognize: a screenshot taken mid-sweep shows the slide's own text repeated
+below itself.
+
+**A hidden pane throttles timers, so a sweep stalls rather than finishing.**
+In a backgrounded or hidden window the browser slows `setTimeout` to a crawl, so
+a loop that walks 60 slides stops making progress and a later read returns stale
+counters — it looks like the loop crashed. Taking a screenshot wakes the pane
+and it resumes. Two loops left running at once also fight over `location.hash`;
+reload the page to kill the old one rather than setting an abort flag it never
+checks.
+
+These are the *false-positive* modes; the four below are false negatives.
 
 Five traps it exists to catch, all of which have produced a false "fits". The
 last two are not measurable at all, and are the reason the rule is **look at
@@ -399,6 +428,19 @@ every slide that carries a figure**, not "run the snippet":
 A code block that reports clipping is fixed by shortening the *comments* (the
 code itself must not drift from the driver, B-6) or by giving the listing the
 full width instead of a column.
+
+**A long bullet stack and a legible figure cannot share a slide — pair them
+instead.** The lever this document gives for a squashed figure is "fewer
+bullets", but her register requires long ones, so that lever is mostly
+unavailable. The resolution that works is two slides: a text slide carrying her
+full argument, then an **image-dominant slide carrying the figure at full size**,
+with the instructive caption on the figure slide. Day 10 needed this three times
+(`sl-day10-layers` / `sl-day10-layers-fig` is the pattern; the page-write
+transaction is the other).
+
+This is not the case the next paragraph forbids. That one is about a slide
+*invented to absorb overflow*, which teaches nothing. Here both halves teach —
+the argument and the diagram — and the diagram was unreadable before.
 
 **Never fix a crop by adding a slide.** Splitting a crowded slide is right when
 both halves teach; a slide invented to absorb the overflow — Day 9x's "why `+`

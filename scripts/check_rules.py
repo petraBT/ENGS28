@@ -159,6 +159,29 @@ def allowances(raw):
     return out
 
 
+from html import unescape as html_unescape
+
+
+def strip_block_comments(block):
+    """Blank out /* ... */ spans, keeping length so offsets stay valid.
+
+    A highlighter closes a block comment at */, so an apostrophe inside one is
+    harmless -- only apostrophes in code (or in the plain-text annotations we
+    put in teaching listings) start a runaway character literal.
+    """
+    return re.sub(r"/\*.*?\*/",
+                  lambda m: re.sub(r"[^\n]", " ", m.group(0)),
+                  block, flags=re.S)
+
+
+def line_offsets(block):
+    """Yield (offset within block, line text) for each line."""
+    off = 0
+    for line in block.split("\n"):
+        yield off, line
+        off += len(line) + 1
+
+
 def line_of(text, pos):
     return text.count("\n", 0, pos) + 1
 
@@ -199,6 +222,41 @@ def check_file(path, quiet=False):
             problems.append(("error", line_of(raw, m.start()), "B-14",
                              "int main() with no return statement — say "
                              "'return 1;' (or declare main void)"))
+
+    # B-15: a lone apostrophe in a listing opens a C character literal that the
+    # syntax highlighter never closes, so every line after it projects red.
+    # Invisible in the source, obvious on the wall -- two Day 10 listings shipped
+    # this way. A real character literal ('a') is fine; so is one inside a
+    # comment, which the highlighter has already closed at the newline.
+    for m in re.finditer(
+            r"<program language=\"c\"><code><!\[CDATA\[(.*?)\]\]></code></program>",
+            raw, flags=re.S):
+        block = strip_block_comments(m.group(1))
+        for off, line in line_offsets(block):
+            code = line.split("//", 1)[0]
+            if "'" not in code:
+                continue
+            if re.search(r"'(?:\\.|[^'\\])'", code):   # a real char literal
+                continue
+            problems.append(("error", line_of(raw, m.start(1) + off), "B-15",
+                             "stray apostrophe in a listing opens a character "
+                             "literal and reddens the rest of the block -- "
+                             f"reword: {line.strip()[:60]!r}"))
+
+    # L-12 (the lintable corner): a list item that ends without terminal
+    # punctuation is the one fragment signature with no false positives.
+    # A warning, not an error -- the corpus carries a backlog of these and they
+    # are judgement calls about enumerated checklists. Captions, titles and the
+    # S-29 bold label are out of scope by Petra's ruling (2026-08-12).
+    for m in re.finditer(r"<li>(.*?)</li>", raw, flags=re.S):
+        body = re.sub(r"<!\[CDATA\[.*?\]\]>", "", m.group(1), flags=re.S)
+        item = re.sub(r"<[^>]+>", "", body)
+        item = html_unescape(item).strip()
+        if not item or item[-1] in '.?!:;)"\u201d':
+            continue
+        problems.append(("warning", line_of(raw, m.start()), "L-12",
+                         "list item is a fragment (no terminal punctuation) -- "
+                         f"write a complete sentence: {' '.join(item.split())[:60]!r}"))
 
     # Images resolve on disk.
     for m in re.finditer(r'<image\s+source="([^"]+)"', text):

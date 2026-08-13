@@ -161,6 +161,38 @@ Per `AUTHORING-book.md`. Order within the chapter:
 
 Write the prose and the figures. **Do not write `<slide>` blocks yet.**
 
+### The order of review, and why it matters
+
+**Never generate slides from prose Petra has not passed.** This is the one
+sequencing error that costs a whole session. Day 10's slides were condensed from
+a draft she later hand-rewrote, so twenty-two of them inherited pre-pass wording
+and each needed rewriting *and* refitting — more work than everything else in
+that session combined, all of it avoidable.
+
+Her review splits, and the split follows what is derived from what:
+
+1. **In-class sections first.** These are the slide source. Nothing downstream
+   can be generated until they are passed.
+2. **Figures next.** Settle the inventory — which exist, which are hers, which
+   need rebuilding — *before* slides. Captions are then written once, against
+   final images. On Day 10 her annotated figures arrived after the slides did,
+   and each one forced caption rewrites plus two figures moving to slides of
+   their own.
+3. **Slides.**
+4. **Pre-class reading and Reference sections** have nothing derived from them.
+   Review them whenever it suits; they do not block.
+
+**The slide pass feeds back into the book, and that leg is not cleanup.**
+Projection is a different reading mode — no page to scroll back on, symbols
+arriving in a fixed order, nothing available but what is on the wall — so it
+surfaces a class of book defect that reading the page does not. Most of Petra's
+Day 10 *slide* feedback turned out to be *book* defects: a forward reference to
+a file introduced two parts later, an activity duplicated between two parts, a
+lesson ordering that showed the test harness before the thing it tests, a naming
+clash the prose had only muttered about, missing `#define` provenance, a missing
+datasheet reference, and a derivation the prose asserted but never showed. Fix
+those in both places, and expect the book to improve because of the deck.
+
 ### Step 4 — Condense into slides
 
 Now author the `<slide>` blocks beside the prose, and the deck JSON.
@@ -240,8 +272,38 @@ and the build will not tell you. Petra found exactly this on Day 7.
 grep -n '<slide xml:id=' source/ch-NAME.ptx
 ```
 
-For each fix you made in Step 3 or after review, ask: does a slide repeat this
-wording, this number, or this claim? If so, fix it there too, then rebuild.
+**The check is reuse, not deletion.** This is the part that is easy to get
+wrong, and getting it wrong costs a whole pass. Diffing her hand pass for text
+she *removed* and grepping the slides for it finds only the slides that kept a
+sentence she cut — on Day 10 that method found **four**. The real number was
+**twenty-two**, because the larger class is slides that *paraphrase where she
+had already written the sentence*. Nothing was deleted; the slide just said it
+worse:
+
+| the slide said | she had written |
+| --- | --- |
+| "On paper, before any of this is code." | "Start on paper, not by writing code." |
+| "…and what to?" | "…and what would you change it to?" |
+| "Phone camera, slow-motion mode, then step through the clip." | "Put your phone's camera into its slow-motion mode and point it at the display, then play the clip back and step through it." |
+
+So: for **every** slide in the day, open the paragraph or activity it condenses
+and ask *did she already write this sentence?* If so, use hers. The failure
+signature is recognizable once you know it — the slide is **terser than the
+prose and reads as a summary of it**. That is backwards; see the "never compress
+her sentences" calibration in `AUTHORING-book.md`.
+
+Two more things a slide can get wrong that no diff will show:
+
+- **a claim the book has since retracted.** Day 10's findings slide still said
+  "ChatGPT never zeroes `TIM14->CNT`" after the book had replaced that with the
+  `TIM_EGR_UG` finding, so the projector was contradicting the chapter.
+- **numbers that appear nowhere in the book.** The same day's hang slide had
+  invented "about ninety microseconds"; the book says "long before the ninth
+  clock pulse".
+
+Then the deck's own glue: `recap`, `agenda`, `prompt` and `section` entries are
+authored in the JSON, not the book, so they drift independently and silently.
+Read them against the section they introduce.
 
 ### Gate 2 — the committee
 
