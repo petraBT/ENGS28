@@ -713,7 +713,7 @@ bullet in a list of sentences is somebody writing a bullet badly. A trailing
 bracket does not count as terminal punctuation, so "(anode to cathode)" is still
 a fragment. The corpus is clean under this rule (2026-08-12). The rest of L-12 is
 judgment, like S-11 … S-28.
-The rest of S-11 … S-21 needs judgment and is deliberately not linted. Each was
+The rest of S-11 … S-29 needs judgment and is deliberately not linted. Each was
 validated against the corpus as it stood before the voice pass: together they
 catch 7 real violations, three of them phrases Petra deleted by hand in
 `plans/day8-voice-reference.diff`, with no false positive in any chapter file.

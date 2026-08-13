@@ -98,11 +98,11 @@ git add -A && git commit -m "..."
 git push
 ```
 
-`output/` is git-ignored. Watch for large binaries in `git status` — the slide
-`.pptx` files under `assets/slides/inclass/` are untracked and currently
-uncommitted. Binaries are permanent once committed, so decide deliberately
-rather than sweeping them in with `git add -A`; if they don't belong in the
-repo, add them to `.gitignore` instead.
+`output/` is git-ignored, and so are the two PowerPoint folders —
+`assets/ClassSlidesOLD/` (123 MB) and `assets/ClassSlidesNEW/` (12 MB), both
+listed in `.gitignore`. They are the source Step 1 mines, and they live only on
+this machine. Binaries are permanent once committed, so watch `git status` and
+decide deliberately rather than sweeping anything in with `git add -A`.
 
 ## Deploying
 

@@ -1,6 +1,6 @@
 ---
 name: checker-voice
-description: Checks that ENGS 28 prose and slide text sound like Petra, against her two frozen hand passes. Not a linter — it judges register and supplies the rewrite. Also checks whether wording she already wrote was reused rather than reinvented.
+description: Checks that ENGS 28 prose and slide text sound like Petra, against her three frozen hand passes. Not a linter — it judges register and supplies the rewrite. Also checks whether wording she already wrote was reused rather than reinvented.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -19,15 +19,29 @@ cannot see register, which is why L-8 … L-11 caught none of it.
 
 Do not start from the rule summaries. Start from her sentences.
 
-1. `plans/day9x-voice-reference.md` — her hand pass over the Day 9x opening,
+1. `plans/day10-voice-reference.diff` — **read this one first.** 692 lines, her
+   only full pass over a finished draft's *prose*, and the largest of the three.
+   S-22 … S-29 come from it. The draft it corrects had already been swept
+   against S-11 … S-21 and she still changed 692 lines, so where it overlaps the
+   older specimens it is the stronger evidence.
+2. `plans/day9x-voice-reference.md` — her hand pass over the Day 9x opening,
    as before → after pairs.
-2. `plans/day8-voice-reference.diff` — her hand rewrite of the Day 8 deck and
+3. `plans/day8-voice-reference.diff` — her hand rewrite of the Day 8 deck and
    the Day 8 video script. Read the `source/ch-timers-interrupts.ptx` hunks as
    well as the deck JSON: the prose changes are the ones nobody reads.
 
-S-11 … S-21 in `AUTHORING-book.md` are a *summary* of those two files. When a
+S-11 … S-29 in `AUTHORING-book.md` are a *summary* of those three files. When a
 rule and a specimen seem to disagree, the specimen wins, and say so in your
-report. Read `AUTHORING-slides.md` § "What no rule covers" so you do not invent a
+report.
+
+**Two calibrations from the Day 10 pass carry as much weight as the rules, and a
+draft gets both backwards.** Her register is **plain and explanatory, not
+terse** — many of her replacements are *longer* than what they replace, and two
+captions gained whole paragraphs — so a passage that reads as compressed and
+aphoristic is a finding even when every sentence is grammatical. And **"we" is
+the course**, including for everything the course supplies: "a library we'll hand
+to you", not "a library we have not read". Never recommend shortening one of her
+own sentences to make a slide fit. Read `AUTHORING-slides.md` § "What no rule covers" so you do not invent a
 rule out of one of the three changes that resist generalization.
 
 ## What you compare against what
@@ -165,7 +179,7 @@ the count is the *only* content, cut the sentence instead (failure 8).
 ## Book prose and slide text are one voice
 
 A `<slide>` block and the paragraph it condenses are separate texts that must not
-sound like two different people (B-7, S-11…S-21, Step 5b). Review them
+sound like two different people (B-7, S-11…S-29, Step 5b). Review them
 **together**, never the deck alone:
 
 ```bash
