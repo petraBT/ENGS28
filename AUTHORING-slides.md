@@ -70,6 +70,13 @@ the em dash into the label and the name, so keep that form.
 
 ## Authoring `<slide>` blocks
 
+**A day's deck condenses the in-class `Part N` sections, and only those.**
+Pre-class reading and reference material are read, not projected. The one
+exception is a **pre-class video deck** for a day that has one — `day8video.json`
+is the only one so far, and it refs the pre-class and reference subsections
+deliberately. A *figure* from the reading may be reused on an in-class slide via
+`refPage`, which is not the same thing as projecting the reading.
+
 Put the block next to the content it condenses. Give every block an `xml:id`
 (the deck references it). `@ref` names an existing figure/activity to show
 without duplicating its image.
@@ -216,10 +223,15 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   so a table lifted from the book no longer projects raw LaTeX.
 - **Watch for old PowerPoint titles baked into extracted images** — re-export the
   image cropped, or it duplicates the deck title.
-- **Solutions** shown in class are instructor material: mark the slide
-  `"instructor": true`. (Note: `?student` hides them from the *view*, but the
-  content is still in the page source until a solutions-free build is added at
-  deploy time.)
+- **Solutions are instructor slides.** Every activity's solution is projected —
+  that is how it works as a reveal after the activity — and only in the
+  instructor deck. Mark the deck entry `"instructor": true` and the source
+  `instructor="yes"`, or, better, `ref` an `<instructor>` block directly so
+  there is only one copy of the answer. `web-deck` strips them at build time,
+  not merely hides them, so build the student deck with `./scripts/build-deck.sh`
+  and the answer is not in the page source either. `check_deck.py` fails when the
+  two markers disagree, and when a solution exists that no deck projects. See
+  P-10.
 
 ## Voice
 

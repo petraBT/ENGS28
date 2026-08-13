@@ -117,13 +117,25 @@ Every activity that asks students to write code has a corresponding solution. No
 exceptions — including open-ended design activities, which get a *worked example*
 solution even though student answers will differ.
 
-**The solution is never in the student book.** There are two places it may live,
-and they are not interchangeable:
+**The solution is never in the student book, and it is never in the student
+deck.** Petra, 2026-08-13: solutions to activities are instructor slides, so they
+show up only in the instructor deck. Every solution is *projected* — that is how
+it works as a reveal after the activity — and every solution is instructor-only.
 
-| Where | How | For |
+Two ways to author it. They render the same in class; the second is preferred,
+because two copies of one answer drift and the drift is invisible until you
+project the stale one:
+
+| Where the text lives | How the deck reaches it | Note |
 | --- | --- | --- |
-| the deck | a `<slide>` whose deck entry is `"instructor": true` | a reveal projected in class after the activity |
-| the book | inside an `<instructor>` element | the worked answer, for your own copy — see *Instructor-only content in the book* at the end of this file |
+| an `<instructor>` element in the book | the deck `ref`s that element **directly**, by its `xml:id`, with `"instructor": true` | **preferred** — one copy of the answer |
+| a `<slide instructor="yes">` beside the prose | an ordinary `ref`, with `"instructor": true` | for an answer shaped for the projector and nowhere else |
+
+Two invariants, both checked by `scripts/check_deck.py`: the deck entry's
+`"instructor": true` must agree with the source marker — disagree one way and the
+student deck lists a slide whose markup was stripped, disagree the other and it
+ships the answer — and **every instructor-marked id in the source must be
+projected by some deck**, because a solution no deck refs cannot be revealed.
 
 Code a student or a lab is meant to produce goes in `<instructor>` **even when
 the class works through it together**, because the book outlives the hour. A

@@ -107,8 +107,38 @@ def main():
             elif ref and s.get("refPage"):
                 print(f"  STALE refPage {s['slide']}: {ref.group(1)} is already on {s['page']}")
                 bad += 1
+    bad += check_every_solution_is_projected(marked)
     print(f"\n{bad} problem(s)")
     sys.exit(1 if bad else 0)
+
+
+def check_every_solution_is_projected(marked):
+    """P-10: a solution the class never sees is not a reveal.
+
+    Petra, 2026-08-13: solutions to activities are instructor slides, so they
+    show up only in the instructor deck.  The half check_deck already does is
+    that a projected slide's flag agrees with its source marker.  This is the
+    other half -- an <instructor> block or instructor="yes" slide that no deck
+    refs at all is invisible in class, and nothing else would say so.
+
+    Repo-wide by construction: an id counts as projected if ANY deck refs it, so
+    this scans assets/decks/ rather than only the decks named on the command
+    line, and reports once at the end.
+    """
+    projected = set()
+    for path in glob.glob(os.path.join(REPO, "assets", "decks", "*.json")):
+        if os.path.basename(path) == "index.json":
+            continue
+        for s in json.load(open(path, encoding="utf-8"))["slides"]:
+            if s.get("slide"):
+                projected.add(s["slide"])
+    orphans = sorted(marked - projected)
+    if orphans:
+        print(f"\nsolutions no deck projects — {len(orphans)}:")
+        for o in orphans:
+            print(f"  NOT PROJECTED {o} is instructor-only in the source, but no deck refs it")
+        print("                (add a deck entry with \"instructor\": true, or delete the block)")
+    return len(orphans)
 
 
 if __name__ == "__main__":

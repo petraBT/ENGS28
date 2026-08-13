@@ -40,7 +40,7 @@ is top to bottom.
 | 7 | **Step 5** | mechanical checks pass |
 | 8 | **Gate 2** | the book's committee → prioritized change list, applied |
 | 9 | **Petra, pass 1** | **she passes the book** |
-| 10 | **Step 4** | `<slide>` blocks + deck JSON, condensed from the text she passed |
+| 10 | **Step 4** | `<slide>` blocks + deck JSON, condensing the **in-class** sections she passed |
 | 11 | **Step 5b** | the fit check, and the book/slide cross-check |
 | 12 | **Gate 3** | the slide-facing panel → change list, applied |
 | 13 | **Petra, pass 2** | **she passes the deck** |
@@ -215,7 +215,11 @@ settle the inventory *before* slides, or captions get written twice. Pre-class
 reading and Reference sections have nothing derived from them, so they ride along
 in this delivery without blocking anything.
 
-**Delivery 2 — the deck**, condensed from the text she passed.
+**Delivery 2 — the deck**, condensing **the in-class sections only**. Pre-class
+reading and reference material are read, not projected. The one exception is a
+**pre-class video deck** for a day that has one — `assets/decks/day8video.json`
+is the only one so far, and it refs the pre-class and reference subsections on
+purpose. Do not "fix" it to point at Part N.
 
 **The slide pass feeds back into the book, and that leg is not cleanup.**
 Projection is a different reading mode — no page to scroll back on, symbols
@@ -232,7 +236,10 @@ those in both places, and expect the book to improve because of the deck.
 
 **This runs after Petra's pass 1, not before it.** Start by reading what she
 changed — `git diff` from the commit before her edits — and condense from the
-post-pass text.
+post-pass text. **Condense the in-class `Part N` sections, and only those.** If a
+slide seems to want material from the pre-class reading, either the in-class
+section is missing a step it should teach, or the slide should not exist. A
+*figure* may legitimately come from the reading, via the deck's `refPage`.
 
 Now author the `<slide>` blocks beside the prose, and the deck JSON.
 See `AUTHORING-slides.md`.
@@ -458,13 +465,14 @@ is done when both are true.
 - [ ] Nothing students write is introduced after the harness that tests it, and no task appears twice (P-16)
 
 **Artifacts — delivery 1**
-- [ ] Every coded activity has an instructor solution, in an `<instructor>` element (P-10)
+- [ ] Every coded activity has a solution, in an `<instructor>` element (P-10)
 - [ ] Images are the annotated versions, cropped to what matters (P-12, B-11)
 - [ ] Every figure the day needs exists, or is on the list you sent her
 - [ ] Book captions describe (B-7)
 
 **Artifacts — delivery 2, the deck**
-- [ ] Every slide condenses **post-pass** prose, reusing her sentences (Step 5b)
+- [ ] Every slide condenses **post-pass in-class** prose, reusing her sentences (Step 5b)
+- [ ] Every activity's solution is in the deck as an instructor-only entry, and in no student-facing one (P-10)
 - [ ] Slide captions instruct (S-3); no slide lead is a bold banner (S-29)
 - [ ] Deck built, every `ref` resolves, arc matches the lesson plan (S-8)
 - [ ] Practice/predict slides have writing room (S-2)

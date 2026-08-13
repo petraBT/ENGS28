@@ -22,13 +22,20 @@ classroom deck it projects. Branch `main`. Small commits, pushed as you go.
 | | You hand her | Which is |
 | --- | --- | --- |
 | **1** | **The book** | pre-class reading (if this day has one), the in-class `Part N` sections, reference material, instructor solutions, and every figure settled |
-| **2** | **The deck** | `<slide>` blocks condensed from the text she passed, plus `assets/decks/dayNN.json` |
+| **2** | **The deck** | `<slide>` blocks condensing **the in-class `Part N` sections only**, plus `assets/decks/dayNN.json` |
 
 Why the split. A slide condenses a paragraph, so a slide built from prose she has
 not passed inherits wording she is about to change: on Day 10 twenty-two of them
 did, and each then needed rewriting *and* refitting. Figures settle in delivery 1
 for the same reason — hers arrived after the slides had been built, and each one
 forced caption rewrites plus two figures moving to slides of their own.
+
+**The deck comes from the in-class sections, and only those.** Pre-class reading
+and reference material are read, not projected — they ship in delivery 1 and
+generate no slides. The one exception is a **pre-class video deck**, a separate
+artifact for a day that has one (`assets/decks/day8video.json` is the only one so
+far), which condenses the pre-class and reference material for the video and is
+listed under its day on the contents page.
 
 Done, for either delivery, means it has passed its committee and is ready for her
 to read as a near-final draft, not as a first attempt.
@@ -301,10 +308,16 @@ git log --oneline -15 -- source/ch-NAME.ptx
 git diff <the commit before her edits> -- source/ch-NAME.ptx
 ```
 
-Every slide condenses a specific paragraph or activity. For each one, open that
-paragraph **in its post-pass form** and ask *did she already write this sentence?*
-If so, use hers — see the reuse rule above, which is where this delivery most
-often goes wrong.
+Every slide condenses a specific paragraph or activity **from an in-class `Part
+N` section**. For each one, open that paragraph in its post-pass form and ask
+*did she already write this sentence?* If so, use hers — see the reuse rule
+above, which is where this delivery most often goes wrong.
+
+Nothing outside the in-class sections becomes a slide. If a slide seems to want
+material from the pre-class reading, either the in-class section is missing a
+step it should teach, or the slide should not exist. (A figure is the one thing
+that may legitimately come from the reading, via `refPage` — Day 6 reuses
+`fig-bjt-npn-symbol` that way rather than duplicating it.)
 
 Author the `<slide>` blocks beside the prose they condense, then the deck JSON.
 Mechanics in `AUTHORING-slides.md`. This step is condensation, not design — the
@@ -414,12 +427,21 @@ new slides report as phantom problems. Re-run
 `build-deck.sh` — a bare `pretext build web-deck` leaves the deck *list* naming
 the instructor slides it just stripped.
 
-**Solutions.** Every coded activity has an instructor solution (P-10). A worked
-answer goes in an `<instructor>` element, which is *stripped* from the reading
-book, the student deck and the PDF; the deck may `ref` that block directly rather
-than a `<slide>` repeating it, and should, because two copies of one solution
-drift invisibly. A deck entry's `"instructor": true` must agree with the source
-marker; `check_deck.py` fails when it does not.
+**Solutions are instructor slides.** Every activity's solution is projected, and
+it is projected **only in the instructor deck** — that is how it works as a
+reveal after the activity, and how it stays out of the copy students get. Two
+ways to author it, and the second is preferred because two copies of one answer
+drift invisibly:
+
+- a `<slide instructor="yes">` carrying the answer, or
+- an `<instructor>` element in the book that the deck `ref`s **directly** by its
+  `xml:id`.
+
+Either way the deck entry takes `"instructor": true`, and it must agree with the
+source marker — `check_deck.py` fails when it does not. Disagree one way and the
+student deck lists a slide whose markup was stripped; disagree the other and it
+ships the answer. Every solution in the source must be projected by some deck: a
+solution no deck refs cannot be revealed in class.
 
 **`git status` before committing. Petra edits this repo while you work: commit
 only files you changed, never `git checkout` a directory to tidy up, and never
