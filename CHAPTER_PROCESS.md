@@ -17,26 +17,45 @@ rather than steps. This file is the reference behind it.
 
 ## The workflow
 
-| Step | Produces | Gate |
+**Two deliveries, not one: the book, then — after Petra has passed it — the
+deck.** A slide condenses a paragraph, so a slide built from prose she has not
+passed inherits wording she is about to change. On Day 10 twenty-two of them did,
+and each then needed rewriting *and* refitting — more work than everything else
+in that session combined. Figures settle with the book, for the same reason: her
+annotated figures arrived after the slides had been built, and each one forced
+caption rewrites plus two figures moving to slides of their own.
+
+The step numbers are **names**, not an order — other files cite "Step 0" and
+"Step 5b", so they stay fixed even though Step 4 now runs late. Execution order
+is top to bottom.
+
+| # | What runs | Produces |
 | --- | --- | --- |
-| 0 | Ground truth: driver code, downstream constraints, datasheet/RM pages | |
-| 1 | Mined old deck: arc, speaker notes, rebuilt annotated images | |
-| 2 | **Lesson plan** (1 page) **+ the outline** | **Gate 1** — small panel |
-| 3 | Book chapter | |
-| 4 | `<slide>` blocks + deck JSON | |
-| 5 | Mechanical checks pass | |
-| 6 | Committee review → prioritized change list | **Gate 2** — full panel |
-| 7 | Petra's sign-off | **her** |
+| 1 | **Step 0** | ground truth: driver code, downstream constraints, datasheet/RM pages |
+| 2 | **Step 1** | mined old deck: arc, speaker notes, rebuilt annotated images |
+| 3 | **Step 2** | the lesson plan (1 page) **+ the outline** |
+| 4 | **Gate 1** | the small panel, on both → fixes applied |
+| 5 | **Step 3** | the book: pre-class, in-class `Part N`, reference, **figures settled** |
+| 6 | **Gate 1.5** | the voice probe, on the first subsection, as soon as it exists |
+| 7 | **Step 5** | mechanical checks pass |
+| 8 | **Gate 2** | the book's committee → prioritized change list, applied |
+| 9 | **Petra, pass 1** | **she passes the book** |
+| 10 | **Step 4** | `<slide>` blocks + deck JSON, condensed from the text she passed |
+| 11 | **Step 5b** | the fit check, and the book/slide cross-check |
+| 12 | **Gate 3** | the slide-facing panel → change list, applied |
+| 13 | **Petra, pass 2** | **she passes the deck** |
+| 14 | **Step 6** | her general corrections become rules |
 
-Two gates, not one. A problem with the arc or the objectives costs one page to fix
-at Gate 1 and a whole chapter at Gate 2.
+Four gates, not one. A problem with the arc or the objectives costs one page to
+fix at Gate 1 and a whole chapter at Gate 2. A wrong register costs a sentence at
+Gate 2 and a slide rewrite plus a refit at Gate 3.
 
-**Gate 2 is not optional, and it is not the place a draft first meets a
-reviewer.** On the I2C week it was not run at all until Petra asked *"Are you
+**A committee gate is not optional, and it is not the place a draft first meets a
+reviewer.** On the I2C week Gate 2 was not run at all until Petra asked *"Are you
 using the committee we constructed?"* — so a wrong hardware claim, a slide of
 undefined symbols and the same six-field list enumerated four times in ten
-minutes all reached her first. A draft does not go to her until the committee
-has run and its list is applied.
+minutes all reached her first. Nothing goes to her until the committee for that
+delivery has run and its list is applied.
 
 ---
 
@@ -159,28 +178,44 @@ Per `AUTHORING-book.md`. Order within the chapter:
    figures, activities, and instructor solutions.
 4. Reference material at the end (B-10).
 
-Write the prose and the figures. **Do not write `<slide>` blocks yet.**
+Write the prose and the figures. **Do not write `<slide>` blocks yet** — they
+are Step 4, after her pass.
+
+**Settle the figure inventory here**, as part of this delivery: which figures
+exist, which are hers, which need rebuilding with `pptx_annotate.py`, and which
+do not exist and must be asked for. Captions are then written once, against final
+images.
+
+### Gate 1.5 — the voice probe
+
+As soon as the **first** subsection of prose exists, stop and run `checker-voice`
+on it alone. Apply what it says before writing the rest.
+
+Register is systemic. If the voice is wrong in the first subsection it is wrong
+in all of them, and a sweep bolted on at the end produces a chapter that is half
+hers — worse than either. She rejected a whole draft with *"You are not speaking
+in my voice."*
+
+One scoping caveat, found the hard way: **acronym first-use is chapter-wide**, so
+on an extract tell the agent what earlier sections already expanded, or its
+acronym findings are noise.
 
 ### The order of review, and why it matters
 
 **Never generate slides from prose Petra has not passed.** This is the one
-sequencing error that costs a whole session. Day 10's slides were condensed from
-a draft she later hand-rewrote, so twenty-two of them inherited pre-pass wording
-and each needed rewriting *and* refitting — more work than everything else in
-that session combined, all of it avoidable.
+sequencing error that costs a whole session, and it is why the workflow above
+delivers twice. Day 10's slides were condensed from a draft she later
+hand-rewrote, so twenty-two of them inherited pre-pass wording and each needed
+rewriting *and* refitting — more work than everything else in that session
+combined, all of it avoidable.
 
-Her review splits, and the split follows what is derived from what:
+**Delivery 1 — the book.** The in-class sections are the slide source, so
+nothing downstream can be generated until they are passed. Figures go with them:
+settle the inventory *before* slides, or captions get written twice. Pre-class
+reading and Reference sections have nothing derived from them, so they ride along
+in this delivery without blocking anything.
 
-1. **In-class sections first.** These are the slide source. Nothing downstream
-   can be generated until they are passed.
-2. **Figures next.** Settle the inventory — which exist, which are hers, which
-   need rebuilding — *before* slides. Captions are then written once, against
-   final images. On Day 10 her annotated figures arrived after the slides did,
-   and each one forced caption rewrites plus two figures moving to slides of
-   their own.
-3. **Slides.**
-4. **Pre-class reading and Reference sections** have nothing derived from them.
-   Review them whenever it suits; they do not block.
+**Delivery 2 — the deck**, condensed from the text she passed.
 
 **The slide pass feeds back into the book, and that leg is not cleanup.**
 Projection is a different reading mode — no page to scroll back on, symbols
@@ -193,23 +228,34 @@ clash the prose had only muttered about, missing `#define` provenance, a missing
 datasheet reference, and a derivation the prose asserted but never showed. Fix
 those in both places, and expect the book to improve because of the deck.
 
-### Step 4 — Condense into slides
+### Step 4 — Condense into slides, from the text she passed
+
+**This runs after Petra's pass 1, not before it.** Start by reading what she
+changed — `git diff` from the commit before her edits — and condense from the
+post-pass text.
 
 Now author the `<slide>` blocks beside the prose, and the deck JSON.
 See `AUTHORING-slides.md`.
 
-This is deliberately last, and deliberately mechanical: the lesson plan already
+This is deliberately late, and deliberately mechanical: the lesson plan already
 fixed the arc, so this step is condensation, not design. If a section resists
 condensing to a slide, that is a signal the section is not clear yet — fix the
 section.
 
-**Slides are written in Petra's voice — rules S-11 … S-21** in
-`AUTHORING-book.md`, derived from her hand rewrite of Day 8 and frozen as a
-specimen at `plans/day8-voice-reference.diff`. Read that diff before writing a
-deck; the rules summarize it, and the examples in them are what make them
-usable. In short: name things plainly, say where they live, give the reason with
-the rule, and drop manufactured urgency — while keeping every technical claim
-exactly as strong (S-16 softens rhetoric, never engineering).
+**Slides are written in Petra's voice — rules S-11 … S-29** in
+`AUTHORING-book.md`, derived from her own hand passes and frozen as three
+specimens: `plans/day10-voice-reference.diff` (692 lines, her only full prose
+pass over a finished draft — read it first), `plans/day9x-voice-reference.md`,
+and `plans/day8-voice-reference.diff`. The rules summarize them, and the examples
+in them are what make them usable. In short: name things plainly, say where they
+live, give the reason with the rule, and drop manufactured urgency — while
+keeping every technical claim exactly as strong (S-16 softens rhetoric, never
+engineering).
+
+**Her register is plain and explanatory, not terse, and several of her rewrites
+are longer than what they replaced.** Restoring it will overflow slides. The six
+legitimate ways to make one fit are listed under the S-22…S-28 calibrations in
+`AUTHORING-book.md`; shortening her prose is not one of them.
 
 The same voice applies to the prose the slide condenses. A `<slide>` block and
 its paragraph are separate texts, so a fix to one is not a fix to the other
@@ -305,15 +351,27 @@ Then the deck's own glue: `recap`, `agenda`, `prompt` and `section` entries are
 authored in the JSON, not the book, so they drift independently and silently.
 Read them against the section they introduce.
 
-### Gate 2 — the committee
+### Gate 2 — the book's committee
 
-Run the **standing core of 7** plus any rotators the chapter calls for (the roster
-and the selection table are in `.claude/agents/README.md`), then the synthesizer,
-which returns a **prioritized, actionable change list** with rule IDs. Apply it.
+*This runs before Petra's pass 1, on the book — Steps 4 and 5b above belong to
+delivery 2 and come after her pass. The file is ordered by topic; the table at
+the top is ordered by execution.*
 
-Running all 17 is only worth it for a chapter unlike anything done before.
+Run the **standing core of 10** plus any rotators the chapter calls for (the
+roster and the selection table are in `.claude/agents/README.md`), then the
+synthesizer, which returns a **prioritized, actionable change list** with rule
+IDs. Apply it.
 
-**Write every reviewer's report to `reviews/dayNN-gateN.md` before running the
+Running all twenty is only worth it for a chapter unlike anything done before.
+
+**Start the three `checker-*` agents first and scope them.** They cost 100–180k
+tokens each on one day's material, and `checker-technical-accuracy` run as a
+single unscoped sweep has cost 22 minutes and 250k — which is precisely why it
+gets skipped. Run it **per `Part N` in parallel**, plus one whole-chapter
+invocation that does nothing but its self-contradiction read. Everything else in
+the core is cheap.
+
+**Write every reviewer's report to `reviews/dayNN-gate2.md` before running the
 synthesizer.** The synthesizer reads that file; it cannot consolidate reports that
 exist only in a chat transcript, and it will (correctly) refuse to invent them. The
 reports are also the evidence for which reviewers earn their keep.
@@ -336,17 +394,45 @@ Point the reviewer at that directory. On the I2C week it caught a command-table
 figure whose caption promised a row the crop did not contain, and a caption that
 put a scope trace's handover blip on the wrong side of the ACK.
 
-### Step 6 — Sign-off
+### Gate 3 — the deck's committee
 
-Petra reviews a near-final draft. Her corrections are fed back into
-`AUTHORING-book.md` as new rules if they are general — that is what keeps the next
-chapter cheaper than this one.
+The slide-facing reviewers only, per `.claude/agents/README.md`, into
+`reviews/dayNN-gate3.md`, then the synthesizer, then apply. `learner-in-the-room`
+matters most here — it walks the deck in projection order asking what each slide
+adds that the one before it did not — and `checker-voice` reads the slides
+against the prose they condense, which is the only automatic check on Step 5b
+there is.
+
+**The slide pass feeds back into the book, and that leg is not cleanup.**
+Projection is a different reading mode — no page to scroll back on, symbols
+arriving in a fixed order, nothing available but what is on the wall — so it
+surfaces a class of book defect that reading the page does not. Most of Petra's
+Day 10 *slide* feedback turned out to be *book* defects: a forward reference to a
+file introduced two parts later, an activity duplicated between two parts, a
+lesson ordering that showed the test harness before the thing it tests, a naming
+clash the prose had only muttered about, missing `#define` provenance, a missing
+datasheet reference, and a derivation the prose asserted but never showed. Fix
+those in both places, and expect the book to improve because of the deck.
+
+### Step 6 — Sign-off, and closing the loop
+
+Petra reviews a near-final draft — the book at pass 1, the deck at pass 2. Her
+corrections are fed back into `AUTHORING-book.md` as new rules if they are
+general, with her before → after pair beside each one, because the examples are
+what make a rule usable. That is what keeps the next chapter cheaper than this
+one. Update the chapter status table below in the same commit.
+
+If a correction is *not* general, say so rather than inventing a rule to cover
+it. An over-broad rule is how a later sweep flattened `plants` to `holds` on a
+slide — a metaphor she had deliberately left standing.
 
 ---
 
 ## Definition of done
 
-A chapter is done when all of these are true.
+Two checklists, because there are two deliveries. **Delivery 1 is everything
+down to Artifacts-that-are-not-slides; delivery 2 is the deck block.** A chapter
+is done when both are true.
 
 **Structure**
 - [ ] Objectives stated; every objective is actually taught and practiced
@@ -367,20 +453,29 @@ A chapter is done when all of these are true.
 - [ ] All code matches the real driver's idiom (B-6)
 - [ ] Reading-question answers *and* distractor feedback match real behavior (B-3)
 - [ ] Register and bit names match the reference manual (L-6)
-- [ ] `check_rules.py` passes (L-1…L-6, image paths, step counts)
+- [ ] `check_rules.py` passes (its own rule set, plus image paths and step counts)
+- [ ] No discovery is answered ahead of itself, **including inside a figure** (P-15)
+- [ ] Nothing students write is introduced after the harness that tests it, and no task appears twice (P-16)
 
-**Artifacts**
-- [ ] Every coded activity has an instructor solution (P-10)
+**Artifacts — delivery 1**
+- [ ] Every coded activity has an instructor solution, in an `<instructor>` element (P-10)
 - [ ] Images are the annotated versions, cropped to what matters (P-12, B-11)
-- [ ] Book captions describe; slide captions instruct (B-7, S-3)
+- [ ] Every figure the day needs exists, or is on the list you sent her
+- [ ] Book captions describe (B-7)
+
+**Artifacts — delivery 2, the deck**
+- [ ] Every slide condenses **post-pass** prose, reusing her sentences (Step 5b)
+- [ ] Slide captions instruct (S-3); no slide lead is a bold banner (S-29)
 - [ ] Deck built, every `ref` resolves, arc matches the lesson plan (S-8)
 - [ ] Practice/predict slides have writing room (S-2)
-- [ ] `pretext build web-deck` clean; student view (`?student`) hides solutions
+- [ ] Every slide that carries a figure has been **looked at**, not only measured
+- [ ] `./scripts/build-deck.sh` clean; student view (`?student`) hides solutions
 
 **Sign-off**
-- [ ] Committee change list applied
-- [ ] Petra approved
+- [ ] Gate 2's change list applied, and Petra passed the book
+- [ ] Gate 3's change list applied, and Petra passed the deck
 - [ ] Any general correction she made is now a rule in `AUTHORING-book.md`
+- [ ] The chapter status table above is updated
 
 ---
 
