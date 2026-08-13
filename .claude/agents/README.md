@@ -80,7 +80,7 @@ the three that most recently caught what everything else missed.
 | --- | --- | --- |
 | `checker-technical-accuracy` | claims against the driver, the RM, the rest of the book; **and reasoning** — a rule against the chapter's own example, arithmetic in prose, self-contradiction | **115k tokens, 9 min** for Part B alone on a scoped section; 250k / 22 min unscoped |
 | `checker-figure-claims` | that every caption, slide title and claim describes what is **actually in the rendered image** | **180k tokens, 16 min** for twelve figures — it renders, crops and measures, and that is the expensive half |
-| `checker-voice` | that the prose and slides sound like Petra, against her two hand passes; and that her existing wording was reused rather than reinvented | **107k tokens, 6 min** including the reuse pass over the old deck |
+| `checker-voice` | that the prose and slides sound like Petra, against her three hand passes; and that her existing wording was reused rather than reinvented | **107k tokens, 6 min** including the reuse pass over the old deck |
 
 **All three verification agents are expensive, and two of them are expensive on
 purpose** — `checker-figure-claims` spends its budget rendering, cropping and

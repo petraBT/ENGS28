@@ -223,23 +223,34 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
 
 ## Voice
 
-Slides are written in Petra's voice, which is **S-11 … S-21** in
-`AUTHORING-book.md`. There are two frozen specimens, and the rules are only a
-summary of them — read both before authoring a deck, and read them again if a
+Slides are written in Petra's voice, which is **S-11 … S-29** in
+`AUTHORING-book.md`. There are three frozen specimens, and the rules are only a
+summary of them — read them before authoring a deck, and read them again if a
 rule feels ambiguous:
 
-- `plans/day8-voice-reference.diff` — her hand rewrite of the Day 8 deck.
+- `plans/day10-voice-reference.diff` — **the one to read first.** 692 lines, her
+  only full prose pass over a finished draft, and the source of S-22…S-28. The
+  draft it corrects had already been swept against S-11…S-21.
 - `plans/day9x-voice-reference.md` — her hand pass over the Day 9x opening,
   with the before/after pairs called out. Written after she rejected a draft
   with *"You are not speaking in my voice"*, so it is the one to check a draft
   against when the register feels off rather than the facts.
+- `plans/day8-voice-reference.diff` — her hand rewrite of the Day 8 deck.
 
 In one line each: name things plainly and say where they live (S-11, S-12); "we"
 for the class and "you" for the student (S-13); give the reason with the rule,
 even though it makes the slide longer (S-14); no manufactured urgency, stakes, or
 dares (S-15, S-17); requirements rather than slogans, **without weakening the
 technical claim** (S-16); a title that says what the slide is (S-18); and admit
-where a rule has exceptions (S-19).
+where a rule has exceptions (S-19). From the Day 10 pass: no classroom management
+in student-facing text (S-25), no course lore (S-24), no count-armature (S-28),
+and a lead line is a sentence, not a bold banner (S-29, below).
+
+**Her register is plain and explanatory, not terse**, and several of her rewrites
+are *longer* than what they replace. Restoring it will overflow slides — nine of
+them on Day 10 — and the cheapest repair is always to tighten her wording, which
+is exactly what the voice rules forbid. The six legitimate levers are listed
+under the S-22…S-28 calibrations in `AUTHORING-book.md`.
 
 A `<slide>` block and the prose it condenses are separate texts that must not
 sound like different people, so a voice fix in one needs checking against the
@@ -521,19 +532,7 @@ gates fail, so there is no edit UI and no write endpoint to reach.
 
 ### S-29 A slide's lead line is a sentence, not a banner
 
-Petra, 2026-08-08, on a deck where most slides opened with a fully bold line:
-*"I really don't like those. Can these become regular bullets?"*
-
-`<p><term>…</term></p>` renders the whole line bold. Use `<term>` for what it is
-for — marking a **term** — not for a lead line that happens to be first.
-
-- A **short noun-phrase label** may stay bold: `<term>Common cathode.</term>`
-  followed by the explanation.
-- A **whole sentence is ordinary text**. ~~`<p><term>Your display looks steady,
-  but at every instant most of it is dark.</term> There are two ways…</p>`~~ →
-  `<p>Your display looks steady, but at every instant most of it is dark. There
-  are two ways…</p>`
-
-Rule of thumb: if the bold runs past about four words, or ends in a full stop or
-a question mark, it is a sentence and should not be bold. Twenty-five leads in
-Day 10 broke this.
+Defined with the other S rules, in `AUTHORING-book.md`. In short: `<term>` marks
+a **term**, not a lead line that happens to be first. If the bold runs past about
+four words, or ends in a full stop or a question mark, it is a sentence and
+should not be bold.

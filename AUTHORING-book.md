@@ -572,7 +572,7 @@ people (B-7, 5b).
 
 ---
 
-**S-22 … S-28 come from the Day 10 pass** (`plans/day10-voice-reference.diff`),
+**S-22 … S-29 come from the Day 10 pass** (`plans/day10-voice-reference.diff`),
 which is the first full prose pass she has made over a finished draft. Where
 they overlap with S-11…S-21 they are stronger, because that draft had already
 been swept against S-11…S-21 and she still changed 692 lines.
@@ -631,6 +631,18 @@ been swept against S-11…S-21 and she still changed 692 lines.
   need"~~ → "For now we mostly care about the rows named *System setup*, *Display
   setup* and *Dimming set*."
 
+- **S-29 A slide's lead line is a sentence, not a banner.** Petra, 2026-08-08,
+  on a deck where most slides opened with a fully bold line: *"I really don't
+  like those. Can these become regular bullets?"* `<p><term>…</term></p>` renders
+  the whole line bold; `<term>` is for marking a **term**. A short noun-phrase
+  label may stay bold — `<term>Common cathode.</term>` followed by the
+  explanation — but a whole sentence is ordinary text.
+  ~~`<p><term>Your display looks steady, but at every instant most of it is
+  dark.</term> There are two ways…</p>`~~ → `<p>Your display looks steady, but at
+  every instant most of it is dark. There are two ways…</p>`
+  Rule of thumb: if the bold runs past about four words, or ends in a full stop
+  or a question mark, it is a sentence. Twenty-five leads in Day 10 broke this.
+
 **Two calibrations that matter as much as the rules.**
 
 **Her register is plain and explanatory, not terse.** Many of her replacements
@@ -687,8 +699,9 @@ them; ask.
 | **L-11** | "on Day N", never "in Day N" — or "tomorrow", since Day Nx follows Day N. |
 | **L-12** | Complete sentences, always. No fragments. Every paragraph, slide bullet, lead line, task statement and feedback line has a subject and a verb. **Out of scope, by Petra's rulings (2026-08-12):** figure and slide *captions*, which keep the conventional noun-phrase style; the short bold noun-phrase *label* S-29 permits (`<term>Common cathode.</term>` followed by the explanation); **enumerated checklists**, where terse parallel items are the point — the compiler-error list in `ch-debugging.ptx`, the register recap in `ch-adc.ptx`, the three voltages to measure in `ch-intro-blinky.ptx`; titles and headings; code comments and in-listing annotations; table cells and figure labels. |
 
-`scripts/check_rules.py` enforces L-1 … L-11, image paths, and step counts. Run it
-before every committee review.
+`scripts/check_rules.py` enforces L-1 … L-11 and warns on L-12, plus B-9, B-11,
+B-11a, B-14, B-15 and S-4, image paths, unresolved cross-references and step
+counts. Run it before every committee review.
 
 L-8 … L-11 are the *lintable corner* of the voice rules — fixed phrases only.
 L-12 is only partly lintable. `check_rules.py` **warns** on a list item that ends
