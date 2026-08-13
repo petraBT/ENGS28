@@ -24,13 +24,18 @@ six-field list enumerated four times in ten minutes all reached her first.
 **A draft does not reach Petra until the committee has run and its list is
 applied.** That is a gate, not a recommendation.
 
+**And the unit is delivered twice** (Petra, 2026-08-13): the book first, and the
+deck only after she has passed it — so there are two committee gates, one before
+each delivery. See `CHAPTER_PROCESS.md`.
+
 | When | Who | Reviewing |
 | --- | --- | --- |
 | **Gate 1** — after the lesson plan | the Gate 1 panel | `plans/dayNN.md` **and the outline** |
 | **Gate 1.5** — the voice probe | `checker-voice` alone | the **first** subsection of prose, as soon as it exists |
-| **Gate 2** — before Petra | the standing core + rotators, then the synthesizer | the whole unit, prose and deck |
+| **Gate 2** — before Petra's pass 1 | the standing core + rotators, then the synthesizer | **the book** — prose, activities, figures |
+| **Gate 3** — before Petra's pass 2 | the slide-facing panel, then the synthesizer | **the deck** — `<slide>` blocks and the deck JSON, against the prose she passed |
 
-Three rules about scheduling, all learned the expensive way:
+Four rules about scheduling, all learned the expensive way:
 
 **Run it early, on the outline — not once at the end on 3,700 lines.** A
 committee that first sees a finished chapter can only ask for rewrites. Gate 1
@@ -41,6 +46,11 @@ entire read path, and three reviewers found it at a cost of one page.
 first subsection it is wrong in all of them, and a sweep at the end produces a
 chapter that is half hers — worse than either. Run `checker-voice` on one section
 of prose before writing the rest.
+
+**Nothing is reviewed against prose she has not passed.** Slides are condensed
+from her post-pass text, so Gate 3 is the first time a reviewer sees a slide.
+Day 10's deck was built from a draft she then hand-rewrote, and twenty-two slides
+inherited wording she had already replaced.
 
 **Scope the expensive reviewers, and start them first.** The three `checker-*`
 agents cost roughly 100–180k tokens each on one day's material — see the cost
@@ -123,21 +133,39 @@ expert-class-logistics, learner-firstgen-novice, learner-anxious-nonhardware
 checker-voice
 ```
 
-**Gate 2 — the standing core (10 + synthesizer).** These earned their place by
-finding defects nothing else caught:
+**Gate 2 — the book's standing core (9 + synthesizer).** These earned their place
+by finding defects nothing else caught:
 
 ```
 checker-technical-accuracy    wrong code, wrong registers, wrong arguments   [scope per Part]
 checker-voice                 register; reuse of her existing wording
 checker-figure-claims         caption vs. what is in the image
-learner-in-the-room           what each slide adds; slides that shouldn't exist
 expert-cognitive-load         load per part, and the repetition census
 expert-continuity-auditor     forward refs, deferred topics, downstream fit
 expert-class-logistics        whether the hour actually works
-learner-visual                figure coverage, annotations, legibility, layout
+learner-visual                figure coverage, annotations, legibility
 learner-firstgen-novice       unexplained jargon, unreachable crucial step
 learner-anxious-nonhardware   no diagnostic path, no way back in
 ```
+
+`learner-in-the-room` is **not** in this core: it walks a deck, and at Gate 2
+there is no deck. It leads Gate 3 instead.
+
+**Gate 3 — the deck's panel (6 + synthesizer)**, on the `<slide>` blocks, the
+deck JSON and the prose they condense, together:
+
+```
+learner-in-the-room           what each slide adds; slides that can't be used from the wall
+checker-voice                 slides vs. the paragraph they condense — the only check on Step 5b
+checker-figure-claims         slide titles and captions vs. what is in the image
+learner-visual                legibility at projection size; a letterboxed figure gone small
+expert-cognitive-load         the repetition census across the projected hour
+expert-class-logistics        whether the deck's arc survives 65 real minutes
+```
+
+Give `checker-voice` **both** texts at Gate 3. Her hand pass reaches the slides
+and the deck and stops at the paragraph margin — or the reverse — and the drift
+is only visible when the two are read side by side.
 
 **Rotators — add when the chapter has that character:**
 
