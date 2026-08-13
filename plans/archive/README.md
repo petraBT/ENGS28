@@ -15,3 +15,5 @@ The live prompt is `plans/CHAPTER-GENERATION-PROMPT.md`; the process behind it i
 | `day10-rework-prompt.md` | Day 10's rework after Petra's first read |
 | `day10-slides-prompt.md` | Day 10's slide pass — the source of the Step 5b lessons |
 | `instructor-build-dashboard-prompt.md` | wiring `web-instructor` into the Launchpad; done |
+| `committee-rebuild-prompt.md` | the August 2026 committee rebuild; its results are the roster and the regression suite |
+| `slide-voice-prompt.md` | the one-time voice sweep over eleven decks. It says the S block ends at S-10 and the L block at L-7; both are long past |
