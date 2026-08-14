@@ -14,3 +14,10 @@ cd "$SCRIPT_DIR"
 rm -rf output/web/external/
 
 pretext build web "$@"
+
+# The reading book carries a copy of assets/decks/ too, and PreTeXt copies it
+# verbatim -- so the deck lists beside the STUDENT pages still name every
+# instructor slide, titles and all ("Solution -- blinkyTimerInt.c").  The pages
+# have the answers stripped; the deck list is a separate pipeline and does not.
+# Same fix the student deck build already uses.
+python3 scripts/filter_student_decks.py output/web

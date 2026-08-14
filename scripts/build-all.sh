@@ -39,6 +39,12 @@ for t in "${TARGETS[@]}"; do
         ./scripts/build-deck.sh
         continue
     fi
+    # The reading book ships a copy of the deck lists as well, and they name
+    # every instructor slide unless filtered. build.sh owns that pairing.
+    if [ "$t" = "web" ]; then
+        ./build.sh
+        continue
+    fi
     # See build.sh: stale external/ copies can be read-only and break the copy.
     rm -rf "output/$t/external/"
     pretext build "$t"

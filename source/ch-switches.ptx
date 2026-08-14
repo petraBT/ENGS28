@@ -922,6 +922,61 @@ while (1) {
                     </p>
                 </task>
             </activity>
+
+            <instructor xml:id="inst-day3-pause">
+                <p>
+                    The pause/resume exercise, on top of <c>blinkyCNT.c</c>.  The
+                    counter is on PA5–PA7 already; what is new is that the button
+                    lives on port B, so GPIOB needs its own clock, its input mode
+                    and its pull-up.  Pausing itself is one line: while the pin
+                    reads LOW, stay put.
+                </p>
+                <program language="c"><code><![CDATA[
+#include "ES28.h"
+#define GPIOAEN    (1U<<0)
+#define GPIOBEN    (1U<<1)          // the button is on port B, so its clock too
+#define LED1_BIT   5
+#define LED_PIN1   (1U<<LED1_BIT)
+#define LED_PIN2   (1U<<(LED1_BIT+1))
+#define LED_PIN3   (1U<<(LED1_BIT+2))
+#define LED_ALL    (LED_PIN1 | LED_PIN2 | LED_PIN3)
+#define BUTTON_PIN (1U<<4)          // PB4 / D5
+
+int main(void) {
+    RCC->IOPENR |= (GPIOAEN | GPIOBEN);
+    GPIOA->MODER |= (1U<<10)|(1U<<12)|(1U<<14);        // PA5,6,7 outputs
+    GPIOA->MODER &= ~(1U<<11) & ~(1U<<13) & ~(1U<<15);
+    GPIOB->MODER &= ~(1U<<8) & ~(1U<<9);               // PB4 input
+    GPIOB->PUPDR |= (1U<<8);                           // PB4 pull-up
+    GPIOB->PUPDR &= ~(1U<<9);
+    while (1) {
+        for (unsigned count = 0; count < 8; count++) {
+            GPIOA->ODR &= ~LED_ALL;
+            GPIOA->ODR |= count << LED1_BIT;
+            delay_ms(500);
+            while ((GPIOB->IDR & BUTTON_PIN) == 0);    // held: wait here
+        }
+    }
+    return 1;
+}
+]]></code></program>
+                <p>
+                    Two things worth saying out loud when this one goes up.  The
+                    pause is <em>level</em>-triggered — it holds while the button
+                    is down and resumes when it comes up — so no edge detection is
+                    needed and no bounce is visible, which is why this exercise
+                    comes before <c>toggleLED.c</c> rather than after it.  And
+                    the wait is a blocking loop: the program can do nothing else
+                    while a finger is on the button.  That is exactly the
+                    structure Part 4 of Day 4 replaces with a state machine, and
+                    the one Day 9 replaces with an interrupt.
+                </p>
+                <p>
+                    The homework, <c>toggleLED.c</c>, has its solutions already:
+                    the edge-detected version on Day 3X and both of the structures
+                    students bring in on Day 4.
+                </p>
+            </instructor>
         </subsection>
 
     </section>
@@ -1742,6 +1797,50 @@ while (1) {
                     </p>
                 </task>
             </activity>
+
+            <instructor xml:id="inst-day4-fsm-diagrams">
+                <p>
+                    <term>The 3-state cycling FSM.</term>  Three states, one per
+                    pattern, and one event.
+                </p>
+                <p><ul>
+                    <li><em>States:</em> PATTERN_A, PATTERN_B, PATTERN_C.</li>
+                    <li><em>Event:</em> a button <em>press</em> — the moment the
+                        pin goes LOW, not the fact that it is LOW.</li>
+                    <li><em>Actions:</em> on A→B write pattern B to
+                        <c>GPIOA-&gt;ODR</c>; on B→C write pattern C; on C→A write
+                        pattern A.  The action is on the transition, and each of
+                        the three arrows carries a different one.</li>
+                </ul></p>
+                <p>
+                    <term>The catch, and it is the whole point of the second
+                    task.</term>  Three states are only enough if the event really
+                    is <q>a press</q>.  A pin does not give you a press; it gives
+                    you a level, and turning a level into an edge is itself the
+                    two-state machine from Part 2.  So a working cycling FSM is
+                    either six states — each pattern with a <q>button still
+                    down</q> twin — or three pattern states running alongside the
+                    Unpressed/Pressed machine that supplies the edge.  A student
+                    who draws three states and no release arrow has drawn a
+                    machine that advances the pattern thousands of times per
+                    press; ask what happens while the finger is still down.
+                </p>
+                <p>
+                    <term>The pause/resume counter.</term>  Two states, RUNNING
+                    and PAUSED, with the same press event flipping between them —
+                    and the same edge problem, so four states in practice.
+                </p>
+                <p>
+                    <term>How the two differ,</term> which is the question worth
+                    landing: in the cycling FSM the work happens <em>on the
+                    transitions</em> — each arrow writes a pattern and then
+                    nothing happens until the next press.  In the pause/resume
+                    counter the work happens <em>in a state</em>: RUNNING keeps
+                    counting for as long as it is the current state, and the
+                    transitions do nothing but start and stop it.  Same diagram
+                    shape, opposite placement of the action.
+                </p>
+            </instructor>
         </subsection>
 
         <!-- ── Part 4: Implementing State Machines (≈30 min) ───── -->
@@ -1786,6 +1885,98 @@ while (1) {
                     </p>
                 </task>
             </activity>
+
+            <instructor xml:id="inst-day4-fsm-code">
+                <p>
+                    The pause/resume counter as a state machine.  Four states,
+                    because the two that matter — counting or not — each need a
+                    twin that means <q>and the button is still down</q>; that twin
+                    is what makes one physical press produce exactly one change.
+                    The counter runs in the two RUN states and stops in the two
+                    PAUSE ones.
+                </p>
+                <program language="c"><code><![CDATA[
+#include "ES28.h"
+#define GPIOAEN    (1U<<0)
+#define GPIOBEN    (1U<<1)
+#define LED1_BIT   5
+#define LED_PIN1   (1U<<LED1_BIT)
+#define LED_PIN2   (1U<<(LED1_BIT+1))
+#define LED_PIN3   (1U<<(LED1_BIT+2))
+#define LED_ALL    (LED_PIN1 | LED_PIN2 | LED_PIN3)
+#define BUTTON_PIN (1U<<4)          // PB4 / D5
+
+typedef enum { RUN, RUN_HELD, PAUSE, PAUSE_HELD } state_t;
+
+int main(void) {
+    state_t  state = RUN;
+    unsigned count = 0, buttonPushed;
+
+    RCC->IOPENR |= (GPIOAEN | GPIOBEN);
+    GPIOA->MODER |= (1U<<10)|(1U<<12)|(1U<<14);        // PA5,6,7 outputs
+    GPIOA->MODER &= ~(1U<<11) & ~(1U<<13) & ~(1U<<15);
+    GPIOB->MODER &= ~(1U<<8) & ~(1U<<9);               // PB4 input
+    GPIOB->PUPDR |= (1U<<8);                           // PB4 pull-up
+    GPIOB->PUPDR &= ~(1U<<9);
+
+    while (1) {
+        // Half a second, read fifty times instead of once: delay_ms(500) would
+        // spend the whole interval unable to see the button.
+        for (unsigned slice = 0; slice < 50; slice++) {
+            buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0);
+            switch (state) {
+                case RUN:
+                    if (buttonPushed)  state = PAUSE_HELD;  // stops immediately
+                    break;
+                case PAUSE_HELD:
+                    if (!buttonPushed) state = PAUSE;       // finger lifted
+                    break;
+                case PAUSE:
+                    if (buttonPushed)  state = RUN_HELD;
+                    break;
+                case RUN_HELD:
+                    if (!buttonPushed) state = RUN;
+                    break;
+            }
+            delay_ms(10);
+        }
+        if (state == RUN || state == RUN_HELD) {
+            count = (count + 1) % 8;
+            GPIOA->ODR &= ~LED_ALL;
+            GPIOA->ODR |= count << LED1_BIT;
+        }
+    }
+    return 1;
+}
+]]></code></program>
+                <p>
+                    <term>What the third task finds.</term>  With the debounce
+                    capacitor fitted, one press gives one state change and the
+                    scope shows a single clean transition.  Without it, a press
+                    can bounce across two reads 10 ms apart and the counter
+                    pauses and resumes again inside one press — visible as a
+                    missed pause rather than as a double count, which is why it is
+                    worth watching the LEDs and the trace together.
+                </p>
+                <p>
+                    <term>Why the delay is sliced.</term>  A student who keeps
+                    <c>delay_ms(500)</c> and puts the switch after it has built
+                    something that reads the button twice a second, so a normal
+                    press lands in the gap and does nothing at all.  That is the
+                    right thing to have happen once — it is the same defect Day 9
+                    opens with, and the same fix is not available yet.  Slicing
+                    the wait is the Day 4 answer; an interrupt is the Day 9 one.
+                </p>
+                <p>
+                    The stretch — a second button that resets the counter from
+                    either state — does not add states.  It adds one event and two
+                    self-transitions, one on RUN and one on PAUSE, each with the
+                    action <c>count = 0</c>; the machine returns to the state it
+                    was already in.  A student who adds three more states for it
+                    has found the real lesson the hard way, and it is worth
+                    drawing both on the board.
+                </p>
+            </instructor>
         </subsection>
 
         <!-- ── Part 5: Lab 2 Introduction (≈15 min) ────────────── -->
