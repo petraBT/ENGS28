@@ -67,6 +67,8 @@ assets/
   decks/           Deck playlists (<id>.json) + index.json
   starters/        Real driver and starter .c files handed to students
   sim-starters/    Per-exercise starter .c files loaded by <sim starter="…"/>
+  datasheets/      Component datasheets for the Day 5X worksheet — TMP235,
+                   DS3231, DRV5053, LIS3DH, Si7021 (external/datasheets/…)
   Labs/            Lab PDFs — the downstream constraint on each chapter
   board-sim/       BUILT output of the board simulator — do not edit by hand;
                    refresh with scripts/sync-board-sim.sh
@@ -91,7 +93,8 @@ output/            Built targets (git-ignored)
 
 **Hosted reference PDFs** (in `assets/`, linked as `external/filename.pdf`):
 `stm32c031_rm.pdf`, `stm32c031_datasheet.pdf`, `nucleo_user_manual.pdf`,
-`nucleo_schematic.pdf`, `nucleo_pinout.pdf`.
+`nucleo_schematic.pdf`, `nucleo_pinout.pdf`. Component datasheets live in
+`assets/datasheets/` and link as `external/datasheets/<name>.pdf`.
 
 ---
 

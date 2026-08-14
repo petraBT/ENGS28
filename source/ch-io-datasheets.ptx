@@ -372,6 +372,120 @@
                     about halfway through.
                 </p>
             </instructor>
+
+            <instructor xml:id="inst-datasheet-key">
+                <p>
+                    Parts A–D, for the five components whose datasheets are in
+                    the repository (<c>assets/datasheets/</c>).  Every number
+                    below is cited to the table it came from, because that is the
+                    habit Part A–D is teaching and the tables move between
+                    revisions.
+                </p>
+                <p>
+                    <term>Part A2 and A3 at a glance.</term>  Every one of the
+                    five accepts 3.3 V, which is the answer to A2 in each case —
+                    but the interesting column is the last one, because two of
+                    these parts are destroyed by 5 V and three are not.
+                </p>
+                <tabular top="major" left="minor" bottom="minor">
+                    <row bottom="major">
+                        <cell>Part</cell><cell>Supply range (A2)</cell>
+                        <cell>Absolute max supply (A3)</cell><cell>Survives 5 V?</cell>
+                    </row>
+                    <row><cell>TMP235</cell><cell>2.3–5.5 V (§6.3)</cell>
+                        <cell>+6 V (§6.1)</cell><cell>yes</cell></row>
+                    <row><cell>DS3231</cell><cell>2.3–5.5 V (Recommended Operating Conditions)</cell>
+                        <cell>−0.3 to +6.0 V on any pin</cell><cell>yes</cell></row>
+                    <row><cell>DRV5053-Q1</cell><cell>2.7–38 V (§6.3)</cell>
+                        <cell>−22 to +40 V (§6.1)</cell><cell>yes, easily</cell></row>
+                    <row><cell>Si7021-A20</cell><cell>1.9–3.6 V (Table 1)</cell>
+                        <cell>+4.2 V (Table 7)</cell><cell><em>no</em></cell></row>
+                    <row bottom="major"><cell>LIS3DH</cell><cell>1.71–3.6 V (Table 6)</cell>
+                        <cell>+4.8 V (Table 9)</cell><cell><em>no</em></cell></row>
+                </tabular>
+                <p>
+                    That column is worth making the room say out loud.  A student
+                    who has only ever seen 5 V parts will reach for the 5 V rail
+                    out of habit, and on two of these five that is a destroyed
+                    component rather than a wrong reading.  It is also the reason
+                    the Absolute Maximum table is a separate question from the
+                    Recommended Operating Conditions table: the first says what
+                    kills it, the second says where it works.
+                </p>
+                <p>
+                    <term>Part C2, supply current.</term>  None of the five comes
+                    close to the 25 mA a GPIO pin can source, so the answer to
+                    <q>does that rule out powering it from a pin</q> is no in
+                    every case: TMP235 9 µA typical (§6.5), LIS3DH 11 µA in
+                    normal mode at 50 Hz (Table 6), Si7021 150 µA while
+                    converting but <em>4 mA peak</em> during power-up and I2C
+                    activity (Table 2), DS3231 200 µA active at 3.63 V, and
+                    DRV5053 2.7 mA typical (§6.5) — the largest of the five, and
+                    still a tenth of the budget.  The honest follow-up is that
+                    <q>it fits</q> is not the same as <q>it is a good idea</q>:
+                    the Si7021's peak is fifteen times its running current, and
+                    a pin that also has to stay at a clean logic level is not the
+                    place to put that.
+                </p>
+                <p>
+                    <term>Part C, worked for the analog branch: the TMP235.</term>
+                    The transfer function is in §6.5: the sensor gain is
+                    10 mV/°C and the output at 0 °C is 500 mV, both for the
+                    TMP235 specifically — the TMP236 in the same document is
+                    19.5 mV/°C and 400 mV, which is the first place a table
+                    reader goes wrong.  So
+                </p>
+                <program language="c"><code><![CDATA[
+V_OUT(mV)  =  500  +  10 x T(degC)          T(degC)  =  (V_OUT(mV) - 500) / 10
+]]></code></program>
+                <p>
+                    At the ends of the −40 °C to +150 °C range that is 100 mV and
+                    2.000 V, so the whole output swing sits inside our 3.3 V ADC
+                    range with room to spare and needs no divider.  It is linear:
+                    §6.5 gives output nonlinearity as ±0.5 °C, which is a
+                    deviation from the straight line rather than a curve to look
+                    up.  One count of our 12-bit ADC is 3.3 V / 4096 = 0.806 mV,
+                    which is 0.08 °C — the converter is roughly thirty times
+                    finer than the sensor's own ±2.5 °C accuracy, and that
+                    comparison is the one worth drawing.
+                </p>
+                <p>
+                    <term>Part C, worked for the I2C branch: the Si7021.</term>
+                    §5 gives the 7-bit base address as <c>0x40</c>, and Table 10
+                    shows all seven bits fixed — there are no address pins, so
+                    two of these cannot share a bus.  Contrast the LIS3DH, whose
+                    address is <c>0011000b</c> with the SDO/SA0 pin selecting the
+                    low bit: 0x18 with SA0 grounded, 0x19 with it tied to the
+                    supply (§6.1.1), which is exactly the <q>list the possible
+                    addresses</q> the worksheet asks for.  The DS3231's is
+                    <c>1101000b</c>, 0x68, fixed.
+                </p>
+                <p>
+                    <term>Part D, the code question.</term>  For an analog part
+                    it is the conversion: the ADC gives a count, and something
+                    has to turn it into millivolts and then into °C or mT.  For a
+                    digital part it is a command sequence — the Si7021 needs
+                    <q>measure temperature</q> (0xE3 or 0xF3, Table 11) sent
+                    before anything can be read back, and the 16-bit code that
+                    comes back is not a temperature until it has been through the
+                    equation in §5.1.2.  Both are the same lesson in two
+                    dialects: the number on the wire is never the physical
+                    quantity.
+                </p>
+                <p>
+                    <term>The one that rewards a careful reader: the DRV5053.</term>
+                    Its output is 0.2 V to 1.8 V with about 1 V at zero field
+                    (§6.7), so the quantity it measures is <em>signed</em> — north
+                    and south push the output opposite ways from a 1 V rest
+                    point — while the ADC only ever returns a non-negative count.
+                    A student who reports <q>output 0.2 to 1.8 V</q> and stops has
+                    answered C correctly and missed what makes it hard.  Its
+                    sensitivity is also not one number: the part comes in
+                    variants from −11 to −90 mV/mT (and two positive ones), so
+                    <q>the sensitivity</q> depends on which suffix is printed on
+                    the package in front of them.
+                </p>
+            </instructor>
         
 
             <slide xml:id="sl-datasheet-assign">
