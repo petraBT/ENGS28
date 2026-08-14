@@ -909,6 +909,66 @@ GPIOB->ODR |= GPIO_ODR_OD5;                  // drive PB5 high
                 </tabular>
             </activity>
 
+            <instructor xml:id="inst-bjt-datasheets">
+                <p>
+                    The filled table, from the datasheets in
+                    <c>assets/datasheets/</c>.
+                </p>
+                <tabular top="major" left="minor" bottom="minor">
+                    <row bottom="major">
+                        <cell>Part</cell><cell>Type</cell>
+                        <cell>h_FE minimum</cell><cell>Max continuous I_C</cell>
+                    </row>
+                    <row><cell>KSC2073</cell><cell>NPN</cell>
+                        <cell>40 (at V_CE = 10 V, I_C = 0.5 A; typ 75, max 140)</cell>
+                        <cell>1.5 A</cell></row>
+                    <row><cell>TIP42</cell><cell>PNP</cell>
+                        <cell>30 (at I_C = 0.3 A); 15 (at I_C = 3.0 A)</cell>
+                        <cell>6.0 A</cell></row>
+                    <row><cell>2N3906</cell><cell>PNP</cell>
+                        <cell>60 at 0.1 mA, 80 at 1 mA, 100 at 10 mA, 60 at 50 mA, 30 at 100 mA</cell>
+                        <cell>200 mA</cell></row>
+                    <row bottom="major"><cell>2N3904</cell><cell>NPN</cell>
+                        <cell>40 at 0.1 mA, 70 at 1 mA, 100 at 10 mA, 60 at 50 mA, 30 at 100 mA</cell>
+                        <cell>200 mA</cell></row>
+                </tabular>
+                <p>
+                    <term>The table is a trap, and the trap is the lesson.</term>
+                    The worksheet says to record <q>the minimum</q>, and for two
+                    of these four there is no such number: the 2N3904's minimum
+                    gain is 100 at 10 mA and 30 at 100 mA, so a design that
+                    switches 100 mA and assumed 100 has three times less base
+                    drive than it needs.  <em>Gain is specified at a collector
+                    current, and the one that matters is the current you are
+                    actually switching.</em>  Ask which row of the table each
+                    group used before letting them read the number out.
+                </p>
+                <p>
+                    Worth doing on the board once the table is up, because it is
+                    Lab 3 in one line: driving 100 mA through a 2N3904 at its
+                    worst-case gain of 30 needs a base current of at least
+                    100 mA / 30 = 3.3 mA, and a GPIO pin at 3.3 V through a base
+                    resistor has to supply it — with V_BE about 0.7 V, that is a
+                    resistor no larger than (3.3 − 0.7) / 3.3 mA = 790 Ω, so the
+                    familiar 1 kΩ is already marginal and 10 kΩ is not a switch
+                    at all.  Design at the minimum gain and the part works;
+                    design at the typical and it works on the bench and fails in
+                    the box.
+                </p>
+                <p>
+                    <term>Two notes on the parts themselves.</term>  The TIP41
+                    and TIP42 share one datasheet — TIP41 is the NPN and TIP42
+                    the PNP, and the gain and current ratings quoted above are
+                    common to both, so a group holding either can fill the row.
+                    And the 2N3904 and 2N3906 datasheets each cover three
+                    packages (TO-92, SOT-23, SOT-223): the current and gain
+                    numbers are the same across them, but the power dissipation
+                    is not — 625 mW for the TO-92 against 1000 mW for the
+                    SOT-223 — which is a good answer to <q>what else on this page
+                    would bite you.</q>
+                </p>
+            </instructor>
+
             <activity xml:id="act-mosfet-datasheets">
                 <title>MOSFET Datasheets</title>
                 <p>
@@ -927,12 +987,73 @@ GPIOB->ODR |= GPIO_ODR_OD5;                  // drive PB5 high
                         <cell>Threshold voltage <m>V_{th}</m></cell>
                         <cell>Max drain current</cell>
                     </row>
-                    <row><cell>IRF9Z24</cell><cell></cell><cell></cell><cell></cell></row>
+                    <row><cell>IRF9Z24N</cell><cell></cell><cell></cell><cell></cell></row>
                     <row><cell>BS250P</cell><cell></cell><cell></cell><cell></cell></row>
-                    <row><cell>IRFZ24</cell><cell></cell><cell></cell><cell></cell></row>
+                    <row><cell>IRFZ24N</cell><cell></cell><cell></cell><cell></cell></row>
                     <row><cell>BS107P</cell><cell></cell><cell></cell><cell></cell></row>
                 </tabular>
             </activity>
+
+            <instructor xml:id="inst-mosfet-datasheets">
+                <p>
+                    The filled table.  Threshold voltage is
+                    <c>V_GS(th)</c> on all four datasheets.
+                </p>
+                <tabular top="major" left="minor" bottom="minor">
+                    <row bottom="major">
+                        <cell>Part</cell><cell>Type</cell>
+                        <cell>V_GS(th)</cell><cell>Max continuous I_D</cell>
+                    </row>
+                    <row><cell>IRF9Z24N</cell><cell>P-channel</cell>
+                        <cell>−2.0 V to −4.0 V</cell>
+                        <cell>−12 A at 25 °C (−8.5 A at 100 °C)</cell></row>
+                    <row><cell>BS250P</cell><cell>P-channel</cell>
+                        <cell>−1 V to −3.5 V</cell><cell>−230 mA</cell></row>
+                    <row><cell>IRFZ24N</cell><cell>N-channel</cell>
+                        <cell>2.0 V to 4.0 V</cell>
+                        <cell>17 A at 25 °C (12 A at 100 °C)</cell></row>
+                    <row bottom="major"><cell>BS107P</cell><cell>N-channel</cell>
+                        <cell>1.0 V to 3.0 V</cell><cell>120 mA</cell></row>
+                </tabular>
+                <p>
+                    <term>The signs first,</term> because that is what the
+                    worksheet asks them to watch.  Both P-channel parts have a
+                    negative threshold: the gate has to go <em>below</em> the
+                    source to turn them on, which is why a P-channel switch goes
+                    in the high side with its source at the supply, and why a
+                    3.3 V GPIO cannot drive one whose source sits at 12 V.
+                </p>
+                <p>
+                    <term>Then the thing the table does not have a column for.</term>
+                    <c>V_GS(th)</c> is where the device begins to conduct, not
+                    where it is on.  The IRFZ24N's 0.07 Ω on-resistance is
+                    specified at <c>V_GS = 10 V</c>, and its threshold is
+                    <em>as high as 4.0 V</em> — so a 3.3 V GPIO is not
+                    guaranteed to turn this part on at all, and if it does, it is
+                    somewhere on the curve rather than fully enhanced.  Same for
+                    the IRF9Z24N at −10 V.  None of these four is a logic-level
+                    MOSFET.  That is the entire reason the lab drives its gate
+                    from something other than a pin, and it is worth saying while
+                    the four rows are on the screen rather than when a motor
+                    fails to turn.
+                </p>
+                <p>
+                    The BS107P is the interesting exception to look at next to
+                    it: its on-resistance is specified at
+                    <c>V_GS = 2.6 V</c>, which a 3.3 V pin does clear — but it
+                    is 23 Ω, so it will pass a small signal and never a motor.
+                    Low threshold and high on-resistance is the trade the small
+                    packages make, and the current column says the same thing:
+                    120 mA against the IRFZ24N's 17 A.
+                </p>
+                <p>
+                    This is the same worst-case lesson as the BJT table one
+                    activity earlier, in the MOSFET's dialect: there, gain is
+                    quoted at a collector current and you must design at the
+                    minimum; here, on-resistance is quoted at a gate voltage and
+                    you must design at the threshold's maximum.
+                </p>
+            </instructor>
         </subsection>
 
     </section>

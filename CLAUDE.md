@@ -67,8 +67,10 @@ assets/
   decks/           Deck playlists (<id>.json) + index.json
   starters/        Real driver and starter .c files handed to students
   sim-starters/    Per-exercise starter .c files loaded by <sim starter="…"/>
-  datasheets/      Component datasheets for the Day 5X worksheet — TMP235,
-                   DS3231, DRV5053, LIS3DH, Si7021 (external/datasheets/…)
+  datasheets/      Component datasheets, linked as external/datasheets/<name>.pdf.
+                   Day 5X worksheet: TMP235, DRV5053, DS3231, LIS3DH, Si7021.
+                   Day 6 transistor tables: KSC2073, TIP41A (covers TIP42),
+                   PZT3904, PZT3906, IRFZ24N, IRF9Z24N, BS107P, BS250P
   Labs/            Lab PDFs — the downstream constraint on each chapter
   board-sim/       BUILT output of the board simulator — do not edit by hand;
                    refresh with scripts/sync-board-sim.sh
