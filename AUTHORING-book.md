@@ -362,6 +362,19 @@ benches** — each student carries a portable equipment kit (a <q>suitcase</q>)
 and works on their own laptop. Never write "bench", "at your bench", or "lab
 station".
 
+
+**Which components a hands-on activity uses is one of these facts, and it is
+the one that has actually shipped wrong.** The Day 5X datasheet worksheet
+listed four parts that nobody had ever handed out — Petra, 2026-08-14: *"the
+ones in the class slides were made up by the AI."* The failure is worth naming
+because the invented list was *plausible*: it named parts the course really
+does use, just not there. Her actual list excludes the LSM303AGR and the
+photocell **on purpose**, because those are studied later and the activity is
+built on meeting an unfamiliar part. So a component list cannot be derived from
+what the course teaches elsewhere, in either direction — ask, and when the
+answer has a reason behind it, write the reason into the source as a comment so
+the next pass does not helpfully restore the plausible version.
+
 ### B-11d No unsupported claims about what is common
 
 "The most frequent mistake", "students usually", "this always trips people up" —
