@@ -4,15 +4,11 @@
     <introduction>
         <p>
             Motors convert electrical energy into mechanical motion and are the most
-            common actuators in embedded systems.  Controlling a DC motor from an MCU
-            requires two capabilities: switching the direction of current through the
-            motor (which requires more voltage and current than a GPIO pin can supply),
-            and varying motor speed.  Speed control is harder than it sounds — a GPIO
-            output can only be fully on (3.3 V) or fully off (0 V), with nothing in
-            between, but the motor needs intermediate average voltages to run at
-            intermediate speeds.  This chapter covers the H-bridge circuit for
-            direction control and Pulse-Width Modulation (PWM) as the solution to
-            the speed control problem.
+            common actuators in embedded systems.  Controlling a DC motor from a
+            microcontroller means switching the direction of the current through the
+            motor and varying the motor's speed — neither of which the microcontroller
+            can do on its own.  This chapter covers the H-bridge circuit for direction
+            control and Pulse-Width Modulation (PWM) for speed control.
         </p>
         <objectives>
             <ul>
@@ -65,8 +61,8 @@
                 The second is that a spinning motor also generates a voltage.  A
                 coil moving through a magnetic field generates a voltage of its own, and
                 a spinning motor is exactly that: it acts as a small generator, producing
-                a voltage that opposes the supply and grows with speed.  We call this the
-                <term>back-EMF</term> (back electromotive force).  At steady speed the
+                a voltage that opposes the supply and is proportional to speed.  We call
+                this the <term>back-EMF</term> (back electromotive force).  At steady speed the
                 supply voltage, the back-EMF, and the resistance of the coils balance
                 out, and so the steady speed is roughly proportional to the voltage
                 across the motor's terminals.
@@ -90,7 +86,9 @@
                 the crossbar of the H.  The two upper switches connect to the motor's
                 supply and the two lower ones to ground, so closing one diagonal pair of
                 switches sends current through the motor one way, and closing the other
-                diagonal pair sends it the other way.</caption>
+                diagonal pair sends it the other way.  (The sketch labels the supply rail
+                <q>Motor VCC</q>; the rest of this chapter calls that rail VM, the motor
+                supply, to keep it distinct from the driver's 3.3 V logic supply, VCC.)</caption>
                 <image source="images/Day11-Motors/slide09_f985348c.png" width="60%"/>
             </figure>
 
@@ -109,17 +107,16 @@
                 P-channel switches we met on Day 6.  Closing one diagonal pair of them
                 sends current through the motor in one direction; closing the other
                 diagonal pair reverses the current, and with it the direction of
-                rotation.  There is also a useful third setting: connect both motor
-                terminals to the same rail, and the spinning motor's own back-EMF is
-                shorted out, which brakes it.  We will work out in class exactly which
-                switches to close for each of these.
+                rotation.  There is also a useful third setting that brakes the motor.
+                We will work out in class exactly which switches to close for each of
+                these, and why braking works.
             </p>
             <p>
                 The driver IC we use in this course is the <term>TB6612FNG</term>.  The
                 STM32C031C6 controls it with a few logic-level signals — two inputs that
                 choose the direction (or braking), and a PWM input that sets the speed —
                 while the motor itself runs from its own power supply.  That separation
-                is the whole point of the driver: our 3.3 V logic decides what the motor
+                is the point of the driver: our 3.3 V logic decides what the motor
                 should do, and the driver switches the motor's larger voltage and
                 current to make it happen.
             </p>
@@ -357,10 +354,11 @@
             <p>
                 Two stages of that chain are new, and they are what this chapter is about:
                 the <term>driver</term>, which we meet as the TB6612 motor driver IC, and
-                the converter, which on our chip is a PWM signal rather than a true DAC.
-                The reading gave the two facts we will lean on all hour: a motor's
-                direction is set by the polarity of its voltage, and its speed by the
-                average value of that voltage.
+                the converter, which on our chip is a PWM signal rather than a true
+                <term>DAC</term> (digital-to-analog converter, the counterpart of the ADC
+                from Day 7).  The reading gave the two facts we will lean on all hour: a
+                motor's direction is set by the polarity of its voltage, and its speed by
+                the average value of that voltage.
             </p>
             <activity xml:id="act-day11-recap">
                 <title>Recall: voltage and the motor</title>
@@ -385,8 +383,8 @@
                 proportional to the terminal voltage.  Swapping the terminals reverses the
                 polarity, which reverses the current and the force, so the direction
                 reverses while the speed — set by the size of the voltage, which has not
-                changed — stays the same.  These are the two knobs the rest of the hour
-                builds hardware for.</p>
+                changed — stays the same.  These are the two knobs we spend the rest of the
+                hour building hardware for.</p>
             </instructor>
         </subsection>
 
@@ -469,24 +467,31 @@
         <subsection xml:id="subsec-day11-tb6612">
             <title>Part 3: The TB6612 Driver and Its Truth Table</title>
             <p>
-                We do not wire the four switches ourselves.  The TB6612 packages two
-                complete H-bridges, the switches themselves, and the logic that prevents
-                shoot-through onto one small breakout board, and exposes each bridge
-                through a handful of logic-level pins the STM32C031C6 can drive directly.
+                The <term>TB6612</term> packages two complete H-bridges — the switches
+                themselves and the logic that prevents shoot-through — onto one small
+                <term>breakout board</term>, a circuit board with the chip already soldered
+                down and its pins brought out to header pins we can wire by hand.  It
+                exposes each bridge through a few logic-level pins, driven at the ordinary
+                0 V and 3.3 V logic levels the STM32C031C6 puts out, so we never wire the
+                four switches ourselves.  Each bridge can pass roughly 1.2 A to its motor;
+                draw much more than that and the chip protects itself by shutting down until
+                it cools.
             </p>
             <figure xml:id="fig-tb6612-internal">
-                <caption>Inside the TB6612, for one motor channel.  Three logic inputs —
-                IN1, IN2, and PWM — pass through control logic that drives the four switch
-                gates; the switches connect the two outputs (OUT1, OUT2) to the motor
-                supply VM or to ground.  The motor's large current flows only in the output
-                half; the input side is ordinary 3.3 V logic.</caption>
+                <caption>Inside the TB6612 — the full chip, which holds two independent
+                motor channels, A and B.  This course uses channel A: its three logic
+                inputs, labeled AIN1, AIN2, and PWMA on the breakout (the IN1, IN2, and PWM
+                of the text), pass through the control logic that drives the four switch
+                gates, and the switches connect channel A's two outputs (AO1, AO2) to the
+                motor supply VM or to ground.  The motor's large current flows only in the
+                output half; the input side is ordinary 3.3 V logic.</caption>
                 <image source="images/Day11-Motors/slide15_d0880cf7.png" width="70%"/>
             </figure>
             <p>
                 Two inputs, IN1 and IN2, choose what the bridge does, and a third, PWM,
-                switches it on and off for speed control (Part 5).  A fourth pin, STBY,
-                must be HIGH for the driver to do anything at all; on our breakout it is
-                pulled up already.  How the inputs map to the four modes — clockwise,
+                switches it on and off for speed control (Part 5).  A fourth pin, STBY
+                (standby), must be HIGH for the driver to do anything at all; on our
+                breakout it is pulled up already.  How the inputs map to the four modes — clockwise,
                 counter-clockwise, brake, and stop — is not something to memorize or guess.
                 It is printed in the datasheet.
             </p>
@@ -528,42 +533,83 @@
             <title>Part 4: First Exercise — Direction by Hand</title>
             <p>
                 Now we wire the driver and a motor and drive it directly, with no program
-                yet, to see the truth table come to life.  The motor runs from its own
-                supply: a wall adapter feeds a barrel connector, an L7805 regulator brings
-                that down to a steady 5 V, and that 5 V powers the motor through the
+                yet, to watch the truth table come to life.  The motor needs its own current
+                path and more than the 3.3 V logic can give, so it runs from a separate
+                supply.  A 6–12 V wall adapter plugs into the barrel jack of a small
+                regulator board; on that board an L7805 regulator brings the input down to a
+                steady 5 V and brings it out on a header, and we feed that 5 V to the
                 driver's VM pin.  The driver's logic side, VCC, runs from the Nucleo's
-                3.3 V.  The two supplies share a common ground but are otherwise separate,
-                and that separation matters: the motor and VM sit on the 5 V rail, so a
-                mistake on the motor side does not put 5 V onto the 3.3 V parts of the
-                board.
+                3.3 V.
+            </p>
+            <figure xml:id="fig-tb6612-regulator">
+                <caption>The regulator board that supplies the motor.  A 6–12 V wall adapter
+                plugs into the barrel jack (J1); the L7805 regulator (U1), with its two
+                smoothing capacitors (C1 and C2, 0.22 µF and 0.1 µF), brings that down to a
+                steady 5 V; and each of the two headers (J2 and J4) brings out three pins —
+                5V, GND, and Vin.  Take the motor supply from the <em>5V</em> pin.  The
+                <em>Vin</em> pin is the raw, unregulated 6–12 V input: wiring it to VM would
+                drive the motor at far more than its rated 3–6 V.</caption>
+                <image source="images/Day11-Motors/slide17_img2.png" width="32%"/>
+            </figure>
+            <p>
+                The 5 V motor supply and the 3.3 V logic supply share a common ground — one
+                wire joins the regulator board's GND to the Nucleo's ground — but are
+                otherwise separate.  That separation is worth getting right: the motor and
+                VM sit on the 5 V rail, so as long as no 5 V wire lands on the 3.3 V rail, a
+                mistake on the motor side stays on the motor side and does not reach the
+                3.3 V parts of the board.
             </p>
             <figure xml:id="fig-tb6612-wiring">
-                <caption>The first-exercise circuit: the TB6612 breakout wired to the
-                motor and to power and ground.  For this exercise the PWM pin is held HIGH
-                and the two direction wires, AIN1 and AIN2, are left free so you can move
-                them by hand between the power and ground rails.</caption>
+                <caption>The breakout and motor for the first exercise.  The TB6612 breakout
+                takes the 5 V motor supply at VM (from the regulator board above), the
+                Nucleo's 3.3 V at VCC, and the shared ground; the motor connects to the two
+                channel-A outputs.  For this exercise the PWM pin is held HIGH and the two
+                direction wires, AIN1 and AIN2, are left free, so you can move them by hand
+                between the power and ground rails.</caption>
                 <image source="images/Day11-Motors/slide17_1573fa6d.png" width="75%"/>
             </figure>
+            <!-- FIGURE GAP flagged to Petra at Gate 2: the Fritzing (slide17_1573fa6d)
+                 routes VM from the Nucleo 3V3 pin, not from the regulator's 5 V rail.
+                 Needs Petra's corrected wiring figure (VM fed from the regulated 5 V), and
+                 confirmation that AIN1/AIN2 are shown free rather than already wired. -->
             <activity xml:id="act-day11-direction">
                 <title>Drive the motor's direction by hand</title>
                 <introduction>
-                    <p>Wire the circuit as in <xref ref="fig-tb6612-wiring"/> with the power
-                    off, leaving the AIN1 and AIN2 wires free and the PWM pin tied HIGH.  You
-                    will move AIN1 and AIN2 by hand between the 3.3 V rail (call it
-                    <q>+</q>) and ground (<q>&#8722;</q>).</p>
+                    <p>Build the circuit with the power off first, then power it and move the
+                    direction wires by hand.  Keep the truth table
+                    (<xref ref="fig-tb6612-truth-table"/>), shown again here, in front of
+                    you.</p>
+                    <image source="images/Day11-Motors/slide16_87126f38.png" width="70%"/>
                 </introduction>
+                <task xml:id="task-day11-dir-wire">
+                    <statement><p>With everything unpowered, wire it up: the breakout's VCC
+                    to the Nucleo's 3.3 V; the breakout's VM to the regulator board's 5V pin;
+                    and a common ground joining the Nucleo's ground, the breakout's GND, and
+                    the regulator board's GND.  Connect the motor to the two channel-A
+                    outputs.  Tie the PWM pin HIGH, to the 3.3 V rail, and leave the AIN1 and
+                    AIN2 wires free.</p></statement>
+                </task>
                 <task xml:id="task-day11-dir-predict">
-                    <statement><p>Using the truth table
-                    (<xref ref="fig-tb6612-truth-table"/>), predict the motor's behavior for
-                    each of the four settings of (AIN1, AIN2): (+, +), (+, &#8722;),
-                    (&#8722;, +), and (&#8722;, &#8722;).  Write your four predictions down
-                    before applying power.</p></statement>
+                    <statement><p>You will move AIN1 and AIN2 between the 3.3 V rail (call it
+                    <q>+</q>) and ground (<q>&#8722;</q>).  Using the truth table, predict the
+                    motor's behavior for each of the four settings of (AIN1, AIN2): (+, +),
+                    (+, &#8722;), (&#8722;, +), and (&#8722;, &#8722;).  Write your four
+                    predictions down before applying power.</p></statement>
                 </task>
                 <task xml:id="task-day11-dir-verify">
-                    <statement><p>Apply power and move the AIN1 and AIN2 wires through all
-                    four settings.  Does each match your prediction?  If one does not, check
-                    that wire against the truth table and the wiring figure before moving
-                    on.</p></statement>
+                    <statement><p>Power the circuit — plug the wall adapter into the regulator
+                    board for the motor's 5 V, and connect the Nucleo to your computer over
+                    USB for the 3.3 V logic — then move the AIN1 and AIN2 wires through all
+                    four settings.  Does each match your prediction?  If the motor does
+                    nothing in any of the four settings, check that the regulator's 5 V
+                    actually reaches VM before checking the individual wires; if a single
+                    setting is wrong, check that one wire against the truth table.</p></statement>
+                </task>
+                <task xml:id="task-day11-dir-stretch">
+                    <statement><p>If you finish early: from the truth table, predict what the
+                    motor does if you also move the PWM wire from the 3.3 V rail down to
+                    ground, then try it.  This is a first look at how PWM will control the
+                    motor in Part 5.</p></statement>
                 </task>
             </activity>
             <instructor>
@@ -571,8 +617,11 @@
                 (+, &#8722;) is IN1 HIGH, IN2 LOW, clockwise; (&#8722;, +) is
                 counter-clockwise; and (&#8722;, &#8722;), both LOW, is stop, with the
                 outputs off so the motor coasts.  The two settings where the inputs differ
-                are the two turning diagonals from Part 2; the two settings where they
-                match are the brake and the coast.</p>
+                are the two turning diagonals from Part 2; the two settings where they match
+                are the brake and the coast.  The stretch: with PWM tied LOW, both outputs go
+                LOW whatever the direction inputs say — short brake — so the motor stops
+                turning.  That is the extreme, a 0% duty cycle, of the speed control we build
+                in Part 5.</p>
             </instructor>
         </subsection>
 
@@ -580,18 +629,23 @@
         <subsection xml:id="subsec-day11-pwm">
             <title>Part 5: PWM Sets the Speed</title>
             <p>
-                The H-bridge sets direction; PWM sets speed.  The reading gave the idea:
-                the STM32C031C6 has no true digital-to-analog converter, so rather than
-                hold the motor at some in-between voltage, we switch the full supply on and
-                off quickly and let the <term>duty cycle</term> — the fraction of each
-                period spent HIGH — set the average.  The motor's inertia smooths the
+                The H-bridge sets the motor's direction.  In this part we turn to its
+                speed, which we set with PWM.  The reading showed the difficulty: a GPIO pin
+                is either fully HIGH or fully LOW, with nothing in between, so it cannot hold
+                an in-between voltage.  Nor does the STM32C031C6 have a true DAC to do it for
+                us — the DAC we met on Day 7 lived inside the ADC, making test voltages the
+                program never sees, not a pin we can drive to an analog level.  So rather
+                than hold the motor at some steady in-between voltage, we switch the full
+                supply on and off quickly and let the <term>duty cycle</term> — the fraction
+                of each period spent HIGH — set the average.  The motor's inertia smooths the
                 pulses, and it turns as though driven by that average voltage.
             </p>
             <figure xml:id="fig-pwm-waveform">
-                <caption>PWM at three duty cycles.  The output is a fixed-frequency square
-                wave; the wider the HIGH pulse, the higher the average voltage (dashed line)
-                and the faster the motor.  A 25% duty cycle averages a quarter of the
-                supply, 50% averages half, and 75% averages three quarters.</caption>
+                <caption>PWM at three duty cycles, drawn for a 5 V supply.  The output is a
+                fixed-frequency square wave; the wider the HIGH pulse, the higher the
+                average voltage (dashed line) and the faster the motor.  Here a 75% duty
+                cycle averages 3.75 V, a 50% duty cycle averages 2.5 V, and a 20% duty
+                cycle averages 1 V.</caption>
                 <image source="images/Day11-Motors/slide23_b58b0b83.png" width="75%"/>
             </figure>
             <p>
@@ -605,11 +659,13 @@
                 nothing to keep it going.
             </p>
             <figure xml:id="fig-pwm-counter-compare">
-                <caption>How the timer makes the waveform.  The counter (the rising ramp)
-                counts to its top value and resets.  While the counter is below the compare
-                value the output is HIGH; above it, LOW.  Raising the compare value widens
-                the HIGH portion of each period and so raises the duty cycle.</caption>
-                <image source="images/Day11-Motors/slide24_c96b1180.png" width="70%"/>
+                <caption>How the timer makes the waveform.  A counter counts up and resets
+                at its top value, over and over (the blue ramp).  A compare value (the
+                dashed line) is checked against it: while the counter is below the compare
+                value the output is HIGH, and above it the output is LOW.  Raising the
+                compare value keeps the ramp below the line for more of each period, which
+                widens the HIGH pulse and so raises the duty cycle.</caption>
+                <image source="images/Day11-Motors/pwm-counter-compare.svg" width="80%"/>
             </figure>
             <p>
                 We will use timer TIM14 for this — the same timer we set up for periodic
@@ -619,13 +675,13 @@
             <activity xml:id="act-day11-pwm">
                 <title>Find the pin, and predict the speeds</title>
                 <introduction>
-                    <p>We will drive the PWM from pin PA7.  Two quick tasks set up the
-                    exercise that follows.</p>
+                    <p>We will drive the PWM from pin PA7 (Arduino header D11).  Two quick
+                    tasks set up the exercise that follows.</p>
                 </introduction>
                 <task xml:id="task-day11-pwm-pin">
                     <statement><p>In the datasheet's Table 12, <em>Pin assignment and
-                    description</em>, find PA7 and read off which timer channel it can output
-                    as one of its alternate functions.</p></statement>
+                    description</em> (p. 30), find PA7 and read off which timer channel it
+                    can output as one of its alternate functions.</p></statement>
                 </task>
                 <task xml:id="task-day11-pwm-predict">
                     <statement><p>The program you are about to run ramps the duty cycle up
@@ -651,14 +707,16 @@
                 For the last exercise we hand the driver's inputs over to the Nucleo and run
                 a program that ramps the motor's speed up and down and reverses it.  The
                 wiring continues from the first exercise: leave the power, the motor, and the
-                breakout as they are, and move just three wires.  The PWM pin, which you tied
-                HIGH by hand, now goes to PA7; the AIN1 and AIN2 wires, which you moved by
-                hand, now go to PA5 and PA6, so the program controls all three.
+                breakout as they are, and move three wires.  The PWM pin, which you tied HIGH
+                by hand, now goes to PA7 (D11); the AIN1 and AIN2 wires, which you moved by
+                hand, now go to PA5 (D13) and PA6 (D12), so the program controls all three.
+                If your first-exercise circuit is not working, you can instead wire the
+                second-exercise circuit (<xref ref="fig-tb6612-wiring-2"/>) from scratch.
             </p>
             <figure xml:id="fig-tb6612-wiring-2">
                 <caption>Wiring for the second exercise, changed from the first only at the
-                driver's three logic inputs: PWM to PA7, AIN1 to PA5, AIN2 to PA6.  The
-                motor and its 5 V supply are unchanged.</caption>
+                driver's three logic inputs: PWM to PA7 (D11), AIN1 to PA5 (D13), AIN2 to
+                PA6 (D12).  The motor and its 5 V supply are unchanged.</caption>
                 <image source="images/Day11-Motors/slide27_faf84a1a.png" width="75%"/>
             </figure>
             <p>
@@ -666,15 +724,17 @@
                 demonstration program <c>TTmotor_ramp.c</c> to its <c>Src</c> folder.
                 Compile and run it.  The program sets up TIM14 for PWM on PA7, drives AIN1
                 and AIN2 for direction, and repeatedly ramps the duty cycle up and back down,
-                reversing the motor at the ends of the ramp.  You are running it today, not
-                writing it — we will go through how it programs TIM14 in the next class.
+                reversing the motor at the ends of the ramp.  You will run it today; we will
+                go through how it programs TIM14 in the next class.
             </p>
             <activity xml:id="act-day11-demo">
                 <title>Run the ramp and watch the PWM</title>
                 <introduction>
                     <p>With the program running and the motor turning, put the oscilloscope
                     on the PWM signal so you can watch the duty cycle change as the motor
-                    speeds up and slows down.</p>
+                    speeds up and slows down.  If the motor does not move when the program
+                    runs, confirm the build succeeded and that the three wires reached PA5,
+                    PA6, and PA7.</p>
                 </introduction>
                 <task xml:id="task-day11-demo-scope">
                     <statement><p>Connect oscilloscope channel 1 (the orange lead) to PA7 and
@@ -692,8 +752,7 @@
                 <p>As the motor speeds up, the HIGH portion of each PWM period grows wider: a
                 larger duty cycle, a larger average voltage, and a faster motor, exactly as
                 predicted.  The period itself stays fixed — only the width of the HIGH part
-                changes.  (For the challenge below: 30% of 1250 is 375, the compare value for
-                a 30% duty cycle.)</p>
+                changes.</p>
             </instructor>
             <figure xml:id="fig-pwm-scope">
                 <caption>The PWM signal from <c>TTmotor_ramp.c</c> on the oscilloscope as the
@@ -702,13 +761,35 @@
                 speed.</caption>
                 <image source="images/Day11-Motors/slide29_ab2c785e.jpg" width="75%"/>
             </figure>
-            <p>
-                A further question, once the ramp is running: the demo drives the PWM at
-                1.6 kHz.  Measure the period of the waveform on the oscilloscope and confirm
-                it.  The counter is fed a 2 MHz clock — the 12 MHz system clock divided down
-                — and counts to 1250 before resetting, and 2 MHz ÷ 1250 = 1.6 kHz.  What
-                compare value, out of 1250, would give a 30% duty cycle?
-            </p>
+            <activity xml:id="act-day11-stretch">
+                <title>Going further</title>
+                <introduction>
+                    <p>Two questions that go past simply running the demo.</p>
+                </introduction>
+                <task xml:id="task-day11-stretch-freq">
+                    <statement><p>The timer feeds its counter a 2 MHz clock — the 12 MHz
+                    system clock divided by 6 — and the counter counts to 1250 before it
+                    resets.  Work out the PWM frequency from those two numbers, then measure
+                    the period of the waveform on the oscilloscope and check that it
+                    agrees.</p></statement>
+                </task>
+                <task xml:id="task-day11-stretch-double">
+                    <statement><p>The motor's speed roughly follows the duty cycle, and the
+                    duty cycle is the compare value out of 1250.  If the motor is running at a
+                    compare value of 300 and you want to roughly double its speed, what
+                    compare value would you try?  Why only <q>roughly</q>?</p></statement>
+                </task>
+            </activity>
+            <instructor>
+                <p>Frequency is the counter clock divided by the count it resets at:
+                12,000,000 Hz ÷ 6 = 2,000,000 Hz feeds the counter, and 2,000,000 Hz ÷ 1250 =
+                1,600 Hz = 1.6 kHz — a period of about 625 µs, which is what the scope shows.
+                For the second question: doubling the duty cycle means roughly compare
+                value 600, since speed follows the average voltage and the average voltage
+                follows the duty cycle.  It is only <q>roughly</q> because that relationship
+                is not perfectly linear — friction and back-EMF bend it, and at a low enough
+                duty cycle the motor may not turn at all.</p>
+            </instructor>
             <p>
                 For next class, work through <c>TTmotor_ramp.c</c> with the reference manual
                 open — RM0490, <q>General-purpose timers (TIM14)</q>, section 17.3.8
