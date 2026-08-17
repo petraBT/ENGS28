@@ -114,5 +114,68 @@ Deck spine sound: six parts, six dividers and the agenda agree; Parts 1–3 buil
   which; recap items 2 and 4 say one thing twice; the closing recap assumes Part 5 ran
   when Part 5 is the designated cut.
 
-## checker-voice — re-running (first run died mid-response when the machine slept)
-## checker-figure-claims — pending
+## checker-voice — MAJOR
+
+Register mostly hers (goal-first opening, "we", budgets in presenterNotes, no reassurance
+theater, no weekday teaching). Two systemic problems, both fixed:
+
+- **[MAJOR] VERIFIED and FIXED — the deck reinstated a sentence she deleted.** Her pass 2
+  (b5fedcd) cut "Note that the two rows where a direction is selected each appear twice,
+  once for PWM HIGH and once for PWM LOW" from the truth-table caption, because
+  `task-day11-tt-pwm-low` asks students to discover exactly that. My slide caption put it
+  back on the wall above the activity. Restored her version, which keeps the H/L gloss the
+  slide had dropped.
+- **[MAJOR] FIXED — eight slides terser than the prose, five parking student-facing
+  sentences in `<note>`, which never projects.** The two numbers that justify the driver
+  (≈1.2 A per channel, and the switch-on current V/R_a of hundreds of mA) were on no slide
+  at all, though Part 6's reversal answer depends on the 1.2 A. Also the hardware-PWM
+  autonomy fact, and the brake-vs-stop design decision. All moved into captions/bullets.
+- **[MAJOR] FIXED — reuse.** Her own Day 11 deck already had: slide 5's actuator legend
+  (now the actuator-chain caption), slide 23's V_PWM = V_SUPPLY × T_HIGH / T (now the
+  duty-cycle caption), slide 26's "almost every pin can carry a PWM output" (was stated
+  backwards and weaker), and **slide 22's dimming recall** — the connection from Day 10's
+  `SevenSeg_dim()` to PWM, which the deck was missing entirely and is the single biggest
+  missing link. Added to Part 5's opening slide.
+- **[MAJOR] FIXED** Six slide titles were epigrams rather than names (S-18), including
+  "The regulator board: take 5 V, not Vin" and "Switching, instead of an in-between
+  voltage" (her own deck calls it "Pulse width modulation").
+- **[MAJOR] FIXED** The "Where we are" recap said one thing twice and put the motor in the
+  class's hands; now uses her own slide-3 note wording and "your own motor will be running".
+- **[MINOR] FIXED** "your TemplateProject" (her Day 10 hand fix); "by an instructor"
+  restored to the wiring slide; a scope instruction duplicated on consecutive slides cut;
+  two count-fragment activity introductions; two S-20 slips in instructor blocks; two
+  armatures I introduced after her pass; "we will" contracted.
+- **OPEN, for Petra:** whether the closing recap may keep the forward reference she cut
+  from the prose; and K_i vs K_t (her slide 7 writes K_t, the book and every slide K_i).
+
+## checker-figure-claims — BLOCKER
+
+- **[BLOCKER] VERIFIED and FIXED (differently than proposed).** `fig-pwm-scope`'s caption
+  promised "the width of the HIGH portion grows and shrinks", but the capture spans ~2 ms —
+  about three periods of a 625 µs waveform — so the duty cycle is essentially constant
+  across it. I looked at the image rather than trusting either measurement. **No single
+  capture at 1.6 kHz can show the ramp**, so rather than ask for a new figure the caption
+  now says what the image is: one moment in the ramp, with the ramp seen by watching the
+  trace over time. Both book and slide captions rewritten.
+- **[BLOCKER] OPEN — needs Petra.** `sl-day11-in1-in2` pre-answers its own activity (P-15):
+  the figure circles the conducting pair, traces the path with a direction arrow, and prints
+  "IN1=LOW, IN2=HIGH", one slide before students are asked to work that out. No unannotated
+  version exists in the extracted media, so this cannot be cropped — it needs either her
+  plain bridge carrying only the IN1/IN2 gate wiring, or the activity projected first.
+- **[MAJOR] OPEN — needs Petra.** `sl-day11-wiring-2`'s caption asserts three pin
+  assignments (D11/D12/D13) that are ~9 px tall and rotated in the image; the mapping is
+  correct (traced at 7×) but unreadable projected. Wants callouts or a header inset.
+- **[MAJOR] OPEN — needs Petra.** The brake/stop panels are in two different drawing
+  languages: O1/O2 vs OUT1/OUT2, PGND vs GND, and the stop panel has no motor symbol and
+  nothing marked. Ties to her stop-mode question. Slide caption now at least names which
+  panel is which.
+- **[MAJOR] OPEN** `pwm-counter-compare.svg`: the red trace runs through the "PWM output"
+  label and the blue ramp crosses "compare CCR1". My SVG, directly patchable — not yet done.
+- **[MINOR] OPEN** actuator-chain's green (#e8f0e4 vs #f4f6f8) is a 12-unit difference that
+  will read as white on a projector; caption no longer relies on it ("the two middle boxes").
+  Both wiring PNGs have a clipped glyph on the top edge. "Discovery3 C" appears in the scope
+  capture's status bar where the kit is an AD2. The book's `fig-hbridge-concept` carries a
+  baked-in "Figure 15-2" from its source book.
+- Confirmed correct: the truth table (best figure in the chapter), the block diagram's
+  IN1/AIN1 reconciliation, the duty-cycle SVG's measured 24/51/75%, the CW/CCW panels not
+  swapped, and the wiring-2 pin mapping.
