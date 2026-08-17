@@ -389,7 +389,9 @@
                 <m>e</m> yields a relationship that only has <m>V</m> and <m>\omega</m> in it: this is the speed the motor
                 settles at:
             </p>
-            <me>\omega = \frac{V}{K_e + b R_a / K_i}</me>
+            <md>
+                <mrow>\omega = \frac{V}{K_e + b R_a / K_i}</mrow>
+            </md>
             <p>
                 Every symbol in the denominator is a constant of the motor and its load, so
                 the speed is proportional to the terminal voltage — the fact the reading
@@ -399,6 +401,32 @@
                 about what happens in the moment you switch a stopped motor on.  You will
                 learn to model that in ENGS 22 or ENGS 26.
             </p>
+            <slide xml:id="sl-day11-actuator-chain" ref="fig-actuator-chain">
+    <caption>The sensor chain of the ADC chapter, run backwards. The two boxes in green are what we build today.</caption>
+    <note>Open here. The chain is the map for the whole day: PWM stands in for the DAC, the TB6612 is the driver.</note>
+</slide>
+
+            <slide xml:id="sl-day11-motor-relations">
+    <p>Four relationships describe a DC motor, and together they tell us what sets its speed.</p>
+    <ul>
+        <li>The torque is proportional to the current through the armature: <c>τ = K_i i</c>.</li>
+        <li>At a steady speed the motor is no longer accelerating, so the torque is just overcoming friction: <c>τ = b ω</c>.</li>
+        <li>A spinning motor generates a voltage of its own, the back-EMF, proportional to its speed: <c>e = K_e ω</c>.</li>
+        <li>The armature coils have resistance, and the voltage left over after the back-EMF drives the current through it: <c>V - e = i R_a</c>.</li>
+    </ul>
+    <caption>τ torque, i current, ω rotational speed, e back-EMF, V terminal voltage.</caption>
+</slide>
+
+            <slide xml:id="sl-day11-equilibrium-speed">
+    <p>Combining those four to eliminate the current and the back-EMF leaves a relationship between just the terminal voltage and the speed the motor settles at:</p>
+    <p><c>ω = V / (K_e + b R_a / K_i)</c></p>
+    <ul>
+        <li>Everything in the denominator is a constant of the motor and its load, so the steady speed is proportional to the voltage at the terminals.</li>
+        <li>That is why varying the average voltage is how we vary the speed, and it is the fact the reading asked you to take on trust.</li>
+    </ul>
+    <caption>This balances a torque against friction at a steady speed, so it says nothing about the moment you switch a stopped motor on.</caption>
+</slide>
+
             <activity xml:id="act-day11-speed-params">
                 <title>What else changes the speed?</title>
                 <introduction>
@@ -435,7 +463,7 @@
                     why.</p></statement>
                 </task>
             </activity>
-            <instructor>
+            <instructor xml:id="inst-day11-speed-params">
                 <p>The table.  Increasing the friction <m>b</m> increases the denominator, so
                 the speed <em>decreases</em> — more of the torque goes into fighting friction.
                 Increasing the armature resistance <m>R_a</m> also increases the denominator,
@@ -500,6 +528,11 @@
                 (Part 3).</caption>
                 <image source="images/Day11-Motors/hbridge-in1-in2-ccw.png" width="55%"/>
             </figure>
+            <slide xml:id="sl-day11-in1-in2" ref="fig-hbridge-in1-in2">
+    <caption>One control line per side. The upper switch turns on when its gate is LOW and the lower when it is HIGH, so exactly one of each pair conducts.</caption>
+    <note>The point students need before the activity: two wires, four switches, and no way for a side to short itself.</note>
+</slide>
+
             <activity xml:id="act-day11-diagonal">
                 <title>Four settings, four things the motor can do</title>
                 <introduction>
@@ -530,7 +563,7 @@
                     supply?</p></statement>
                 </task>
             </activity>
-            <instructor>
+            <instructor xml:id="inst-day11-diagonal">
                 <p>The two turning combinations are the ones where the control lines differ.
                 With IN1 LOW and IN2 HIGH the upper-left and lower-right switches conduct, so
                 current runs supply → OUT1 → motor → OUT2 → ground, crossing the motor from
@@ -559,6 +592,10 @@
                 mode for a given pair of inputs is read off the datasheet's table, not off this
                 drawing.</p>
             </instructor>
+            <slide xml:id="sl-day11-diagonals" ref="fig-hbridge-cw-ccw">
+    <caption>The two combinations where the control lines differ. Current crosses the motor one way, then the other.</caption>
+</slide>
+
             <figure xml:id="fig-hbridge-cw-ccw">
                 <caption>The two driving diagonals.  On the left, the upper-left and
                 lower-right switches conduct, so current flows from the supply through
@@ -575,6 +612,11 @@
                 separating, because they look the same on a truth table and feel completely
                 different on the bench.
             </p>
+            <slide xml:id="sl-day11-brake-vs-stop" ref="fig-hbridge-brake-vs-stop">
+    <caption>Braking shorts the two terminals so the back-EMF drives a current that opposes the rotation. Stopping disconnects them and lets the shaft coast.</caption>
+    <note>Two ways to stop a motor, and choosing between them is a design decision — a wheel that must hold position wants the brake.</note>
+</slide>
+
             <figure xml:id="fig-hbridge-brake-vs-stop">
                 <caption>Braking, on the left, against stopping, on the right.  To brake, the
                 two lower switches conduct, so both motor terminals are tied together at
@@ -621,6 +663,16 @@
                     a motor through a driver IC instead of wiring the H-bridge by hand.
                 </p>
             </insight>
+            <slide xml:id="sl-day11-shoot-through" ref="fig-hbridge-shoot-through">
+    <ul>
+        <li>The upper and lower switch on the same side conducting at once shorts the motor supply straight to ground, with only the transistors' own resistance to limit the current.</li>
+        <li>The two control lines cannot ask for it, because one line drives both gates of a side in opposite senses.</li>
+        <li>It happens in the transitions instead: a transistor takes time to turn off, so one can still be conducting as its partner turns on. Reversing the motor is when both sides switch at once, so it is the most likely moment.</li>
+        <li>The TB6612 staggers its switching so every transition passes through a brief state with one side fully off.</li>
+    </ul>
+    <caption>This is one reason we drive a motor through a driver IC instead of wiring the bridge by hand.</caption>
+</slide>
+
             <figure xml:id="fig-hbridge-shoot-through">
                 <caption>Shoot-through.  The upper and lower switch on the right-hand side
                 are conducting at the same time, so current runs straight from the motor
@@ -665,6 +717,11 @@
                 output half; the input side is ordinary 3.3 V logic.</caption>
                 <image source="images/Day11-Motors/tb6612-block-annotated.png" width="100%"/>
             </figure>
+            <slide xml:id="sl-day11-tb6612-inside" ref="fig-tb6612-internal">
+    <caption>Logic inputs at 3.3 V on one side, the motor's own supply and its large current on the other.</caption>
+    <note>The separation is the point of the driver, and it is why the motor's power does not come through the microcontroller's pins.</note>
+</slide>
+
             <p>
                 The two inputs, IN1 and IN2, choose what the bridge does, which yields the
                 motor direction, and a third, PWM, controls the average voltage at the motor
@@ -683,6 +740,10 @@
                 for that row.  </caption>
                 <image source="images/Day11-Motors/tb6612-truth-table-annotated.png" width="85%"/>
             </figure>
+            <slide xml:id="sl-day11-truth-table" ref="fig-tb6612-truth-table">
+    <caption>Read the mode off the table, not off the bridge drawing. Note that a direction row appears twice, once for PWM HIGH and once for PWM LOW.</caption>
+</slide>
+
             <p>
                 Two things in that table are worth more than a glance, because both of them
                 decide how the driver behaves in the exercises that follow.
@@ -712,7 +773,7 @@
                     <xref ref="fig-hbridge-brake-vs-stop"/>.</p></statement>
                 </task>
             </activity>
-            <instructor>
+            <instructor xml:id="inst-day11-truth-table">
                 <p>With IN1 HIGH and IN2 LOW: PWM HIGH gives OUT1 HIGH, OUT2 LOW, which the
                 table names CW.  PWM LOW gives OUT1 LOW and OUT2 LOW, which the table names
                 <em>short brake</em> — the same shorted-terminals state we reasoned out in
@@ -765,6 +826,14 @@
                 the motor at up to 12 V rather than its rated 3–6 V.</caption>
                 <image source="images/Day11-Motors/slide17_img2.png" width="26%"/>
             </figure>
+            <slide xml:id="sl-day11-regulator" ref="fig-tb6612-regulator" stack="yes">
+    <ul>
+        <li>A 6–12 V wall adapter plugs into the barrel connector; the regulator brings that down to a steady 5 V and brings it out on a header.</li>
+        <li>Take the motor supply from the <term>5V</term> pin. The <term>Vin</term> pin next to it is the raw, unregulated input, and wiring that to VM would drive the motor at up to 12 V rather than its rated 3–6 V.</li>
+    </ul>
+    <caption>The 5 V feeds the driver's VM. The driver's logic side, VCC, runs from the Nucleo's 3.3 V.</caption>
+</slide>
+
             <p>
                 The 5 V motor supply and the 3.3 V logic supply share a common ground — one
                 wire joins the regulator board's GND to the Nucleo's ground — but are
@@ -783,14 +852,22 @@
                 between the power and ground rails.</caption>
                 <image source="images/Day11-Motors/tb6612-wiring-exercise1.png" width="100%"/>
             </figure>
+            <slide xml:id="sl-day11-wiring-1" ref="fig-tb6612-wiring">
+    <caption>PWM tied HIGH, AIN1 and AIN2 left dangling so you can move them by hand. Have your wiring checked before you apply power.</caption>
+    <note>The two supplies share a ground and are otherwise separate: all 5 V wires stay on the motor side and never touch the 3.3 V rail.</note>
+</slide>
+
+            <p>
+                The truth table again, to work from while you wire and test.
+            </p>
+            <image source="images/Day11-Motors/tb6612-truth-table-annotated.png" width="70%"/>
+
             <activity xml:id="act-day11-direction">
                 <title>Drive the motor's direction by hand</title>
                 <introduction>
                     <p>Build the circuit with the power off, have your wiring checked by an instructor before
                     you apply power, and then work through the settings by hand.  Keep the
-                    truth table (<xref ref="fig-tb6612-truth-table"/>), shown again here, in
-                    front of you.</p>
-                    <image source="images/Day11-Motors/tb6612-truth-table-annotated.png" width="70%"/>
+                    truth table, shown again just above, in front of you.</p>
                 </introduction>
                 <task xml:id="task-day11-dir-wire">
                     <statement><p>With everything unpowered, wire it up as in the image above, paying special attention to the regulator's 5 V only going to the motor driver's VM pin whereas the motor driver's VCC
@@ -816,6 +893,26 @@
                     checking the individual wires; if a single setting is wrong, check that one
                     wire against the truth table.</p></statement>
                 </task>
+            </activity>
+            <instructor xml:id="inst-day11-direction">
+                <p>With PWM held HIGH: (+, +), both inputs HIGH, is short brake, with both
+                outputs LOW; (+, &#8722;) is IN1 HIGH, IN2 LOW, one direction of rotation,
+                with OUT1 HIGH and OUT2 LOW; (&#8722;, +) is the other direction, OUT1 LOW and
+                OUT2 HIGH; and (&#8722;, &#8722;), both LOW, is stop, with both outputs off
+                and high-impedance so the motor coasts.  The two settings where the inputs
+                differ are the two turning diagonals from Part 2; the two where they match are
+                the brake and the coast.</p>
+                <p>One thing to expect and to mention: which physical direction counts as
+                clockwise depends on which way round the two motor wires are connected, so
+                half the room will see the datasheet's CW as counter-clockwise.  Nothing is
+                wrong; swapping the two motor wires swaps the labels.</p>
+            </instructor>
+
+            <activity xml:id="act-day11-direction-more">
+                <title>If you finish early: measure what the table promised</title>
+                <introduction>
+                    <p>Two things worth doing once the motor turns on command.</p>
+                </introduction>
                 <task xml:id="task-day11-dir-measure">
                     <statement><p>Now confirm the other half of your prediction.  Put the
                     oscilloscope on each of the two motor terminals in turn and measure them
@@ -834,14 +931,7 @@
                     about braking against coasting?</p></statement>
                 </task>
             </activity>
-            <instructor>
-                <p>With PWM held HIGH: (+, +), both inputs HIGH, is short brake, with both
-                outputs LOW; (+, &#8722;) is IN1 HIGH, IN2 LOW, one direction of rotation,
-                with OUT1 HIGH and OUT2 LOW; (&#8722;, +) is the other direction, OUT1 LOW and
-                OUT2 HIGH; and (&#8722;, &#8722;), both LOW, is stop, with both outputs off
-                and high-impedance so the motor coasts.  The two settings where the inputs
-                differ are the two turning diagonals from Part 2; the two where they match are
-                the brake and the coast.</p>
+            <instructor xml:id="inst-day11-direction-more">
                 <p>The measurements should give roughly 5 V and 0 V at the two terminals for
                 the turning settings, and 0 V at both for (+, +).  The odd one out is
                 (&#8722;, &#8722;): with all four switches off, neither terminal is driven at
@@ -854,10 +944,6 @@
                 the more obvious the difference.  It is the clearest demonstration in the hour
                 that back-EMF is real: the only thing stopping the motor quickly is the
                 current its own rotation drives through the shorted windings.</p>
-                <p>One thing to expect and to mention: which physical direction counts as
-                clockwise depends on which way round the two motor wires are connected, so
-                half the room will see the datasheet's CW as counter-clockwise.  Nothing is
-                wrong; swapping the two motor wires swaps the labels.</p>
             </instructor>
             <p>
                 One caution about the direction names.  The truth table calls its two turning
@@ -884,6 +970,15 @@
                 of each period spent HIGH — set the average.  The motor's inertia smooths the
                 pulses, and it turns as though driven by that average voltage.
             </p>
+            <slide xml:id="sl-day11-pwm-idea">
+    <p>The H-bridge sets the motor's direction. Its speed we set with pulse-width modulation, PWM.</p>
+    <ul>
+        <li>A GPIO pin is either fully HIGH or fully LOW, so it cannot hold an in-between voltage, and the STM32C031C6 has no true DAC to hold one for us.</li>
+        <li>So we switch the full supply on and off quickly, and let the fraction of each period spent HIGH — the <term>duty cycle</term> — set the average voltage.</li>
+        <li>The motor's inertia smooths the pulses, and the shaft turns as though it were driven by that average.</li>
+    </ul>
+</slide>
+
             <figure xml:id="fig-pwm-waveform">
                 <caption>PWM at three duty cycles, drawn for a 5 V supply.  The output is a
                 fixed-frequency square wave; the wider the HIGH pulse, the higher the
@@ -892,6 +987,10 @@
                 cycle averages 1.25 V.</caption>
                 <image source="images/Day11-Motors/pwm-duty-cycles.svg" width="70%"/>
             </figure>
+            <slide xml:id="sl-day11-duty-cycles" ref="fig-pwm-waveform">
+    <caption>Same period in all three; only the width of the HIGH pulse changes, and with it the average voltage the motor sees.</caption>
+</slide>
+
             <p>
                 The waveform is produced with almost no work.  We use a counter that counts up from
                 zero and resets when it reaches a fixed top value, over and over.  A second
@@ -911,6 +1010,11 @@
                 widens the HIGH pulse and so raises the duty cycle.</caption>
                 <image source="images/Day11-Motors/pwm-counter-compare.svg" width="80%"/>
             </figure>
+            <slide xml:id="sl-day11-counter-compare" ref="fig-pwm-counter-compare">
+    <caption>A counter, a compare value, and one rule: the output is HIGH while the counter is below the compare value. Raising the compare value widens the pulse.</caption>
+    <note>All of it runs in the timer hardware, so once it is set up the CPU does nothing to keep it going.</note>
+</slide>
+
             <p>
                 We will use timer TIM14 for this — the same timer we set up for periodic
                 interrupts on Day 8 — and route its output onto a pin.  Not every pin can
@@ -948,7 +1052,7 @@
                     mind.</p></statement>
                 </task>
             </activity>
-            <instructor>
+            <instructor xml:id="inst-day11-pwm">
                 <p>Table 12 gives PA7 the alternate function TIM14_CH1, which is alternate
                 function 4.</p>
                 <p>Two registers, in the clear-then-set idiom the course uses throughout.  The
@@ -993,6 +1097,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 PA6 (D12).  The motor and its 5 V supply are unchanged.</caption>
                 <image source="images/Day11-Motors/tb6612-wiring-exercise2.png" width="80%"/>
             </figure>
+            <slide xml:id="sl-day11-wiring-2" ref="fig-tb6612-wiring-2">
+    <caption>Three wires move: PWM to PA7 (D11), AIN1 to PA5 (D13), AIN2 to PA6 (D12). The motor and its 5 V supply stay as they are.</caption>
+</slide>
+
             <p>
                 Make a copy of <c>TemplateProject</c>, rename it <c>DCmotor</c>, and add the
                 demonstration program <c>TTmotor_ramp.c</c> to its <c>Src</c> folder.
@@ -1001,6 +1109,15 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 reversing the motor at the ends of the ramp.  You will run it today; we will
                 go through how it programs TIM14 in the next class.
             </p>
+            <slide xml:id="sl-day11-run-demo">
+    <p>Copy <c>TemplateProject</c>, rename it <c>DCmotor</c>, and add <c>TTmotor_ramp.c</c> to its <c>Src</c> folder, then compile and run it.</p>
+    <ul>
+        <li>The program sets up TIM14 for PWM on PA7, drives AIN1 and AIN2 for direction, and ramps the duty cycle up and back down, reversing the motor at the ends of the ramp.</li>
+        <li>Put channel 1 of the oscilloscope, the orange lead, on PA7, with its ground lead to a ground on the board.</li>
+    </ul>
+    <caption>You will run it today; we will go through how it programs TIM14 in the next class.</caption>
+</slide>
+
             <activity xml:id="act-day11-demo">
                 <title>Measure the PWM, and account for what the motor does</title>
                 <introduction>
@@ -1034,7 +1151,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                     instead.</p></statement>
                 </task>
             </activity>
-            <instructor>
+            <instructor xml:id="inst-day11-demo">
                 <p>The period measures about 625 µs, and 1/625 µs = 1.6 kHz.  The prediction
                 from the timer's numbers agrees: 12,000,000 Hz ÷ 6 = 2,000,000 Hz feeds the
                 counter, and 2,000,000 Hz ÷ 1250 = 1,600 Hz = 1.6 kHz.</p>
@@ -1065,6 +1182,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 speed.</caption>
                 <image source="images/Day11-Motors/slide29_ab2c785e.jpg" width="75%"/>
             </figure>
+            <slide xml:id="sl-day11-scope" ref="fig-pwm-scope">
+    <caption>The period stays fixed as the motor ramps; the width of the HIGH portion is what grows and shrinks.</caption>
+</slide>
+
             <activity xml:id="act-day11-stretch">
                 <title>Going further</title>
                 <introduction>
@@ -1088,7 +1209,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                     might get better — before you ever try it.</p></statement>
                 </task>
             </activity>
-            <instructor>
+            <instructor xml:id="inst-day11-stretch">
                 <p>With 1250 steps on a 5 V supply, one step of the compare value is
                 5 V ÷ 1250 = 4 mV of average voltage.  Resetting at 100 instead would make the
                 frequency 2,000,000 Hz ÷ 100 = 20 kHz, and the step 5 V ÷ 100 = 50 mV.  The
