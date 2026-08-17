@@ -1,6 +1,7 @@
 # Day 11 — DC Motors, the H-Bridge, and PWM (lesson plan)
 
-One in-class hour (~65 min). Chapter `source/ch-motors.ptx`. Pre-class reading +
+One Tuesday class, **110 minutes** (see the budget section — the first revision of
+this plan wrongly said 65). Chapter `source/ch-motors.ptx`. Pre-class reading +
 in-class Parts 1–6. Days 11x and 12 are separate sessions; Day 11 hands off to
 11x with the PWM code understood conceptually and set as homework to study.
 
@@ -35,13 +36,17 @@ locked out by a fresh build.)*
 
 ## THE STRETCH (P-3)
 
-For students who finish the run exercise early: measure the PWM period on the AD2
-and reconcile it with the driver's constants — 12 MHz / (PSC+1 = 6) = 2 MHz,
-2 MHz / (ARR+1 = 1250) = 1.6 kHz — then work out which CCR1 value gives a 30 %
-duty cycle and confirm it on the scope. Generalizes duty cycle → average voltage
-into the register arithmetic Day 11x will build, withholding no part of the
-crucial step. (An early-finisher lead-in also exists for the first exercise — see
-Part 4.)
+`act-day11-stretch`, for students who finish the Part 6 measurements: work out the
+smallest change in average motor voltage the program can ask for, given 1250 counter
+steps on a 5 V supply, then work out what a 100-step counter would have done to both
+the PWM frequency and that voltage step, and state the trade-off. Then predict what
+changes if the same motor is driven at 50 Hz instead of 1.6 kHz — the optional
+experiment Lab 6 suggests — using the brake-phase reasoning from Part 5.
+
+Both generalize the day's idea rather than withholding any part of the crucial step,
+and neither needs anything the class has not already measured. Part 4 carries its own
+early-finisher task (`task-day11-dir-stretch`), since it is the activity with the
+widest completion spread.
 
 ## Datasheet moments (P-11)
 
@@ -55,20 +60,54 @@ Part 4.)
 
 ## Activity sequence (Part 1..6) and time budget
 
-| Part | Title | Mode | ~min | Note |
-| --- | --- | --- | --- | --- |
-| 1 | The actuator signal chain and the DC motor | explain + predict (recap of reading/video) | 6 | |
-| 2 | The H-bridge: reversing direction | explain + predict | 8 | |
-| 3 | The TB6612 controller IC and its truth table | explain + read the table | 8 | datasheet moment |
-| 4 | First exercise — manual direction control | **do** (predict from the table, then wire and verify) | 20 | **PROTECTED — do not compress** |
-| 5 | PWM: controlling speed by switching | explain + predict | 8 | **the live cut — compress to ~5 if behind** |
-| 6 | Second exercise — run the PWM demo | **do** (run `TTmotor_ramp.c`, read the scope) | 12 | continues from Part 4 wiring |
+**The class length, stated once, because the first revision of this plan had it
+wrong.** Day N with N odd is a **Tuesday and runs 110 minutes**; Day Nx is a
+Wednesday x-hour and runs **50**; Day N with N even is a Thursday and runs **110**
+(`plans/week5.md`, which states the same rule for the same reason — every day of
+week 5 had first been budgeted to 65). **Day 11 is a Tuesday: 110 minutes.**
 
-Intro/agenda ~2, homework hand-off ~2. Total ~66. **Recovery rule (for the
-instructor, not the book):** if Part 4 overruns, Part 5 is the compressible part —
-its concept is carried by the pre-class reading (B-2). Part 4 and Part 6 (the two
-halves of the crucial step) are protected. Part 6 is eased because it is **not a
-fresh build**: it moves three jumpers from the manual rails to PA5/PA6/PA7.
+The first revision of this plan budgeted 65, and the Gate 1 and Gate 2
+`expert-class-logistics` reviews were briefed with that number. Their timing
+findings — a BLOCKER at Gate 2, "no slack, the crucial step is not reached" — are
+therefore **void as timing findings**; they were answering a question posed with the
+wrong premise. Their non-timing findings stand and are applied (the missing
+regulator wiring figure, the missing early-finisher task).
+
+Budget below is against the reworked parts, after Petra's pass 1 restored the motor
+physics and replaced every activity she called too simple:
+
+| Part | Title | Mode | ~min |
+| --- | --- | --- | --- |
+| 1 | The actuator chain, and what sets the speed | explain + derive + predict | 19 |
+| 2 | The H-bridge reverses the motor | explain + predict (3 tasks) | 22 |
+| 3 | The TB6612 driver and its truth table | explain + datasheet reading (3 tasks) | 13 |
+| 4 | First exercise — direction by hand | **do** (wire, predict, verify, measure, time the brake) | 30 |
+| 5 | PWM sets the speed | explain + quantitative predict (4 tasks) | 17 |
+| 6 | Second exercise — ramping the motor with PWM | **do** (run, measure period and duty, explain the reversal) | 23 |
+
+Intro/agenda ~3, homework hand-off ~3. **Total ~130 against 110 available.**
+
+**So the day is now genuinely over budget — by roughly 20 minutes — and that is a
+real finding, not the old phantom one.** The richer activities Petra asked for
+consumed the 45 minutes of slack a 110-minute class started with, and then some.
+Two honest ways to shed it, in the order to try them:
+
+1. **Move Part 5's quantitative tasks to the homework** (~8 min).
+   `task-day11-pwm-quantitative` and `task-day11-pwm-lowduty` are paper work needing
+   no hardware, and the homework is currently only "study the driver against the
+   reference manual". Keep `task-day11-pwm-brakephase` in class — it is the one that
+   pays off the Part 3 discovery.
+2. **Mark Part 4's two added measurement tasks as early-finisher work** (~8 min):
+   `task-day11-dir-measure` (terminal voltages against the truth table) and
+   `task-day11-dir-brake` (brake against coast). Both are excellent and neither is
+   on the path to the crucial step, so they are the right things to make optional
+   rather than cut.
+
+That recovers ~16 of the 20. If more is needed, Part 2's shoot-through is
+"cultural enrichment" on Petra's own deck and can be stated rather than developed.
+**Part 4's build and Part 6's run stay protected** — they are the two halves of the
+crucial step, and Part 6 is already eased by continuing from Part 4's wiring rather
+than being a fresh build.
 
 ## Hand-offs
 

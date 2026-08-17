@@ -134,3 +134,31 @@ SHOULD FIX: 8 trim reading brake to a forward pointer (un-pre-answer Part 2); 9 
 MINOR: 12 voice (whole point→point, Part 3 opening, S-20 instructor, STBY (standby), Part 6 contrastive, AIN1/AIN2 bridge); 13 Dxx names (D11=PA7, D12=PA6, D13=PA5); 14 define breakout board / logic-level pins; 15 Table 12 p.30; 16 re-show truth table in Part 4; 17 drop "just"; 18 fig-hbridge-concept "Motor VCC"=VM note.
 NEEDS PETRA: corrected wiring Fritzing (VM from 5 V, not 3V3; confirm AIN free); regulator-stage risk facts (barrel keying? caps?); fig-pwm-scope recrop; optional shoot-through diagram / motor cutaway / scope-probe crop.
 DEFER: rq-* answerable-from-adjacent-prose; "fast enough" quantify; PWM=LOW brakes nuance.
+
+---
+
+## CORRECTION (2026-08-17, Petra): the class is 110 minutes, not 65
+
+Petra: *"This is a Tuesday class, so 110 minutes long?"* — correct, and it is the
+documented rule: Day N odd = Tuesday = **110 min**; Day Nx = Wednesday x-hour = 50;
+Day N even = Thursday = 110 (`plans/week5.md`, `plans/week5-map.md`, which record the
+same error being made for every day of week 5).
+
+`plans/day11.md` said ~65, and both `expert-class-logistics` runs were briefed with
+that number, so:
+
+- **VOID as timing findings:** the Gate 2 BLOCKER ("the 65 minutes have no slack",
+  "the crucial step is not reached by a real fraction of the room"), the Gate 1
+  BLOCKER of the same kind, and the whole protect/cut apparatus they motivated. A
+  110-minute class started with ~45 minutes of slack. This is the third time this
+  defect has been recorded in this repo; see the note added to `AUTHORING-book.md`.
+- **STILL LIVE, and applied:** everything those reviews found that was not about the
+  clock — above all the Part 4 wiring figure with no regulator or VM path (five
+  reviewers converged on it), the missing Part 4 early-finisher task, and the
+  observation that Part 3's datasheet lookup is slower than a lecture beat.
+
+**The day is now over budget for real**, but at a different number: after Petra's
+pass 1 restored the physics and replaced the too-simple activities, the parts sum to
+**~130 against 110**. The cut/defer order is in `plans/day11.md` — move Part 5's two
+paper tasks to the homework, make Part 4's two added measurement tasks
+early-finisher work — and Part 4's build and Part 6's run stay protected.
