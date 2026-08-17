@@ -189,6 +189,11 @@ These are the ones that get written wrong from plausibility.
 - The Nucleo supplies **3.3 V**. Never say 5 V — it could damage the chip.
 - **AD2 oscilloscope**: CH1 is orange, CH2 is blue; minus leads have white
   stripes. Never say "yellow".
+- **Class lengths, by day number.** Day N with N **odd** is a **Tuesday, 110
+  minutes**; Day N**x** is a **Wednesday x-hour, 50 minutes**; Day N with N
+  **even** is a **Thursday, 110 minutes**. Every day of week 5 was first budgeted
+  to 65 minutes, and so was Day 11 — the error has now been made three times, so
+  take the length from this line rather than assuming an hour.
 - **There are no lab benches.** Each student carries a portable kit and works on
   their own laptop. Never write "bench".
 - `TemplateProject` is the starting point for every student project: copy it,

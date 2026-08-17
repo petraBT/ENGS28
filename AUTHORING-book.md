@@ -204,6 +204,33 @@ day.** Day 10 had the stopwatch measurement in both a deck prompt and the
 activity's first task, and the colon experiment as both its own activity and the
 last task of a later one.
 
+### P-17 An activity must require work that reading cannot do
+
+> *"Activity 11.2.3 is totally stupid. Students are not third graders. They can
+> read a table without an activity."* — Petra, Day 11 pass 1
+
+An `<activity>` earns its place only if a student who has read the surrounding
+prose still has something to **work out, compute, predict, or measure**. Looking a
+value up in a table that is printed on the same page is not an activity; neither is
+restating a fact the paragraph above just gave. She rejected four in one day on this
+ground — *"way too basic"*, *"stupidly simple"*, *"students will feel
+infantalized"* — and the summary judgment was *"there is not even close to enough
+going on in this class. Students need to be challenged more."*
+
+The repairs that satisfied her all added a step that reading cannot supply:
+
+| Rejected | Replaced with |
+| --- | --- |
+| read CW/CCW/brake off the truth table | find the two rows that share a direction, notice PWM LOW is *short brake* rather than a disconnect, and say what that means once PWM switches at 1.6 kHz |
+| "does the steady speed go up or down?" | her four motor relationships, the equilibrium speed derived from them, and a table of parameters to reason about — intuition first, then verified against the equation |
+| "predict the speed at 25%, 50%, 75%" | write speed as a function of duty cycle, predict a number, then say which relationship makes the prediction fail at 5% and what was left out of it |
+| "which way does the HIGH portion change?" | measure period and pulse width, convert to the compare value out of 1250, and give two reasons the driver brakes before it reverses |
+
+Two related traps. **Do not create difficulty by withholding** (P-3) — every one of
+those repairs adds a rung above the crucial step rather than removing scaffolding
+below it. And **an activity built on a model should ask where the model stops being
+true**, which is both harder and more useful than asking it to be applied again.
+
 ### P-12 Prefer the old annotated images
 
 `assets/ClassSlidesOLD/` is the authority for the intended in-class arc, and its
