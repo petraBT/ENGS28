@@ -385,8 +385,8 @@
                 <m>V - e = i\, R_a</m>.</li>
             </ul>
             <p>
-                Those four have only <m>V</m> and <m>\omega</m> in common once <m>i</m> and
-                <m>e</m> are eliminated between them, and what is left is the speed the motor
+                Combining those four equations to eliminate <m>i</m> and
+                <m>e</m> yields a relationship that only has <m>V</m> and <m>\omega</m> in it: this is the speed the motor
                 settles at:
             </p>
             <me>\omega = \frac{V}{K_e + b R_a / K_i}</me>
@@ -506,7 +506,7 @@
                     <p>The two control lines give four combinations, and each does something
                     different to the motor.  Reason them out from the bridge before we look
                     at any of them.  Call the motor's terminals OUT1 (left) and OUT2 (right),
-                    and take it that a control line HIGH pulls its terminal down to ground
+                    and recall that a control line (IN1 or IN2) HIGH pulls its terminal down to ground
                     and LOW pulls it up to the supply.</p>
                 </introduction>
                 <task xml:id="task-day11-diagonal-turn">
@@ -549,6 +549,15 @@
                 two terminals being connected to each other, not which rail they sit at.  The
                 TB6612 implements this by driving both outputs LOW, which its datasheet calls
                 <em>short brake</em>.</p>
+                <p>Worth drawing out, because Part 3's truth table will look inconsistent with
+                this sketch otherwise: with the gates tied to two control lines as drawn, every
+                one of the four combinations either drives the motor or shorts it.  There is no
+                way for two wires to ask for all four switches to be off at once, so the
+                simplified bridge cannot leave the motor genuinely disconnected.  The real chip
+                can, and that is one of the things its control logic is for — it decodes the
+                inputs onto four separate gate signals rather than tying them in pairs.  So the
+                mode for a given pair of inputs is read off the datasheet's table, not off this
+                drawing.</p>
             </instructor>
             <figure xml:id="fig-hbridge-cw-ccw">
                 <caption>The two driving diagonals.  On the left, the upper-left and
@@ -572,8 +581,11 @@
                 ground and the spinning motor's own back-EMF drives a current through that
                 short, which opposes the rotation and brings the shaft quickly to rest.  To
                 stop, all four switches are off, so both terminals are left floating: no
-                current can flow in or out, nothing opposes the rotation, and the shaft
-                coasts down under friction alone.</caption>
+                current can flow in or out, nothing opposes the rotation, and the shaft coasts
+                down under friction alone.  This all-off state is one the driver's control
+                logic produces; it is not something the two direction lines could ask for by
+                themselves, which is why the modes are read from the datasheet's table rather
+                than from the bridge drawing.</caption>
                 <sidebyside widths="44% 44%" margins="3%" valign="middle">
                     <image source="images/Day11-Motors/slide12_8fcc0651.png"/>
                     <image source="images/Day11-Motors/hbridge-stop.png"/>
@@ -651,7 +663,7 @@
                 gates, and the switches connect channel A's two outputs (AO1, AO2) to the
                 motor supply VM or to ground.  The motor's large current flows only in the
                 output half; the input side is ordinary 3.3 V logic.</caption>
-                <image source="images/Day11-Motors/tb6612-block-annotated.png" width="80%"/>
+                <image source="images/Day11-Motors/tb6612-block-annotated.png" width="100%"/>
             </figure>
             <p>
                 The two inputs, IN1 and IN2, choose what the bridge does, which yields the
@@ -668,8 +680,7 @@
                 <url href="external/datasheets/TB6612FNG_datasheet_en_20141001.pdf">TB6612FNG
                 datasheet</url>.  IN1, IN2, and PWM set the outputs OUT1 and OUT2, and so the
                 mode.  <q>H/L</q> in a cell means the value in that position does not matter
-                for that row.  Note that the two rows where a direction is selected each
-                appear twice, once for PWM HIGH and once for PWM LOW.</caption>
+                for that row.  </caption>
                 <image source="images/Day11-Motors/tb6612-truth-table-annotated.png" width="85%"/>
             </figure>
             <p>
@@ -687,25 +698,18 @@
                     <statement><p>Select a direction — say IN1 HIGH and IN2 LOW — and then
                     read the two rows that share it, one with PWM HIGH and one with PWM LOW.
                     What are OUT1 and OUT2 in each case, and what mode does the table name for
-                    each?  The PWM LOW case is <em>not</em> the motor being disconnected: say
-                    what it is instead, and what that means for the motor during the LOW part
+                    each?  The PWM LOW case is <em>not</em> the motor being disconnected:
+                    what is it instead, and what that means for the motor during the LOW part
                     of every PWM cycle once we start switching PWM thousands of times a
-                    second in Part 5.</p></statement>
+                    second?</p></statement>
                 </task>
                 <task xml:id="task-day11-tt-brake-stop">
-                    <statement><p>The table names both a <em>short brake</em> mode and a
+                    <statement><p>The table shows both a <em>short brake</em> mode and a
                     <em>stop</em> mode.  Find the input combination for each, and read off
                     OUT1 and OUT2.  One of them describes the outputs as
                     <q>OFF (High impedance)</q> — explain what that phrase means about the
                     four switches, and match the two rows to the two pictures in
                     <xref ref="fig-hbridge-brake-vs-stop"/>.</p></statement>
-                </task>
-                <task xml:id="task-day11-tt-standby">
-                    <statement><p>Finally, the last row of the table. What single input puts
-                    the whole driver into standby, and why can a chip that is being told to
-                    turn a motor still be made to do nothing at all?  Our breakout pulls this
-                    pin up for us — what would happen if it did not, and we left the pin
-                    unconnected?</p></statement>
                 </task>
             </activity>
             <instructor>
@@ -721,7 +725,10 @@
                 terminals tied to ground through the lower switches, the left-hand picture in
                 <xref ref="fig-hbridge-brake-vs-stop"/>.  Stop is IN1 LOW, IN2 LOW, and its
                 outputs are <q>OFF (High impedance)</q>, which means all four switches are off
-                and neither terminal is connected to anything — the right-hand picture.  High
+                and neither terminal is connected to anything — the right-hand picture.  This
+                is the row where the simplified bridge from Part 2 would have misled them: two
+                gates tied to a LOW control line would both pull their terminals up to VM, a
+                short, whereas the real chip's logic turns everything off instead.  High
                 impedance is the phrase datasheets use for a pin that is neither driven HIGH
                 nor driven LOW but simply disconnected, so it can neither source nor sink
                 current.</p>
@@ -768,16 +775,18 @@
             <figure xml:id="fig-tb6612-wiring">
                 <caption>The circuit for the first exercise.  The TB6612 breakout takes the
                 regulated 5 V at VM, the Nucleo's 3.3 V at VCC, and a ground shared with the
-                Nucleo; the motor connects to the two channel-A outputs.  For this exercise
-                the PWM pin is held HIGH and the two direction wires, AIN1 and AIN2, are left
-                unconnected, so that you can move them by hand between the power and ground
-                rails.</caption>
-                <image source="images/Day11-Motors/tb6612-wiring-exercise1.png" width="80%"/>
+                Nucleo; the motor connects to the two channel-A outputs.  The 0.22 µF
+                capacitor across the breakout's logic supply is a smoothing capacitor: it sits
+                between VCC and ground and holds that rail steady when the motor's switching
+                disturbs it.  For this exercise the PWM pin is held HIGH and the two direction
+                wires, AIN1 and AIN2, are left unconnected, so that you can move them by hand
+                between the power and ground rails.</caption>
+                <image source="images/Day11-Motors/tb6612-wiring-exercise1.png" width="100%"/>
             </figure>
             <activity xml:id="act-day11-direction">
                 <title>Drive the motor's direction by hand</title>
                 <introduction>
-                    <p>Build the circuit with the power off, have your wiring checked before
+                    <p>Build the circuit with the power off, have your wiring checked by an instructor before
                     you apply power, and then work through the settings by hand.  Keep the
                     truth table (<xref ref="fig-tb6612-truth-table"/>), shown again here, in
                     front of you.</p>
@@ -785,7 +794,7 @@
                 </introduction>
                 <task xml:id="task-day11-dir-wire">
                     <statement><p>With everything unpowered, wire it up as in the image above, paying special attention to the regulator's 5 V only going to the motor driver's VM pin whereas the motor driver's VCC
-                    is supplied by the Nucleo's 3.3 V. The regulator's ground and the Nucleo shares a common ground.  Connect the motor to the two channel-A
+                    is supplied by the Nucleo's 3.3 V. The regulator and the Nucleo share a common ground.  Connect the motor to the two channel-A
                     outputs of the motor driver.  Tie the PWM pin HIGH, to the 3.3 V rail, and leave the AIN1 and
                     AIN2 wires dangling free for now.</p></statement>
                 </task>
@@ -908,72 +917,62 @@
                 carry a given timer's output; the datasheet's pin table lists which can.
             </p>
             <activity xml:id="act-day11-pwm">
-                <title>From duty cycle to shaft speed</title>
+                <title>Getting ready to program the timer</title>
                 <introduction>
-                    <p>We will drive the PWM from pin PA7 (Arduino header D11).  The first
-                    task finds that pin in the datasheet; the rest work out what the duty
-                    cycle actually does to the motor, which is what you will check against a
-                    running motor in Part 6.</p>
+                    <p>We will drive the PWM from pin PA7 (Arduino header D11).  Next class we
+                    write the code that makes TIM14 produce this waveform; these three tasks
+                    are the parts of it you can already work out, from the datasheet and from
+                    what you know about GPIO and timers.</p>
                 </introduction>
                 <task xml:id="task-day11-pwm-pin">
                     <statement><p>In the datasheet's Table 12, <em>Pin assignment and
                     description</em> (p. 30), find PA7 and read off which timer channel it
-                    can output as one of its alternate functions.</p></statement>
+                    can output, and which of the pin's alternate functions it is.</p></statement>
                 </task>
-                <task xml:id="task-day11-pwm-quantitative">
-                    <statement><p>Part 1 gave the steady speed as
-                    <m>\omega = V/(K_e + b R_a / K_i)</m>, and the motor now sees an average
-                    voltage of the duty cycle times the 5 V supply.  Write down <m>\omega</m>
-                    as a function of the duty cycle <m>D</m>.  If the motor turns at 200 rpm
-                    at a duty cycle of 80%, what does your expression predict at 40%?  And at
-                    5%?</p></statement>
+                <task xml:id="task-day11-pwm-config">
+                    <statement><p>A pin only carries a timer's output once it has been switched
+                    away from being an ordinary GPIO output and handed to that peripheral,
+                    which is the same alternate-function machinery you used to give pins to
+                    the UART and the ADC.  Write the register operations that put PA7 into
+                    alternate-function mode and select the alternate function you found above.
+                    Name the registers and the bit positions; you do not need the timer's own
+                    registers for this.</p></statement>
                 </task>
-                <task xml:id="task-day11-pwm-lowduty">
-                    <statement><p>Your 5% answer is a prediction the real motor will not
-                    keep.  Turn the duty cycle down far enough and the shaft does not creep
-                    slowly — it stops altogether, and stays stopped.  Which of the four
-                    relationships in Part 1 is responsible for that failure, and what has been
-                    left out of it?</p></statement>
-                </task>
-                <task xml:id="task-day11-pwm-brakephase">
-                    <statement><p>Now the harder question, and it comes from what you read off
-                    the truth table in Part 3.  During the LOW part of every PWM cycle the
-                    driver is not letting the motor coast — it is in short brake, actively
-                    opposing the rotation.  At a 50% duty cycle the motor is therefore being
-                    braked for half of every cycle.  Why does the shaft not slow to a crawl?
-                    What would you have to know about the motor to be sure that a 1.6 kHz
-                    switching rate is fast enough?</p></statement>
+                <task xml:id="task-day11-pwm-timing">
+                    <statement><p>Now the timer's numbers.  TIM14 counts from a 12 MHz clock,
+                    and we want a PWM period divided into 1250 steps of duty cycle at a
+                    switching frequency of about 1.6 kHz.  What must the prescaler divide the
+                    clock by, and what value does the counter have to count to?  Remember from
+                    our earlier work with timers what actually gets written into the prescaler
+                    and auto-reload registers, as opposed to the number you have in
+                    mind.</p></statement>
                 </task>
             </activity>
             <instructor>
-                <p>PA7's alternate functions include TIM14_CH1, its alternate function 4 —
-                that is the channel we drive.</p>
-                <p>The average voltage is <m>V = D \times 5\text{ V}</m>, so
-                <m>\omega = 5D/(K_e + b R_a / K_i)</m>: the speed is proportional to the duty
-                cycle, since everything else is constant.  Halving the duty cycle from 80% to
-                40% should therefore halve the speed, from 200 rpm to 100 rpm.  Scaling the
-                same way to 5% predicts 12.5 rpm.</p>
-                <p>The 5% prediction fails because of <m>\tau = b\,\omega</m>.  That
-                relationship models friction as pure viscous drag, proportional to speed,
-                which goes to zero as the shaft stops — so on paper any voltage at all, however
-                small, produces some speed.  Real friction has a part that does not vanish at
-                zero speed: it takes a minimum torque to break the shaft loose and start it
-                moving at all.  Below that the model's answer is simply wrong, and the motor
-                sits still.  This is worth naming as the general lesson: the model is a good
-                one over the range it was built for, and the interesting question with any
-                model is where it stops being true.</p>
-                <p>The brake phase.  A 1.6 kHz PWM has a period of 625 µs, so the braked
-                phase at 50% duty lasts about 300 µs.  Whether that matters depends on how
-                fast the rotor can change speed, and a rotor with a gearbox and a load on it
-                changes speed on a scale of tens or hundreds of milliseconds — hundreds of
-                times longer than one PWM period.  The rotor cannot respond to any single
-                cycle; it responds to the average over many, which is exactly why the average
-                voltage is the right thing to think about.  To be sure, we would need the
-                motor's mechanical time constant, set by its rotational inertia against the
-                friction and load: as long as the PWM period is far shorter than that time
-                constant, the shaft cannot follow individual cycles.  Turn the PWM frequency
-                low enough — a few tens of hertz — and it can, which is why a motor driven
-                slowly enough audibly and visibly pulses.</p>
+                <p>Table 12 gives PA7 the alternate function TIM14_CH1, which is alternate
+                function 4.</p>
+                <p>Two registers, in the clear-then-set idiom the course uses throughout.  The
+                mode register selects alternate-function mode for pin 7, and the low
+                alternate-function register selects AF4 for pin 7:</p>
+                <program language="c"><code><![CDATA[
+RCC->IOPENR |= RCC_IOPENR_GPIOAEN;          // Enable clock access to GPIOA
+
+GPIOA->MODER &= ~GPIO_MODER_MODE7_Msk;      // PA7 alternate function mode (10)
+GPIOA->MODER |= GPIO_ALTERNATE << GPIO_MODER_MODE7_Pos;
+
+GPIOA->AFR[0] &= ~GPIO_AFRL_AFSEL7_Msk;     // PA7 alt. function type (AF4, 0100)
+GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
+]]></code></program>
+                <p>The AFR array is worth a word: there are two alternate-function registers,
+                a low one for pins 0 to 7 and a high one for pins 8 to 15, so PA7 is the last
+                pin handled by <c>AFR[0]</c>.</p>
+                <p>The timing.  We need 1250 counts per PWM period at 1.6 kHz, so the counter
+                must be clocked at 1250 × 1600 Hz = 2 MHz, and the prescaler must therefore
+                divide the 12 MHz system clock by 6.  What goes into the registers is each of
+                those numbers minus one, because the prescaler and the counter both start from
+                zero: the prescaler register gets 5, and the auto-reload register gets 1249.
+                That is exactly what the program they run in Part 6 does, and next class they
+                will write it.</p>
             </instructor>
         </subsection>
 
@@ -1009,8 +1008,7 @@
                     on the PWM signal: channel 1 (the orange lead) on PA7, and its ground lead
                     to a ground on the board.  If the motor does not move when the program
                     runs, confirm the build succeeded and that the three wires reached PA5,
-                    PA6, and PA7.  Everything below is a measurement or an explanation of one,
-                    so keep a note of the numbers as you go.</p>
+                    PA6, and PA7.</p>
                 </introduction>
                 <task xml:id="task-day11-demo-period">
                     <statement><p>Measure the period of the waveform, and from it the PWM
@@ -1025,13 +1023,6 @@
                     period.  Give the duty cycle as a percentage, and then convert it into the
                     compare value out of 1250 that the program must have written to produce
                     it.</p></statement>
-                </task>
-                <task xml:id="task-day11-demo-predict-check">
-                    <statement><p>Take two of your measurements at clearly different duty
-                    cycles and estimate the shaft speed at each, by eye or by ear.  Does the
-                    ratio of the two speeds match the ratio of the two duty cycles, as Part 5
-                    predicted?  If the slower one is slower than predicted, say which effect
-                    from Part 5 accounts for it.</p></statement>
                 </task>
                 <task xml:id="task-day11-demo-reversal">
                     <statement><p>Watch what happens at the end of a ramp, where the motor
@@ -1052,10 +1043,6 @@
                 of numbers is fine; what matters is that they convert the measured width into
                 the compare value the program wrote, which is the number Day 11x will teach
                 them to compute and load.</p>
-                <p>The speed ratio should roughly track the duty-cycle ratio, and where it does
-                not, the slower measurement is usually slower than predicted — friction that
-                does not vanish at low speed, the effect they identified in Part 5, takes a
-                bigger fractional bite out of a small average voltage than a large one.</p>
                 <p>The reversal.  The first reason is shoot-through: reversing means both sides
                 of the bridge switch at once, which is exactly when a transistor that has not
                 finished turning off can conduct at the same time as its partner.  Braking
@@ -1088,15 +1075,17 @@
                     1250 distinct values.  Work out the smallest change in average motor
                     voltage the program can ask for.  If we had instead let the counter reset
                     at 100, what would the PWM frequency have become, and what would the
-                    smallest voltage step have been?  State the trade-off between the two
-                    choices in one sentence.</p></statement>
+                    smallest voltage step have been?  What are the trade-offs between the two
+                    choices?</p></statement>
                 </task>
                 <task xml:id="task-day11-stretch-lowfreq">
                     <statement><p>Lab 6 suggests, as an optional experiment, running the same
-                    motor with a 50 Hz PWM instead of 1.6 kHz.  Using your answer to the brake
-                    phase question in Part 5, predict what changes about the motor's behavior —
-                    both what gets worse and what might get better — before you ever try
-                    it.</p></statement>
+                    motor with a 50 Hz PWM instead of 1.6 kHz.  Work out the period of each,
+                    and then think about what the motor does between one HIGH pulse and the
+                    next: recall from the truth table that during the LOW part of a cycle the
+                    driver is braking the motor rather than letting it coast.  Predict what
+                    changes about the motor's behavior at 50 Hz — both what gets worse and what
+                    might get better — before you ever try it.</p></statement>
                 </task>
             </activity>
             <instructor>
@@ -1106,8 +1095,9 @@
                 trade-off: for a fixed counter clock, a higher PWM frequency and a finer speed
                 resolution pull in opposite directions, because the frequency is the clock
                 divided by the number of steps.</p>
-                <p>At 50 Hz the period is 20 ms, which is no longer short compared with the
-                rotor's mechanical response, so the shaft can partly follow individual cycles:
+                <p>At 1.6 kHz the period is 625 µs; at 50 Hz it is 20 ms, which is no longer
+                short compared with the rotor's mechanical response, so the shaft can partly
+                follow individual cycles — and each cycle now spends milliseconds braking:
                 expect audible and felt pulsing, and rougher rotation, especially at low duty
                 cycles.  What can improve is low-speed torque — each pulse is a full-voltage
                 pulse lasting long enough to break the shaft loose from static friction, so a
@@ -1119,7 +1109,6 @@
                 open — RM0490, <q>General-purpose timers (TIM14)</q>, section 17.3.8
                 (<em>PWM mode</em>) and section 17.4 (<em>TIM14 registers</em>) — and see how
                 the program sets the timer's registers to produce the PWM you watched today.
-                In the next class we will build that setup ourselves.
             </p>
         </subsection>
     </section>
