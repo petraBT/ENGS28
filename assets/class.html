@@ -265,8 +265,21 @@
          (and register diagrams built as tables) showed no grid lines. */
       /* Standalone tables (register diagrams, etc.) get clear space above and
          below so they don't crowd the lead line and the bullets. */
+      /* An <image> that is NOT in a <figure> — a typeset equation inside an
+         activity, say — keeps its PreTeXt image-box, but nothing was sizing the
+         <img> inside it, so it rendered at its intrinsic pixel size and the
+         declared width did nothing. Day 11's equilibrium equation measured the
+         same at 38% and at 30%. */
+      #ref .ref-body .image-box { margin-left: auto !important; margin-right: auto !important; }
+      #ref .ref-body .image-box img { display: block; width: 100%; height: auto; }
       #ref .ref-body > table.tabular { margin: 1.2em 0; }
       #ref table.tabular { border-collapse: collapse; }
+      /* Extracted book markup arrives without the book stylesheet, so a table
+         kept the browser's 16px while the prose around it scaled with the
+         projector — Day 11's parameter table was a quarter smaller than the
+         question above it. Size it like a list item instead, so it grows with
+         the slide. The wide-table rule below is more specific and still wins. */
+      #ref table.tabular { font-size: 2.7vmin; font-size: 2.7cqmin; }
       #ref table.tabular td, #ref table.tabular th { padding: .28em .5em; }
       /* A wide register diagram (10+ columns, e.g. a full 16-bit register) shrinks
          its type so the whole row fits the slide width; narrower tables (truth
@@ -281,6 +294,14 @@
       #ref table.tabular td.r2, #ref table.tabular th.r2 { border-right: 2px solid #6b6a67; }
       #ref table.tabular td.t2, #ref table.tabular th.t2 { border-top: 2px solid #6b6a67; }
       #ref table.tabular td.b2, #ref table.tabular th.b2 { border-bottom: 2px solid #6b6a67; }
+      /* PreTeXt numbers its rules 1 minor, 2 medium, 3 MAJOR, and only 1 and 2
+         were styled here — so top="major" / bottom="major" drew nothing on a
+         slide. Day 11's parameter table projected with no line under its header
+         row while every minor line between the data rows showed. */
+      #ref table.tabular td.l3, #ref table.tabular th.l3 { border-left: 3px solid #3a3936; }
+      #ref table.tabular td.r3, #ref table.tabular th.r3 { border-right: 3px solid #3a3936; }
+      #ref table.tabular td.t3, #ref table.tabular th.t3 { border-top: 3px solid #3a3936; }
+      #ref table.tabular td.b3, #ref table.tabular th.b3 { border-bottom: 3px solid #3a3936; }
       /* Inline colour for slide text (see the <clr> element in engs28-html.xsl),
          e.g. matching oscilloscope-channel colours. */
       #ref .deck-clr-orange { color: #c26a1f; font-weight: 600; }
@@ -698,6 +719,9 @@
         // The player doesn't load MathJax, so PreTeXt <m> math arrives as raw LaTeX
         // in .process-math spans (e.g. "\(V_{CC}\)"). Convert the simple inline math
         // the in-class content uses into readable plain text.
+        var GREEK = { omega: 'ω', theta: 'θ', tau: 'τ', gamma: 'γ', sigma: 'σ',
+                      alpha: 'α', delta: 'δ', Delta: 'Δ', phi: 'φ', lambda: 'λ',
+                      rho: 'ρ', pi: 'π' }
         function demath(root) {
           ;[].forEach.call(root.querySelectorAll('.process-math'), function (el) {
             var t = el.textContent
@@ -708,6 +732,18 @@
                  .replace(/\\Omega/g, 'Ω').replace(/\\mu/g, 'µ').replace(/\\beta/g, 'β')
                  .replace(/\\cdot/g, '·').replace(/\\times/g, '×').replace(/\\approx/g, '≈')
                  .replace(/\\leq?/g, '≤').replace(/\\geq?/g, '≥').replace(/\\pm/g, '±')
+                 // The rest of the Greek and the operators the book's math uses.
+                 // Without these the catch-all below DELETES them, so Day 11's
+                 // parameter table projected as "Does increase or decrease?" and
+                 // "Torque constant, K_t, where = K_t i" — the symbol the row is
+                 // about, gone. \b matters: bare /\\to/ eats the front of \theta.
+                 .replace(/\\(omega|theta|tau|gamma|sigma|alpha|delta|Delta|phi|lambda|rho|pi)\b/g,
+                          function (_, g) { return GREEK[g] })
+                 .replace(/\\lfloor\b/g, '⌊').replace(/\\rfloor\b/g, '⌋')
+                 .replace(/\\to\b/g, '→').replace(/\\propto\b/g, '∝').replace(/\\implies\b/g, '⇒')
+                 .replace(/\\ldots\b/g, '…').replace(/\\lt\b/g, '<').replace(/\\gt\b/g, '>')
+                 // Named functions keep their names; only the backslash goes.
+                 .replace(/\\(arctan|sin|cos|tan|log|ln|min|max|bmod)\b/g, '$1')
                  .replace(/\\,|\\;|\\ /g, ' ')
                  .replace(/_\{([^{}]*)\}/g, '_$1').replace(/\^\{([^{}]*)\}/g, '^$1')
                  .replace(/\\[a-zA-Z]+/g, '')                      // any leftover command
@@ -861,6 +897,16 @@
                 tbl.style.tableLayout = 'fixed'
                 tbl.style.width = '100%'
               }
+            }
+            // A <tabular> inside a projected ACTIVITY can't reach that path:
+            // data-deck-colwidths is authored on a <slide>, and an activity is
+            // book content the deck refs by its own xml:id. Content-sized, Day
+            // 11's parameter table came out 503px on a 1178px slide. Give it the
+            // width it is projected at; the columns still size by content.
+            if (isActivity) {
+              ;[].forEach.call(refBody.querySelectorAll('table.tabular'), function (t) {
+                if (!t.querySelector('colgroup')) t.style.width = '100%'
+              })
             }
             // A demo slide (its body is a board simulator) gets the whole slide.
             refBody.classList.toggle('has-sim', !!refBody.querySelector('.sim-embed'))
