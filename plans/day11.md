@@ -41,12 +41,13 @@ smallest change in average motor voltage the program can ask for, given 1250 cou
 steps on a 5 V supply, then work out what a 100-step counter would have done to both
 the PWM frequency and that voltage step, and state the trade-off. Then predict what
 changes if the same motor is driven at 50 Hz instead of 1.6 kHz — the optional
-experiment Lab 6 suggests — using the brake-phase reasoning from Part 5.
+experiment Lab 6 suggests — reasoning from the period of each and from the truth
+table's fact that the driver brakes during the LOW part of every cycle.
 
 Both generalize the day's idea rather than withholding any part of the crucial step,
-and neither needs anything the class has not already measured. Part 4 carries its own
-early-finisher task (`task-day11-dir-stretch`), since it is the activity with the
-widest completion spread.
+and neither needs anything the class has not already measured. Part 4's early-finisher
+work is `act-day11-direction-more`, an activity of its own, since Part 4 has the widest
+completion spread of the day.
 
 ## Datasheet moments (P-11)
 
@@ -82,32 +83,51 @@ physics and replaced every activity she called too simple:
 | 2 | The H-bridge reverses the motor | explain + predict (3 tasks) | 22 |
 | 3 | The TB6612 driver and its truth table | explain + datasheet reading (3 tasks) | 13 |
 | 4 | First exercise — direction by hand | **do** (wire, predict, verify, measure, time the brake) | 30 |
-| 5 | PWM sets the speed | explain + quantitative predict (4 tasks) | 17 |
+| 5 | PWM sets the speed | explain + prepare for the coding (3 tasks) | 17 |
 | 6 | Second exercise — ramping the motor with PWM | **do** (run, measure period and duty, explain the reversal) | 23 |
 
-Intro/agenda ~3, homework hand-off ~3. **Total ~130 against 110 available.**
+Intro/agenda **~7** (five items come out of each kit — Nucleo, TB6612 breakout, TT
+motor, regulator board and wall adapter, AD2 — and there are no benches, so this is
+not a three-minute start), homework hand-off ~3. **Total ~134 against 110 available.**
 
-**So the day is now genuinely over budget — by roughly 20 minutes — and that is a
-real finding, not the old phantom one.** The richer activities Petra asked for
-consumed the 45 minutes of slack a 110-minute class started with, and then some.
-Two honest ways to shed it, in the order to try them:
+**The day is over budget by roughly 25 minutes, and Gate 3 argues it is worse than
+that** once the Part 4 wiring-check queue is counted: one instructor giving a
+pre-power look at every build serializes the room, and that is the single largest
+uncosted item in the hour. The defer order below is written against the task IDs as
+they actually exist after Petra's pass 2 — an earlier version of this list named four
+tasks that no longer exist, which made it unusable on the day.
 
-1. **Move Part 5's quantitative tasks to the homework** (~8 min).
-   `task-day11-pwm-quantitative` and `task-day11-pwm-lowduty` are paper work needing
-   no hardware, and the homework is currently only "study the driver against the
-   reference manual". Keep `task-day11-pwm-brakephase` in class — it is the one that
-   pays off the Part 3 discovery.
-2. **Mark Part 4's two added measurement tasks as early-finisher work** (~8 min):
-   `task-day11-dir-measure` (terminal voltages against the truth table) and
-   `task-day11-dir-brake` (brake against coast). Both are excellent and neither is
-   on the path to the crucial step, so they are the right things to make optional
-   rather than cut.
+1. **Move Part 5's paper work to the homework** (~9 min). `task-day11-pwm-config`
+   (write the MODER and AFR operations for PA7) and `task-day11-pwm-timing` (derive
+   the prescaler and auto-reload for 1.6 kHz) need no hardware, and the homework is
+   already "work through `TTmotor_ramp.c` against RM0490 §17.3.8 and §17.4" — these
+   are the same work, done before rather than after reading the driver. Keep
+   `task-day11-pwm-pin` in class: it is a thirty-second datasheet lookup and it names
+   the pin the next exercise uses.
+2. **`act-day11-direction-more` is already optional** (~8 min) — the two measurement
+   tasks, terminal voltages against the truth table and brake against coast, are their
+   own activity precisely so they can be skipped by anyone still wiring. Say so out
+   loud rather than letting the room assume it is required.
+3. **Shorten Part 2's shoot-through** (~3 min). Petra's own deck marks it *cultural
+   enrichment*; state it against the figure rather than developing it, and give the
+   time to the start of class.
+4. **If Part 6 is still tight**, take `task-day11-demo-reversal` — the two reasons the
+   driver brakes before reversing — into the instructor debrief instead of asking each
+   group to work it out. It is the most valuable question of the day, so it is the last
+   thing to go, but Part 6 needs a lever of its own and this is it.
 
-That recovers ~16 of the 20. If more is needed, Part 2's shoot-through is
-"cultural enrichment" on Petra's own deck and can be stated rather than developed.
-**Part 4's build and Part 6's run stay protected** — they are the two halves of the
-crucial step, and Part 6 is already eased by continuing from Part 4's wiring rather
-than being a fresh build.
+**Not compressible: Part 4's build and Part 6's run**, the two halves of the crucial
+step. Part 6 is already eased by continuing from Part 4's wiring rather than being a
+fresh build.
+
+**Instructor-facing, and deliberately not in the book (S-25):** narrow the pre-power
+check to the two things that can do damage — the regulator's 5V (not Vin) reaching VM,
+and the motor leads — rather than the whole build. The AIN1/AIN2 jumpers move between
+3.3 V and ground and are self-diagnosable from the truth table, so they do not need a
+queue. Gate 3 asked for a student-facing pin checklist as well; that is not written,
+because `task-day11-dir-wire` is Petra's own sentence and already specifies every
+connection, and a checklist beside it would be the same content twice (B-8). Raise it
+with her rather than duplicating her text.
 
 ## Hand-offs
 

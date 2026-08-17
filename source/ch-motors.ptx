@@ -414,7 +414,7 @@
         <li>A spinning motor generates a voltage of its own, the back-EMF, proportional to its speed: <c>e = K_e ω</c>.</li>
         <li>The armature coils have resistance, and the voltage left over after the back-EMF drives the current through it: <c>V - e = i R_a</c>.</li>
     </ul>
-    <caption>τ torque, i current, ω rotational speed, e back-EMF, V terminal voltage.</caption>
+    <caption>τ torque, i armature current, ω rotational speed, e back-EMF, V terminal voltage; K_i the torque constant, b the friction, K_e the generator constant, R_a the armature resistance.</caption>
 </slide>
 
             <slide xml:id="sl-day11-equilibrium-speed">
@@ -826,7 +826,7 @@
                 the motor at up to 12 V rather than its rated 3–6 V.</caption>
                 <image source="images/Day11-Motors/slide17_img2.png" width="26%"/>
             </figure>
-            <slide xml:id="sl-day11-regulator" ref="fig-tb6612-regulator" stack="yes">
+            <slide xml:id="sl-day11-regulator" ref="fig-tb6612-regulator">
     <ul>
         <li>A 6–12 V wall adapter plugs into the barrel connector; the regulator brings that down to a steady 5 V and brings it out on a header.</li>
         <li>Take the motor supply from the <term>5V</term> pin. The <term>Vin</term> pin next to it is the raw, unregulated input, and wiring that to VM would drive the motor at up to 12 V rather than its rated 3–6 V.</li>
@@ -853,8 +853,8 @@
                 <image source="images/Day11-Motors/tb6612-wiring-exercise1.png" width="100%"/>
             </figure>
             <slide xml:id="sl-day11-wiring-1" ref="fig-tb6612-wiring">
-    <caption>PWM tied HIGH, AIN1 and AIN2 left dangling so you can move them by hand. Have your wiring checked before you apply power.</caption>
-    <note>The two supplies share a ground and are otherwise separate: all 5 V wires stay on the motor side and never touch the 3.3 V rail.</note>
+    <caption>The two supplies share a ground and are otherwise separate: every 5 V wire stays on the motor side and never touches the 3.3 V rail. Wire it with nothing powered — no USB, no adapter — and have your wiring checked. After the check, plug in the USB cable for the 3.3 V logic, then the wall adapter for the motor's 5 V.</caption>
+    <note>The figure shows the while-wiring state, which is why it says to leave USB disconnected; the order after the check is USB first, then the adapter.</note>
 </slide>
 
             <p>
@@ -862,12 +862,17 @@
             </p>
             <image source="images/Day11-Motors/tb6612-truth-table-annotated.png" width="70%"/>
 
+            <slide xml:id="sl-day11-truth-table-again" ref="fig-tb6612-truth-table">
+    <caption>The table to predict from, while you wire and test.</caption>
+    <note>Back up for the activity: they are asked to predict all four settings from this.</note>
+</slide>
+
             <activity xml:id="act-day11-direction">
                 <title>Drive the motor's direction by hand</title>
                 <introduction>
                     <p>Build the circuit with the power off, have your wiring checked by an instructor before
                     you apply power, and then work through the settings by hand.  Keep the
-                    truth table, shown again just above, in front of you.</p>
+                    <q>H-SW Control Function</q> table in front of you.</p>
                 </introduction>
                 <task xml:id="task-day11-dir-wire">
                     <statement><p>With everything unpowered, wire it up as in the image above, paying special attention to the regulator's 5 V only going to the motor driver's VM pin whereas the motor driver's VCC
@@ -1011,7 +1016,10 @@
                 <image source="images/Day11-Motors/pwm-counter-compare.svg" width="80%"/>
             </figure>
             <slide xml:id="sl-day11-counter-compare" ref="fig-pwm-counter-compare">
-    <caption>A counter, a compare value, and one rule: the output is HIGH while the counter is below the compare value. Raising the compare value widens the pulse.</caption>
+    <ul>
+        <li>We will use timer TIM14 for this, the same timer we set up for periodic interrupts on Day 8, and route its output onto a pin. Not every pin can carry a given timer's output.</li>
+    </ul>
+    <caption>The counter is the timer's CNT, the compare value its CCR1, and the top value its ARR — the same ARR you set on Day 8. The output is HIGH while CNT is below CCR1, so raising CCR1 widens the pulse.</caption>
     <note>All of it runs in the timer hardware, so once it is set up the CPU does nothing to keep it going.</note>
 </slide>
 
@@ -1029,9 +1037,10 @@
                     what you know about GPIO and timers.</p>
                 </introduction>
                 <task xml:id="task-day11-pwm-pin">
-                    <statement><p>In the datasheet's Table 12, <em>Pin assignment and
-                    description</em> (p. 30), find PA7 and read off which timer channel it
-                    can output, and which of the pin's alternate functions it is.</p></statement>
+                    <statement><p>In the STM32C031C6 datasheet — not the TB6612 one — find
+                    Table 12, <em>Pin assignment and description</em>, on page 30.  Look up PA7
+                    and read off which timer channel it can output, and which of the pin's
+                    alternate functions it is.</p></statement>
                 </task>
                 <task xml:id="task-day11-pwm-config">
                     <statement><p>A pin only carries a timer's output once it has been switched
@@ -1180,7 +1189,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 motor ramps.  The period is fixed; the width of the HIGH portion — the duty
                 cycle — grows and shrinks as the program raises and lowers the motor
                 speed.</caption>
-                <image source="images/Day11-Motors/slide29_ab2c785e.jpg" width="75%"/>
+                <image source="images/Day11-Motors/fig-pwm-scope.png" width="85%"/>
             </figure>
             <slide xml:id="sl-day11-scope" ref="fig-pwm-scope">
     <caption>The period stays fixed as the motor ramps; the width of the HIGH portion is what grows and shrinks.</caption>
