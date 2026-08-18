@@ -81,7 +81,7 @@ the three that most recently caught what everything else missed.
 | `checker-technical-accuracy` | claims against the driver, the RM, the rest of the book; **and reasoning** — a rule against the chapter's own example, arithmetic in prose, self-contradiction | **115k tokens, 9 min** for Part B alone on a scoped section; 250k / 22 min unscoped |
 | `checker-figure-claims` | that every caption, slide title and claim describes what is **actually in the rendered image** | **180k tokens, 16 min** for twelve figures — it renders, crops and measures, and that is the expensive half |
 | `checker-voice` | that the prose and slides sound like Petra, against her three hand passes; and that her existing wording was reused rather than reinvented | **107k tokens, 6 min** including the reuse pass over the old deck |
-| `checker-arc-fidelity` | that every step of **her** arc reaches the room, and that every in-class paragraph is condensed by exactly one slide — the only reviewer that reads her deck and the new deck side by side | **~60k tokens, 4 min** on one day; it reads two decks and a chapter but renders nothing |
+| `checker-arc-fidelity` | that every step of **her** arc reaches whatever is being built — the plan at Gate 1, the book at Gate 2, the room at Gate 3 — and, at Gate 3, that every in-class paragraph is condensed by exactly one slide | **~60k tokens, 4 min** on one day; it reads two artifacts and renders nothing. **Cheapest and most valuable at Gate 1**, where a missing step costs a line |
 
 **All three verification agents are expensive, and two of them are expensive on
 purpose** — `checker-figure-claims` spends its budget rendering, cropping and
@@ -124,9 +124,18 @@ executable change list and resolves rigor-vs-accessibility.
 **Gate 1 — the plan and the outline** (cheap, minutes):
 
 ```
+checker-arc-fidelity          her arc against the Parts; and the stated class length
 expert-active-learning, expert-cognitive-load, expert-continuity-auditor,
 expert-class-logistics, learner-firstgen-novice, learner-anxious-nonhardware
 ```
+
+`checker-arc-fidelity` leads Gate 1 because this is where a dropped step is
+cheapest to notice. Day 11's plan gave Part 1 six minutes as a *"recap of
+reading/video"* for the material her slides 7 and 8 spend two slides on; the
+physics reached the chapter only when Petra asked where it had gone, two gates
+later. **Give every reviewer at this gate the real class length** — Day 11's plan
+said ~66 minutes against a real 110, and both logistics runs answered a question
+that had been mis-posed.
 
 **Gate 1.5 — the voice probe**, on the first subsection of prose only:
 
@@ -134,10 +143,11 @@ expert-class-logistics, learner-firstgen-novice, learner-anxious-nonhardware
 checker-voice
 ```
 
-**Gate 2 — the book's standing core (9 + synthesizer).** These earned their place
+**Gate 2 — the book's standing core (10 + synthesizer).** These earned their place
 by finding defects nothing else caught:
 
 ```
+checker-arc-fidelity          her arc against the chapter — what she taught that the draft does not
 checker-technical-accuracy    wrong code, wrong registers, wrong arguments   [scope per Part]
 checker-voice                 register; reuse of her existing wording
 checker-figure-claims         caption vs. what is in the image
@@ -151,6 +161,15 @@ learner-anxious-nonhardware   no diagnostic path, no way back in
 
 `learner-in-the-room` is **not** in this core: it walks a deck, and at Gate 2
 there is no deck. It leads Gate 3 instead.
+
+`checker-arc-fidelity` **is** in this core, and it is the answer to the Day 11
+book. Eleven reviewers read that draft and `checker-technical-accuracy` reported
+its motor physics *"VERIFIED correct"* — which it was. What none of them noticed
+is that her four relationships, her equilibrium speed and her parameter table were
+**not in the chapter at all**, along with the IN1/IN2 gate-tying figure, the
+shoot-through picture and the brake-versus-stop explanation. Petra reported all
+four in one message. **Verification checks that what is present is right; only
+this agent checks whether what should be present is there.**
 
 **Gate 3 — the deck's panel (7 + synthesizer)**, on the `<slide>` blocks, the
 deck JSON and the prose they condense, together:
@@ -249,6 +268,7 @@ the "how strong is this" column before trusting a row.
 | F3 | Two screenshots stacked in one image-dominant figure | `checker-figure-claims` | **caught (MAJOR)** | strong, with the right fix (two figures, not a `<sidebyside>`) |
 | F4 | Composites with text outside its box, an arrow through a label, a dropped annotation, and an ACK ellipse on clock pulse 8 | `checker-figure-claims` | **caught — all four kinds** | strong. It measured the ellipse's bounding box against pulse centres rather than eyeballing it, and said "ask for the original" instead of proposing patches |
 | H | Two of her slides became prose inside a Part and never became a slide, so the deck opened Part 2 on how to control an H-bridge with no slide saying what one is | `checker-arc-fidelity` | **caught (MAJOR)** | strong. Fixture: Day 11 at `ad9103b`, brief named only the files. It located the orphaned paragraph at `ch-motors.ptx:513–522`, showed zero hits for `P-channel`/`pMOS`/`nMOS` across every Day 11 slide block, and proposed the slide that was in fact added. It also **graded it MAJOR not BLOCKER** on the correct ground that the activity is still gated — and found three live defects the fixture did not contain (the STBY paragraph with no slide, her TIM14 block diagram dropped by omission, the Day 10 dimming recall on a slide but not in the book), so it generalizes. Ran with `ClassSlidesOLD` unreachable (gitignored) and reconstructed her arc from extracted media — the brief now says to take the `.pptx` from the live tree |
+| H2 | A lesson plan built to the wrong class length, with her motor physics, her Stop/coast mode and her TIM14 figure never assigned to any Part | `checker-arc-fidelity` at **Gate 1** | **caught (BLOCKER)** | **strongest row in the suite.** Fixture: `plans/day11.md` at `d36aadf`, brief named only the files. From a one-page plan it returned the 65-vs-110 error citing `CLAUDE.md`'s own line, and — the part that matters — named it as *causal*: "it manufactures every cut below". It then found the physics unassigned (quoting ω = V/(Ke + bRa/Ki) off her slide 8, which is what Petra asked for two gates later), Stop/coast never taught though Part 4 asks students to predict it, and her slide 25 missing from the figure inventory. Also produced two findings nobody had made: the regulator may be a pre-built board rather than a breadboard build — which, if so, removes the basis for "Part 4 protected, Part 5 is the cut" — and the pins named PA5/6/7 where the board is silkscreened D13/D12/D11 |
 | G | The committee not being run at all | process, not an agent | **addressed, untestable** | the gate is in this file, `CHAPTER_PROCESS.md` and `plans/CHAPTER-GENERATION-PROMPT.md`. No agent can enforce it |
 | G′ | A structural convention never checked against sibling chapters | `checker-technical-accuracy` B4 + `CHAPTER_PROCESS.md` Step 0.5 | **caught** | good — the B run confirmed the x-day no-reading convention holds, citing `ch-debugging.ptx` |
 

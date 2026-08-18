@@ -241,6 +241,21 @@ so plain media extraction silently drops them.
 Rebuild them with `scripts/pptx_annotate.py` rather than shipping the bare
 picture. A register diagram without its callouts has lost the teaching.
 
+**This rule existed and was skipped anyway on Day 11**, which is the interesting
+part. Petra: *"My annotated picture of the TB6612 controller is much better than
+the plain one you included. Same for the datasheet table… I am attaching a bunch
+of annotated images from my slides — looks like you never checked these."* Nothing
+in the process produced evidence that the step had happened, so skipping it looked
+identical to doing it.
+
+So it now produces an artifact. **Record a figure manifest in
+`plans/dayNN-ground-truth.md` §6: every image in her deck, and for each one a
+decision** — rebuilt with annotations / used raw and why / hand-authored because
+hers is too low-resolution / dropped and why. A figure of hers that is not in the
+manifest has not been considered, and `checker-arc-fidelity` reads the manifest at
+Gate 2. Day 11's manifest was missing her slide 25 (the RM0490 TIM14 block
+diagram) entirely, so no gate ever ruled on it and it reached the room nowhere.
+
 ### P-13 The lab is one consumer, not the goal
 
 Chapters prepare students for the lab that follows, but a great deal of learning
@@ -348,6 +363,59 @@ that it motivates, not in the CR1 section that mentions it.
 
 Duplication is the standard failure mode of drafts assembled from slide decks; check
 for it explicitly.
+
+### B-8a The chapter teaches what her deck taught, or records why not
+
+`ClassSlidesOLD` is the authority for the in-class arc (P-12, `CHAPTER_PROCESS.md`
+Step 1). B-8 says each concept is taught **exactly once**; this says each of *her*
+concepts is taught **at least once**.
+
+Day 11's book reached her with **four of her slides missing outright** — reported
+in a single message:
+
+> *"Where did the actual physics go? That should be presented here along with the
+> formulas."* (her slides 7–8: τ = K_t i, τ = bω, e = K_eω, V − e = iR_a, the
+> equilibrium speed, and the parameter table)
+>
+> *"You never show the picture that also includes IN1 and IN2 and how the two
+> transistor controls on the left are tied together in IN1, the two on the right
+> in IN2… So students never see what IN1 and IN2 actually do."* (her slide 10)
+>
+> *"You also don't show the picture for shoot-through."* (her slide 14)
+>
+> *"You totally don't mention the difference between brake and stop. This has to
+> be explained — better, that could become an activity."* (her slides 12–13)
+
+The rewrite is allowed to reorder her, merge her slides, replace her activities
+with harder ones and cut an aside. It is not allowed to lose a step silently. Three
+tests, in order of how cheaply they can be applied:
+
+1. the lesson plan carries a **coverage table** — her slide, and the Part that
+   carries it or the reason it is dropped (Step 2);
+2. the drop reasons are **recorded**, not inferred. "Moved to the pre-class
+   reading" and "the delivered Day 5x never taught capacitor codes" are decisions;
+   absence is not;
+3. `checker-arc-fidelity` runs at Gate 1 and Gate 2 and reports the table.
+
+**Note what does not catch this.** Eleven Gate 2 reviewers read the Day 11 draft
+and `checker-technical-accuracy` reported its physics *"VERIFIED correct"* — and
+it was. Verification confirms that what is present is right; it says nothing about
+what is absent. Neither does any linter, and neither does a build.
+
+### B-9a Expand an acronym at first use, and name nothing the text never uses again
+
+Two opposite caption faults, both from Day 11 pass 1.
+
+**Unexpanded.** *"The caption brings up the word DAC but doesn't spell it out — not
+everyone will remember what that is?"* And: *"Do we ever spell out what PWM
+actually means (pulse width modulation)?"* — in a chapter whose Part 5 is about
+PWM. Expand on first use **in the running text and again in a caption**, because a
+caption is read out of order; `<term>` is not an expansion.
+
+**Over-named.** *"What is the J1, U1, C1, C2 etc all about? They are not mentioned
+again anywhere?"* A figure caption that names board designators the prose never
+uses is asking a student to hold identifiers that pay nothing back. Name a part in
+a caption only if the text, an activity, or the wiring instructions refer to it.
 
 ### B-9 Cross-references and counts are real
 

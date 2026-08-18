@@ -138,6 +138,17 @@ by hand.
 
 Write `plans/dayNN.md`:
 
+- **The class length, on its own line, taken from `CLAUDE.md`'s standing facts** —
+  odd day = Tuesday 110 min, `Nx` = Wednesday 50 min, even day = Thursday 110 min.
+  Write the rule you applied, not just the number. Day 11's plan opened at ~66
+  minutes against a real 110, and **that one wrong premise shaped the whole
+  chapter** (see *What Day 11 taught us*): every Part was budgeted thin, Part 1 got
+  six minutes for material her slides spend two slides on, and both logistics
+  reviews were answering a question that had been mis-posed.
+- **A coverage table against her mined arc** — every slide of `ClassSlidesOLD`,
+  and which Part carries it or why it is dropped. This is the cheapest place in
+  the whole process to notice that a step of hers has no home; a missing row costs
+  a line here, a section at Gate 2, and a round of her time after that.
 - **Objectives** — what a student can do afterwards.
 - **The CRUCIAL step** (P-2) — one sentence. The thing every student must reach.
 - **The STRETCH** (P-3) — what the fastest students do instead of waiting.
@@ -156,6 +167,13 @@ finished chapter, and reviewing it costs a paragraph of rewriting where the same
 finding on a finished draft costs a section.
 
 ### Gate 1 — the plan and outline review
+
+Run `checker-arc-fidelity` here **first**, against the plan. It is the cheapest
+gate at which her arc can be compared to what is being built, and Day 11 is the
+case for it: her slides 7 and 8 are the entire motor physics, the plan gave Part 1
+six minutes as a *"recap of reading/video"*, and the physics reached the chapter
+only when Petra asked *"Where did the actual physics go?"* — two gates and eleven
+reviewers later.
 
 Small panel, minutes to run:
 
@@ -568,6 +586,55 @@ chapter so far. The book itself was not the problem — it passed in two rounds.
 Rounds three, four and five were the deck, and almost every note in them was
 about **layout and legibility**, not content. That is what `AUTHORING-visual.md`
 now exists for.
+
+### The book stage, which went wrong first
+
+The deck's problems get the attention because they took four rounds, but **the
+book took two rounds and lost more.** Her first message on it ran to twenty-four
+items, and five of them were the same thing: the chapter did not contain what she
+teaches.
+
+**One wrong number shaped the whole chapter.** The first `plans/day11.md` budgeted
+the class at **~66 minutes against a real 110**, and every Part was sized to fit
+it. Part 1 — the actuator chain *and* the DC motor — got **six minutes**, marked
+*"explain + predict (recap of reading/video)"*. Her slides 7 and 8 spend two full
+slides on the motor physics. At six minutes there was no room for it, so it was
+never written, and the plan passed Gate 1 with the omission invisible because the
+budget was self-consistent. Her two verdicts — *"Where did the actual physics go?"*
+and *"I don't think there is even close to enough going on in this class"* — are
+the same finding read from two ends. **The clock error and the thin content were
+not two problems.** That is why the class length is now a required line in the plan
+and why `checker-arc-fidelity` checks it at Gate 1.
+
+**Four of her slides were simply absent, and eleven reviewers did not notice.**
+The motor equations (her 7–8), the IN1/IN2 gate-tying figure (her 10), the
+shoot-through picture (her 14), and brake-versus-stop (her 12–13). Gate 2 ran a
+full committee over that draft and `checker-technical-accuracy` reported the
+physics *"VERIFIED correct"* — which it was, every word. **Verification confirms
+that what is present is right and says nothing about what is absent.** No linter
+covers it, no build covers it, and no persona reviewer thought to open her deck.
+`B-8a` and `checker-arc-fidelity` at Gate 1 and Gate 2 exist for exactly this.
+
+**The IN1/IN2 figure is the one to remember.** She asked for it in her *first*
+book message. The book got a figure; the pMOS/nMOS naming stayed in prose. Four
+rounds later, on the deck, she asked for the same thing again — *"we need to talk
+about what the transistors are, what is on when"*. **A correction satisfied in one
+artifact is not satisfied in the next one**, and nothing carried it forward.
+
+**P-12 existed and was skipped, and skipping it was invisible.** Her annotated
+figures were in the repo the whole time; the draft shipped with the plain extracted
+versions. *"Looks like you never checked these."* The rule was fine — what was
+missing was any evidence that it had been followed, so P-12 now produces a figure
+manifest in the ground truth with a recorded decision per image.
+
+**Activities: she rejected four in one message and then generalised it herself.**
+*"Students are not third graders"*, *"way too basic"*, *"stupidly simple"*,
+*"students will feel infantalized"*. P-17 was written from that message and is
+good — but note that it took her saying it four times in one round, plus a summary
+judgment, before it became a rule. **A correction repeated inside a single message
+is already a rule; write it then, not after the next chapter repeats it.**
+
+### The deck stage
 
 **The single largest cause: the deck was condensed from the book, and nothing
 compared it back to her arc.** Step 4 says "condense the in-class Part N sections,
