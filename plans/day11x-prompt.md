@@ -120,18 +120,17 @@ decision rather than letting the overflow happen silently**: either speed sensin
 moves wholly to Day 12, or slides 17–21 become a short closing motivation with the
 work in Day 12. Say which of her slides has no room, and why.
 
-## Two live defects in Day 11 you may be asked to fix
+## Day 11 is closed
 
-Found by `checker-arc-fidelity` after Day 11 was passed; reported to her, not
-applied, because she had declared the day done. Ask before touching them.
+`checker-arc-fidelity` found three things after Day 11 was passed. All three are
+now resolved, so do not re-open them:
 
-- **`ch-motors.ptx:783–790` is condensed by no slide.** It says STBY must be HIGH
-  and is pulled up on our breakout. Nothing on the wall says so, yet
-  `act-day11-truth-table`'s projected introduction says *"with STBY HIGH
-  throughout"* and `inst-day11-truth-table` explains the pull-up **in the answer**.
-  Two bullets on `sl-day11-truth-table` fixes it.
-- **The Day 10 dimming recall** is a bullet on `sl-day11-pwm-idea` but is in no
-  paragraph of the book, so the deck teaches something the book does not.
+- the STBY paragraph had no slide — it is `sl-day11-four-inputs` now, between the
+  block diagram and the truth table;
+- the Day 10 dimming recall was on a slide with no paragraph behind it — the Part 5
+  opening paragraph carries it now;
+- her Day 11 slide 25, the annotated RM0490 TIM14 block diagram, was dropped from
+  Day 11 without a decision. **That decision is this day** — see above.
 
 ## Standing reminders
 
