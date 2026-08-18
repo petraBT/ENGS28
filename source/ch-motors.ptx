@@ -422,21 +422,20 @@
     <note>Open here. The chain is the map for the whole day: PWM stands in for the DAC, the TB6612 is the driver.</note>
 </slide>
 
-            <slide xml:id="sl-day11-motor-circuit" ref="fig-motor-circuit">
-    <caption>The motor as a circuit: the supply V drives a current i through the armature resistance R_a, against the back-EMF e the spinning motor generates.</caption>
-</slide>
-
-            <slide xml:id="sl-day11-motor-relations" ref="fig-motor-relations">
-    <p>Four relationships describe a DC motor, and together they tell us what sets its speed.</p>
+            <slide xml:id="sl-day11-motor-relations" room="compressed">
+    <image source="images/Day11-Motors/motor-circuit.png" width="46%"/>
+    <p>Current → electromagnet field → repels permanent magnet field → torque.</p>
     <ul>
-        <li>The torque is proportional to the armature current, and at a steady speed that torque is just overcoming friction.</li>
-        <li>The back-EMF is proportional to speed, and what is left of the supply after it drives the current through the armature resistance.</li>
-        <li>τ torque, i armature current, ω speed, e back-EMF, V terminal voltage; K_t the torque constant, b the friction, K_e the generator constant, R_a the armature resistance.</li>
+        <li>Torque is proportional to current: <m>\tau = K_t\, i</m>. At a steady speed, torque just overcomes friction: <m>\tau = b\, \omega</m>.</li>
+        <li>A moving coil in a magnetic field generates a voltage, the back-EMF, and it is proportional to speed: <m>e = K_e\, \omega</m>.</li>
+        <li>The motor coils have some resistance, and the voltage left over after the back-EMF is what drives the current through them: <m>V - e = i\, R_a</m>.</li>
     </ul>
+    <caption>τ torque, i current, ω rotational speed, e back-EMF, V terminal voltage; K_t the torque constant, b the friction, K_e the generator constant, R_a the armature resistance.</caption>
+    <note>The circuit and the equations are the same story twice: point at the loop while you say each one.</note>
 </slide>
 
             <slide xml:id="sl-day11-equilibrium-speed" ref="fig-equilibrium-speed">
-    <p>Combining those four to eliminate the current and the back-EMF leaves a relationship between just the terminal voltage and the speed the motor settles at:</p>
+    <p>Combining those four to eliminate the torque, the current and the back-EMF leaves a relationship between just the terminal voltage and the speed the motor settles at:</p>
     <ul>
         <li>Everything in the denominator is a constant of the motor and its load, so the steady speed is proportional to the voltage at the terminals. This is the reason that varying the average voltage is how we vary the speed.</li>
         <li>It balances a torque against friction at a steady speed, so it says nothing about the moment you switch a stopped motor on.</li>
@@ -447,7 +446,7 @@
                 <title>What else changes the speed?</title>
                 <introduction>
                     <p>Work through both parts with this equation in front of you:</p>
-                    <image source="images/Day11-Motors/motor-equilibrium-speed.svg" width="37%"/>
+                    <image source="images/Day11-Motors/motor-equilibrium-speed.svg" width="30%"/>
                 </introduction>
                 <task xml:id="task-day11-params-table">
                     <statement>
@@ -520,6 +519,29 @@
                 P-channel switches, which are on when their gate is LOW, and the lower two are
                 N-channel switches, which are on when their gate is HIGH.
             </p>
+            <slide xml:id="sl-day11-reverse-polarity" ref="fig-hbridge-concept">
+    <ul>
+        <li>To reverse the direction of the motor, switch the + and − connections.</li>
+        <li>In an embedded system there is no hand to swap the two wires, so an H-bridge does it with electronic switches.</li>
+        <li>Four switches surround the motor, which forms the crossbar of the H. The two upper ones connect to the motor supply VM, the two lower ones to ground.</li>
+    </ul>
+    <caption>Whenever you work with a motor there is going to be an H-bridge involved.</caption>
+    <note>The reading's sketch. Supply at the top, ground at the bottom, motor across the middle — that is the whole shape.</note>
+</slide>
+
+            <figure xml:id="fig-hbridge-pmos-nmos">
+                <caption>The four switches are power MOSFETs, and they are not all the same
+                kind.  The upper two are P-channel devices, which conduct when their gate is
+                driven LOW; the lower two are N-channel devices, which conduct when their gate
+                is driven HIGH.  The gate of each is marked <em>g</em>.  That opposition is
+                what the next page turns into a single control line per side.</caption>
+                <image source="images/Day11-Motors/hbridge-pmos-nmos.svg" width="90%"/>
+            </figure>
+            <slide xml:id="sl-day11-pmos-nmos" ref="fig-hbridge-pmos-nmos">
+    <caption>Two kinds of switch, opposite to each other: the upper pMOS conducts on a LOW gate, the lower nMOS on a HIGH gate. The gate of each is marked g.</caption>
+    <note>Never mind what p and n stand for or how they work — what matters is that they are opposites, which is what the next slide rests on.</note>
+</slide>
+
             <p>
                 Closing one switch on the upper rail and the opposite switch on the lower
                 rail connects one motor terminal to the supply and the other to ground, so
@@ -634,7 +656,7 @@
                 different on the bench.
             </p>
             <slide xml:id="sl-day11-brake-vs-stop" ref="fig-hbridge-brake-vs-stop">
-    <caption>On the left, braking: the two terminals are shorted, so the back-EMF drives a current that opposes the rotation. On the right, stopping: all four switches are off, the terminals are left floating, and the shaft coasts. Which we choose is a design decision.</caption>
+    <caption>On the left, braking: the two terminals are shorted, so the back-EMF drives a current that opposes the rotation. The loop is dashed and carries no arrow because which way that current runs depends on which way the shaft was turning. On the right, stopping: all four switches are off, the terminals are left floating, and the shaft coasts.</caption>
     <note>Worth saying out loud: a wheel that must hold position wants the brake, a flywheel that should spin down gently wants the coast.</note>
 </slide>
 
@@ -642,7 +664,10 @@
                 <caption>Braking, on the left, against stopping, on the right.  To brake, the
                 two lower switches conduct, so both motor terminals are tied together at
                 ground and the spinning motor's own back-EMF drives a current through that
-                short, which opposes the rotation and brings the shaft quickly to rest.  To
+                short, which opposes the rotation and brings the shaft quickly to rest.  That
+                loop is drawn dashed and without an arrow on purpose: which way the current
+                runs depends on which way the shaft happened to be turning, and either way it
+                is driven to ground through the lower switches and opposes the rotation.  To
                 stop, all four switches are off, so both terminals are left floating: no
                 current can flow in or out, nothing opposes the rotation, and the shaft coasts
                 down under friction alone.  This all-off state is one the driver's control
@@ -686,9 +711,9 @@
             </insight>
             <slide xml:id="sl-day11-shoot-through" ref="fig-hbridge-shoot-through">
     <ul>
-        <li>The upper and lower switch on the same side conducting at once shorts the motor supply straight to ground, with only the transistors' own resistance to limit the current.</li>
-        <li>The two control lines cannot ask for it, because one line drives both gates of a side in opposite senses.</li>
-        <li>It happens in the transitions instead: a transistor takes time to turn off, so one can still be conducting as its partner turns on. Reversing the motor is when both sides switch at once, so it is the most likely moment.</li>
+        <li>If we allowed the upper and lower switch on the same side to conduct at once this would short the motor supply straight to ground, with only the transistors' own resistance to limit the current.</li>
+        <li>By design this is not a setting that can be obtained via the two control lines, because one line drives both gates of a side in opposite senses.</li>
+        <li>But it could happens in the transitions instead: a transistor takes time to turn off, so one can still be conducting as its partner turns on. Reversing the motor is when both sides switch at once, so it is the most likely moment.</li>
         <li>The TB6612 staggers its switching so every transition passes through a brief state with one side fully off.</li>
     </ul>
     <caption>This is one reason we drive a motor through a driver IC instead of wiring the bridge by hand.</caption>
@@ -775,7 +800,7 @@
                 <task xml:id="task-day11-tt-pwm-low">
                     <statement><p>Select a direction — say IN1 HIGH and IN2 LOW — and then
                     read the row that with PWM HIGH.
-                    What are OUT1 and OUT2 and what mode does the table name it? </p></statement>
+                    What are OUT1 and OUT2 and what mode does the table name it? How does that compare to your earlier prediction?</p></statement>
                 </task>
                 <task xml:id="task-day11-tt-brake-stop">
                     <statement><p>The table shows both a <em>short brake</em> mode and a
@@ -839,10 +864,12 @@
             </figure>
             <slide xml:id="sl-day11-regulator" ref="fig-tb6612-regulator">
     <ul>
+        <li>The motor needs its own current path, and more than the 3.3 V logic rail can give. So it runs from a separate supply, and not from the Nucleo.</li>
         <li>A 6–12 V wall adapter plugs into the barrel connector; the regulator brings that down to a steady 5 V and brings it out on a header.</li>
-        <li>Take the motor supply from the <term>5V</term> pin. The <term>Vin</term> pin next to it is the raw, unregulated input, and wiring that to VM would drive the motor at up to 12 V rather than its rated 3–6 V.</li>
+        <li>That 5 V is what we feed to the driver's <term>VM</term> pin — the motor supply, the rail across the top of every H-bridge drawing today. The driver's logic side, VCC, runs from the Nucleo's 3.3 V.</li>
+        <li>Take it from the <term>5V</term> pin. The <term>Vin</term> pin next to it is the raw, unregulated input, and wiring that to VM would drive the motor at up to 12 V rather than its rated 3–6 V.</li>
     </ul>
-    <caption>The 5 V feeds the driver's VM. The driver's logic side, VCC, runs from the Nucleo's 3.3 V.</caption>
+    <caption>Two supplies, one ground: 5 V for the motor, 3.3 V for the logic.</caption>
 </slide>
 
             <p>
@@ -864,7 +891,7 @@
                 <image source="images/Day11-Motors/tb6612-wiring-exercise1.png" width="100%"/>
             </figure>
             <slide xml:id="sl-day11-wiring-1" ref="fig-tb6612-wiring">
-    <caption>The two supplies share a ground and are otherwise separate: every 5 V wire stays on the motor side and never touches the 3.3 V rail. Wire it with nothing powered — no USB, no adapter — and have your wiring checked by an instructor. After the check, plug in the USB cable for the 3.3 V logic, then the wall adapter for the motor's 5 V.</caption>
+    <caption>Nothing powered while you wire it — no USB, no adapter — and have your wiring checked before you apply power. The two supplies share a ground and are otherwise separate: every 5 V wire stays on the motor side and never touches the 3.3 V rail. After the check, USB first for the 3.3 V logic, then the wall adapter for the motor's 5 V.</caption>
     <note>The figure shows the while-wiring state, which is why it says to leave USB disconnected; the order after the check is USB first, then the adapter.</note>
 </slide>
 
@@ -872,11 +899,6 @@
                 The truth table again, to work from while you wire and test.
             </p>
             <image source="images/Day11-Motors/tb6612-truth-table-annotated.png" width="70%"/>
-
-            <slide xml:id="sl-day11-truth-table-again" ref="fig-tb6612-truth-table">
-    <caption>The table to predict from, while you wire and test.</caption>
-    <note>Back up for the activity: they are asked to predict all four settings from this.</note>
-</slide>
 
             <activity xml:id="act-day11-direction">
                 <title>Drive the motor's direction by hand</title>
@@ -989,7 +1011,7 @@
     <p>The H-bridge sets the motor's direction. In this part we turn to its speed, which we set with pulse-width modulation (PWM).</p>
     <ul>
         <li>We have done this once already: dimming the seven-segment display on Day 10 pulsed its LEDs, and a wider pulse gave a higher duty cycle and a brighter light. The same idea sets a motor's speed.</li>
-        <li>A GPIO pin is either fully HIGH or fully LOW, so it cannot hold an in-between voltage, and the STM32C031C6 has no true DAC to hold one for us.</li>
+        <li>A GPIO pin is either fully HIGH or fully LOW, so it cannot hold an in-between voltage, and the STM32C031C6 has no true DAC to create one for us.</li>
         <li>So we switch the full supply on and off quickly, and let the fraction of each period spent HIGH — the <term>duty cycle</term> — set the average voltage.</li>
         <li>The motor's inertia smooths the pulses, and the shaft turns as though it were driven by that average.</li>
     </ul>
@@ -1044,7 +1066,7 @@
             <slide xml:id="sl-day11-tim14-pin">
     <ul>
         <li>We'll use timer TIM14, the same timer we used for periodic interrupts on Day 8.</li>
-        <li>Almost every pin can carry a PWM output, driven by one counter or another; the datasheet's Table 12 says which counter, and which alternate function.</li>
+        <li>Almost every pin can carry a PWM output, driven by one counter or another; the datasheet's Table 12 shows which counter to use for a particular pin, and which alternate function mode.</li>
     </ul>
     <note>This is the table they go to in the first task of the activity, so leave it on the wall while they start.</note>
 </slide>
@@ -1052,10 +1074,7 @@
             <activity xml:id="act-day11-pwm">
                 <title>Getting ready to program the timer</title>
                 <introduction>
-                    <p>We will drive the PWM from pin PA7 (Arduino header D11).  Next class we
-                    write the code that makes TIM14 produce this waveform; these three tasks
-                    are the parts of it you can already work out, from the datasheet and from
-                    what you know about GPIO and timers.</p>
+                    <p>We will drive the PWM from pin PA7 (Arduino header D11). </p>
                 </introduction>
                 <task xml:id="task-day11-pwm-pin">
                     <statement><p>In the STM32C031C6 datasheet — not the TB6612 one — find
@@ -1066,16 +1085,16 @@
                 <task xml:id="task-day11-pwm-config">
                     <statement><p>A pin only carries a timer's output once it has been switched
                     away from being an ordinary GPIO output and handed to that peripheral,
-                    which is the same alternate-function machinery you used to give pins to
+                    which is the same alternate-function machinery we used to give pins to
                     the UART and the ADC.  Write the register operations that put PA7 into
                     alternate-function mode and select the alternate function you found above.
                     Name the registers and the bit positions; you do not need the timer's own
                     registers for this.</p></statement>
                 </task>
                 <task xml:id="task-day11-pwm-timing">
-                    <statement><p>Now the timer's numbers.  TIM14 counts from a 12 MHz clock,
-                    and we want a PWM period divided into 1250 steps of duty cycle at a
-                    switching frequency of about 1.6 kHz.  What must the prescaler divide the
+                    <statement><p>Now the timer's numbers.  Recall that our system clock runs at 12 MHz.
+                    We want to create a PWM signal at a switching frequency of about 1.6 kHz. Furthermore,
+                    each period should be divided into 1250 steps of duty cycle.  What must the prescaler divide the
                     clock by, and what value does the counter have to count to?  Remember from
                     our earlier work with timers what actually gets written into the prescaler
                     and auto-reload registers, as opposed to the number you have in

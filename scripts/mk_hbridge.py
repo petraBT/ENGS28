@@ -45,7 +45,7 @@ MX, MR = 400, 40                  # motor circle
 GATE = 96                         # gate lead reaches this far off the leg
 BRACKET = 136                     # control-line bracket, further out still
 
-HEAD = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">
+HEAD_T = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">
  <defs>
   <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
    <path d="M0,0 L10,5 L0,10 z" fill="#c01c28"/></marker>
@@ -61,10 +61,19 @@ HEAD = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{
    .term{{font:bold 22px Helvetica,Arial,sans-serif;fill:#1a1a1a}}
    .ctlt{{font:bold 24px Helvetica,Arial,sans-serif;fill:#1a5fb4}}
    .st  {{font:bold 23px Helvetica,Arial,sans-serif;fill:#1a7f37}}
+   .pbox{{stroke:#c01c28;stroke-width:3;fill:none}}
+   .nbox{{stroke:#1a3fd0;stroke-width:3;fill:none}}
+   .pt  {{font:bold 25px Helvetica,Arial,sans-serif;fill:#c01c28}}
+   .nt  {{font:bold 25px Helvetica,Arial,sans-serif;fill:#1a3fd0}}
+   .gt  {{font:bold 26px Helvetica,Arial,sans-serif;fill:#1a1a1a}}
   </style>
  </defs>
  <rect width="100%" height="100%" fill="#fff"/>
-'''.format(w=W, h=H)
+'''
+
+
+def head(h):
+    return HEAD_T.replace('{{', '{').replace('}}', '}').replace('{w}', str(W)).replace('{h}', str(h))
 
 
 def mosfet(x, y, on, kind, side):
@@ -111,8 +120,14 @@ def wrapped(text, x, y, cls='sm', size=21, width=W - 48):
     return '\n'.join(out), len(textwrap.wrap(text, cols))
 
 
-def base(on, title, current=None, ctl=True, note=None, statelbl=None):
-    s = [HEAD]
+def base(on, title, current=None, ctl=True, note=None, statelbl=None,
+         devbox=False, dashed=False, legend=None):
+    # The canvas grows to fit whatever sits under the drawing. A fixed height
+    # silently cut the last lines of a long note off the bottom.
+    note_y = GND + 84 + (34 * len(legend) if legend else 0)
+    n_note = wrapped(note, 24, note_y)[1] if note else 0
+    h = max(H, note_y + n_note * 27 + 10)
+    s = [head(h)]
     s.append(f'<line class="rail" x1="{RAIL_L}" y1="{VM}" x2="{RAIL_R}" y2="{VM}"/>')
     s.append(f'<text class="lbl" x="{RAIL_R + 12}" y="{VM + 9}">VM</text>')
     s.append(f'<line class="rail" x1="{RAIL_L}" y1="{GND}" x2="{RAIL_R}" y2="{GND}"/>')
@@ -147,14 +162,31 @@ def base(on, title, current=None, ctl=True, note=None, statelbl=None):
             s.append(f'<line class="ctl" x1="{bx}" y1="{YU}" x2="{bx}" y2="{YL}"/>')
             s.append(f'<text class="ctlt" x="{bx + side * 14}" y="{(YU+YL)//2 + 8}" '
                      f'text-anchor="{anchor}">{lab}</text>')
+    if devbox:
+        # Her slide-10 annotation: the two upper devices boxed as pMOS, the two
+        # lower as nMOS, with the gate of each marked g.
+        for cls, tcls, y in (('pbox', 'pt', YU), ('nbox', 'nt', YL)):
+            for x, side in ((XL, -1), (XR, +1)):
+                x0 = min(x + 22, x + side * (GATE + 22))
+                x1 = max(x + 22, x + side * (GATE + 22))
+                s.append(f'<rect class="{cls}" x="{x0}" y="{y-72}" '
+                         f'width="{x1-x0}" height="144" rx="3"/>')
+                gx = x0 + 12 if side < 0 else x1 - 12
+                anchor = 'start' if side < 0 else 'end'
+                s.append(f'<text class="gt" x="{gx}" y="{y-18}" '
+                         f'text-anchor="{anchor}">g</text>')
     if current:
-        s.append(f'<path class="cur" d="{current}" marker-end="url(#arw)"/>')
+        dash = ' stroke-dasharray="14 9"' if dashed else ''
+        marker = '' if dashed else ' marker-end="url(#arw)"'
+        s.append(f'<path class="cur" d="{current}"{dash}{marker}/>')
     s.append(f'<text class="lbl" x="24" y="42">{title}</text>')
     if statelbl:
         s.append(f'<text class="st" x="24" y="{GND + 46}">{statelbl}</text>')
+    if legend:
+        for i, (text, cls) in enumerate(legend):
+            s.append(f'<text class="{cls}" x="24" y="{GND + 46 + i * 34}">{text}</text>')
     if note:
-        body, _ = wrapped(note, 24, GND + 84)
-        s.append(body)
+        s.append(wrapped(note, 24, note_y)[0])
     s.append('</svg>')
     return '\n'.join(s)
 
@@ -181,6 +213,12 @@ def leg_down(x, through_upper=True, through_lower=True, y_from=None, y_to=None):
     return ' '.join(parts)
 
 
+# 0. what the four switches ARE, before any control line is drawn: her slide 10.
+mk('hbridge-pmos-nmos.svg', on=ALLON, ctl=False, devbox=True,
+   title='',
+   legend=[('pMOS power transistors, ON when the gate input is LOW', 'pt'),
+           ('nMOS power transistors, ON when the gate input is HIGH', 'nt')])
+
 # 1. the plain bridge and its control lines — no current traced (P-15)
 mk('hbridge-in1-in2.svg', on=ALLON,
    title='The H-bridge, and its two control lines',
@@ -204,10 +242,10 @@ mk('hbridge-cur-out2-out1.svg', on=dict(ul=0, ur=1, ll=1, lr=0),
 cur_br = (f'M{XL},{MY} L{XL},{YL-56} M{XL},{YL+56} L{XL},{GND-6} L{XR},{GND-6} '
           f'L{XR},{YL+56} M{XR},{YL-56} L{XR},{MY}')
 mk('hbridge-brake.svg', on=dict(ul=0, ur=0, ll=1, lr=1),
-   title='Short brake', current=cur_br,
+   title='Short brake', current=cur_br, dashed=True,
    statelbl='Both terminals tied together at ground',
-   note='The spinning motor drives its own back-EMF through the short, and that '
-        'current opposes the rotation.')
+   note='Dashed, and with no arrow: which way the generator current runs depends on which '
+        'way the shaft was turning.')
 
 # 5. stop: all four off, and the motor still drawn
 mk('hbridge-stop.svg', on=ALLOFF, title='Stop',
