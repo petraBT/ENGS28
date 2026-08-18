@@ -20,6 +20,7 @@ over anything here.**
 | **How a chapter gets written** — steps and gates | `CHAPTER_PROCESS.md` |
 | **Starting a chapter in a fresh session** | `plans/CHAPTER-GENERATION-PROMPT.md` |
 | **Slide markup and deck mechanics** | `AUTHORING-slides.md` |
+| **How a slide should LOOK** — type sizes, figures, captions, layout | `AUTHORING-visual.md` |
 | **Build, git, deploy** | `AUTHORING.md` |
 | **The review committee** | `.claude/agents/README.md` |
 

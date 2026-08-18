@@ -271,6 +271,30 @@ its paragraph are separate texts, so a fix to one is not a fix to the other
 Remember the deck may legitimately diverge from the reading (P-9): the book may
 show worked code that the deck presents as a fill-in-the-blank skeleton.
 
+### Step 4b — Walk the arc against her old deck, and the prose against the slides
+
+**Two mappings, both of which Day 11 got wrong and nothing caught.**
+
+**The arc.** Put the mined slide titles from Step 1 beside the deck you just
+built and read them in parallel. Step 4 condenses the book's `Part N` sections,
+so the deck inherits whatever those sections happen to contain — and if her arc
+had a step the book folded into a paragraph, the deck simply does not have it.
+Day 11 opened Part 2 on *how to control an H-bridge* with no slide saying what
+one is, because her slides 9 and 10 (reverse the polarity; the four switches are
+pMOS and nMOS) had become two paragraphs with no `<slide>` block. She found it,
+five rounds in: *"you just jump into how to control the H-bridge, without any
+review of what an h-bridge is."*
+
+**The paragraph mapping.** Walk the in-class prose paragraph by paragraph and
+confirm each one either has a slide or was deliberately left off. The same walk
+catches a slide carrying two paragraphs' worth — Day 11's counter/compare slide
+had a fifth bullet condensing the paragraph *after* its figure, which is why it
+was 196 px over.
+
+Her old deck is also the authority for **layout**, not just sequence — see
+`AUTHORING-visual.md` Rule 3. Day 11's four-relationships slide went through three
+shapes before landing on the one her slide 7 had used all along.
+
 ### Step 5 — Mechanical checks
 
 ```bash
@@ -519,7 +543,7 @@ is done when both are true.
 | ch-timers-interrupts.ptx | Day08 | Day 8 through Gate 2 + Petra's review rounds |
 | ch-gpio-interrupts.ptx | Day09 | Day 9 through Gate 2 (Petra pending) |
 | ch-i2c.ptx | Day09X, Day10 | Days 9x and 10 through Gate 2 (Petra pending) |
-| ch-motors.ptx | Day11, Day11x, Day12 | rough |
+| ch-motors.ptx | Day11, Day11x, Day12 | **Day 11 done** (book + deck, Petra passed 2026-08-18); 11x and 12 rough |
 | ch-accelerometers.ptx | Day13, Day13x, Day14 | rough (Day 13 moved here from ch-i2c, Petra's call) |
 | ch-servos.ptx | Day15, Day15x | rough |
 | ch-photosensors.ptx | Day16 | rough |
@@ -531,6 +555,68 @@ unannotated images, invented code, and no in-class structure. Assume nothing in 
 rough chapter is correct until checked against Step 0 ground truth.
 
 ---
+
+## What Day 11 taught us
+
+Day 11 took **five rounds of Petra's review across two sessions**, more than any
+chapter so far. The book itself was not the problem — it passed in two rounds.
+Rounds three, four and five were the deck, and almost every note in them was
+about **layout and legibility**, not content. That is what `AUTHORING-visual.md`
+now exists for.
+
+**The single largest cause: the deck was condensed from the book, and nothing
+compared it back to her arc.** Step 4 says "condense the in-class Part N sections,
+and only those," which guarantees the deck inherits the book's structure. When two
+of her slides had become two paragraphs of one Part, the deck lost them silently.
+No linter checks this, no committee reviewer checked it, and both Gate 3 and two
+full fit sweeps passed over it. **Step 4b** now exists to catch it.
+
+**The same correction was given four times, and I re-made it after being
+corrected.** "Text on slides is too small" appeared in every round: the figures in
+round one, the captions in round two (*"whenever you aren't actually captioning an
+image, don't use caption"*), a caption again in round four, a formula in round
+five. In round four I put a nine-item symbol legend in a `<caption>` — the exact
+element she had banned for that use two rounds earlier — because the rule as
+written keyed on *"is it captioning an image"* (it was) rather than on *"can the
+room read it"* (it could not). **A correction should be turned into a rule that
+generalises to the next case, not applied to the instance she pointed at.**
+
+**Reviewers do not catch layout, and they did not catch bad prose either.** Gate 3
+ran six reviewers and produced thirteen figure findings, none of which was the
+missing lead-in or the wrong slide layout. A dedicated voice checker passed a
+bullet that jammed two relationships into one ungrammatical sentence — *"the
+back-EMF is proportional to speed, and what is left of the supply after it drives
+the current through the armature resistance"* — which Petra called out with
+*"What do you mean by…??? This is terrible. Did this get reviewed?"* The committee
+checks drafts against rules; it does not read a slide the way a person in the room
+does, and it cannot see a deck's shape at all.
+
+**Three defects were in the player, not the content, and had been mis-attributed
+to the content for months.** A slide table kept a fixed 16 px while the prose
+scaled with the projector; `major` table rules drew nothing; `demath()` silently
+**deleted** every LaTeX command it did not know, so ω and τ vanished from the wall.
+Each looked like an authoring mistake. **When a slide looks wrong in a way that
+would affect every deck, check the player before rewriting the content.**
+
+**The fit check lied.** A two-column body that overflowed grew past the slide
+rather than clipping, so `scrollHeight === clientHeight` and the snippet answered
+*"fits"* for a slide that was 196 px over and printing over its own title. Two
+sessions' sweeps reported it clean. Fixed in the player; the lesson is the one
+`AUTHORING-slides.md` already states and that I did not follow — **look at every
+slide that carries a figure.**
+
+**A wrong premise fed to reviewers wastes the whole gate.** `plans/day11.md` said
+the class was ~65 minutes; it is a Tuesday, so 110. Both logistics reviews and a
+Gate 2 BLOCKER were answering a question I had mis-posed, and the rule was already
+written down in `plans/week5.md`. It is in `CLAUDE.md`'s standing facts now, which
+is where a fresh session actually looks. **Third time this repo made that mistake.**
+
+**Context ran out mid-list, and the handover lost fidelity.** Stopping to write a
+handover was right, and it was accurate enough to resume cold. But one item —
+*"the formula in the introduction is wrong"* — described the symptom she saw
+(it projected as slash-and-paren text) as a mathematical error, and the next
+session spent time re-deriving a formula that was correct. **A handover should
+record what she said and what you observed as two separate lines.**
 
 ## What Day 9's Gate 2 taught us
 

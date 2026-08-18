@@ -531,11 +531,18 @@ These are the quality rules.
 - **S-5 Solutions and instructor cues are never student-facing.** Solutions are
   `"instructor": true`; how-to-solve-it hints are `<note>`; timing goes in
   `presenterNote`.
-- **S-6 No `<m>` math on slides** — the player has no MathJax. Write plain text
-  (`V_IL`, `h_FE`, `R_lim`): the player typesets a single-letter variable plus
-  `_subscript` as an italic symbol with a real subscript, so it *looks* like
-  math without one. Two-letter heads are left alone on purpose, so RM names
-  like `rc_w0` and `CK_CNT` stay verbatim (L-6).
+- **S-6 Built-up math on a slide is a figure; inline math can be `<m>` or plain
+  text.** The player has no MathJax, so `<m>` is flattened by `demath()`. Since
+  2026-08-18 that covers the Greek and operators this book uses, so a one-line
+  `<m>\tau = K_t\, i</m>` projects correctly — but **a fraction bar, a root or a
+  stacked limit does not**, and Petra has twice rejected a flattened
+  `V/(K_e + b R_a / K_t)` as not looking like a formula. Those become a typeset
+  SVG, sized per `AUTHORING-visual.md`. Plain text (`V_IL`, `h_FE`, `R_lim`) is
+  still fine and often simplest: the player typesets a single-letter variable
+  plus `_subscript` as an italic symbol with a real subscript either way.
+  Two-letter heads are left alone on purpose, so RM names like `rc_w0` and
+  `CK_CNT` stay verbatim (L-6). **Not mechanically checked** — no linter reads
+  this rule.
 - **S-7 One idea per slide.** See P-7.
 - **S-9 Slides stand alone.** A slide must carry its reasoning without the book
   open beside it — the worked arithmetic, not just the formula; why a register and

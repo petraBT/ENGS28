@@ -90,6 +90,15 @@ without duplicating its image.
 | **Activity** | *no `<slide>` block* — the deck refs the `<activity>`'s own `xml:id` | full-width; the activity's own heading is hidden, and any figures **or code listings** it embeds are dropped (they get their own slides) |
 | **Table** | `<slide ref="table-X"><caption>takeaway</caption></slide>` (tables are targetable) | the table full-width, with the instructive caption below it |
 | **Demo** (live board simulator) | `<slide><p>lead-in</p><sim starter="…"/></slide>` | lead-in line on top, the running simulator filling the rest of the slide |
+| **Image above text** | `<slide><image source="…" width="46%"/><p>…</p><ul>…</ul></slide>` — a **bare `<image>`**, not a `<figure>` | image on top at the width you declare, text below. The one layout `ref` cannot give you, and the one Petra's own decks use most |
+| **Image beside text** | `<slide><sidebyside widths="52% 44%" margins="2%" valign="middle"><image source="…"/><p>…</p></sidebyside>…</slide>` | two columns *inside* the body, so the text keeps full slide type size |
+
+**A bare `<image>` in a slide body honours its declared `width`** — since
+2026-08-18. Before that nothing sized the `<img>` inside PreTeXt's `image-box`,
+so it rendered at its intrinsic pixel size and the percentage did nothing: Day
+11's equation measured the same at 38% and at 30%. A `<figure>` in a slide body
+is still **stripped** (the player drops `figure, .figure-like` from every body),
+which is why the bare form is the one to use.
 
 **A code activity you want shown *with* its code** (e.g. "rewrite this snippet") must be
 authored as a **self-contained `<slide>` block** — put the `<program>` and the questions
@@ -212,8 +221,19 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   book's outer sidebyside margins so the panels don't collapse.) If the reading
   already had them as two separate small figures with no xref, replace those with the
   one combined figure — it reads better in the book too. (Day 6 N/P-channel topologies.)
-- **No `<m>` math in slides** — the player doesn't load MathJax. Use plain text
-  (e.g. `V_IL`, not `<m>V_{IL}</m>`). The player still makes it *look* like math:
+- **`<m>` math in slides: inline yes, built-up no.** The player loads no MathJax,
+  so `<m>` arrives as raw LaTeX and `demath()` flattens it. Since 2026-08-18 it
+  maps the Greek and operators this book actually uses (`\omega`, `\tau`,
+  `\theta`, `\to`, `\propto`, the named functions, …), so a one-line
+  `<m>\tau = K_t\, i</m>` projects correctly as *τ = K*&#8203;<sub>t</sub> *i* —
+  which is what Petra's own slide 7 wrote by hand. Before that fix every command
+  demath did not know was **deleted**: Day 11's parameter table asked *"Does
+  increase or decrease?"* with the ω silently gone.
+  **Anything built up still has to be a figure** — a fraction bar, a root, a
+  stacked limit. `\frac{a}{b}` flattens to `a/b`, and Petra has twice rejected a
+  slash-fraction as *"looks terrible"* / *"plain text"*. Plain text is still fine
+  and often simplest (`V_IL`, not `<m>V_{IL}</m>`); the player makes it *look*
+  like math either way:
   a **single-letter** variable followed by `_subscript` is typeset as an italic
   symbol with a real subscript (`V_BE` → *V*&#8203;<sub>BE</sub>), in slide text,
   captions, titles, and in a ref'd table. Two-letter heads are deliberately left
@@ -347,13 +367,31 @@ in one panel, `<tabular>` in the other). Slide tables honor PreTeXt's `halign`/`
 — the player maps PreTeXt's per-cell alignment classes (`c`/`l`/`r`, `m`/`t`/`b`) — so
 `halign="center"` really centers the data under the headers.
 
-**`<col width="…"/>` works on slides, and only on slides.** PreTeXt honours it in
-print but emits no `<colgroup>` in HTML, so a slide table used to size its columns
-by *content*: the UART/I2C comparison came out 422 px against 755 px with both
-columns declared `50%`. The XSL now carries the declared widths through as
-`data-deck-colwidths` and the player injects the missing `<colgroup>` and switches
-the table to a fixed layout. Declare a width on **every** column and make them sum
-to 100%, or leave them off entirely and take content sizing.
+**`<col width="…"/>` works on a table a `<slide>` block owns — and only there.**
+PreTeXt honours it in print but emits no `<colgroup>` in HTML, so a slide table
+used to size its columns by *content*: the UART/I2C comparison came out 422 px
+against 755 px with both columns declared `50%`. The XSL carries the declared
+widths through as `data-deck-colwidths` **on the `<slide>` element**, and the
+player injects the missing `<colgroup>` and switches the table to a fixed layout.
+Declare a width on **every** column and make them sum to 100%, or leave them off
+entirely and take content sizing.
+
+**A `<tabular>` inside a projected `<activity>` cannot reach that path**, because
+the attribute is authored on `<slide>` and an activity is book content the deck
+refs by its own `xml:id`. Declared widths there are silently ignored. Since
+2026-08-18 such a table is given the full slide width with content-sized columns
+instead of shrink-wrapping — Day 11's parameter table came out 503 px on a
+1178 px slide and Petra's note was simply *"the table is too small on the
+slide"*. If you need real column proportions in an activity table, the table has
+to move into a `<slide>` block.
+
+**Slide tables are sized in `cqmin`, like everything else.** Extracted book
+markup arrives without the book stylesheet, so a table used to keep the browser's
+fixed 16 px while the prose beside it scaled with the projector. `#ref
+table.tabular` is `2.7cqmin` now (a list item's size); tables with ten or more
+columns keep their own smaller rule. PreTeXt numbers its rules **1 minor, 2
+medium, 3 major** and the player styles all three — before 2026-08-18 only 1 and
+2 were styled, so `top="major"` / `bottom="major"` drew nothing on a slide.
 
 **Check that a slide fits.** Content is free to be substantial but must not
 overflow. Paste this in the browser console with the slide showing; it reports
@@ -440,6 +478,16 @@ every slide that carries a figure**, not "run the snippet":
   Still worth a look when a figure carries fine detail: letterboxing makes a
   wide image *small* on a bullet-heavy slide, and small is still unreadable.
   The lever remains the number of bullets.
+- **A two-column body that grew past the slide instead of clipping — FIXED in
+  the player, 2026-08.** `.ref-cols` centres its children, so an over-full bullet
+  column did not scroll or clip: it expanded in *both* directions, printing its
+  first bullets over the slide title and losing its last off the bottom, while
+  `scrollHeight === clientHeight` and the snippet answered **"fits"**. Day 11's
+  `sl-day11-counter-compare` was 196 px over and measured clean in two separate
+  sessions' sweeps; Petra found it by looking at it. `.ref-body` is now capped
+  against its column (`max-height: 100%; overflow: auto`), so the overflow is a
+  real number again. If you are reading a sweep from before 2026-08-18, its
+  two-column results are not trustworthy.
 - **An `.svg` with a `viewBox` but no `width`/`height`.** It has no intrinsic
   size, so the browser gives it the 300×150 replaced-element default and it
   projects tiny no matter how much room the slide has — Petra's *"that picture
