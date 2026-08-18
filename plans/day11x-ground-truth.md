@@ -147,12 +147,23 @@ the caption should name the mismatch rather than quietly crop it.
 
 Its homework: *work through `TTmotor_ramp.c` with RM0490 §17.3.8 and §17.4 open.*
 
-**Consequence for her slide 5.** Two of its ten questions — "make the pin a pwm
-pin" and the two timing registers — are Day 11 recall, not new work. The new
-questions are the clock-enable pair, `CCMR1`, `CCER`, `CR1`, and the punchline
-`CCR1`. The activity should say so, so the room spends its minutes on the
-registers Day 11 deliberately deferred (`plans/day11.md`: *"The register-level
-walkthrough of the code is **not** taught here — that is Day 11x."*)
+**Consequence for her slide 5 — corrected at Gate 1.** This section originally
+said *two* of her ten questions were recall and then enumerated three. Both were
+wrong. **Seven are recall; only `CCMR1` and `CCER` are new.** Day 8
+(`ch-timers-interrupts.ptx:731–848`) already writes `RCC_APBENR2`, `TIM14->PSC`,
+`TIM14->ARR` and `TIM14->CR1` for TIM14 **by name**; `sl-day11-counter-compare`
+names `ARR` and `CCR1` by mnemonic; `inst-day11-pwm` projects `RCC->IOPENR`,
+`GPIOA->MODER` and `GPIOA->AFR[0]`, which students wrote themselves in
+`task-day11-pwm-config`. The corrected table is in `plans/day11x.md`.
+
+**Also already taught:** `TIM14->EGR |= TIM_EGR_UG` was covered on **Day 10**
+(`ch-i2c.ptx:1663–1673`), with the same reasoning and an `<xref>` to Day 8's
+buffered register. The bit is not new; the *question* — why the update event
+precedes `CEN` — has never been put to students.
+
+**Terminology:** use **"buffered"** (Day 8 and Day 10's term), not "shadow
+register", which appears nowhere in `source/`. Say once that RM0490 calls the same
+mechanism a shadow register.
 
 **Also inherited:** Day 11's Gate 1 arc check found her Day 11 slide 25 — the
 annotated RM0490 TIM14 block diagram (Figure 165) — was dropped from Day 11
@@ -160,10 +171,17 @@ without a decision. It belongs here as the opener that joins Day 11's abstract
 counter-compare picture (`fig-pwm-counter-compare`) to the registers this day
 writes.
 
-**Overlap to watch:** her slide 16 (PWM resolution, T₀ = T_p / `PWM_TIMER_MAX`)
-is the same idea as Day 11's *optional* stretch `task-day11-stretch-resolution`.
-Different day, so no P-16 violation, but it should be framed as making the
-stretch question everyone's, not as new material.
+**Overlap to watch — sharpened at Gate 1.** Her slide 16 (PWM resolution) overlaps
+Day 11's *optional* stretch `task-day11-stretch-resolution`. This section first
+judged it safe as "making the stretch question everyone's" — that judgment predates
+checking that **Day 11's solution slide `inst-day11-stretch` projects the number**:
+*"one step of the compare value is 5 V ÷ 1250 = 4 mV of average voltage."*
+Re-deriving it is B-8 repetition.
+
+**The escape is in her own slide label:** *"Minimum pulse width, **T₀**"* — a
+**time**, which Day 11 never gave. T₀ = 625 µs / 1250 = **500 ns**. Teach T₀ as the
+time, tie it to the 4 mV they already have, and land it on Lab 6 Deliverable 1's
+screenshot resolution. Same slide, different quantity, no repeat.
 
 ---
 
@@ -239,11 +257,35 @@ lets the pin out, and Part 1's activity names both registers.
 
 ---
 
-## 8. Downstream
+## 8. Downstream — Lab 6, read
 
-**Lab 6** (`assets/Labs/`) is the constraint (P-13) — her slide 15 note: *"Need to
-study this for lab 6."* Day 12 continues into the full Lab 6 build. Check the Lab 6
-PDF before Gate 1 closes.
+**Lab 6** is the constraint (P-13) — her slide 15 note: *"Need to study this for
+lab 6."* Its p. 2 prints the driver prototypes, and says *"the mode and speed (PWM)
+controls are separated for flexibility"*:
+
+```c
+void motor_init(void);                 // Set ports for PWM, IN1, IN2
+void motor_mode(uint8_t mode);         // FWD, REV, BRAKE, STOP
+void motor_speed(uint16_t pwm_value);  // interacts with TIM14
+```
+
+**The seam, corrected at Gate 1.** `motor_init()` ← `tim14_pa7_pwm_init()` merged
+with the PA5/PA6 setup from `main()` (driver lines 51–57), including
+`TIM14->CCR1 = 0;`. `motor_speed()` ← `tim14_pwm_set()`. **`motor_mode()` ← Day
+11's truth table**, *not* the inline direction logic in `main()` (lines 87–104),
+which is the ramp's brake-before-reverse policy and produces only three of the four
+modes — never STOP. A student sketching `motor_mode()` from that block copies
+ramp-specific state into their driver. The teaching point: the driver exposes
+mechanism, `main()` holds policy.
+
+Lab 6 also: 1.6 kHz with 1250 discrete values (matches the driver exactly); test on
+Waveforms **before** connecting the motor; `RPM = 60 × PPS / 20` derived **in the
+reading quiz** — a 20-slot wheel; and the optional 50 Hz experiment that matches the
+commented-out defines.
+
+**Recorded for Day 12's Gate 0:** since Day 11x has no pre-class reading, that
+reading quiz can only belong to Day 12. Moving her slides 20–21 there is safe only
+if Day 12's Before-Class section carries the derivation.
 
 ---
 
