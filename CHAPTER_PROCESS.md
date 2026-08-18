@@ -318,6 +318,60 @@ Her old deck is also the authority for **layout**, not just sequence — see
 `AUTHORING-visual.md` Rule 3. Day 11's four-relationships slide went through three
 shapes before landing on the one her slide 7 had used all along.
 
+### Steps 3′ and 4′ — the PILOT ordering: the student's experience first
+
+**Status: pilot, one chapter. Day 11x runs it; Day 11 is the control.** The order
+above stays in force everywhere else until this is judged.
+
+Petra's proposal, 2026-08-18, after Day 11 took five rounds:
+
+> *"Is it better to start with the pre-class reading section and the slides, review
+> those, since that's really the student experience, and then after all that's
+> reviewed, create the in-class narrative directly from the slides?"*
+
+**Why it should work.** Her old slides are discrete teaching steps; the chapter
+turns them into continuous prose inside `Part N`, and the deck is then condensed
+back out of that prose. Prose has no step boundaries, so the boundaries have to be
+guessed on the way back — which is exactly how two of her Day 11 steps returned as
+clauses inside a paragraph about something else. Nothing was deleted; the shape was
+lost in the round trip. This ordering removes the round trip: **her deck → our
+deck**, one lossy hop instead of two. It also puts the harder constraint first,
+since a figure that works in the book routinely fails on the wall.
+
+**It preserves the invariant the current order exists for.** Slides are built from
+the plan she passed at Gate 1; she then passes the slides; the prose is written
+from passed slides. Nothing is ever built on unpassed text — the Day 10 lesson
+survives with the arrows reversed.
+
+| | Step | Artifact |
+| --- | --- | --- |
+| 3′ | **Write the student-facing half** | the pre-class reading (if the day has one), and the in-class **skeleton**: subsections, figures, `<activity>` blocks with their `<instructor>` answers, `<slide>` blocks, and the deck JSON. No connecting prose yet. |
+| | **Gate 2′ — the student-facing gate** | the reading gets the book core; the slides get the deck panel. `checker-arc-fidelity` runs across both. Then **delivery 1 to Petra.** |
+| 4′ | **Write the in-class prose from the passed slides** | each paragraph expands the slide beside it. |
+| | **Gate 3′ — the prose gate** | `checker-voice` leads, `checker-arc-fidelity` runs the paragraph↔slide mapping in the easy direction, then **delivery 2.** |
+
+**Three guards, and the pilot is not a fair test without all three.**
+
+1. **Gate 1.5, the voice probe, moves to Step 4′** and runs on the *first*
+   subsection of prose before the rest is written. It never ran on Day 11.
+2. **The prose is expected to be longer than the slide it expands.** The slide is
+   the skeleton, not the target. The failure mode of this ordering is prose that
+   reads like expanded bullets, which is precisely the register the S-22…S-28
+   calibrations forbid — *"her register is plain and explanatory, not terse."*
+   Compression toward the slide is the thing to watch for.
+3. **Gate 3′ is a real gate.** The artifact reviewed last is the one a student who
+   missed class depends on; it does not get a rubber stamp.
+
+**What this ordering does not fix,** so do not expect it to: the class-length
+premise (Step 2 and Gate 1), activities that are too easy (P-17), her annotated
+figures being ignored (P-12), or the need for the arc check at every gate. Day 11
+lost the physics before any artifact existed.
+
+**How it is judged.** Two numbers, recorded in `reviews/day11x-pilot.md`: how many
+review rounds Petra spends, and what fraction of her notes are *"this isn't what I
+teach"* versus *"this doesn't read right"*. Day 11 was five rounds, and the first
+kind dominated.
+
 ### Step 5 — Mechanical checks
 
 ```bash
@@ -566,7 +620,7 @@ is done when both are true.
 | ch-timers-interrupts.ptx | Day08 | Day 8 through Gate 2 + Petra's review rounds |
 | ch-gpio-interrupts.ptx | Day09 | Day 9 through Gate 2 (Petra pending) |
 | ch-i2c.ptx | Day09X, Day10 | Days 9x and 10 through Gate 2 (Petra pending) |
-| ch-motors.ptx | Day11, Day11x, Day12 | **Day 11 done** (book + deck, Petra passed 2026-08-18); 11x and 12 rough |
+| ch-motors.ptx | Day11, Day11x, Day12 | **Day 11 done** (book + deck, Petra passed 2026-08-18); **11x is the pilot of Steps 3′/4′** — see `plans/day11x-prompt.md`; 12 rough |
 | ch-accelerometers.ptx | Day13, Day13x, Day14 | rough (Day 13 moved here from ch-i2c, Petra's call) |
 | ch-servos.ptx | Day15, Day15x | rough |
 | ch-photosensors.ptx | Day16 | rough |
