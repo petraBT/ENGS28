@@ -1452,6 +1452,17 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                     voltage does the motor see from a 5 V supply?</p></statement>
                 </task>
             </activity>
+            <slide xml:id="sl-day11x-registers-questions" room="yes">
+    <p>With the reference manual open at section 17.4, <em>TIM14 registers</em> — page 482.</p>
+    <ol>
+        <li>Section 17.3.8 selects PWM mode by writing <c>0110</c> or <c>0111</c> into a field called OC1M. Which register is that field in? Which of the two values holds the pin HIGH until the counter reaches the compare value, and then drops it? What would the other one have looked like on the scope?</li>
+        <li>Find the bit named CC1E, and the register it lives in. If you deleted the one line that sets it, and changed nothing else, what would you see on PA7?</li>
+        <li>The program writes one more register that neither of those questions asked about, just before it starts the counter. Find it. What does the bit our program sets do, and why do it before starting the counter rather than after?</li>
+    </ol>
+    <caption>If you finish: our program calls tim14_pwm_set(625), and the counter runs to 1249. What duty cycle is that, and what average voltage on a 5 V supply?</caption>
+    <note>≈ 8 min on these three. Say at the START that we go through all of them together afterwards, so nobody's fifteen minutes depends on their group being fast. Checkpoint at about minute 7: ask every table to confirm they are actually in section 17.4 — a group in the datasheet, or in the TIM1 chapter, will find nothing and will not say so.</note>
+</slide>
+
             <instructor xml:id="inst-day11x-registers">
                 <p><term>The whole mapping.</term>  The three new answers are in the last
                 three rows; the rest is <xref ref="table-day11x-recall"/>.</p>
@@ -1469,6 +1480,8 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 the first part of every period and HIGH for the rest, so a compare value
                 that should have meant slow would have driven the motor fast.  The duty
                 cycle would run backwards.</p>
+            </instructor>
+            <instructor xml:id="inst-day11x-registers-b">
                 <p><term>CC1E.</term>  It is bit 0 of <c>TIM14_CCER</c>, the capture/compare
                 enable register, and the manual says that with it set the OC1 signal is
                 output on the corresponding output pin.  Without it the counter still
@@ -1644,8 +1657,8 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
     <note>≈ 2 min. This is the reveal for the first decode task — do not project it before they have written something down.</note>
 </slide>
 
-            <slide xml:id="sl-day11x-init-code">
-    <p>The whole setup, in the order it runs.</p>
+            <slide xml:id="sl-day11x-init-pin">
+    <p>First half of the setup: hand the pin to the timer.</p>
     <program language="c"><code><![CDATA[
 void tim14_pa7_pwm_init(void) {
 	// Enable clock access to GPIOA
@@ -1658,7 +1671,14 @@ void tim14_pa7_pwm_init(void) {
 	// Set PA7 alternate function type (AF4, 0100)
 	GPIOA->AFR[0] &= ~GPIO_AFRL_AFSEL7_Msk;
 	GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
+]]></code></program>
+    <caption>Clock, mode, function — the same three steps as every pin we have configured.</caption>
+    <note>≈ 2 min. This half is Day 11 recall: they wrote MODER and AFR themselves in act-day11-pwm. Move briskly and spend the time on the second half.</note>
+</slide>
 
+            <slide xml:id="sl-day11x-init-timing">
+    <p>Then the timer's own numbers: how fast it counts, how far, and where it starts.</p>
+    <program language="c"><code><![CDATA[
 	// Enable clock access to Timer 14
 	RCC->APBENR2 |= RCC_APBENR2_TIM14EN;
 
@@ -1670,7 +1690,14 @@ void tim14_pa7_pwm_init(void) {
 
 	// Set the compare register value - start with a speed of 0
 	TIM14->CCR1 = 0;
+]]></code></program>
+    <caption>Rate, range — and a starting speed of zero, so the motor cannot jump when the counter starts.</caption>
+    <note>≈ 2 min. The first three are Day 8, and the arithmetic behind PSC_FACTOR-1 and PWM_TIMER_MAX-1 is what they did on Day 11. CCR1 = 0 is the one that is neither: it is the safety line.</note>
+</slide>
 
+            <slide xml:id="sl-day11x-init-mode">
+    <p>And the part that makes it a PWM channel rather than a counter.</p>
+    <program language="c"><code><![CDATA[
 	// Set pwm mode 1 (0110): pin is high up to capture value, then goes low
 	TIM14->CCMR1 &= ~TIM_CCMR1_OC1M_Msk;
 	TIM14->CCMR1 |= TIM_OC1_PWM1 << TIM_CCMR1_OC1M_Pos;
@@ -1689,8 +1716,8 @@ void tim14_pa7_pwm_init(void) {
 	TIM14->CR1 |= TIM_CR1_CEN;
 }
 ]]></code></program>
-    <caption>Pin first, then the timer's numbers, then the mode, then the output, then go.</caption>
-    <note>≈ 4 min. One beat per block, in this order — do not read it as one list. The two CCMR1 pairs are the read-modify-write they just decoded. EGR/UG is Day 10 recall: say "the buffered registers from the display timer" and move on rather than re-deriving it.</note>
+    <caption>Mode, output, update, go — the four they just decoded.</caption>
+    <note>≈ 3 min, one beat per block. The two CCMR1 pairs are the read-modify-write from the decode activity: clear the field, then set it. EGR/UG is Day 10 recall — "the buffered registers from the display timer" — and CC1E is the line whose absence gives a silent pin.</note>
 </slide>
 
             <slide xml:id="sl-day11x-set-code">

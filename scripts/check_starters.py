@@ -58,8 +58,12 @@ FRAGMENTS = [
     # TTmotor_ramp.c is the Day 11x driver.  The book quotes the two PWM
     # functions; the ramp state machine in main() is read from the file, not
     # reprinted, so this is a FRAGMENTS pair rather than a whole-file one.
+    # tim14_pa7_pwm_init() is projected in two halves -- the pin, then the timer --
+    # so the pair of markers is compared against the one function.
     ("assets/starters/TTmotor_ramp.c", "tim14_pa7_pwm_init", "source/ch-motors.ptx",
-     "// Generate an update event - this clears counter, prescaler counter, updates registers"),
+     ("// Set PA7 alternate function type (AF4, 0100)",
+      "// Set the compare register value - start with a speed of 0",
+      "// Generate an update event - this clears counter, prescaler counter, updates registers")),
     ("assets/starters/TTmotor_ramp.c", "tim14_pwm_set", "source/ch-motors.ptx",
      "// Safety first: Allow no pulse values outside the (0, PWM_TIMER_MAX-1 range!"),
 ]
@@ -137,7 +141,14 @@ def main():
             print(f"  MISSING  {rel_starter}")
             problems += 1
             continue
-        block = listing(open(chapter).read(), marker)
+        # A marker may be a tuple of markers, when one function is projected
+        # across two <program> blocks -- a long init split into "the pin" and
+        # "the timer", the way Petra's own Day 11x slide 10 splits it.  The
+        # blocks are concatenated in the order given and compared as one.
+        chapter_text = open(chapter).read()
+        markers = marker if isinstance(marker, tuple) else (marker,)
+        blocks = [listing(chapter_text, m) for m in markers]
+        block = None if any(b is None for b in blocks) else "\n".join(blocks)
         real = function_body(open(starter).read(), func)
         if block is None or real is None:
             print(f"  NO LISTING  {rel_starter}:{func}()")
