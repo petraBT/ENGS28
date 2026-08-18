@@ -169,7 +169,36 @@ was 196 px over (it grew past the slide instead of clipping). That is fixed, but
 it is the reason the rule is *look at every slide that carries a figure*, not
 *run the snippet*.
 
----
+### Render it at its own size, or you will look at the wrong picture
+
+Looking is only worth anything if what you are shown is the figure. **`qlmanage
+-t` forces every thumbnail into a square** and crops whatever does not fit, so a
+wide diagram comes back with its right-hand side missing — which looks exactly
+like a composite that `pptx_annotate.py` cropped. On Day 11x two rebuilt figures
+were read as silently cropped, written up as defects, and very nearly reported to
+Petra as figures that had to come from her. Both were fine. The rasterizer was
+not.
+
+Render at the size the SVG declares:
+
+```bash
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# read width/height off the <svg> element -- they match the viewBox (B-11a)
+"$CHROME" --headless --disable-gpu --screenshot=out.png \
+          --window-size=1158,644 --default-background-color=FFFFFFFF fig.svg
+```
+
+Two habits that make this cheap. **Check the aspect ratio of what you got against
+the `viewBox`** — a square PNG from a 2:1 figure is the tell, and it costs one
+line to notice. And when several figures need looking at, put them in one HTML
+page and screenshot that once, rather than reading a dozen images in.
+
+The general form of the mistake is worth naming, because it is not really about
+`qlmanage`: **a defect you can only see through a tool is a claim about the tool
+as much as about the figure.** Before reporting one, confirm the tool is showing
+you the whole artifact. `pptx_annotate.py` does have real failure modes — a label
+that does not wrap, a shape layer that lands in the wrong place — and they are
+distinguishable from a bad render only if the render is honest.
 
 ## Rule 6 — Draw only what the chapter teaches
 
@@ -237,6 +266,8 @@ Before handing over a deck:
 - [ ] No `<caption>` carries anything a student must read
 - [ ] Every figure's text is ≥ 2 % of slide height; display equations ≈ 4–5 %
 - [ ] Every figure looked at in the player, not just measured
+- [ ] Every rebuilt composite rendered at its declared `viewBox` size, and its
+      aspect ratio checked against it, before any of it is called a defect
 - [ ] No figure answers a question a later slide asks
 - [ ] No figure drawn twice
 - [ ] The fit snippet run with the crossfade killed and the preview server stopped

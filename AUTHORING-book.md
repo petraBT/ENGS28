@@ -256,6 +256,14 @@ manifest has not been considered, and `checker-arc-fidelity` reads the manifest 
 Gate 2. Day 11's manifest was missing her slide 25 (the RM0490 TIM14 block
 diagram) entirely, so no gate ever ruled on it and it reached the room nowhere.
 
+And a rebuild is only judged once you have seen it whole: **render every composite
+at the size its `<svg>` declares** before calling anything about it a defect.
+`qlmanage -t` squares its thumbnails and crops wide figures, which is
+indistinguishable from a composite that lost its right-hand side — on Day 11x two
+sound figures were written up as cropped on that evidence. The method, and the
+habit of checking the render's aspect ratio against the `viewBox`, are in
+`AUTHORING-visual.md` Rule 5.
+
 ### P-13 The lab is one consumer, not the goal
 
 Chapters prepare students for the lab that follows, but a great deal of learning
