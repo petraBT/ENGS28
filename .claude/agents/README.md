@@ -81,6 +81,7 @@ the three that most recently caught what everything else missed.
 | `checker-technical-accuracy` | claims against the driver, the RM, the rest of the book; **and reasoning** — a rule against the chapter's own example, arithmetic in prose, self-contradiction | **115k tokens, 9 min** for Part B alone on a scoped section; 250k / 22 min unscoped |
 | `checker-figure-claims` | that every caption, slide title and claim describes what is **actually in the rendered image** | **180k tokens, 16 min** for twelve figures — it renders, crops and measures, and that is the expensive half |
 | `checker-voice` | that the prose and slides sound like Petra, against her three hand passes; and that her existing wording was reused rather than reinvented | **107k tokens, 6 min** including the reuse pass over the old deck |
+| `checker-arc-fidelity` | that every step of **her** arc reaches the room, and that every in-class paragraph is condensed by exactly one slide — the only reviewer that reads her deck and the new deck side by side | **~60k tokens, 4 min** on one day; it reads two decks and a chapter but renders nothing |
 
 **All three verification agents are expensive, and two of them are expensive on
 purpose** — `checker-figure-claims` spends its budget rendering, cropping and
@@ -109,7 +110,7 @@ figure or a whole argument.
 | --- | --- |
 | `expert-cognitive-load` | working-memory demand, chunking, fading scaffolds — **and owns the repetition census** |
 | `expert-continuity-auditor` | prerequisites, forward references, downstream delivery |
-| `expert-class-logistics` | whether the plan survives a real 65 minutes |
+| `expert-class-logistics` | whether the plan survives the real class length — **take it from `CLAUDE.md`'s standing facts and put it in the brief** |
 | `expert-active-learning` | who is doing the intellectual work |
 | `expert-rigor-hawk` | depth removed and called scaffolding |
 | `expert-ai-era-readiness` | what still matters when AI writes the code |
@@ -151,17 +152,23 @@ learner-anxious-nonhardware   no diagnostic path, no way back in
 `learner-in-the-room` is **not** in this core: it walks a deck, and at Gate 2
 there is no deck. It leads Gate 3 instead.
 
-**Gate 3 — the deck's panel (6 + synthesizer)**, on the `<slide>` blocks, the
+**Gate 3 — the deck's panel (7 + synthesizer)**, on the `<slide>` blocks, the
 deck JSON and the prose they condense, together:
 
 ```
 learner-in-the-room           what each slide adds; slides that can't be used from the wall
+checker-arc-fidelity          her arc against the room; every paragraph mapped to exactly one slide
 checker-voice                 slides vs. the paragraph they condense — the only check on Step 5b
 checker-figure-claims         slide titles and captions vs. what is in the image
 learner-visual                legibility at projection size; a letterboxed figure gone small
 expert-cognitive-load         the repetition census across the projected hour
-expert-class-logistics        whether the deck's arc survives 65 real minutes
+expert-class-logistics        whether the deck's arc survives the real class length
 ```
+
+`checker-arc-fidelity` is the one added after Day 11, and it is the only member
+of either gate that can see a **hole** rather than a defect. Everything else
+reviews what is on the page; it reviews what is not. Give it the old deck's path
+explicitly — it will not guess which `ClassSlidesOLD` file maps to the day.
 
 Give `checker-voice` **both** texts at Gate 3. Her hand pass reaches the slides
 and the deck and stops at the paragraph margin — or the reverse — and the drift
@@ -241,6 +248,7 @@ the "how strong is this" column before trusting a row.
 | F2 | A slide's figure silently cropped while every measurement reads zero | — | **not covered** | there is no static or measurable signal. `checker-figure-claims` names candidates with bullet counts; that is triage, not detection. **The control is the human fit check** (`AUTHORING-slides.md`, trap 4) |
 | F3 | Two screenshots stacked in one image-dominant figure | `checker-figure-claims` | **caught (MAJOR)** | strong, with the right fix (two figures, not a `<sidebyside>`) |
 | F4 | Composites with text outside its box, an arrow through a label, a dropped annotation, and an ACK ellipse on clock pulse 8 | `checker-figure-claims` | **caught — all four kinds** | strong. It measured the ellipse's bounding box against pulse centres rather than eyeballing it, and said "ask for the original" instead of proposing patches |
+| H | Two of her slides became prose inside a Part and never became a slide, so the deck opened Part 2 on how to control an H-bridge with no slide saying what one is | `checker-arc-fidelity` | **caught (MAJOR)** | strong. Fixture: Day 11 at `ad9103b`, brief named only the files. It located the orphaned paragraph at `ch-motors.ptx:513–522`, showed zero hits for `P-channel`/`pMOS`/`nMOS` across every Day 11 slide block, and proposed the slide that was in fact added. It also **graded it MAJOR not BLOCKER** on the correct ground that the activity is still gated — and found three live defects the fixture did not contain (the STBY paragraph with no slide, her TIM14 block diagram dropped by omission, the Day 10 dimming recall on a slide but not in the book), so it generalizes. Ran with `ClassSlidesOLD` unreachable (gitignored) and reconstructed her arc from extracted media — the brief now says to take the `.pptx` from the live tree |
 | G | The committee not being run at all | process, not an agent | **addressed, untestable** | the gate is in this file, `CHAPTER_PROCESS.md` and `plans/CHAPTER-GENERATION-PROMPT.md`. No agent can enforce it |
 | G′ | A structural convention never checked against sibling chapters | `checker-technical-accuracy` B4 + `CHAPTER_PROCESS.md` Step 0.5 | **caught** | good — the B run confirmed the x-day no-reading convention holds, citing `ch-debugging.ptx` |
 

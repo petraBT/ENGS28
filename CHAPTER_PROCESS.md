@@ -291,6 +291,11 @@ catches a slide carrying two paragraphs' worth — Day 11's counter/compare slid
 had a fifth bullet condensing the paragraph *after* its figure, which is why it
 was 196 px over.
 
+`checker-arc-fidelity` does this walk at Gate 3 and reports both mappings as
+tables; run it there rather than doing it by hand. Step 4b remains the author's
+own pass, because the reviewer runs after the deck is built and this is cheaper
+to fix before.
+
 Her old deck is also the authority for **layout**, not just sequence — see
 `AUTHORING-visual.md` Rule 3. Day 11's four-relationships slide went through three
 shapes before landing on the one her slide 7 had used all along.
