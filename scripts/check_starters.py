@@ -55,6 +55,13 @@ STARTERS = [
 FRAGMENTS = [
     ("assets/starters/i2c.c", "i2c1_init", "source/ch-i2c.ptx",
      "RCC->IOPENR |= RCC_IOPENR_GPIOBEN;"),
+    # TTmotor_ramp.c is the Day 11x driver.  The book quotes the two PWM
+    # functions; the ramp state machine in main() is read from the file, not
+    # reprinted, so this is a FRAGMENTS pair rather than a whole-file one.
+    ("assets/starters/TTmotor_ramp.c", "tim14_pa7_pwm_init", "source/ch-motors.ptx",
+     "// Generate an update event - this clears counter, prescaler counter, updates registers"),
+    ("assets/starters/TTmotor_ramp.c", "tim14_pwm_set", "source/ch-motors.ptx",
+     "// Safety first: Allow no pulse values outside the (0, PWM_TIMER_MAX-1 range!"),
 ]
 
 
