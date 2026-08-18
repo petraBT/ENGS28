@@ -167,8 +167,13 @@ def base(on, title, current=None, ctl=True, note=None, statelbl=None,
         # lower as nMOS, with the gate of each marked g.
         for cls, tcls, y in (('pbox', 'pt', YU), ('nbox', 'nt', YL)):
             for x, side in ((XL, -1), (XR, +1)):
-                x0 = min(x + 22, x + side * (GATE + 22))
-                x1 = max(x + 22, x + side * (GATE + 22))
+                # The near edge is 22 past the leg wire on the far side from
+                # the gate, the far edge 22 past the gate lead. Writing the
+                # near edge as x + 22 instead of x - side * 22 shifted the
+                # right-hand boxes 22px right, so they were narrower than the
+                # left pair and cut the leg side of both right-hand MOSFETs.
+                near, far = x - side * 22, x + side * (GATE + 22)
+                x0, x1 = min(near, far), max(near, far)
                 s.append(f'<rect class="{cls}" x="{x0}" y="{y-72}" '
                          f'width="{x1-x0}" height="144" rx="3"/>')
                 gx = x0 + 12 if side < 0 else x1 - 12
