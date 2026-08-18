@@ -43,11 +43,24 @@ teach"* versus *"this doesn't read right."*
 
 ## Step 0 — ground truth, before anything else
 
-- **Recover `TTmotor_ramp.c` into `assets/starters/`.** It is the day's driver and
-  it is **not** in the repo. Its text is in `plans/day11-ground-truth.md` §2, and
-  her Day 11x slides 10, 14 and 15 carry the core functions. B-6: the code in the
-  book is the real driver's code — do not reconstruct it from memory. Once it is
-  a file, `scripts/check_starters.py` will verify the book's listing against it.
+- **`assets/starters/TTmotor_ramp.c` is in the repo** — Petra added it on
+  2026-08-18. It is the day's driver, and it is the authority (B-6): every listing
+  in the book must be copied from it, never retyped or reconstructed, and
+  `scripts/check_starters.py` verifies the match once the book quotes it. Read the
+  whole file before writing anything.
+
+  Three things in it worth knowing before you plan the day:
+
+  - the active constants are `PSC_FACTOR 6` and `PWM_TIMER_MAX 1250` — 12 MHz ÷ 6 =
+    2 MHz, ÷ 1250 = 1.6 kHz. That agrees with what Day 11 already teaches, so
+    nothing needs reconciling;
+  - a **commented-out pair for 50 Hz** sits directly beneath them. Day 11's stretch
+    (`act-day11-stretch`, source ~1283) asks students to reason about running the
+    motor at 50 Hz instead of 1.6 kHz — so the alternative they reasoned about is
+    literally in the file, two lines down. That is a gift for this day: they can
+    change two `#define`s and hear it;
+  - the header carries a stray scratch line, `// trying 50 Hz`, above the includes.
+    Leave her file alone — but do not copy that line into a book listing.
 - **Write the figure manifest** (`plans/day11x-ground-truth.md` §6): every image
   in her deck, and for each a decision — rebuilt with annotations / used raw /
   hand-authored / dropped and why. P-12 existed on Day 11 and was skipped, and
