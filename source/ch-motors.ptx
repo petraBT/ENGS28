@@ -1356,8 +1356,16 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 
             <!-- DELIVERY 2: prose. -->
 
+            <p>
+                The program we are about to read drives exactly one pin: PA7, which you
+                found on Day 11 is where TIM14's channel 1 comes out.  Getting that pin to
+                carry a PWM waveform takes eleven lines of setup, and most of them write
+                registers we have written before — some on Day 8, when we first used this
+                timer, and some on Day 11, when we handed the pin over to it.  So before we
+                go looking for what is new, here is what we already know how to do.
+            </p>
             <table xml:id="table-day11x-recall">
-                <title>What we have already set up, and where</title>
+                <title>Setting up PA7 as a PWM output: what we have already done, and where</title>
                 <tabular halign="left">
                     <row header="yes" bottom="minor">
                         <cell>To do this</cell>
@@ -1402,7 +1410,8 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 </tabular>
             </table>
             <slide xml:id="sl-day11x-recall" ref="table-day11x-recall">
-    <caption>Eight of the lines in the driver are registers we have already written. Two are not, and neither is the reason the counter is restarted before it runs.</caption>
+    <p>The program we are about to read drives one pin — PA7, where TIM14's channel 1 comes out. Setting it up takes twelve lines, and most of them write registers we have written before.</p>
+    <caption>Two of them we have never written, and neither is the reason the counter gets restarted before it runs.</caption>
     <note>≈ 2 min. Project this before the activity. The point is that the room is further along than it feels — and that the fifteen minutes coming up are for the three things that are genuinely new, not for re-finding PSC and ARR.</note>
 </slide>
 
@@ -1464,8 +1473,8 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 </slide>
 
             <instructor xml:id="inst-day11x-registers">
-                <p><term>The whole mapping.</term>  The three new answers are in the last
-                three rows; the rest is <xref ref="table-day11x-recall"/>.</p>
+                <p><term>The whole mapping.</term>  The three new answers are the last
+                three; the rest is the recall table we opened the Part with.</p>
                 <p><c>RCC_IOPENR</c> gives GPIOA its clock.  <c>GPIOA_MODER</c> puts PA7 in
                 alternate-function mode and <c>GPIOA_AFR[0]</c> selects AF4, which is
                 TIM14_CH1.  <c>RCC_APBENR2</c> gives TIM14 its clock.  <c>TIM14_PSC</c> is
@@ -1502,8 +1511,6 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 each period, so a 50% duty cycle and about 2.5 V average on a 5 V supply.
                 Accept 625/1249 too — the difference is a tenth of a percent and the point
                 is the fraction, not the rounding.</p>
-                <p>Williams, Chapter 10, pp. 199–206, from the start of the chapter to
-                <q>Initializing Timers</q>, covers the same ground in prose.</p>
             </instructor>
         </subsection>
 
@@ -1612,16 +1619,18 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                     could go wrong if we left that line out?</p></statement>
                 </task>
                 <task xml:id="task-day11x-decode-cc1e">
-                    <statement><p><c>TIM14->CCER |= TIM_CCER_CC1E;</c> — using
-                    <xref ref="fig-ccer-cc1e"/>, what is the numeric value of
+                    <statement><p><c>TIM14->CCER |= TIM_CCER_CC1E;</c> — find
+                    <c>TIM14_CCER</c>, the capture/compare enable register, in section 17.4,
+                    and read which bit CC1E is.  What is the numeric value of
                     <c>TIM_CCER_CC1E</c>?  Why is this line written with <c>|=</c> and no
                     clearing line before it, when the OC1M line above needed
                     one?</p></statement>
                 </task>
                 <task xml:id="task-day11x-decode-cen">
-                    <statement><p><c>TIM14->CR1 |= TIM_CR1_CEN;</c> — using
-                    <xref ref="fig-cr1-cen"/>, what value is that, and what happens on the
-                    pin the instant this line runs?</p></statement>
+                    <statement><p><c>TIM14->CR1 |= TIM_CR1_CEN;</c> — find
+                    <c>TIM14_CR1</c>, control register 1, in the same section, and read which
+                    bit CEN is.  What value is that, and what happens on the pin the instant
+                    this line runs?</p></statement>
                 </task>
             </activity>
             <instructor xml:id="inst-day11x-bitfields">
@@ -1644,6 +1653,15 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 configuration.</p>
             </instructor>
 
+            <slide xml:id="sl-day11x-bitfield-registers">
+    <p>The three registers, as section 17.4 prints them — CCER, CR1, EGR. The bit we set is bit 0 in all three.</p>
+    <image source="images/Day11x-Motors(2)/fig-ccer-cc1e.svg" width="92%"/>
+    <image source="images/Day11x-Motors(2)/fig-cr1-cen.svg" width="92%"/>
+    <image source="images/Day11x-Motors(2)/fig-egr-ug.svg" width="92%"/>
+    <caption>CC1E, CEN and UG are all bit 0 — which is why each of those lines is a plain OR with 1.</caption>
+    <note>≈ 2 min. Walk the answers here, with the registers on the wall, rather than on the text answer slide. Point at the CCMR1 field spanning several bits versus these three single bits — that is the whole reason the first needs clearing and these do not.</note>
+</slide>
+
             <figure xml:id="fig-ccmr1-oc1m">
                 <caption>Section 17.4's description of the OC1M field, with the value our
                 driver writes boxed, and the two lines that write it.  Note what the manual
@@ -1657,7 +1675,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 </slide>
 
             <slide xml:id="sl-day11x-init-pin">
-    <p>First half of the setup: hand the pin to the timer.</p>
+    <p>We now have every register we need, so here is the whole initialization, in the order it runs. We'll take it in three pieces — and the first is the pin, which is where Day 11 left off.</p>
     <program language="c"><code><![CDATA[
 void tim14_pa7_pwm_init(void) {
 	// Enable clock access to GPIOA
@@ -1676,7 +1694,7 @@ void tim14_pa7_pwm_init(void) {
 </slide>
 
             <slide xml:id="sl-day11x-init-timing">
-    <p>Then the timer's own numbers: how fast it counts, how far, and where it starts.</p>
+    <p>Second piece: the timer's own numbers — how fast it counts, how far, and where it starts.</p>
     <program language="c"><code><![CDATA[
 	// Enable clock access to Timer 14
 	RCC->APBENR2 |= RCC_APBENR2_TIM14EN;
@@ -1695,7 +1713,7 @@ void tim14_pa7_pwm_init(void) {
 </slide>
 
             <slide xml:id="sl-day11x-init-mode">
-    <p>And the part that makes it a PWM channel rather than a counter.</p>
+    <p>Last piece: what makes it a PWM channel rather than a plain counter.</p>
     <program language="c"><code><![CDATA[
 	// Set pwm mode 1 (0110): pin is high up to capture value, then goes low
 	TIM14->CCMR1 &= ~TIM_CCMR1_OC1M_Msk;
@@ -1738,29 +1756,43 @@ void tim14_pwm_set(uint16_t value) {
             <activity xml:id="act-day11x-checkpoint">
                 <title>Name the register</title>
                 <introduction>
-                    <p>On your own, without looking back.  Here is the initialization with
-                    the register names taken out.  Write in the register each line writes.</p>
+                    <p>On your own, without looking back.  Each line of the initialization
+                    does one of these jobs.  Write in the register it writes.</p>
                 </introduction>
                 <task xml:id="task-day11x-checkpoint-lines">
                     <statement>
-                        <p>Give the port its clock, put the pin in alternate-function mode,
-                        select the alternate function, give the timer its clock, set the
-                        counting rate, set the value the counter runs to, set the starting
-                        speed, select PWM mode, let the channel reach the pin, force an
-                        update event, start the counter.</p>
-                        <p>Eleven steps, ten different registers — one of them is written
-                        twice.  Which one, and why?</p>
+                        <tabular halign="left" top="minor" left="minor">
+                            <row header="yes" bottom="minor">
+                                <cell>The line does this</cell>
+                                <cell>so it writes</cell>
+                            </row>
+                            <row><cell>Give the pin's port a clock</cell><cell></cell></row>
+                            <row><cell>Put PA7 in alternate-function mode</cell><cell></cell></row>
+                            <row><cell>Select which alternate function</cell><cell></cell></row>
+                            <row><cell>Give the timer a clock</cell><cell></cell></row>
+                            <row><cell>Set the counting rate</cell><cell></cell></row>
+                            <row><cell>Set the value the counter runs up to</cell><cell></cell></row>
+                            <row><cell>Set the starting speed</cell><cell></cell></row>
+                            <row><cell>Select PWM mode</cell><cell></cell></row>
+                            <row><cell>Keep the channel an output</cell><cell></cell></row>
+                            <row><cell>Let the channel reach the pin</cell><cell></cell></row>
+                            <row><cell>Force an update event</cell><cell></cell></row>
+                            <row bottom="minor"><cell>Start the counter</cell><cell></cell></row>
+                        </tabular>
+                        <p>Twelve lines, but not twelve different registers.  Which one is
+                        written twice, and why?</p>
                     </statement>
                 </task>
             </activity>
             <instructor xml:id="inst-day11x-checkpoint">
-                <p>In order: <c>RCC_IOPENR</c>, <c>GPIOA_MODER</c>, <c>GPIOA_AFR[0]</c>,
-                <c>RCC_APBENR2</c>, <c>TIM14_PSC</c>, <c>TIM14_ARR</c>, <c>TIM14_CCR1</c>,
-                <c>TIM14_CCMR1</c>, <c>TIM14_CCER</c>, <c>TIM14_EGR</c>, <c>TIM14_CR1</c>.</p>
+                <p>Down the column: <c>RCC_IOPENR</c>, <c>GPIOA_MODER</c>,
+                <c>GPIOA_AFR[0]</c>, <c>RCC_APBENR2</c>, <c>TIM14_PSC</c>, <c>TIM14_ARR</c>,
+                <c>TIM14_CCR1</c>, <c>TIM14_CCMR1</c>, <c>TIM14_CCMR1</c> again,
+                <c>TIM14_CCER</c>, <c>TIM14_EGR</c>, <c>TIM14_CR1</c>.</p>
                 <p>The one written twice is <c>TIM14_CCMR1</c> — once for the OC1M field to
                 select PWM mode, and once for CC1S to keep the channel as an output.  Both
-                fields live in the same register, which is why it appears twice in a list of
-                eleven steps and ten registers.</p>
+                fields live in the same register, which is why twelve lines need only eleven
+                registers.</p>
                 <p>Ninety seconds, then read the answers out.  This is the day's crucial
                 step, and it is the only moment a student produces the mapping without help
                 — so give it the ninety seconds even if Part 4 is running long.  Cut the
@@ -1787,8 +1819,9 @@ void tim14_pwm_set(uint16_t value) {
                 <task xml:id="task-day11x-stretch-mode">
                     <statement><p>Write the body of <c>motor_mode()</c>.  Lab 6 gives you
                     the signature — <c>void motor_mode(uint8_t mode);</c>, with the four
-                    modes FWD, REV, BRAKE and STOP — and Day 11's truth table
-                    (<xref ref="fig-tb6612-truth-table"/>) gives you IN1 and IN2 for each.
+                    modes FWD, REV, BRAKE and STOP — and the TB6612 truth table
+                    from Day 11, on page 4 of the driver's datasheet, gives you IN1 and IN2
+                    for each.
                     Note that <c>TTmotor_ramp.c</c> only ever produces three of the four: it
                     never puts the driver in stop.  What do IN1 and IN2 have to be for that
                     fourth case, and how is what the motor does then different from
@@ -1799,9 +1832,10 @@ void tim14_pwm_set(uint16_t value) {
                     ran at 50 Hz instead of 1.6 kHz.  Now work out the numbers: from a
                     12 MHz clock, what does the prescaler have to divide by, and what does
                     the counter have to run up to, to give a 50 Hz PWM with 2000 steps of
-                    duty cycle?  Then look at the two commented-out <c>#define</c> lines
-                    just below the active ones in <c>TTmotor_ramp.c</c> and check them
-                    against your answer.</p></statement>
+                    duty cycle?  The two commented-out <c>#define</c> lines just below the
+                    active ones in <c>TTmotor_ramp.c</c> are that setting — check them
+                    against your answer, then try them and listen to the
+                    difference.</p></statement>
                 </task>
             </activity>
             <instructor xml:id="inst-day11x-stretch">
@@ -1817,12 +1851,11 @@ void tim14_pwm_set(uint16_t value) {
                 period.  Split across 2000 steps that is a prescale of 120: 12 MHz ÷ 120 =
                 100 kHz, and 100 kHz ÷ 2000 = 50 Hz.  So <c>PSC_FACTOR</c> would have to be
                 120 and <c>PWM_TIMER_MAX</c> 2000.</p>
-                <p><term>And the check is the point.</term>  The two commented-out lines in
-                the file read <c>PSC_FACTOR 12</c>, while the comments beside them say 120.
-                Twelve would give 12 MHz ÷ 12 ÷ 2000 = 500 Hz, ten times too fast.  A
-                student who does the arithmetic finds it, which is the whole reason to ask
-                for the arithmetic.  Expect them to trust the file over their own working —
-                that is the habit worth breaking here.</p>
+                <p>The commented-out pair in the file is exactly that setting, so a group
+                that has done the arithmetic can uncomment the two lines, rebuild, and hear
+                the difference — which is the optional experiment Lab 6 suggests.  What they
+                should hear at 50 Hz is the pulsing Day 11 asked them to predict, and
+                possibly better low-speed torque.</p>
             </instructor>
         </subsection>
 
@@ -1835,14 +1868,15 @@ void tim14_pwm_set(uint16_t value) {
             <figure xml:id="fig-pwm-resolution">
                 <caption>The narrowest pulse this program can ask for.  The period is fixed
                 by the value the counter runs up to, and one count of the compare register
-                is one step of pulse width — so the number of steps sets how finely the
-                speed can be adjusted.</caption>
+                is one step of pulse width, <m>T_0</m> — so the number of steps sets how
+                finely the speed can be adjusted.  That is the channel's
+                <term>resolution</term>.</caption>
                 <image source="images/Day11x-Motors(2)/fig-pwm-resolution.svg" width="92%"/>
             </figure>
             <slide xml:id="sl-day11x-resolution" ref="fig-pwm-resolution" room="yes">
     <ul>
         <li>Our period is 625 µs, and the counter divides it into 1250 steps.</li>
-        <li>So how much time is one step of the compare register?</li>
+        <li>So how much time is one step of the compare register? That number is the channel's <term>resolution</term>.</li>
     </ul>
     <note>≈ 2 min, predict then reveal. T_0 = 625 µs / 1250 = 500 ns. They already have the voltage side from the Day 11 stretch — 5 V / 1250 = 4 mV per step — so do NOT re-derive that; state it and join the two: one count of CCR1 is 500 ns of pulse width and 4 mV of average voltage. That is the resolution their Waveforms screenshot for Lab 6 Deliverable 1 has to be able to show.</note>
 </slide>
@@ -1855,6 +1889,22 @@ void tim14_pwm_set(uint16_t value) {
                 the motor assembly in your kit.</caption>
                 <image source="images/Day11x-Motors(2)/fig-encoder-wheel.jpg" width="62%"/>
             </figure>
+            <figure xml:id="fig-photointerrupter-video">
+                <caption>The photointerrupter's output on the oscilloscope while the motor
+                speeds up from about 30 rpm to about 180 rpm.  The pulses are the beam being
+                interrupted by each slot in turn, and as the shaft turns faster they crowd
+                together — which is the whole idea behind measuring speed this way: the rate
+                the pulses arrive at is proportional to the speed of the shaft.</caption>
+                <video youtube="VH0-zO2LpDc" width="80%"/>
+            </figure>
+
+            <slide xml:id="sl-day11x-scope-video">
+    <p>The same sensor's output, while the motor speeds up from about 30 rpm to about 180 rpm.</p>
+    <video youtube="VH0-zO2LpDc" width="74%"/>
+    <caption>The pulses crowd together as the shaft turns faster. On Thursday we count them.</caption>
+    <note>≈ 1 min. Play it, do not narrate over it. This is her own capture from the Day 11x deck; the point students should say out loud afterwards is that the pulse RATE is what carries the speed, not the pulse shape.</note>
+</slide>
+
             <slide xml:id="sl-day11x-next" ref="fig-encoder-wheel">
     <ul>
         <li>We can set the speed. We cannot yet measure it.</li>
