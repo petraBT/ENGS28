@@ -354,4 +354,120 @@ student text.
 
 ---
 
-*One reviewer still running.*
+## checker-figure-claims — verdict: MAJOR
+
+Opened every figure at native resolution and in the player. **No blockers, and all
+eight verifications the brief asked for hold against the pixels:** the white-out on
+Figures 176/177 damaged nothing; Petra's `TIMx_CCER` correction is complete (all
+three labels, no `TIM1_CCER` survives); the register map shows four registers; the
+CCMR1 reveal contains every element claimed, with the magenta comment reading
+exactly `// Set timer to output mode (00)`; **Figure 165 names no register at all**
+(only signal and block names — P-15 holds, and the source comment forbidding
+additions should stay); T₀ and T_p are proper subscripts; the OLED reads **222 RPM**
+at 5× zoom.
+
+- **[MAJOR] The register-map SLIDE caption says three registers; the image shows
+  four.** The *book* caption was corrected to four; the slide caption was not.
+  Seen alone the slide contradicts itself. Re-caption the slide; do not touch the
+  image.
+- **[MAJOR] The CCMR1 reveal fails the legibility rule and cannot be fixed by
+  scaling.** The manual's field descriptions measure **13 px = 1.4%** of slide
+  height and the code inside the annotation boxes **10–12 px = 1.1–1.3%**, against
+  the ≥2% rule — and these *are* the content of the reveal. The figure is already
+  **height-limited** (827×690 in a 1470×700 well), so it cannot grow. Two things
+  make it worse: the leftover **"Timer 14 Registers"** heading takes the right ~20%,
+  and the opaque code boxes cover the `0001`/`0010` description lines while the box
+  border overstrikes `0111: PWM mode 2`.
+  **Its recommendation, which I endorse: ask Petra for two graded exports** — the
+  OC1M half and the CC1S half, each without the heading. Split across two slides
+  each half projects at roughly twice the type size, and the split matches the
+  two-fields-one-register story the caption already tells. **Do not crop or shrink
+  it myself.**
+- **[MINOR] Four caption/image position errors**, all mine: "the capture/compare
+  register **beside** it" (it is *below* the counter — and the body prose says
+  "below", so the caption contradicts the paragraph); "the comparator **between**
+  them" (it is to the *right*); "`TIMx_CCMR1` just **below**" (it is at the *lower
+  left*); and "the four they just decoded" where the code shows **five** commented
+  steps and the activity covered **three**.
+- **[MINOR] Notation splits across figures.** Her three figures write the period as
+  **T_PERIOD**; my hand-authored resolution figure writes **T_p** — same quantity,
+  two symbols, four slides apart. Change *my SVG*, since hers cannot change.
+- **[MINOR] The three bit-field SVGs print no register name**, leaving three
+  anonymous rows on slide 18 identified only by the order of the intro line. A
+  student who mis-maps one row gets the wrong decode answer. Add the name at the
+  left of each row, the way her own register map does.
+- **[MINOR] `V_avg`, `V_M`, `T_HIGH`, `T_PERIOD` appear only inside the figures** —
+  the prose never uses these symbols, and the boxed red formula is the most
+  prominent thing on two slides with no caption acknowledging it exists.
+- **[MINOR] Dead space.** The resolution slide is two-thirds empty and the figure is
+  neither width- nor height-limited — a bigger figure is free. The scope-still slide
+  has a large empty band above it too.
+- **[NOTE] `fig-pwm-scope.png` lives in `Day11-Motors/` but is now used only by Day
+  11x** (Day 11's own figure is the video). A re-crop made "for Day 11" would
+  silently change Day 11x's prediction slide. Move it or note it.
+- **[UNVERIFIABLE] Both texts claim the closing video runs "about 30 rpm to about
+  180 rpm".** A video renders black in a still capture. **Petra should play it once
+  before shipping** — it is her own capture, so this is a confirmation, not a
+  suspicion.
+
+---
+
+# Consolidated change list
+
+Seven reports: **2 BLOCKER, 5 MAJOR.** The findings trade against each other —
+the arc wants content *added*, cognitive load wants tellings *collapsed*, logistics
+needs Part 4 to shed ~8 minutes, and voice wants prose *lengthened*. They resolve
+together only because **prose length costs no class time** and **the collapses buy
+the minutes the additions need**.
+
+## The finding that unlocks the rest
+
+**The brake-before-reverse and `abs()` material exists nowhere**, and three shipped
+artifacts point at it — including `inst-day11x-checkpoint`'s instruction to *"cut
+the brake-and-`abs` discussion"* as the way to protect the 90-second checkpoint.
+**Cutting nothing recovers nothing**, so Part 4's stated safety valve is fictional,
+which is why the clock findings have no slack to draw on. Fix the hole and the valve
+becomes real.
+
+## Apply — no decision needed
+
+| # | Change | From |
+| --- | --- | --- |
+| 1 | **Put the two `#define` lines at the head of the init listing.** Four slides rest on two symbols shown nowhere | in-the-room (BLOCKER) |
+| 2 | **Name the file and the manual section on the Part 2 questions slide**, and restore "does the motor **see** from a 5 V supply" | in-the-room (BLOCKER) |
+| 3 | **Break the P-15 leak**: the recall table's `CCR1` row answers the Part 3 prediction five slides early. Reword the row's job, keep the register cell blank until Part 3 | in-the-room |
+| 4 | **"Twelve steps" everywhere** (slide, checkpoint, instructor). The function is 16 lines / 12 steps / 11 registers | in-the-room, voice |
+| 5 | **Add the brake/`abs` code under the Lab 6 seam bullets** — that slide has a third of its height empty, so no new slide and no new minutes. Makes both valve notes truthful | arc |
+| 6 | **Put the UG and CC1E field descriptions on the Part 2 reveal**, from her slide 12's layout | arc |
+| 7 | **Restore the driver listing to the book prose**, in three `<program>` blocks split where the slides split, quoted from the starter | arc, voice |
+| 8 | **Give Part 5 its numbers** — 625 µs ÷ 1250 = 500 ns, tied to the 4 mV from Day 11 | voice |
+| 9 | **Follow her recap edit**: drop "We will not wire anything today —" for her "We'll use the reference manual, the figures, and the code" | voice |
+| 10 | **Sweep the deck JSON**: "The timer behind the waveform" → "that makes"; register-map title and caption; three-vs-four registers | voice, figure-claims |
+| 11 | **Rewrite the Part 3, 4 and 5 openings** (absent-frame, aphorism, count-armature), and delete the aphorism's verbatim repeat in the activity intro | voice |
+| 12 | **Collapse the clearing-line point** from five tellings to two; drop the "which is why" clause from both visible captions | cognitive load |
+| 13 | **Move CC1E's full explanation to Part 3 only**; Part 2's answer stops at naming plus one sentence | cognitive load |
+| 14 | **Drop the duplicated `V_avg` box from Figure 177's slide**, where it competes with CC1E | cognitive load |
+| 15 | **Fix four caption position errors** (beside/below, between/right, lower-left, four-vs-five) | figure-claims |
+| 16 | **`T_p` → `T_PERIOD`** in my resolution SVG; **add register names** to the three bit-field SVGs | figure-claims |
+| 17 | **"they" → "you"** on the init-mode caption; **S-11 metaphor** out of the CC1E caption | voice |
+| 18 | **Add "we'll"** to Parts 2, 3 and 5, which have none | voice |
+| 19 | **Expand `TIM14_CCMR1`** on first student-facing use | voice |
+| 20 | **Name the sensor** — "optical incremental sensor", her slide 18's title | voice |
+| 21 | **Time the two untimed activities**; merge init-pin into init-timing; fold the decode reveal into the register walk | logistics, cognitive load, arc |
+| 22 | **Fix the source order** of the last two slides to match the deck; move the Thursday hand-off to the closing slide only | arc, voice |
+| 23 | **Add a video fallback line** to the closing note | logistics |
+| 24 | **Move Part 5's resolution number onto the `CCR1` slide** so it survives if Part 5 is lost | logistics |
+| 25 | **Re-crop the "Timer 14 Registers" header** that her replacement file re-introduced | arc |
+| 26 | Enlarge the resolution and scope-still figures into their dead space; note or move `fig-pwm-scope.png` | figure-claims |
+
+## For Petra
+
+- **The CCMR1 reveal needs a re-export in two halves** — it fails the legibility
+  rule at 1.1–1.4% and is height-limited, so it cannot be fixed by scaling or
+  cropping.
+- **The negative frame** — was removing "No hardware today" a list-label-vs-sentence
+  distinction, or a change of mind? It decides whether Day 8's agenda item stands.
+- **Should the book carry the driver listing?** Restoring it makes Part 4 the
+  longest Part. The alternative is to shorten the prose's claim — but a program
+  living only on the wall would be a first for this book.
+- **Play the closing video once** to confirm the 30→180 rpm claim.
