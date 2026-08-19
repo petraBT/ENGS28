@@ -1318,15 +1318,55 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
     <section xml:id="sec-motors-day11x">
         <title>Day 11x In-Class: Writing the PWM Code</title>
 
-        <!-- DELIVERY 2: the section introduction is written from the slides
-             Petra passes, not before them.  Pilot ordering, CHAPTER_PROCESS.md
-             Steps 3' and 4'. -->
+        <introduction>
+            <p>
+                On Tuesday we got a motor turning.  We wired the TB6612 breakout, set the
+                motor's direction by hand from the truth table, and then ran
+                <c>TTmotor_ramp.c</c>, which ramped the speed up and back down while we
+                watched the duty cycle change on the oscilloscope.  Today we'll open that
+                program and read it one register at a time, and by the end of class you'll be
+                able to take any line of its setup and say which register it writes and what
+                that register does.  We will not wire anything today — everything happens in
+                the reference manual, RM0490, and in the code.
+            </p>
+        </introduction>
 
         <!-- Part 1 -->
         <subsection xml:id="subsec-day11x-timer-peripheral">
-            <title>Part 1: The Timer Behind the Waveform</title>
-
-            <!-- DELIVERY 2: prose. -->
+            <title>Part 1: The Timer That Makes the Waveform</title>
+            <p>
+                The hardware we built on Tuesday controls both a motor's direction of
+                rotation and its speed of rotation.  The H-bridge inside the TB6612 chooses
+                which way current crosses the motor, which is what sets the direction;
+                pulse-width modulation of the switches in that bridge sets what fraction of
+                each period the supply is connected at all, which sets the average voltage
+                across the terminals and so the speed.  The wiring that does both is the
+                circuit you built for the second exercise
+                (<xref ref="fig-tb6612-wiring-2"/>): motor power from the regulator, logic
+                power from the Nucleo's 3.3 V, and three signal wires from PA5 (D13),
+                PA6 (D12) and PA7 (D11).
+            </p>
+            <p>
+                The PWM signal itself comes out of a peripheral we have already met.  TIM14
+                is the same timer we set up on Day 8 to interrupt once a millisecond, and
+                there we drew only its timing core — the prescaler that divides the system
+                clock down, the counter CNT that counts the divided pulses, and the
+                auto-reload register that says how far the counter runs before it starts
+                again (<xref ref="fig-tim14-block"/>).  PWM is built into that same timer, in
+                the machinery around that core that we left out of the Day 8 drawing.
+            </p>
+            <p>
+                <xref ref="fig-tim14-block-full"/> is the whole of TIM14 as the reference
+                manual, RM0490, draws it in its Figure 165.  The core we already know runs
+                across the middle.  What is new is the block sitting just below the counter —
+                the capture/compare register — and the path leading from it out to the pin
+                marked TIMx_CH1, which for us is PA7.  That register holds the compare value
+                we drew on Tuesday: the counter is compared against it on the way up, so the
+                capture/compare register sets how long the output stays HIGH in each period,
+                while the auto-reload register sets how long the whole period is.  For the
+                rest of today we'll either be putting a value into that register or arranging
+                for the result of that comparison to reach the pin.
+            </p>
 
             <!-- P-15: her annotation names functional blocks only - prescaler,
                  counter, auto-reload, compare register.  It names none of
@@ -1334,8 +1374,8 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                  day: Part 2's discoveries are not answered inside this figure.
                  DO NOT add register names to it.  The omission is deliberate. -->
             <figure xml:id="fig-tim14-block-full">
-                <caption>TIM14 in full, as RM0490 Figure 165 prints it.  In the timers
-                chapter we drew this timer's core only — the prescaler, the counter, and the
+                <caption>TIM14 in full, as RM0490 Figure 165 prints it.  On Day 8 we
+                drew this timer's core only — the prescaler, the counter, and the
                 auto-reload value it counts up to (<xref ref="fig-tim14-block"/>) — and said
                 the capture/compare machinery around it would come back in the motor
                 chapters.  This is it.  The clock still enters at the left and the counter
