@@ -1346,22 +1346,22 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 PA6 (D12) and PA7 (D11).
             </p>
             <p>
-                The PWM signal itself comes out of a peripheral we have already met.  TIM14
+                The PWM signal itself comes out of a peripheral we have already studied.  TIM14
                 is the same timer we set up on Day 8 to interrupt once a millisecond, and
-                there we drew only its timing core — the prescaler that divides the system
+                there we looked only at its timing core — the prescaler that divides the system
                 clock down, the counter CNT that counts the divided pulses, and the
                 auto-reload register that sets how far the counter runs before it starts
                 again (<xref ref="fig-tim14-block"/>).  PWM is built into that same timer, in
-                the machinery around that core that we left out of the Day 8 drawing.
+                the machinery around that core that we left aside on Day 8.
             </p>
             <p>
                 <xref ref="fig-tim14-block-full"/> is the whole of TIM14 as the reference
-                manual, RM0490, draws it in its Figure 165.  The core we already know runs
+                manual, RM0490, prints it in Figure 165.  The core we already know runs
                 across the middle.  What is new is the block sitting just below the counter —
-                the capture/compare register — and the path leading from it out to the pin
-                marked TIMx_CH1, which for us is PA7.  That register holds the compare value
-                we drew on Tuesday: the counter is compared against it on the way up, so the
-                capture/compare register sets how long the output stays HIGH in each period,
+                the capture/compare register, <c>CCR1</c> — and the path leading from it out
+                to the pin marked TIMx_CH1, which for us is PA7.  <c>CCR1</c> holds the
+                compare value we introduced on Tuesday: the counter is compared against it on
+                the way up, so <c>CCR1</c> sets how long the output stays HIGH in each period,
                 while the auto-reload register sets how long the whole period is.  For the
                 rest of today we'll either be putting a value into that register or arranging
                 for the result of that comparison to reach the pin.
@@ -1374,7 +1374,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                  DO NOT add register names to it.  The omission is deliberate. -->
             <figure xml:id="fig-tim14-block-full">
                 <caption>TIM14 in full, as RM0490 Figure 165 prints it.  On Day 8 we
-                drew this timer's core only — the prescaler, the counter, and the
+                looked only at this timer's core — the prescaler, the counter, and the
                 auto-reload value it counts up to (<xref ref="fig-tim14-block"/>) — and said
                 the capture/compare machinery around it would come back in the motor
                 chapters.  This is it.  The clock still enters at the left and the counter
@@ -1399,7 +1399,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
             <p>
                 The program we are about to read drives exactly one pin: PA7, which you
                 found on Day 11 is where TIM14's channel 1 comes out.  Getting that pin to
-                carry a PWM waveform takes eleven lines of setup, and most of them write
+                carry a PWM waveform takes twelve steps of setup, and most of them write
                 registers we have written before — some on Day 8, when we first used this
                 timer, and some on Day 11, when we handed the pin over to it.  So before we
                 go looking for what is new, here is what we already know how to do.
@@ -1455,6 +1455,16 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
     <note>≈ 2 min. Project this before the activity. The point is that the room is further along than it feels — and that the fifteen minutes coming up are for the three things that are genuinely new, not for re-finding PSC and ARR.</note>
 </slide>
 
+            <p>
+                That leaves three things the table does not cover, and they are what the
+                next stretch of class is for.  Two of them are registers we have never
+                written: one puts the channel into PWM mode, and one lets the channel's
+                output reach the pin at all.  The third is not a missing register so much as
+                a line whose reason is not obvious — the program writes one more register
+                just before it starts the counter, and the interesting part is why that
+                write has to happen first rather than after.  All three are in section 17.4
+                of the reference manual, and finding them there is the work.
+            </p>
             <activity xml:id="act-day11x-registers">
                 <title>Which register does each job</title>
                 <introduction>
@@ -1538,10 +1548,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 signal internally — but nothing reaches PA7, so the pin sits at whatever
                 the output stage leaves it at and the motor never turns.  This is worth
                 dwelling on: it is the one line whose absence produces a board that looks
-                completely correct and does nothing, and they will meet it again in Lab 6.</p>
+                completely correct and does nothing, and they will run into it again in Lab 6.</p>
                 <p><term>The extra register.</term>  <c>TIM14_EGR</c>, the event generation
                 register, and the bit is UG.  Setting it re-initializes the counter and
-                updates the registers.  They met this on Day 10, on the timer we used for
+                updates the registers.  They saw this on Day 10, on the timer we used for
                 the display: <c>PSC</c> and <c>ARR</c> are buffered, so the values we write
                 do not reach the working copies until an update event happens.  Force one
                 before starting the counter and the very first period is already the period
@@ -1557,8 +1567,13 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
         <!-- Part 3 -->
         <subsection xml:id="subsec-day11x-hardware">
             <title>Part 3: Where Those Registers Sit in the Hardware</title>
-
-            <!-- DELIVERY 2: prose. -->
+            <p>
+                We now have the names.  What we do not have yet is a picture of where those
+                registers sit inside the timer, and that picture is what makes the two new
+                ones reasonable rather than arbitrary.  Before we look at it, it is worth
+                going back to the trace you measured on Tuesday and asking a question about
+                it that we could not have answered then.
+            </p>
 
             <figure xml:id="fig-pwm-scope-still">
                 <caption>One frozen moment of the trace you watched on Day 11
@@ -1578,6 +1593,15 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
     <note>≈ 90 s, predict before Figure 176 names it. Answer: the compare value, CCR1. ARR is written once in the init and never touched again. Take a show of hands on each before revealing — the wrong answer is instructive, because a program that rewrote ARR would change the frequency instead of the speed.</note>
 </slide>
 
+            <p>
+                The answer is the compare value.  The program writes a new one every two
+                seconds as the ramp climbs and falls, and it never touches the auto-reload
+                register after the initialization, which is why the width of the HIGH portion
+                moves while the period stays exactly where it is.  A program that rewrote the
+                auto-reload value instead would change the frequency of the waveform rather
+                than its duty cycle, and the motor would not speed up at all.
+                <xref ref="fig-tim14-main-circuit"/> is where both of those numbers live.
+            </p>
             <figure xml:id="fig-tim14-main-circuit">
                 <caption>Where the two numbers actually live (RM0490, Figure 176).  The
                 counter runs along the bottom and the compare value sits above it, and the
@@ -1585,7 +1609,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 which is why <c>TIM14_CCR1</c> sets how long the pin stays HIGH and
                 <c>TIM14_ARR</c>, the value the counter runs up to, sets how long the period
                 is.  The manual calls the working copy of the compare value a
-                <term>shadow register</term>; it is the same buffered arrangement we drew
+                <term>shadow register</term>; it is the same buffered arrangement we saw
                 for the prescaler in the timers chapter
                 (<xref ref="subsec-day8-rcw0"/>).</caption>
                 <image source="images/Day11x-Motors(2)/fig-tim14-main-circuit.png" width="92%"/>
@@ -1595,6 +1619,16 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
     <note>≈ 3 min. This is the answer to the prediction slide. "Shadow register" is RM0490's word for the buffered copy from Day 8 — say that once, use "buffered" after, and do not let it become a second concept.</note>
 </slide>
 
+            <p>
+                Producing the waveform inside the timer is not the same as getting it out to
+                the pin, and the difference is a single bit.  The comparator's result travels
+                through an output stage on its way to PA7, and that stage will only pass it
+                on once the channel has been enabled — which is what CC1E in
+                <c>TIM14_CCER</c> does.  This is worth knowing precisely, because leaving
+                that one line out produces a board on which the clock is running, the counter
+                is counting, the compare register is being written every two seconds, and the
+                pin does nothing at all.
+            </p>
             <figure xml:id="fig-tim14-output-stage">
                 <caption>How the signal gets out to the pin (RM0490, Figure 177).  The
                 waveform produced by the comparator in <xref ref="fig-tim14-main-circuit"/>
@@ -1613,6 +1647,12 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
     <note>≈ 2 min. If the clock is tight this is NOT the slide to drop — this is the "my pin is silent and everything looks right" bug, and they will hit it in Lab 6 at 11 pm. The TIM1_CCER mislabel is in the caption; mention it only if someone asks.</note>
 </slide>
 
+            <p>
+                It is worth seeing those registers once more as section 17.4 actually prints
+                them, because that is the form you will be reading in the lab and in the rest
+                of this chapter: a row of numbered bits with a name written across the ones
+                that belong to each field.
+            </p>
             <figure xml:id="fig-tim14-register-map">
                 <caption>The timer's four registers as rows of bits, the way section 17.4
                 prints them: the counter itself, and the three numbers we set around it.  The
@@ -1629,8 +1669,15 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
         <!-- Part 4 -->
         <subsection xml:id="subsec-day11x-driver">
             <title>Part 4: Reading the Driver</title>
-
-            <!-- DELIVERY 2: prose. -->
+            <p>
+                Knowing which register to write is not yet knowing what to write into it.
+                Section 17.4 gives every register as a row of bits, and the value our program
+                needs is assembled from the position of a field and the pattern that goes in
+                it.  Three of the registers we need are the easy case, because the thing we
+                set is a single bit; <c>TIM14_CCMR1</c> is the harder case, and the
+                difference between them explains a detail of the code that would otherwise
+                look like clutter.
+            </p>
 
             <!-- P-6: the decode activity comes BEFORE the walkthrough, and
                  fig-ccmr1-oc1m is the reveal, so it is placed after the
@@ -1703,6 +1750,17 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 configuration.</p>
             </instructor>
 
+            <p>
+                <c>TIM14_CCMR1</c> is different because neither of the things we set in it is
+                a single bit.  OC1M, which chooses what the channel does, is four bits wide
+                and split across the register — three of them together and a fourth up at bit
+                16.  CC1S, which decides whether the channel is an output or an input, is two
+                bits at the bottom.  A field several bits wide cannot be set by OR-ing a value
+                into it, because OR can only turn bits on: whatever was already there stays
+                there, and the result is the two patterns mixed together.  That is why each of
+                these two gets a clearing line before its setting line, and why the three
+                single-bit registers do not.
+            </p>
             <figure xml:id="fig-ccmr1-bits">
                 <caption><c>TIM14_CCMR1</c> laid out bit by bit.  Two of its fields are ours:
                 OC1M, which selects what the channel does and is spread across bits 6:4 and
@@ -1735,6 +1793,14 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
     <note>≈ 2 min. This is the reveal for the first decode task — do not project it before they have written something down. It also answers the checkpoint question that comes later: two fields of one register is why CCMR1 is the line written twice.</note>
 </slide>
 
+            <p>
+                That is every register the initialization touches, so we can now read it
+                straight through.  The function runs in three stretches: it hands the pin to
+                the timer, it sets the timer's own numbers, and it puts the channel into PWM
+                mode and starts it.  Nothing in it is new at this point, which is the whole
+                idea — by the time you reach the last line every register in it should be one
+                you have already looked up.
+            </p>
             <slide xml:id="sl-day11x-init-pin">
     <p>We now have every register we need, so here is the whole initialization, in the order it runs. We'll take it in three pieces — and the first is the pin, which is where Day 11 left off.</p>
     <program language="c"><code><![CDATA[
@@ -1814,6 +1880,16 @@ void tim14_pwm_set(uint16_t value) {
     <note>≈ 2 min, and this is the day's closing idea — set it up as such. Expect someone to notice that value &lt; 0 can never be true for a uint16_t, and they are right: as written, that branch cannot run. Keep it, and say why. The guard is there for the SIGNATURE, not for this one call. In Lab 6 they write motor_speed() themselves, and taking an int16_t is the natural choice — the ramp counter is signed, and abs() is easy to forget. The moment the parameter is signed, that branch is the only thing between a negative speed and a compare value of 65,000-odd, which is a motor at full tilt rather than stopped. Defensive code earns its place by surviving a change of type; this is a good half-minute on why you leave it in.</note>
 </slide>
 
+            <p>
+                Once that function has run, the motor's speed is changed by writing one
+                register and nothing else.  <c>tim14_pwm_set()</c> clamps the value it is
+                given into the range the counter can represent and then assigns it to
+                <c>CCR1</c>; the prescaler, the auto-reload value, the mode bits and the
+                output enable are all left exactly as the initialization set them, and the
+                timer keeps producing the waveform without any further help from the CPU.
+                That is the closure worth carrying out of today: one function to set the
+                channel up, and one register to write for the rest of the program's life.
+            </p>
             <activity xml:id="act-day11x-checkpoint">
                 <title>Name the register</title>
                 <introduction>
@@ -1860,6 +1936,16 @@ void tim14_pwm_set(uint16_t value) {
                 brake-and-<c>abs</c> discussion instead.</p>
             </instructor>
 
+            <p>
+                Lab 6 asks you to turn this into a device driver of your own, with an
+                initialization function, a mode-select function and a speed-select function
+                in a file called <c>tb6612.c</c>.  Two of the three are almost in front of
+                you already: <c>tim14_pa7_pwm_init()</c> becomes the initialization once you
+                fold in the two lines that make PA5 and PA6 outputs, and
+                <c>tim14_pwm_set()</c> becomes the speed-select nearly unchanged.  The third
+                is the one to be careful with, and the trap is that
+                <c>TTmotor_ramp.c</c> looks as though it contains it.
+            </p>
             <slide xml:id="sl-day11x-lab6-seam">
     <ul>
         <li>Lab 6 asks for three functions: <c>motor_init()</c>, <c>motor_mode()</c> and <c>motor_speed()</c>.</li>
@@ -1923,8 +2009,14 @@ void tim14_pwm_set(uint16_t value) {
         <!-- Part 5 -->
         <subsection xml:id="subsec-day11x-resolution">
             <title>Part 5: Resolution, and What Comes Next</title>
-
-            <!-- DELIVERY 2: prose. -->
+            <p>
+                There is one number left that the program never states outright.  The counter
+                divides each period into a fixed number of steps, and the compare register can
+                only hold whole numbers, so the duty cycle cannot be set to just any value —
+                it moves in steps.  How coarse those steps are is the channel's
+                <term>resolution</term>, and it is worth working out for our settings, because
+                it is what decides whether two speeds you ask for are actually different.
+            </p>
 
             <figure xml:id="fig-pwm-resolution">
                 <caption>The narrowest pulse this program can ask for.  The period is fixed
@@ -1942,6 +2034,14 @@ void tim14_pwm_set(uint16_t value) {
     <note>≈ 2 min, predict then reveal. T_0 = 625 µs / 1250 = 500 ns. They already have the voltage side from the Day 11 stretch — 5 V / 1250 = 4 mV per step — so do NOT re-derive that; state it and join the two: one count of CCR1 is 500 ns of pulse width and 4 mV of average voltage. That is the resolution their Waveforms screenshot for Lab 6 Deliverable 1 has to be able to show.</note>
 </slide>
 
+            <p>
+                That is as far as we can go with the motor on its own.  We can set its speed,
+                and after today we know exactly which register carries that setting and what
+                every other register in the program is doing to make it work.  What we cannot
+                do yet is measure the speed we are getting, and without that we have no way to
+                tell whether the motor is actually turning as fast as we asked — under load it
+                will not be.  The hardware for measuring it is already sitting on your motor.
+            </p>
             <figure xml:id="fig-encoder-wheel">
                 <caption>The other half of a motor controller: a slotted wheel on the shaft,
                 and a photointerrupter that sees the light through it interrupted once per
