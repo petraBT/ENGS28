@@ -66,7 +66,9 @@ loses the thread at the bit-fields has no equivalent reveal to fall back into.)*
 void motor_mode(uint8_t mode);   // FWD, REV, BRAKE, STOP
 ```
 
-working from Day 11's `fig-tb6612-truth-table`. The point is the fourth case:
+working from the TB6612 truth table on page 4 of the driver's datasheet — cited
+that way, not as a book `<xref>`, because slides must not link into the book. The
+point is the fourth case:
 `TTmotor_ramp.c` produces only three of the four modes — CW, CCW and short brake —
 and **never STOP**, so the driver in front of them is not a complete answer. That
 pulls Day 11's brake-versus-stop distinction forward into the place where it is
@@ -78,12 +80,12 @@ signature, so that was a lookup, not work — P-17.)*
 Second stretch, for the arithmetic-minded: the commented-out pair of `#define`s
 beneath the active ones is the 50 Hz alternative Day 11's stretch asked them to
 predict and Lab 6 offers as its optional experiment. Work out what prescaler and
-reload actually give 50 Hz from a 12 MHz clock, and check the two commented lines
-against your own arithmetic. **It is a real defect** — as written they give 500 Hz
-(the `#define` says 12 where its own comment says 120; ground truth §1a). A student
-who does the arithmetic finds it. Pending Petra's answer on whether the file gets
-corrected; written to survive either answer, and it must not tell students the file
-is right.
+reload actually give 50 Hz from a 12 MHz clock, check the two commented lines
+against your own arithmetic, then uncomment them and listen.
+
+*(Gate 0 found `PSC_FACTOR` there set to 12 where its own comment said 120 — 500 Hz
+rather than 50. **Petra corrected the file on 2026-08-19**, so the lines now agree
+with the arithmetic and the stretch no longer sends anyone hunting for a defect.)*
 
 ## Datasheet / reference-manual moments (P-11)
 
@@ -92,9 +94,6 @@ is right.
   page — the way `act-day3-ref-manual` does, because that is the only prior
   manual-navigation exercise this course has run and it handed over the section
   number. **§17.3.8, *PWM mode*** (page 479) is where `0110` and `0111` are defined.
-- **Part 2 reveal:** her slide 7's **Williams, Chapter 10, pp 199–206**, start of
-  chapter to "Initializing Timers" — her only pointer to the textbook, and it
-  belongs on the reveal where she put it.
 - **Part 3:** **RM0490 Figure 176** (*Capture/compare channel 1 main circuit*) and
   **Figure 177** (*Output stage of capture/compare channel (channel 1)*), both RM
   PDF page 476, both inside the TIM14 chapter.
@@ -266,7 +265,7 @@ get named, not walked line by line. They are lower-stakes than the `CCR1` closur
   after `tim14_pwm_set(625)`, and what duty cycle that is.
 - **Reveal, ~4 min:** her slide 6 layout exactly — same rows, same geometry,
   answers added in place. Not a two-column question/answer table; the row-for-row
-  identity is what makes it readable from the wall. Williams pp 199–206 goes here.
+  identity is what makes it readable from the wall.
 
 **Part 3: Where Those Registers Sit in the Hardware** *(8 min, predict → explain)*
 - **Opens with a prediction**, not an explanation: recall the scope trace from

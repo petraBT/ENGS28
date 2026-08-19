@@ -203,6 +203,25 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
 
 ## Conventions (apply going forward)
 
+- **Never link into the book from a slide.** No `<xref>` in anything that gets
+  projected — not in a `<slide>` block, and not in an `<activity>` or
+  `<instructor>` block a deck entry refs. The link opens **in the same window**,
+  so one stray click during class replaces the deck with a book page and the
+  slides are gone. Petra, on the Day 11x decode activity: *"Referring to figures
+  in the book is no good."*
+  What to do instead, in order of preference:
+  1. **Name the thing where the room already is.** They have the reference manual
+     open — *"find `TIM14_CCER` in section 17.4"* beats *"see Figure 4.7"*, and it
+     is the better task anyway, because looking it up is the work.
+  2. **Put the picture on a slide.** If the room has to see it, it belongs on the
+     wall, not behind a link.
+  3. **Both, in that order** — this is the shape Petra asked for: name the
+     register in the question, then a following slide showing the registers, so
+     the answer can be walked through with the thing on screen.
+  The book keeps its `<xref>`s: it is read at a desk, where following a link is
+  free. This rule is only about what gets projected. It is worth a grep before
+  every deck goes over — an `<xref>` inside an activity is easy to miss, because
+  the activity was written for the book first.
 - **Captions are INSTRUCTIVE, not descriptive.** A slide caption is a one-line
   "what to notice / what this shows / what to do" (e.g. *"CH1 on the button, CH2
   on the LED; minus leads to GND"*), NOT the book's full figure caption. Author it

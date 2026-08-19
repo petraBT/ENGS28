@@ -270,4 +270,6 @@ Before handing over a deck:
       aspect ratio checked against it, before any of it is called a defect
 - [ ] No figure answers a question a later slide asks
 - [ ] No figure drawn twice
+- [ ] No `<xref>` in anything projected — slides, and any activity or instructor
+      block a deck entry refs (a book link opens in the same window and loses the deck)
 - [ ] The fit snippet run with the crossfade killed and the preview server stopped

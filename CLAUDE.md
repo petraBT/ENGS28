@@ -195,6 +195,10 @@ These are the ones that get written wrong from plausibility.
   **even** is a **Thursday, 110 minutes**. Every day of week 5 was first budgeted
   to 65 minutes, and so was Day 11 — the error has now been made three times, so
   take the length from this line rather than assuming an hour.
+- **The course uses its own readings.** It no longer assigns or cites **Williams**.
+  Her older decks still carry Williams page references — Day 11x's slide 7 does —
+  so mining an old deck will resurface them (P-12 reuse). Drop them; do not carry
+  a citation into the book because her slide had one.
 - **There are no lab benches.** Each student carries a portable kit and works on
   their own laptop. Never write "bench".
 - `TemplateProject` is the starting point for every student project: copy it,

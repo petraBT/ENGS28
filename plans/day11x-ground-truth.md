@@ -95,8 +95,9 @@ Mined arc:
 | Enable the timer? | `TIM14_CR1` |
 | **What register controls the speed of the motor?** | **`TIM14_CCR1`** |
 
-Her references slide (7): *Williams, Chapter 10, pp 199–206* (start of chapter to
-"Initializing Timers"); *Reference Manual, Section 17.3.8*.
+Her references slide (7): *Reference Manual, Section 17.3.8*.  It also cites
+*Williams, Chapter 10, pp 199–206* — **dropped**: the course uses its own readings
+and no longer relies on Williams (Petra, 2026-08-19).  See `CLAUDE.md`.
 
 ### The two traps, both confirmed
 
