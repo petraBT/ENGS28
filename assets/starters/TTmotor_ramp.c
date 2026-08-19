@@ -25,7 +25,7 @@
 #define PSC_FACTOR	6		    // 12 MHz / 6 = 2 MHz
 #define PWM_TIMER_MAX	  1250		// 2 MHz / 1250 = 1.6 kHz with prescale 6
 
-//#define PSC_FACTOR	12		    // 12 MHz / 120 = 100 KHz
+//#define PSC_FACTOR	120		    // 12 MHz / 120 = 100 KHz
 //#define PWM_TIMER_MAX	  2000		// 100 KHz / 2000 = 50 Hz with prescale 120
 
 #define SPEED_UPDATE	  2000		// 2 seconds
