@@ -296,9 +296,14 @@ get named, not walked line by line. They are lower-stakes than the `CCR1` closur
   is not re-derived.
 - `TIM14->CCR1 = 0;` named: the one line of the init that is safety rather than
   configuration, and Lab 6's `motor_init()` needs it.
-- `tim14_pwm_set()`: the clamp, and the single assignment to `CCR1`. Instructor note
-  — the `value < 0` branch is unreachable on a `uint16_t`; a student reading
-  carefully will ask.
+- `tim14_pwm_set()`: the clamp, and the single assignment to `CCR1`. The
+  `value < 0` branch is unreachable on a `uint16_t`, and a student reading carefully
+  will say so — **keep it, and say why** (Petra, 2026-08-19): the guard is there for
+  the signature, not for this call. In Lab 6 they write `motor_speed()` themselves
+  and taking an `int16_t` is the natural choice, since the ramp counter is signed and
+  `abs()` is easy to forget. The moment the parameter is signed, that branch is all
+  that stands between a negative speed and a compare value of 65,000-odd. **This
+  becomes prose in delivery 2**; it is a presenter note for now.
 - The ramp's two asides (her slides 14, 15): **point at** the brake-before-reverse
   code and recall the why from Day 11 rather than re-deriving it; `abs()` on a
   bipolar ramp.

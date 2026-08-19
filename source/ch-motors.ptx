@@ -1253,16 +1253,17 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 the second is the one worth drawing out.</p>
             </instructor>
             <figure xml:id="fig-pwm-scope">
-                <caption>The PWM signal from <c>TTmotor_ramp.c</c>, caught at one moment in
-                the ramp.  The window spans about two milliseconds, so it holds roughly three
-                periods of the 1.6 kHz waveform and the duty cycle barely changes across it.
-                Watch the same trace while the program runs and the width of the HIGH portion
-                grows and shrinks as the motor speeds up and slows down, while the period
-                stays fixed.</caption>
-                <image source="images/Day11-Motors/fig-pwm-scope.png" width="85%"/>
+                <caption>The PWM signal from <c>TTmotor_ramp.c</c> on the oscilloscope, while
+                the ramp runs.  The window is narrow enough to hold only a few periods of the
+                1.6 kHz waveform, so what you are watching is one pulse train changing shape:
+                the width of the HIGH portion grows and shrinks as the motor speeds up and
+                slows down, while the spacing from one rising edge to the next — the period —
+                does not move at all.  That is duty cycle changing while frequency stays
+                fixed, which is the whole of how this program sets the speed.</caption>
+                <video youtube="MuDX2vrNV3Q" width="85%"/>
             </figure>
             <slide xml:id="sl-day11-scope" ref="fig-pwm-scope">
-    <caption>One moment in the ramp: about three periods of the 1.6 kHz waveform, so the duty cycle barely changes across the screen. Watch it while the program runs and the HIGH portion grows and shrinks while the period stays fixed.</caption>
+    <caption>Watch the HIGH portion grow and shrink while the period stays exactly where it is.</caption>
 </slide>
 
             <activity xml:id="act-day11-stretch">
@@ -1520,7 +1521,16 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 
             <!-- DELIVERY 2: prose. -->
 
-            <slide xml:id="sl-day11x-predict-ccr1" refPage="subsec-day11-demo.html" ref="fig-pwm-scope">
+            <figure xml:id="fig-pwm-scope-still">
+                <caption>One frozen moment of the trace you watched on Day 11
+                (<xref ref="fig-pwm-scope"/>).  The window is about two milliseconds wide, so
+                it holds roughly three periods of the 1.6 kHz waveform and the duty cycle
+                barely changes across the screen.  Stopping the picture is what makes it
+                possible to ask which of the two numbers behind it the program is
+                rewriting.</caption>
+                <image source="images/Day11-Motors/fig-pwm-scope.png" width="80%"/>
+            </figure>
+            <slide xml:id="sl-day11x-predict-ccr1" ref="fig-pwm-scope-still">
     <ul>
         <li>This is the trace you measured on Day 11, while the ramp was running.</li>
         <li>The width of the HIGH part changed as the motor sped up and slowed down. The period did not.</li>
@@ -1550,12 +1560,13 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 <caption>How the signal gets out to the pin (RM0490, Figure 177).  The
                 waveform produced by the comparator in <xref ref="fig-tim14-main-circuit"/>
                 arrives at the left and reaches the pin at the right only if the output
-                enable circuit lets it through, which is what the CC1E bit does.  Two things
-                to know about this figure: it is printed in the TIM14 chapter of the manual
-                but ST has labeled the register <c>TIM1_CCER</c> rather than
-                <c>TIM14_CCER</c>, because the artwork is shared with the chapter on TIM1 —
-                the register our code writes is TIM14's.  And the manual's <c>TIMx_CCMR1</c>
-                is the same register as the <c>TIM14_CCMR1</c> we have been naming.</caption>
+                enable circuit lets it through, which is what the CC1E bit does.  One
+                difference from the printed manual worth knowing: RM0490 labels these boxes
+                <c>TIM1_CCER</c>, which is a slip carried over from the chapter on TIM1 —
+                the figure is in the TIM14 chapter and the register our code writes is
+                TIM14's.  We have put it back to <c>TIMx_CCER</c>, the manual's own way of
+                writing <q>whichever timer you are using</q>, which is how the same figure
+                already labels <c>TIMx_CCMR1</c> just below.</caption>
                 <image source="images/Day11x-Motors(2)/fig-tim14-output-stage.png" width="92%"/>
             </figure>
             <slide xml:id="sl-day11x-output-stage" ref="fig-tim14-output-stage">
@@ -1750,7 +1761,7 @@ void tim14_pwm_set(uint16_t value) {
 }
 ]]></code></program>
     <caption>One register. Nothing else is touched again while the motor turns.</caption>
-    <note>≈ 2 min, and this is the day's closing idea — set it up as such. If someone notices that `value &lt; 0` can never be true for a uint16_t, they are right: it is unreachable. The function is still safe, because a negative int16_t converts to a large uint16_t and the first branch clamps it, and main() only ever passes abs(). Worth thirty seconds as an example of code that reads as a safety check and does nothing.</note>
+    <note>≈ 2 min, and this is the day's closing idea — set it up as such. Expect someone to notice that value &lt; 0 can never be true for a uint16_t, and they are right: as written, that branch cannot run. Keep it, and say why. The guard is there for the SIGNATURE, not for this one call. In Lab 6 they write motor_speed() themselves, and taking an int16_t is the natural choice — the ramp counter is signed, and abs() is easy to forget. The moment the parameter is signed, that branch is the only thing between a negative speed and a compare value of 65,000-odd, which is a motor at full tilt rather than stopped. Defensive code earns its place by surviving a change of type; this is a good half-minute on why you leave it in.</note>
 </slide>
 
             <activity xml:id="act-day11x-checkpoint">
