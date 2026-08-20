@@ -127,6 +127,12 @@
       }
       #ref .ref-body ol { margin: .2em 0; padding-left: 1.5em; }
       #ref .ref-body ol > li { font-size: 2.7vmin; font-size: 2.7cqmin; line-height: 1.55; margin-bottom: .65em; padding-left: .2em; }
+      /* The bullet list has had this since it was written; the NUMBERED list did
+         not, so the last item's trailing margin — 65 px on a 1600x900 stage —
+         counted as overflow and pushed slides over that were visibly fine. Day
+         11x's questions slide measured 18 px over with 65 px of empty space
+         under it. */
+      #ref .ref-body ol > li:last-child { margin-bottom: 0; }
       /* Practice slides (room="yes" on a slide, or "room": true on a deck ref):
          leave a couple of blank lines after each item / task for students — and
          the instructor — to write an answer during class. */
@@ -137,6 +143,18 @@
       #ref .ref-body.roomy > p > ol > li,
       #ref .ref-body.roomy > p > ul > li,
       #ref .ref-body.roomy .task { margin-bottom: 2.7em; }
+      /* Not after the LAST one. The writing space between items is the point;
+         the copy of it below the final item is against the bottom of the slide,
+         where it buys nothing and counts as overflow — 65 px of it put Day 11x's
+         questions slide 18 px over once Petra promoted the early-finisher line
+         to a fourth question. */
+      #ref .ref-body.roomy > ol > li:last-child,
+      #ref .ref-body.roomy > ul > li:last-child,
+      #ref .ref-body.roomy > .para > ol > li:last-child,
+      #ref .ref-body.roomy > .para > ul > li:last-child,
+      #ref .ref-body.roomy > p > ol > li:last-child,
+      #ref .ref-body.roomy > p > ul > li:last-child,
+      #ref .ref-body.roomy .task:last-child { margin-bottom: 0; }
       /* The opposite setting (room="compressed" / "room": "compressed"): tighten
          the gaps between items so a long activity fits on one slide without any
          of its content being cut. Type size is untouched — only the spacing —
@@ -755,6 +773,48 @@
           ;[].forEach.call(root.querySelectorAll('.autopermalink, script, .knowl-output'), function (el) {
             if (el.parentNode) el.parentNode.removeChild(el)
           })
+          dexref(root)
+        }
+        /* A cross-reference projects as a BOOK NUMBER — "Figure 11.2.12" — which
+           names nothing anybody in the room can see. The book needs the xref and
+           the slide does not, so the link is rewritten here rather than removed
+           from the source (most of these live in activities the deck refs by
+           their own xml:id, so the book's reading depends on them).
+
+           Three cases, in order:
+             "(Figure 11.2.12)"        the whole parenthetical goes
+             "as in picture Figure 3"  a naming word already precedes it: link goes
+             "Derive it from Figure 3" nothing else names the target: "the figure"
+
+           The type word comes from the link's own text, so a Table stays a table
+           and a Section stays a section. */
+        var XREF_TYPE = { figure: 'the figure', table: 'the table', section: 'that section',
+                          chapter: 'that chapter', example: 'the example', activity: 'the activity',
+                          listing: 'the listing', item: 'the step', part: 'that part' }
+        var XREF_NAMES = /(picture|figure|table|section|chapter|diagram|listing|example)\s*$/i
+        function dexref(root) {
+          ;[].forEach.call(root.querySelectorAll('a.xref'), function (a) {
+            var word = (a.textContent || '').trim().split(/[\s\u00a0]+/)[0].toLowerCase()
+            var prev = a.previousSibling, next = a.nextSibling
+            var before = prev && prev.nodeType === 3 ? prev.nodeValue : ''
+            var after  = next && next.nodeType === 3 ? next.nodeValue : ''
+            // "(Figure 11.2.12)" — drop the parentheses with it, and the space before them.
+            if (/\(\s*$/.test(before) && /^\s*\)/.test(after)) {
+              prev.nodeValue = before.replace(/\s*\(\s*$/, '')
+              next.nodeValue = after.replace(/^\s*\)/, '')
+              a.parentNode.removeChild(a)
+              return
+            }
+            // "as in picture Figure 10.1.2" — the sentence already names the thing.
+            if (XREF_NAMES.test(before)) {
+              prev.nodeValue = before.replace(/\s+$/, '')
+              a.parentNode.removeChild(a)
+              return
+            }
+            // Otherwise the sentence needs a noun where the number was.
+            a.parentNode.replaceChild(
+              document.createTextNode(XREF_TYPE[word] || 'the figure'), a)
+          })
         }
         // The player doesn't load MathJax, so PreTeXt <m> math arrives as raw LaTeX
         // in .process-math spans (e.g. "\(V_{CC}\)"). Convert the simple inline math
@@ -1078,6 +1138,18 @@
               var noteClone = noteBlock.cloneNode(true)
               strip(noteClone); absolutize(noteClone, res.url); demath(noteClone)
               refBody.appendChild(noteClone)
+            }
+            /* A note written on the DECK ENTRY rather than in the source. Until
+               2026-08-20 this rendered for glue slides only, so every timing
+               note on a ref slide was invisible in the player — which is every
+               note on an <activity> or an <instructor> block, since neither can
+               carry a <slide>'s <note>. Day 11x had four of them, all written to
+               make its clock auditable, and none of them reached the wall. */
+            if (notesOn && slide.presenterNote) {
+              var jsonNote = document.createElement('div')
+              jsonNote.className = 'deck-slide-note'
+              jsonNote.textContent = slide.presenterNote
+              refBody.appendChild(jsonNote)
             }
 
             // Last, once every piece of text is in place: typeset V_BE, h_FE,

@@ -1451,7 +1451,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
             </table>
             <slide xml:id="sl-day11x-recall" ref="table-day11x-recall">
     <p>The program we are about to read drives one pin — PA7, where TIM14's channel 1 comes out. Setting it up takes twelve steps, and most of them write registers we have written before.</p>
-    <caption>Two of them we have never written, and neither is the reason the counter gets restarted before it runs.</caption>
+    <caption>We'll need a few more registers to set the timer up for PWM mode.</caption>
     <note>≈ 2 min. Project this before the activity. The point is that the room is further along than it feels — and that the fifteen minutes coming up are for the three things that are genuinely new, not for re-finding PSC and ARR.</note>
 </slide>
 
@@ -1514,10 +1514,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
     <p>With <c>TTmotor_ramp.c</c> open on your laptop, and the reference manual at section 17.4, <em>TIM14 registers</em>, page 482.</p>
     <ol>
         <li>Section 17.3.8 selects PWM mode by writing <c>0110</c> or <c>0111</c> into a field called OC1M. Which register is that field in? Which of the two choices holds the pin HIGH until the counter reaches the compare value, and then drops it? What would the other one have looked like on the scope?</li>
-        <li>Find the bit named CC1E, and the register it lives in. If you deleted the one line of <c>tim14_pa7_pwm_init()</c> that sets it, and changed nothing else, what would you see on PA7?</li>
+        <li>Find the bit named CC1E, and the register it lives in. If you were to delete the one line of <c>tim14_pa7_pwm_init()</c> that sets this bit, and changed nothing else, what would you see on PA7?</li>
         <li><c>tim14_pa7_pwm_init()</c> writes one more register that neither of those questions asked about, just before it starts the counter. Find it in the file, then look it up in section 17.4. What does the bit our program sets do, and why do it before starting the counter rather than after?</li>
+        <li>If you finish: our program calls tim14_pwm_set(625), and the counter runs to 1249. What duty cycle is that, and what average voltage does the motor see from its 5 V supply?</li>
     </ol>
-    <caption>If you finish: our program calls tim14_pwm_set(625), and the counter runs to 1249. What duty cycle is that, and what average voltage does the motor see from its 5 V supply?</caption>
     <note>≈ 8 min on these three. Say at the START that we go through all of them together afterwards, so nobody's fifteen minutes depends on their group being fast. Checkpoint at about minute 7: ask every table to confirm they are actually in section 17.4 — a group in the datasheet, or in the TIM1 chapter, will find nothing and will not say so.</note>
 </slide>
 
@@ -1683,7 +1683,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
             </p>
 
             <!-- P-6: the decode activity comes BEFORE the walkthrough, and
-                 fig-ccmr1-oc1m is the reveal, so it is placed after the
+                 the CCMR1 figures are the reveal, so they are placed after the
                  instructor answer rather than above the activity. -->
             <figure xml:id="fig-ccer-cc1e">
                 <caption>The capture/compare enable register, <c>TIM14_CCER</c>, bit by bit.
@@ -1763,21 +1763,26 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 these two gets a clearing line before its setting line, and why the three
                 single-bit registers do not.
             </p>
-            <figure xml:id="fig-ccmr1-bits">
-                <caption><c>TIM14_CCMR1</c> laid out bit by bit.  Two of its fields are ours:
-                OC1M, which selects what the channel does and is spread across bits 6:4 and
-                bit 16, and CC1S at bits 1:0, which decides whether the channel is an output
-                at all.  Neither is a single bit, which is what makes them different from the
-                three that follow.</caption>
+            <figure xml:id="fig-ccmr1-oc1m-bits">
+                <caption><c>TIM14_CCMR1</c> laid out bit by bit, with the first of our two
+                fields marked.  OC1M selects what the channel does, and it is four bits wide
+                and not in one piece: three of them at 6:4, and the fourth up at bit 16.  Four
+                bits is what makes it different from CC1E, CEN and UG, which are one bit
+                each.</caption>
                 <image source="images/Day11x-Motors(2)/fig-ccmr1-oc1m.png" width="96%"/>
             </figure>
+            <figure xml:id="fig-ccmr1-cc1s-bits">
+                <caption>The same register, with our other field marked.  CC1S is two bits at
+                1:0, and it decides whether the channel is an output or an input.  Two fields
+                in one register is why the initialization writes <c>CCMR1</c> twice.</caption>
+                <image source="images/Day11x-Motors(2)/fig-ccmr1-cc1s.png" width="96%"/>
+            </figure>
             <slide xml:id="sl-day11x-bitfield-registers">
-    <p>The other three registers, as section 17.4 prints them — CCER, CR1, EGR.</p>
-    <image source="images/Day11x-Motors(2)/fig-ccer-cc1e.svg" width="92%"/>
-    <image source="images/Day11x-Motors(2)/fig-cr1-cen.svg" width="92%"/>
-    <image source="images/Day11x-Motors(2)/fig-egr-ug.svg" width="92%"/>
-    <caption>CCER, CR1 and EGR, as section 17.4 prints them. The bit we set is bit 0 in all three.</caption>
-    <note>≈ 1 min, and it runs straight into the answer slide as ONE beat of two minutes, not two beats. Walk the answers here, with the registers on the wall, and let the answer slide be the reveal in writing rather than a second telling. The contrast to draw is with CCMR1 on the next slide: these three are single bits, so OR-ing 1 in is safe; OC1M and CC1S are multi-bit fields, so they have to be cleared first. That is the answer to "why does one need a clearing line and the others do not".</note>
+    <p>Two of your three answers, as section 17.4 prints them: the register CC1E lives in, and the register CEN lives in. The third, <c>CCMR1</c>, is on the next two slides.</p>
+    <image source="images/Day11x-Motors(2)/fig-ccer-cc1e.svg" width="100%"/>
+    <image source="images/Day11x-Motors(2)/fig-cr1-cen.svg" width="100%"/>
+    <caption>CC1E is bit 0 of CCER, CEN is bit 0 of CR1. One bit each — which is why <c>|=</c> on its own is safe here.</caption>
+    <note>≈ 1 min, and it runs straight into the answer slide as ONE beat of two minutes, not two beats. Walk the answers here, with the registers on the wall, and let the answer slide be the reveal in writing rather than a second telling. The contrast to draw is with CCMR1, which follows: these two are single bits, so OR-ing 1 in is safe; OC1M and CC1S are multi-bit fields, so they have to be cleared first. EGR is the same easy case as these two and was answered in Part 2 — its bit map is in the book, and it does not need the wall again. That is the answer to "why does one need a clearing line and the others do not".</note>
 </slide>
 
             <figure xml:id="fig-ccmr1-oc1m">
@@ -1790,9 +1795,24 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 register, which is why the initialization writes <c>CCMR1</c> twice.</caption>
                 <image source="images/Day11x-Motors(2)/fig-ccmr1-oc1m_cc1s.png" width="88%"/>
             </figure>
-            <slide xml:id="sl-day11x-ccmr1" ref="fig-ccmr1-oc1m">
-    <caption>0110 is PWM mode 1: HIGH until the counter reaches the compare value, then LOW. And 00 in CC1S is what keeps the channel an output.</caption>
-    <note>≈ 2 min. This is the reveal for the first decode task — do not project it before they have written something down. It also answers the checkpoint question that comes later: two fields of one register is why CCMR1 is the line written twice.</note>
+            <slide xml:id="sl-day11x-ccmr1-oc1m" ref="fig-ccmr1-oc1m-bits" stack="yes">
+    <ul>
+        <li>OC1M is four bits, and they are not together: 6:4, and a fourth at bit 16.</li>
+        <li>Section 17.3.8 on <c>0110</c>: <q>PWM mode 1 — Channel 1 is active as long as TIMx_CNT &lt; TIMx_CCR1 else inactive.</q> HIGH until the counter reaches the compare value, then LOW.</li>
+        <li>Four bits is why the line needs a partner: <c>CCMR1 &amp;= ~TIM_CCMR1_OC1M_Msk;</c> first, then <c>CCMR1 |= TIM_OC1_PWM1 &lt;&lt; TIM_CCMR1_OC1M_Pos;</c></li>
+    </ul>
+    <caption>Clear the field, then set it — because OR alone would leave whatever was there and mix the two patterns together.</caption>
+    <note>≈ 1 min, and it is the reveal for decode task (a) — do not project it before they have written something down. The full page from the manual, with these words in place, is the figure in their book.</note>
+</slide>
+
+            <slide xml:id="sl-day11x-ccmr1-cc1s" ref="fig-ccmr1-cc1s-bits" stack="yes">
+    <ul>
+        <li>CC1S is two bits at 1:0, in the same register.</li>
+        <li>Section 17.4 on <c>00</c>: <q>CC1 channel is configured as output.</q> That is what keeps the channel an output, and it is what the second <c>CCMR1</c> pair writes.</li>
+        <li>Two fields in one register — which is why the initialization writes <c>CCMR1</c> twice.</li>
+    </ul>
+    <caption>The answer to the checkpoint question that comes later: CCMR1 is the register written twice, because two of its fields are ours.</caption>
+    <note>≈ 1 min. <c>00</c> is also the reset value, so this pair changes nothing on a fresh chip — say that, and say why it is written anyway: the driver does not get to assume what ran before it.</note>
 </slide>
 
             <p>
@@ -1990,35 +2010,59 @@ void tim14_pwm_set(uint16_t value) {
             </p>
             <activity xml:id="act-day11x-checkpoint">
                 <title>Name the register</title>
-                <introduction>
+                <statement>
                     <p>On your own, without looking back.  Each step of the initialization
                     does one of these jobs.  Write in the register it writes.</p>
-                </introduction>
-                <task xml:id="task-day11x-checkpoint-lines">
-                    <statement>
-                        <tabular halign="left" top="minor" left="minor">
-                            <row header="yes" bottom="minor">
-                                <cell>The line does this</cell>
-                                <cell>so it writes</cell>
-                            </row>
-                            <row><cell>Give the pin's port a clock</cell><cell></cell></row>
-                            <row><cell>Put PA7 in alternate-function mode</cell><cell></cell></row>
-                            <row><cell>Select which alternate function</cell><cell></cell></row>
-                            <row><cell>Give the timer a clock</cell><cell></cell></row>
-                            <row><cell>Set the counting rate</cell><cell></cell></row>
-                            <row><cell>Set the value the counter runs up to</cell><cell></cell></row>
-                            <row><cell>Set the starting speed</cell><cell></cell></row>
-                            <row><cell>Select PWM mode</cell><cell></cell></row>
-                            <row><cell>Keep the channel an output</cell><cell></cell></row>
-                            <row><cell>Let the channel reach the pin</cell><cell></cell></row>
-                            <row><cell>Force an update event</cell><cell></cell></row>
-                            <row bottom="minor"><cell>Start the counter</cell><cell></cell></row>
-                        </tabular>
-                        <p>Twelve steps, but not twelve different registers.  Which one is
-                        written twice, and why?</p>
-                    </statement>
-                </task>
+                    <tabular halign="left" top="minor" left="minor">
+                        <row header="yes" bottom="minor">
+                            <cell>The line does this</cell>
+                            <cell>so it writes this register</cell>
+                        </row>
+                        <row><cell>Give the pin's port a clock</cell><cell></cell></row>
+                        <row><cell>Put PA7 in alternate-function mode</cell><cell></cell></row>
+                        <row><cell>Select which alternate function</cell><cell></cell></row>
+                        <row><cell>Give the timer a clock</cell><cell></cell></row>
+                        <row><cell>Set the counting rate</cell><cell></cell></row>
+                        <row><cell>Set the value the counter runs up to</cell><cell></cell></row>
+                        <row><cell>Set the starting speed</cell><cell></cell></row>
+                        <row><cell>Select PWM mode</cell><cell></cell></row>
+                        <row><cell>Keep the channel an output</cell><cell></cell></row>
+                        <row><cell>Let the channel reach the pin</cell><cell></cell></row>
+                        <row><cell>Force an update event</cell><cell></cell></row>
+                        <row bottom="minor"><cell>Start the counter</cell><cell></cell></row>
+                    </tabular>
+                    <p>Twelve steps, but not twelve different registers.  Which one is
+                    written twice, and why?</p>
+                </statement>
             </activity>
+
+            <slide xml:id="sl-day11x-checkpoint">
+    <p>On your own, without looking back. Each step of the initialization does one of these jobs — write in the register it writes.</p>
+    <sidebyside widths="66%" margins="17%">
+        <tabular halign="left" top="minor" left="minor">
+            <col width="62%"/>
+            <col width="38%"/>
+            <row header="yes" bottom="minor">
+                <cell>The line does this</cell>
+                <cell>so it writes this register</cell>
+            </row>
+            <row><cell>Give the pin's port a clock</cell><cell></cell></row>
+            <row><cell>Put PA7 in alternate-function mode</cell><cell></cell></row>
+            <row><cell>Select which alternate function</cell><cell></cell></row>
+            <row><cell>Give the timer a clock</cell><cell></cell></row>
+            <row><cell>Set the counting rate</cell><cell></cell></row>
+            <row><cell>Set the value the counter runs up to</cell><cell></cell></row>
+            <row><cell>Set the starting speed</cell><cell></cell></row>
+            <row><cell>Select PWM mode</cell><cell></cell></row>
+            <row><cell>Keep the channel an output</cell><cell></cell></row>
+            <row><cell>Let the channel reach the pin</cell><cell></cell></row>
+            <row><cell>Force an update event</cell><cell></cell></row>
+            <row bottom="minor"><cell>Start the counter</cell><cell></cell></row>
+        </tabular>
+    </sidebyside>
+    <caption>Twelve steps, but not twelve different registers. Which one is written twice, and why?</caption>
+    <note>≈ 90 s, individual, and protect it — it is the only moment all hour a student produces the mapping unaided. Then read the answers off the next slide.</note>
+</slide>
             <instructor xml:id="inst-day11x-checkpoint">
                 <p>Down the column: <c>RCC_IOPENR</c>, <c>GPIOA_MODER</c>,
                 <c>GPIOA_AFR[0]</c>, <c>RCC_APBENR2</c>, <c>TIM14_PSC</c>, <c>TIM14_ARR</c>,

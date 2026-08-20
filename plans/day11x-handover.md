@@ -1,8 +1,9 @@
 # Day 11x — handover
 
-State as of 2026-08-20, after the Gate 3 list was applied and its two structural
-items closed. Everything needed to finish Day 11x is here or in the files it
-names, so the work survives a context reset.
+State as of 2026-08-20, after the Gate 3 list was applied, its two structural
+items closed, and Petra's first round of notes on the finished deck applied.
+Everything needed to finish Day 11x is here or in the files it names, so the work
+survives a context reset.
 
 ## Where the unit is
 
@@ -19,7 +20,7 @@ them resolved differently than the reviewers proposed, both recorded below with
 the measurement that decided it.
 
 `build-all`, `check_rules`, `check_deck` and `check_starters` are clean, and all
-33 deck slides measure **fits** at 1600×900 with the crossfade killed and no
+34 deck slides measure **fits** at 1600×900 with the crossfade killed and no
 clipped code. Measure without `?notes`: presenter notes are part of the body, so
 a sweep run with them showing reports several hundred px of overflow on slides
 that fit.
@@ -29,10 +30,15 @@ that fit.
 
 ## Petra's decisions, 2026-08-19
 
-1. **Apply everything in the Gate 3 list except the CCMR1 split.** The reveal
-   figure stays as one slide. Its legibility finding (field text at 1.4%, code at
-   1.1–1.3%, against the ≥2% rule, and height-limited so unscalable) is therefore
-   **accepted risk, not resolved** — recorded, not silently dropped.
+1. ~~**Apply everything in the Gate 3 list except the CCMR1 split.**~~ —
+   **SUPERSEDED 2026-08-20.** She made the split herself and dropped
+   `fig-ccmr1-oc1m.png` and `fig-ccmr1-cc1s.png` into the images folder: the same
+   bit map twice, once with OC1M boxed and once with CC1S. The reveal is now two
+   slides, each carrying the manual's own wording as slide text beside its own
+   bit map, so **the legibility finding is resolved rather than accepted** — no
+   text on either slide is below the ≥2% rule. Her dense combined page
+   (`fig-ccmr1-oc1m_cc1s.png`) stays in the book, where reading distance is a
+   laptop and not a projector.
 2. **Never point out in writing that there is no hardware today.** Not a rephrase —
    the observation itself goes. This is broader than the one sentence: do not tell
    these students what a day does *not* involve.
@@ -78,16 +84,62 @@ explicitly *no class time*.
 Where the four minutes came from: the register walk and its answers 4 → 2; the two
 init slides 3 → 2; the Lab 6 seam 3 → 2, read off the bullets rather than discussed.
 
+## Her round on the finished deck, 2026-08-20 — applied
+
+- **The decode activity and the slide after it named different registers.** The
+  activity asks about CCMR1, CCER and CR1; the slide showed CCER, CR1 and EGR.
+  The slide is now CCER and CR1 — *"two of your three answers"* — and CCMR1 is the
+  two slides that follow, so the three slides cover exactly the three questions.
+  EGR keeps its bit map in the book and loses the wall, where it was a fourth
+  register nobody had been asked about.
+- **Her CCMR1 split, applied** (see decision 1 above).
+- **"Name the register" had an (a) and no (b).** The single `<task>` is now the
+  activity's `<statement>`, so neither the book nor the wall prints a label.
+- **Its table was full-slide wide.** A `<tabular>` inside a projected activity
+  cannot carry declared column widths (`AUTHORING-slides.md`), so the checkpoint
+  now has its own `<slide>` block: 62/38 columns inside a `<sidebyside widths=
+  "66%" margins="17%">`. The deck refs the slide; the book keeps the activity.
+- **Projected `<xref>`s are gone from every deck.** Not from the source — the
+  book needs them, and most of them live in activities the deck refs by their own
+  `xml:id` — but rewritten in the player: `dexref()` in `assets/class.html` drops
+  the whole parenthetical for "(Figure 11.2.12)", drops the link where a naming
+  word already precedes it ("as in picture Figure 10.1.2"), and otherwise puts the
+  noun where the number was ("placed as in the figure"). Eleven of them, across
+  six decks.
+- **The video sound: not ours to fix.** The embed is not muted and the player adds
+  no `mute` — asked over YouTube's iframe API on the Day 11 slide, it answers
+  `muted: false, volume: 100`. But YouTube's own metadata reports `loudnessDb:
+  -9986` for **both** videos (`MuDX2vrNV3Q`, the TTmotorRamp capture, and
+  `VH0-zO2LpDc`), which is its sentinel for a digitally silent track. The uploads
+  carry an audio stream with nothing in it, so the motor cannot be heard however
+  the embed is configured. **Re-uploading the capture with its audio is the fix,
+  and it is hers.** Nothing in the book or the player needs to change for the
+  sound to arrive once it does.
+
+Two player bugs surfaced while checking her notes, both fixed and both affecting
+every deck:
+
+- **A note written on the deck entry never reached the wall.** `presenterNote`
+  rendered for glue slides only, so on a `ref` slide it was dead text — and an
+  `<activity>` or an `<instructor>` block cannot carry a `<slide>`'s `<note>`, so
+  that was the only place their notes could live. Day 11x had four, all written to
+  make its clock auditable, and none of them projected under `?notes`.
+- **`room="yes"` put its writing space after the LAST item too**, against the
+  bottom of the slide where it buys nothing and counts as overflow. The bullet
+  list had a `:last-child` exception since it was written; the numbered list did
+  not. Her fourth question on the Part 2 slide put it 18 px over with 65 px of
+  empty space underneath — the fix is the exception, not shorter questions.
+
 ## Still open with her, not blocking
 
 - Play the closing video once to confirm the "30 → 180 rpm" claim (a video renders
-  black in a still, so no reviewer could check it).
+  black in a still, so no reviewer could check it) — and see the sound note above
+  while you are in there.
 - `fig-pwm-scope.png` still lives in `Day11-Motors/` and Day 11x is now its only
   slide user. **Noted in the source** at `fig-pwm-scope-still` rather than moved:
   Day 11's Gate 2 left a re-crop of that file open with her, and a re-crop made
   "for Day 11" would silently change Day 11x's prediction slide. Moving the file is
   hers to decide.
-- The CCMR1 reveal's legibility, per her decision 1 above.
 
 ## Standing facts for this day, so they are not re-derived
 

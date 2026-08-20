@@ -441,6 +441,34 @@ every way a slide can be cut, not just the obvious one:
 })()
 ```
 
+**Measure with the notes OFF.** `?notes` puts each slide's presenter note into
+`.ref-body`, so a sweep run with them showing reports several hundred px of
+overflow on slides that fit — Day 11x measured five slides "over" that way, all
+of them clean. Sweep on the plain URL; turn `?notes` on only to read them.
+
+**A note written on the DECK ENTRY renders on a ref slide too, since
+2026-08-20.** `presenterNote` used to render for glue slides only, so on a `ref`
+slide it was text that existed in the JSON and nowhere else — and an `<activity>`
+or an `<instructor>` block cannot carry a `<slide>`'s `<note>`, so the deck entry
+is the *only* place their timing notes can live. Day 11x had four that never
+projected.
+
+**A projected `<xref>` is rewritten by the player, not by you.** On the wall
+"Figure 11.2.12" names nothing anybody can see, but the book needs the reference
+and most of these live in activities the deck refs by their own `xml:id`, so
+editing the source would change the reading. `dexref()` in `assets/class.html`
+handles it: "(Figure 11.2.12)" loses the whole parenthetical, "as in picture
+Figure 10.1.2" loses the link, and anything else gets the noun where the number
+was — "placed as in the figure". Write the sentence for the book; the wall takes
+care of itself.
+
+**`room="yes"` no longer pads below the last item.** The writing space between
+items is the point of the mode; the copy of it under the final item sits against
+the bottom of the slide and counts as overflow. The bullet list always had the
+exception, the numbered list did not — 65 px of invisible padding put Day 11x's
+questions slide 18 px over, and the answer was the exception, not shorter
+questions.
+
 **Give the player time to settle — and kill the crossfade first.** Waiting
 ~300 ms after setting `location.hash` is not enough on its own. During the
 transition **both slides are in the DOM**, so `.ref-body` measures the outgoing
