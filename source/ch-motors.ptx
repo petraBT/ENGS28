@@ -1705,10 +1705,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
             <activity xml:id="act-day11x-bitfields">
                 <title>From a register name to a register value</title>
                 <introduction>
-                    <p>Here are three lines from the driver.  <c>ES28.h</c> defines
-                    <c>TIM_OC1_PWM1</c> as 6, and every <c>_Pos</c> name is the bit position
-                    of the field it names.  Work each one out on paper before we walk
-                    through the file.</p>
+                    <p>Here are four lines from the driver.  <c>ES28.h</c> defines
+                    <c>TIM_OC1_PWM1</c> as 6 and <c>TIM_CC1_OUTPUT</c> as 0, and every
+                    <c>_Pos</c> name is the bit position of the field it names.  Work each one
+                    out on paper before we walk through the file.</p>
                 </introduction>
                 <task xml:id="task-day11x-decode-oc1m">
                     <statement><p><c>TIM14->CCMR1 |= TIM_OC1_PWM1 &lt;&lt; TIM_CCMR1_OC1M_Pos;</c>
@@ -1731,6 +1731,12 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                     bit CEN is.  What value is that, and what happens on the pin the instant
                     this line runs?</p></statement>
                 </task>
+                <task xml:id="task-day11x-decode-cc1s">
+                    <statement><p><c>TIM14->CCMR1 |= TIM_CC1_OUTPUT &lt;&lt; TIM_CCMR1_CC1S_Pos;</c>
+                    — the same register as the first question, and a second field of it.
+                    Which bits is CC1S, and what does <c>00</c> select?  The file's comment
+                    calls it the default value — so why write it at all?</p></statement>
+                </task>
             </activity>
             <instructor xml:id="inst-day11x-bitfields">
                 <p><term>OC1M.</term>  6 is <c>0110</c>, which is exactly the PWM mode 1
@@ -1750,6 +1756,14 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 <c>TIM14->CCR1 = 0;</c> is in the initialization at all: it is the one line
                 in the function that is there for safety rather than for
                 configuration.</p>
+                <p><term>CC1S.</term>  Bits 1:0 of <c>CCMR1</c>, and <c>00</c> configures
+                the channel as an output.  It is also the reset value, so on a chip that has
+                just powered up these two lines change nothing — which is the interesting
+                part.  A driver does not get to assume what ran before it: after a soft reset,
+                or after a program that had used the channel as an input capture, CC1S would
+                not be <c>00</c> and the pin would never drive.  It is also why <c>CCMR1</c>
+                is written twice, which is the question the checkpoint ends on: two of its
+                fields are ours.</p>
             </instructor>
 
             <p>
@@ -1778,10 +1792,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 <image source="images/Day11x-Motors(2)/fig-ccmr1-cc1s.png" width="96%"/>
             </figure>
             <slide xml:id="sl-day11x-bitfield-registers">
-    <p>Two of your three answers, as section 17.4 prints them: the register CC1E lives in, and the register CEN lives in. The third, <c>CCMR1</c>, is on the next two slides.</p>
+    <p>Two of your four answers, as section 17.4 prints them: the register CC1E lives in, and the register CEN lives in. The other two are both <c>CCMR1</c>, on the next two slides.</p>
     <image source="images/Day11x-Motors(2)/fig-ccer-cc1e.svg" width="100%"/>
     <image source="images/Day11x-Motors(2)/fig-cr1-cen.svg" width="100%"/>
-    <caption>CC1E is bit 0 of CCER, CEN is bit 0 of CR1. One bit each — which is why <c>|=</c> on its own is safe here.</caption>
+    <caption>CC1E is bit 0 of CCER, CEN is bit 0 of CR1. One bit each — which is why <c>|=</c> on its own is safe here, and why the two CCMR1 fields are not.</caption>
     <note>≈ 1 min, and it runs straight into the answer slide as ONE beat of two minutes, not two beats. Walk the answers here, with the registers on the wall, and let the answer slide be the reveal in writing rather than a second telling. The contrast to draw is with CCMR1, which follows: these two are single bits, so OR-ing 1 in is safe; OC1M and CC1S are multi-bit fields, so they have to be cleared first. EGR is the same easy case as these two and was answered in Part 2 — its bit map is in the book, and it does not need the wall again. That is the answer to "why does one need a clearing line and the others do not".</note>
 </slide>
 
@@ -1802,7 +1816,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
         <li>Four bits is why the line needs a partner: <c>CCMR1 &amp;= ~TIM_CCMR1_OC1M_Msk;</c> first, then <c>CCMR1 |= TIM_OC1_PWM1 &lt;&lt; TIM_CCMR1_OC1M_Pos;</c></li>
     </ul>
     <caption>Clear the field, then set it — because OR alone would leave whatever was there and mix the two patterns together.</caption>
-    <note>≈ 1 min, and it is the reveal for decode task (a) — do not project it before they have written something down. The full page from the manual, with these words in place, is the figure in their book.</note>
+    <note>≈ 1 min, and it is the reveal for decode task (a) — the first of the two CCMR1 fields — do not project it before they have written something down. The full page from the manual, with these words in place, is the figure in their book.</note>
 </slide>
 
             <slide xml:id="sl-day11x-ccmr1-cc1s" ref="fig-ccmr1-cc1s-bits" stack="yes">
@@ -1812,7 +1826,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
         <li>Two fields in one register — which is why the initialization writes <c>CCMR1</c> twice.</li>
     </ul>
     <caption>The answer to the checkpoint question that comes later: CCMR1 is the register written twice, because two of its fields are ours.</caption>
-    <note>≈ 1 min. <c>00</c> is also the reset value, so this pair changes nothing on a fresh chip — say that, and say why it is written anyway: the driver does not get to assume what ran before it.</note>
+    <note>≈ 1 min, and it is the reveal for decode task (d), which is the only place CC1S is asked about before it appears here. <c>00</c> is also the reset value, so this pair changes nothing on a fresh chip — say that, and say why it is written anyway: the driver does not get to assume what ran before it.</note>
 </slide>
 
             <p>
@@ -2014,6 +2028,8 @@ void tim14_pwm_set(uint16_t value) {
                     <p>On your own, without looking back.  Each step of the initialization
                     does one of these jobs.  Write in the register it writes.</p>
                     <tabular halign="left" top="minor" left="minor">
+                        <col right="minor"/>
+                        <col right="minor"/>
                         <row header="yes" bottom="minor">
                             <cell>The line does this</cell>
                             <cell>so it writes this register</cell>
@@ -2040,8 +2056,8 @@ void tim14_pwm_set(uint16_t value) {
     <p>On your own, without looking back. Each step of the initialization does one of these jobs — write in the register it writes.</p>
     <sidebyside widths="66%" margins="17%">
         <tabular halign="left" top="minor" left="minor">
-            <col width="62%"/>
-            <col width="38%"/>
+            <col width="62%" right="minor"/>
+            <col width="38%" right="minor"/>
             <row header="yes" bottom="minor">
                 <cell>The line does this</cell>
                 <cell>so it writes this register</cell>
@@ -2105,7 +2121,7 @@ void tim14_pwm_set(uint16_t value) {
 	}
 	TB6612_PWMA = abs(counter_new);              // magnitude only
 ]]></code></program>
-    <caption>The driver says how; your program says when.</caption>
+    <caption>The driver contains the code to move the motor; your program calls driver functions to create a certain behavior.</caption>
     <note>≈ 2 min, and the bullets carry the answer — read the seam off the slide rather than discussing it open-ended; this is the Part's other minute back. It is the seam that matters for Lab 6 and it is easy to get wrong: a student who writes motor_mode() from main()'s if-else will drag the ramp's brake-before-reverse decision into the driver, and then cannot call it for a plain forward. Note the driver never produces STOP at all — that case is theirs to add, which is the stretch.</note>
 </slide>
 

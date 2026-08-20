@@ -130,6 +130,25 @@ every deck:
   not. Her fourth question on the Part 2 slide put it 18 px over with 65 px of
   empty space underneath — the fix is the exception, not shorter questions.
 
+## Her second round, 2026-08-20 — applied
+
+- **CC1S arrived unannounced.** Nothing named it before it appeared on the second
+  CCMR1 slide. It is now **task (d) of the decode activity** — the same register as
+  task (a) and a second field of it, asking which bits CC1S is, what `00` selects,
+  and why the driver writes a field whose default is already the value it wants.
+  The answer is the one the CC1S slide was already carrying: `00` is the reset
+  value, so on a fresh chip the pair changes nothing, and it is written anyway
+  because a driver does not get to assume what ran before it — after a soft reset,
+  or after a program that used the channel as input capture, CC1S would not be `00`
+  and the pin would never drive. The CC1S slide is now that task's reveal, and the
+  answers in `inst-day11x-bitfields` run in task order.
+  The activity stays capped at 2 minutes: (d) is the short one.
+- **The checkpoint table had no right-hand rule**, so the answer column ran off
+  into white space. Both `<col>`s carry `right="minor"` now — a rule down the middle
+  and one at the right edge, so it reads as a form. The book's copy of the table
+  got the same two rules, so the two do not diverge. Per-row rules are one
+  `bottom="minor"` away if she wants a full grid to write on.
+
 ## Still open with her, not blocking
 
 - Play the closing video once to confirm the "30 → 180 rpm" claim (a video renders
