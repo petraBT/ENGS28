@@ -1280,7 +1280,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                     choices?</p></statement>
                 </task>
                 <task xml:id="task-day11-stretch-lowfreq">
-                    <statement><p>Lab 6 suggests, as an optional experiment, running the same
+                    <statement><p>In Lab 6 there is an optional experiment: running the same
                     motor with a 50 Hz PWM instead of 1.6 kHz.  Work out the period of each,
                     and then think about what the motor does between one HIGH pulse and the
                     next: recall from the truth table that during the LOW part of a cycle the
@@ -1713,14 +1713,15 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 <task xml:id="task-day11x-decode-oc1m">
                     <statement><p><c>TIM14->CCMR1 |= TIM_OC1_PWM1 &lt;&lt; TIM_CCMR1_OC1M_Pos;</c>
                     — write 6 in binary, and deduce which bits of <c>CCMR1</c> this sets.  Does
-                    that put the value section 17.3.8 asked for into the OC1M field?  The
+                    that put the PWM mode the Reference Manual (Section 17.3.8) asked for into
+                    the OC1M field?  The
                     line above it is <c>TIM14->CCMR1 &amp;= ~TIM_CCMR1_OC1M_Msk;</c> — what
                     could go wrong if we left that line out?</p></statement>
                 </task>
                 <task xml:id="task-day11x-decode-cc1e">
                     <statement><p><c>TIM14->CCER |= TIM_CCER_CC1E;</c> — find
-                    <c>TIM14_CCER</c>, the capture/compare enable register, in section 17.4,
-                    and read which bit CC1E is.  What is the numeric value of
+                    <c>TIM14_CCER</c>, the capture/compare enable register, in Section 17.4 of the
+                    Reference Manual, and read which bit CC1E is.  What is the numeric value of
                     <c>TIM_CCER_CC1E</c>?  Why is this line written with <c>|=</c> and no
                     clearing line before it, when the OC1M line above needed
                     one?</p></statement>
@@ -1734,8 +1735,9 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 <task xml:id="task-day11x-decode-cc1s">
                     <statement><p><c>TIM14->CCMR1 |= TIM_CC1_OUTPUT &lt;&lt; TIM_CCMR1_CC1S_Pos;</c>
                     — the same register as the first question, and a second field of it.
-                    Which bits is CC1S, and what does <c>00</c> select?  The file's comment
-                    calls it the default value — so why write it at all?</p></statement>
+                    Which bits is CC1S, and what does <c>00</c> select?  The comment in
+                    <c>TTmotor_ramp.c</c> calls it the default value — so why write it at
+                    all?</p></statement>
                 </task>
             </activity>
             <instructor xml:id="inst-day11x-bitfields">
@@ -1812,7 +1814,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
             <slide xml:id="sl-day11x-ccmr1-oc1m" ref="fig-ccmr1-oc1m-bits" stack="yes">
     <ul>
         <li>OC1M is four bits, and they are not together: 6:4, and a fourth at bit 16.</li>
-        <li>Section 17.3.8 on <c>0110</c>: <q>PWM mode 1 — Channel 1 is active as long as TIMx_CNT &lt; TIMx_CCR1 else inactive.</q> HIGH until the counter reaches the compare value, then LOW.</li>
+        <li>Section 17.3.8 of the Reference Manual on <c>0110</c>: <q>PWM mode 1 — Channel 1 is active as long as TIMx_CNT &lt; TIMx_CCR1 else inactive.</q> HIGH until the counter reaches the compare value, then LOW.</li>
         <li>Four bits is why the line needs a partner: <c>CCMR1 &amp;= ~TIM_CCMR1_OC1M_Msk;</c> first, then <c>CCMR1 |= TIM_OC1_PWM1 &lt;&lt; TIM_CCMR1_OC1M_Pos;</c></li>
     </ul>
     <caption>Clear the field, then set it — because OR alone would leave whatever was there and mix the two patterns together.</caption>
@@ -1821,9 +1823,9 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 
             <slide xml:id="sl-day11x-ccmr1-cc1s" ref="fig-ccmr1-cc1s-bits" stack="yes">
     <ul>
-        <li>CC1S is two bits at 1:0, in the same register.</li>
-        <li>Section 17.4 on <c>00</c>: <q>CC1 channel is configured as output.</q> That is what keeps the channel an output, and it is what the second <c>CCMR1</c> pair writes.</li>
-        <li>Two fields in one register — which is why the initialization writes <c>CCMR1</c> twice.</li>
+        <li>CC1S is two bits at 1:0.</li>
+        <li>Section 17.4 of the Reference Manual on <c>00</c>: <q>CC1 channel is configured as output.</q> That is what keeps the channel an output, and it is what the second <c>CCMR1</c> pair writes.</li>
+        <li>OC1M and CC1S are two different fields in the same register — which is why the initialization writes <c>CCMR1</c> twice.</li>
     </ul>
     <caption>The answer to the checkpoint question that comes later: CCMR1 is the register written twice, because two of its fields are ours.</caption>
     <note>≈ 1 min, and it is the reveal for decode task (d), which is the only place CC1S is asked about before it appears here. <c>00</c> is also the reset value, so this pair changes nothing on a fresh chip — say that, and say why it is written anyway: the driver does not get to assume what ran before it.</note>
@@ -1930,7 +1932,7 @@ void tim14_pwm_set(uint16_t value) {
                  is taken here instead — three minutes down to two, with the pin
                  half narrated rather than read out. -->
             <slide xml:id="sl-day11x-init-pin">
-    <p>We now have every register we need, so here is the whole initialization, in the order it runs. We'll take it in three pieces — and the first is the pin, which is where Day 11 left off.</p>
+    <p>We now have every register we need, so here is the whole initialization, in the order it runs. We'll take it in three pieces — and the first is getting the pin ready for PWM mode, which is where Day 11 left off.</p>
     <program language="c"><code><![CDATA[
 void tim14_pa7_pwm_init(void) {
 	// Enable clock access to GPIOA
@@ -1949,7 +1951,7 @@ void tim14_pa7_pwm_init(void) {
 </slide>
 
             <slide xml:id="sl-day11x-init-timing">
-    <p>Second piece: the timer's own numbers. Two of them come from constants set at the top of the file.</p>
+    <p>Second piece: getting the timer to count at the correct rate, and initializing the compare register value. Two of the numbers come from constants set at the top of the file.</p>
     <program language="c"><code><![CDATA[
 #define PSC_FACTOR	6		    // 12 MHz / 6 = 2 MHz
 #define PWM_TIMER_MAX	  1250		// 2 MHz / 1250 = 1.6 kHz with prescale 6
@@ -1997,7 +1999,7 @@ void tim14_pa7_pwm_init(void) {
 </slide>
 
             <slide xml:id="sl-day11x-set-code">
-    <p>And the whole of what changes while the motor is running.</p>
+    <p>And the only thing that changes while the motor is running.</p>
     <program language="c"><code><![CDATA[
 void tim14_pwm_set(uint16_t value) {
 // Safety first: Allow no pulse values outside the (0, PWM_TIMER_MAX-1 range!
@@ -2028,8 +2030,8 @@ void tim14_pwm_set(uint16_t value) {
                     <p>On your own, without looking back.  Each step of the initialization
                     does one of these jobs.  Write in the register it writes.</p>
                     <tabular halign="left" top="major" bottom="major" left="minor" right="minor">
-                        <col halign="left" width="62%"/>
-                        <col halign="center" width="38%"/>
+                        <col halign="left" width="55%"/>
+                        <col halign="center" width="45%"/>
                         <row bottom="major">
                             <cell>The line does this</cell>
                             <cell>so it writes this register</cell>
@@ -2056,8 +2058,8 @@ void tim14_pwm_set(uint16_t value) {
     <p>On your own, without looking back. Each step of the initialization does one of these jobs — write in the register it writes.</p>
     <sidebyside widths="66%" margins="17%">
         <tabular halign="left" top="major" bottom="major" left="minor" right="minor">
-            <col halign="left" width="62%"/>
-            <col halign="center" width="38%"/>
+            <col halign="left" width="55%"/>
+            <col halign="center" width="45%"/>
             <row bottom="major">
                 <cell>The line does this</cell>
                 <cell>so it writes this register</cell>
@@ -2095,7 +2097,7 @@ void tim14_pwm_set(uint16_t value) {
             </instructor>
 
             <p>
-                Lab 6 asks you to turn this into a device driver of your own, with an
+                In Lab 6 you are asked to turn this into a device driver of your own, with an
                 initialization function, a mode-select function and a speed-select function
                 in a file called <c>tb6612.c</c>.  Two of the three are almost in front of
                 you already: <c>tim14_pa7_pwm_init()</c> becomes the initialization once you
@@ -2106,7 +2108,7 @@ void tim14_pwm_set(uint16_t value) {
             </p>
             <slide xml:id="sl-day11x-lab6-seam">
     <ul>
-        <li>Lab 6 asks for three functions: <c>motor_init()</c>, <c>motor_mode()</c> and <c>motor_speed()</c>.</li>
+        <li>In Lab 6 you are asked to write three functions: <c>motor_init()</c>, <c>motor_mode()</c> and <c>motor_speed()</c>.</li>
         <li><c>tim14_pa7_pwm_init()</c> is most of <c>motor_init()</c> — add the two lines in <c>main()</c> that make PA5 and PA6 outputs, and keep <c>TIM14->CCR1 = 0;</c>.</li>
         <li><c>tim14_pwm_set()</c> is <c>motor_speed()</c> almost unchanged.</li>
         <li><c>motor_mode()</c> is the truth table from Day 11 — IN1 and IN2 for forward, reverse, brake and stop.</li>
@@ -2131,8 +2133,8 @@ void tim14_pwm_set(uint16_t value) {
                     <p>These are optional, for when you have finished the rest.</p>
                 </introduction>
                 <task xml:id="task-day11x-stretch-mode">
-                    <statement><p>Write the body of <c>motor_mode()</c>.  Lab 6 gives you
-                    the signature — <c>void motor_mode(uint8_t mode);</c>, with the four
+                    <statement><p>Write the body of <c>motor_mode()</c>.  The signature is given in
+                    Lab 6 — <c>void motor_mode(uint8_t mode);</c>, with the four
                     modes FWD, REV, BRAKE and STOP — and the TB6612 truth table
                     from Day 11, on page 4 of the driver's datasheet, gives you IN1 and IN2
                     for each.
@@ -2167,7 +2169,7 @@ void tim14_pwm_set(uint16_t value) {
                 120 and <c>PWM_TIMER_MAX</c> 2000.</p>
                 <p>The commented-out pair in the file is exactly that setting, so a group
                 that has done the arithmetic can uncomment the two lines, rebuild, and hear
-                the difference — which is the optional experiment Lab 6 suggests.  What they
+                the difference — which is the optional experiment in Lab 6.  What they
                 should hear at 50 Hz is the pulsing Day 11 asked them to predict, and
                 possibly better low-speed torque.</p>
             </instructor>
