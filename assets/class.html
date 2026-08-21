@@ -2481,17 +2481,72 @@
             }
             // No Content-Type header: keeps this a "simple" CORS request, so
             // there is no preflight to fail if the server is slow to start.
-            fetch(REVIEW_SERVER + '/slide-comment', { method: 'POST', body: JSON.stringify(payload) })
+            post(payload)
+              .then(function (queued) {
+                clearLasso(); drawLasso()
+                toast('✓ queued for Claude — ' + queued + ' waiting')
+              })
+              .catch(function () {
+                // The server is down — reviewing is batch work, so Petra may
+                // well be circling slides while the whole preview stack is
+                // stopped for corrections. Buffer the comment in THIS
+                // browser and keep going; the outbox flushes the moment the
+                // server answers again (retry below, or a reload).
+                try {
+                  var out = outbox()
+                  out.push(payload)
+                  localStorage.setItem(OUTBOX_KEY, JSON.stringify(out))
+                  clearLasso(); drawLasso()
+                  toast('⏳ saved in this browser (' + out.length + ') — sends itself when the review server is back')
+                  scheduleFlush()
+                } catch (err) {
+                  // Storage refused too: keep the box so the text survives.
+                  toast('Could not send or save — start the slides authoring preview (Launchpad) or: python3 scripts/review-server.py', true)
+                }
+              })
+          }
+
+          function post(payload) {
+            return fetch(REVIEW_SERVER + '/slide-comment', { method: 'POST', body: JSON.stringify(payload) })
               .then(function (res) { return res.json() })
               .then(function (body) {
                 if (!body.ok) throw new Error(body.error || 'refused')
-                clearLasso(); drawLasso()
-                toast('✓ sent to Claude — ' + body.queued + ' comment' + (body.queued === 1 ? '' : 's') + ' queued')
+                return body.queued
               })
-              .catch(function () {
-                // Keep the box (and the text) — nothing is lost.
-                toast('Could not send — review server not running. Start the slides authoring preview (Launchpad) or: python3 scripts/review-server.py', true)
+          }
+
+          /* The outbox: comments made while the review server was down.
+             Flushed in order, oldest first; each success is removed from
+             storage immediately, so a flush interrupted halfway loses
+             nothing and re-sends nothing. */
+          var OUTBOX_KEY = 'deck:review:outbox'
+          function outbox() {
+            try {
+              var raw = localStorage.getItem(OUTBOX_KEY)
+              var p = raw ? JSON.parse(raw) : []
+              return Array.isArray(p) ? p : []
+            } catch (err) { return [] }
+          }
+          var flushTimer = null
+          function scheduleFlush() {
+            clearTimeout(flushTimer)
+            flushTimer = setTimeout(flushOutbox, 15000)
+          }
+          function flushOutbox() {
+            clearTimeout(flushTimer)
+            var out = outbox()
+            if (!out.length) return
+            post(out[0])
+              .then(function (queued) {
+                var rest = outbox()
+                // Remove the sent comment by identity (ts), not position —
+                // a new comment may have been buffered mid-flight.
+                rest = rest.filter(function (c) { return c.ts !== out[0].ts })
+                localStorage.setItem(OUTBOX_KEY, JSON.stringify(rest))
+                if (rest.length) flushOutbox()
+                else toast('✓ saved comments sent — ' + queued + ' waiting for Claude')
               })
+              .catch(function () { scheduleFlush() })   // still down; try again
           }
           box.querySelector('.rv-send').addEventListener('click', send)
           box.querySelector('.rv-cancel').addEventListener('click', function () { clearLasso(); drawLasso() })
@@ -2515,12 +2570,17 @@
 
           // The button appears only when the review server answers — the same
           // self-effacement as the edit layer, so a rehearsal or the deployed
-          // deck never shows it. ?review opens the mode directly.
+          // deck never shows it. ?review opens the mode directly. Either way,
+          // a non-empty outbox keeps trying: comments buffered while the
+          // stack was down must reach the queue file without being asked.
           fetch(REVIEW_SERVER + '/health').then(function (res) { return res.json() }).then(function (body) {
             if (!body.ok) return
             reviewBtn.style.display = ''
             if (params.has('review')) setReview(true)
-          }).catch(function () { /* review server not running: stay inert */ })
+            flushOutbox()
+          }).catch(function () {
+            if (outbox().length) scheduleFlush()   // review server not running: UI stays inert, outbox keeps trying
+          })
         })()
       })()
     </script>
