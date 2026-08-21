@@ -206,7 +206,7 @@ These are the ones that get written wrong from plausibility.
 - Units in prose are Unicode, not LaTeX: µs, ms, kΩ, µF.
 - American spelling throughout (L-7).
 
-## Slide review comments ("watch my slide comments")
+## Slide review comments ("check my slide comments")
 
 Petra reviews slides in the deck player by **circling a region and typing a
 comment** (◎ Review / `R` / `?review` in `assets/class.html`, localhost only).
@@ -217,18 +217,28 @@ deck FILE — use this to find the entry in `assets/decks/<deck>.json`), title,
 normalized `bbox` + `stroke` of the circled region, her `text`, and the exact
 `url` to reopen that slide.
 
-When Petra says **"watch my slide comments"** in a session:
-1. Ensure the server is up (`curl -s 127.0.0.1:8928/health`); if not, start
-   `python3 scripts/review-server.py` in the background.
-2. Set a file watcher (Monitor tool) on `reviews/slide-comments.jsonl` and act
-   on each new line as it arrives.
+**The workflow is BATCH by default.** Petra circles her way through a deck (or
+several) while a session does other work or none; comments accumulate in the
+file. When she says **"check my slide comments"**: read the whole file, sort
+by `ts`, group by deck and source file, apply ALL the edits, rebuild **once**
+at the end, and report per-comment what changed. As each comment is handled
+(or judged moot — say why), MOVE its line to
+`reviews/slide-comments-archive.jsonl`; the queue holds only unhandled
+comments, and nothing is ever just deleted. To SEE what she circled, render
+the comment's `url` in headless Chrome (puppeteer-core, 1600×900 viewport)
+and crop to `bbox` (scaled by stage size).
 
-**"Check my slide comments"** = drain the file once, no watcher.
+**"Watch my slide comments"** is the opt-in LIVE mode for tight iteration on
+a slide: ensure the server is up (`curl -s 127.0.0.1:8928/health`, else start
+`python3 scripts/review-server.py` in the background), then set a file
+watcher (Monitor tool) on the queue and act per comment as it lands.
 
-Acting on a comment: to SEE what she circled, render the slide's `url` in
-headless Chrome (puppeteer-core; 1600×900 viewport) and crop to `bbox` (scale
-by stage size). Make the edit her text asks for — slide blocks in
-`source/*.ptx`, deck entries in `assets/decks/*.json`, same rules as any slide
-edit. When a comment has been handled (or is moot), MOVE its line to
-`reviews/slide-comments-archive.jsonl` — the queue file holds only unhandled
-comments, and nothing is ever just deleted.
+Two rules that keep her reviewing while you correct:
+- **Never kill the review server (:8928) during corrections.** It is
+  standalone on purpose; restarting page/edit servers or rebuilding must not
+  take it down.
+- Her open player tab **buffers comments in a browser-local outbox** whenever
+  the server is unreachable and flushes them automatically when it answers
+  again (15s retry, and on any reload). So if she says she made comments but
+  the queue file lacks them, they are sitting in her browser: bring the stack
+  up and have her reload (or just refocus, and wait a retry) the player tab.
