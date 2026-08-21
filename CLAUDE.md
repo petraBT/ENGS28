@@ -206,39 +206,46 @@ These are the ones that get written wrong from plausibility.
 - Units in prose are Unicode, not LaTeX: µs, ms, kΩ, µF.
 - American spelling throughout (L-7).
 
-## Slide review comments ("check my slide comments")
+## Review comments — slides and book ("check my review comments")
 
-Petra reviews slides in the deck player by **circling a region and typing a
-comment** (◎ Review / `R` / `?review` in `assets/class.html`, localhost only).
-Each comment is POSTed to `scripts/review-server.py` (port 8928, started by
-`./preview-slides.sh`) and appended to **`reviews/slide-comments.jsonl`** — one
-JSON object per line: deck, slide (runtime index), `jsonIndex` (index in the
-deck FILE — use this to find the entry in `assets/decks/<deck>.json`), title,
-normalized `bbox` + `stroke` of the circled region, her `text`, and the exact
-`url` to reopen that slide.
+Petra reviews by **circling a region and typing a comment** — on SLIDES in the
+deck player (◎ Review / `R` / `?review` in `assets/class.html`) and on BOOK
+pages in the web-edit preview (◎ Review button / `R` / `?review`, injected by
+`assets/ptx-review.js` via ptx-edit.js; sticky across page turns per tab).
+Localhost only, both invisible unless `scripts/review-server.py` (port 8928,
+started by `./preview-slides.sh`, or standalone) answers. Every comment is one
+JSON line appended to **`reviews/slide-comments.jsonl`**:
 
-**The workflow is BATCH by default.** Petra circles her way through a deck (or
-several) while a session does other work or none; comments accumulate in the
-file. When she says **"check my slide comments"**: read the whole file, sort
-by `ts`, group by deck and source file, apply ALL the edits, rebuild **once**
-at the end, and report per-comment what changed. As each comment is handled
-(or judged moot — say why), MOVE its line to
-`reviews/slide-comments-archive.jsonl`; the queue holds only unhandled
-comments, and nothing is ever just deleted. To SEE what she circled, render
-the comment's `url` in headless Chrome (puppeteer-core, 1600×900 viewport)
-and crop to `bbox` (scaled by stage size).
+- **Slide comments**: deck, slide (runtime index), `jsonIndex` (index in the
+  deck FILE — locates the entry in `assets/decks/<deck>.json`), title,
+  stage-normalized `bbox` + `stroke`, her `text`, and the `url` to reopen it.
+- **Book comments** (`kind: "book"`): `page`, `url`, `viewportWidth`,
+  `bbox`/`stroke` in DOCUMENT pixels, `anchors` (the circled PreTeXt blocks:
+  id + tag + text excerpt), and — when the edit server was up at capture —
+  `source: {file, line}` pointing straight into `source/*.ptx`.
 
-**"Watch my slide comments"** is the opt-in LIVE mode for tight iteration on
-a slide: ensure the server is up (`curl -s 127.0.0.1:8928/health`, else start
-`python3 scripts/review-server.py` in the background), then set a file
-watcher (Monitor tool) on the queue and act per comment as it lands.
+**The workflow is BATCH by default.** Comments accumulate; when Petra says
+**"check my review comments"** (or "…slide…"/"…book…" — same thing): read the
+file, sort by `ts`, group by deck/page and source file, apply ALL edits,
+rebuild affected targets **once**, and report per comment what changed. As
+each is handled (or judged moot — say why), MOVE its line to
+`reviews/slide-comments-archive.jsonl`; nothing is ever just deleted.
+
+To SEE what she circled: render the comment's `url` in headless Chrome
+(puppeteer-core) and crop. Slides: 1600×900 viewport, clip = bbox × stage
+size. Book: viewport width = `viewportWidth`, clip = the document-pixel bbox
+(padded) — and for the fix itself, prefer `source.file:line` or the anchors'
+ids/excerpts over pixels.
+
+**"Watch my review comments"** is the opt-in LIVE mode: ensure the server
+(`curl -s 127.0.0.1:8928/health`, else start it), then Monitor the queue file
+and act per comment.
 
 Two rules that keep her reviewing while you correct:
 - **Never kill the review server (:8928) during corrections.** It is
   standalone on purpose; restarting page/edit servers or rebuilding must not
   take it down.
-- Her open player tab **buffers comments in a browser-local outbox** whenever
-  the server is unreachable and flushes them automatically when it answers
-  again (15s retry, and on any reload). So if she says she made comments but
-  the queue file lacks them, they are sitting in her browser: bring the stack
-  up and have her reload (or just refocus, and wait a retry) the player tab.
+- Her open tabs **buffer comments in a browser-local outbox** when the server
+  is unreachable and flush automatically once it answers (15s retry, and on
+  reload). A comment she made that is "missing" from the file is sitting in
+  her browser: bring the stack up and wait a retry or have her reload.

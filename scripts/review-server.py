@@ -83,8 +83,10 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(comment, dict) or not str(comment.get("text", "")).strip():
             self._send(400, {"error": "comment has no text"})
             return
-        if not comment.get("deck"):
-            self._send(400, {"error": "comment names no deck"})
+        # A slide comment names its deck; a book comment (ptx-review.js)
+        # names its page. Either anchors it; neither is a reason to lose it.
+        if not comment.get("deck") and not comment.get("page"):
+            self._send(400, {"error": "comment names no deck or page"})
             return
         comment["received"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
         QUEUE.parent.mkdir(exist_ok=True)
