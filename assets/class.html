@@ -2294,6 +2294,234 @@
                         'alt-shift-click edits. Local only.')
           }).catch(function () { /* edit-server not running: stay inert */ })
         })()
+
+        /* --- slide review comments (authoring only) ------------------------
+           Circle part of a slide, type a comment, and it lands in
+           reviews/slide-comments.jsonl via scripts/review-server.py (:8928,
+           started by ./preview-slides.sh) — where a Claude session picks it
+           up ("watch my slide comments", see CLAUDE.md). The feedback loop
+           for slide production: point at the problem instead of describing
+           it in chat.
+
+           Same self-effacing rules as the edit layer: localhost only, and
+           the ◎ Review button appears only when the review server answers,
+           so none of this exists for students or on the deployed deck.
+           Everything below builds its own DOM/CSS — the only shared state
+           it touches is read-only (deck, currentIndex, rect, sizeCanvas).
+
+           Distinct from pen annotation on purpose: a review lasso is
+           TRANSIENT (never saved as ink, cleared on send/cancel/slide
+           change), and while review mode is on, an overlay swallows pointer
+           input so nothing draws or navigates by accident. R toggles. */
+        ;(function () {
+          if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return
+          var REVIEW_SERVER = 'http://127.0.0.1:8928'
+
+          var css = document.createElement('style')
+          css.textContent =
+            '#review-overlay { position: absolute; inset: 0; z-index: 5; display: none; cursor: crosshair; }' +
+            '#review-overlay.on { display: block; }' +
+            '#review-overlay canvas { position: absolute; inset: 0; width: 100%; height: 100%; }' +
+            '#review-box { position: absolute; z-index: 6; width: 24em; max-width: 44%; background: #fff;' +
+            '  border: 1px solid #d98324; border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.25);' +
+            '  padding: .6em; display: none; font-size: 14px; }' +
+            '#review-box.on { display: block; }' +
+            '#review-box textarea { width: 100%; height: 5em; box-sizing: border-box; resize: vertical;' +
+            '  font: inherit; border: 1px solid #ccc9c0; border-radius: 5px; padding: .45em .55em; }' +
+            '#review-box .rv-row { display: flex; gap: .5em; align-items: center; margin-top: .5em; }' +
+            '#review-box .rv-hint { flex: 1; color: #86847c; font-size: .85em; }' +
+            '#review-box button { font: inherit; border-radius: 5px; padding: .3em .9em; cursor: pointer; border: 1px solid #ccc9c0; background: #f4f2ee; }' +
+            '#review-box button.rv-send { background: #d98324; border-color: #d98324; color: #fff; font-weight: 600; }' +
+            '#review-toast { position: absolute; z-index: 7; left: 50%; transform: translateX(-50%); bottom: 46px;' +
+            '  background: rgba(20,20,19,.92); color: #f2f2f2; padding: .5em 1em; border-radius: 6px;' +
+            '  font-size: 13px; display: none; max-width: 80%; }' +
+            '#review-toast.err { background: #8e2a20; }'
+          document.head.appendChild(css)
+
+          var overlay = document.createElement('div')
+          overlay.id = 'review-overlay'
+          var lassoCanvas = document.createElement('canvas')
+          overlay.appendChild(lassoCanvas)
+          var lassoCtx = lassoCanvas.getContext('2d')
+          var box = document.createElement('div')
+          box.id = 'review-box'
+          box.innerHTML =
+            '<textarea placeholder="What should change here?"></textarea>' +
+            '<div class="rv-row"><span class="rv-hint">⌘⏎ sends · Esc cancels</span>' +
+            '<button type="button" class="rv-cancel">Cancel</button>' +
+            '<button type="button" class="rv-send">Send</button></div>'
+          var toastEl = document.createElement('div')
+          toastEl.id = 'review-toast'
+          // Under #bar in the DOM so the bar still wins hit-testing at z 6.
+          var barEl = document.getElementById('bar')
+          stage.insertBefore(overlay, barEl)
+          stage.insertBefore(box, barEl)
+          stage.appendChild(toastEl)
+          var field = box.querySelector('textarea')
+
+          var reviewBtn = document.createElement('button')
+          reviewBtn.id = 'review-btn'
+          reviewBtn.type = 'button'
+          reviewBtn.title = 'Review mode — circle something and comment; goes straight to Claude (R)'
+          reviewBtn.innerHTML = '<span style="color:#d98324">◎</span> Review'
+          reviewBtn.style.display = 'none'
+          barEl.insertBefore(reviewBtn, document.getElementById('pos'))
+
+          var reviewOn = false
+          var lasso = null          // stroke in progress (normalized pts)
+          var pending = null        // finished lasso waiting for its comment
+
+          var toastTimer = null
+          function toast(message, isErr) {
+            toastEl.textContent = message
+            toastEl.className = isErr ? 'err' : ''
+            toastEl.style.display = 'block'
+            clearTimeout(toastTimer)
+            toastTimer = setTimeout(function () { toastEl.style.display = 'none' }, isErr ? 6000 : 3200)
+          }
+
+          function clearLasso() {
+            lasso = null
+            pending = null
+            box.classList.remove('on')
+            var r = rect()
+            lassoCtx.clearRect(0, 0, r.width, r.height)
+          }
+
+          function setReview(on) {
+            reviewOn = on
+            overlay.classList.toggle('on', on)
+            reviewBtn.classList.toggle('active', on)
+            if (!on) clearLasso()
+            else toast('Review mode — circle something, then type. R or Esc leaves.')
+          }
+          reviewBtn.addEventListener('click', function () { setReview(!reviewOn) })
+
+          function drawLasso() {
+            sizeCanvas(lassoCanvas, lassoCtx)
+            var r = rect()
+            lassoCtx.clearRect(0, 0, r.width, r.height)
+            var pts = (lasso || pending || {}).pts
+            if (!pts || pts.length < 2) return
+            lassoCtx.strokeStyle = '#d98324'
+            lassoCtx.lineWidth = 2.5
+            lassoCtx.setLineDash([7, 5])
+            lassoCtx.beginPath()
+            lassoCtx.moveTo(pts[0][0] * r.width, pts[0][1] * r.height)
+            for (var i = 1; i < pts.length; i++) lassoCtx.lineTo(pts[i][0] * r.width, pts[i][1] * r.height)
+            lassoCtx.stroke()
+            lassoCtx.setLineDash([])
+          }
+
+          // The overlay swallows pointer input so the annotation and laser
+          // handlers on #stage (a parent, reached by bubbling) never see it.
+          overlay.addEventListener('pointerdown', function (e) {
+            e.stopPropagation(); e.preventDefault()
+            if (box.classList.contains('on')) return   // finish the open comment first
+            try { overlay.setPointerCapture(e.pointerId) } catch (err) {}
+            lasso = { pts: [point(e)] }
+          })
+          overlay.addEventListener('pointermove', function (e) {
+            e.stopPropagation()
+            if (!lasso) return
+            e.preventDefault()
+            var p = point(e)
+            if (farEnough(p, lasso.pts[lasso.pts.length - 1])) {
+              if (lasso.pts.length < 400) lasso.pts.push(p)
+              drawLasso()
+            }
+          })
+          overlay.addEventListener('pointerup', function (e) {
+            e.stopPropagation()
+            if (!lasso) return
+            if (lasso.pts.length < 3) { clearLasso(); drawLasso(); return }  // a stray click
+            pending = lasso
+            lasso = null
+            openBox(e)
+          })
+          overlay.addEventListener('touchmove', function (e) { e.preventDefault() }, { passive: false })
+
+          function openBox(e) {
+            var r = rect()
+            box.classList.add('on')
+            // Beside the pointer, clamped so it never leaves the stage or
+            // covers the bar.
+            var bw = box.offsetWidth, bh = box.offsetHeight
+            var x = Math.min(Math.max(8, e.clientX - r.left + 14), r.width - bw - 8)
+            var y = Math.min(Math.max(8, e.clientY - r.top - bh / 2), r.height - bh - 44)
+            box.style.left = x + 'px'
+            box.style.top = y + 'px'
+            field.value = ''
+            field.focus()
+          }
+
+          function bbox(pts) {
+            var xs = pts.map(function (p) { return p[0] }), ys = pts.map(function (p) { return p[1] })
+            var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys)
+            return { x: r4(x0), y: r4(y0), w: r4(Math.max.apply(null, xs) - x0), h: r4(Math.max.apply(null, ys) - y0) }
+          }
+
+          function send() {
+            var text = field.value.trim()
+            if (!text || !pending) return
+            var slide = deck && deck.slides[currentIndex() - 1]
+            var payload = {
+              ts: new Date().toISOString(),
+              deck: deckId,
+              deckTitle: (deck && deck.title) || deckId,
+              slide: currentIndex(),
+              jsonIndex: slide ? slide._ink : null,
+              title: document.getElementById('title').textContent,
+              type: slide ? (slide.type || 'ref') : null,
+              student: studentView,
+              url: location.href,
+              bbox: bbox(pending.pts),
+              stroke: pending.pts,
+              text: text,
+            }
+            // No Content-Type header: keeps this a "simple" CORS request, so
+            // there is no preflight to fail if the server is slow to start.
+            fetch(REVIEW_SERVER + '/slide-comment', { method: 'POST', body: JSON.stringify(payload) })
+              .then(function (res) { return res.json() })
+              .then(function (body) {
+                if (!body.ok) throw new Error(body.error || 'refused')
+                clearLasso(); drawLasso()
+                toast('✓ sent to Claude — ' + body.queued + ' comment' + (body.queued === 1 ? '' : 's') + ' queued')
+              })
+              .catch(function () {
+                // Keep the box (and the text) — nothing is lost.
+                toast('Could not send — review server not running. Start the slides authoring preview (Launchpad) or: python3 scripts/review-server.py', true)
+              })
+          }
+          box.querySelector('.rv-send').addEventListener('click', send)
+          box.querySelector('.rv-cancel').addEventListener('click', function () { clearLasso(); drawLasso() })
+          field.addEventListener('keydown', function (e) {
+            e.stopPropagation()   // typing must not page the deck or toggle modes
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send() }
+            else if (e.key === 'Escape') { clearLasso(); drawLasso() }
+          })
+
+          document.addEventListener('keydown', function (e) {
+            if (e.metaKey || e.ctrlKey || e.altKey) return
+            var t = e.target
+            if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable)) return
+            if (e.key === 'r' || e.key === 'R') setReview(!reviewOn)
+            else if (e.key === 'Escape' && reviewOn) setReview(false)
+          })
+
+          // A lasso's coordinates mean nothing on another slide.
+          window.addEventListener('hashchange', function () { if (reviewOn) { clearLasso(); drawLasso() } })
+          window.addEventListener('resize', function () { if (reviewOn) drawLasso() })
+
+          // The button appears only when the review server answers — the same
+          // self-effacement as the edit layer, so a rehearsal or the deployed
+          // deck never shows it. ?review opens the mode directly.
+          fetch(REVIEW_SERVER + '/health').then(function (res) { return res.json() }).then(function (body) {
+            if (!body.ok) return
+            reviewBtn.style.display = ''
+            if (params.has('review')) setReview(true)
+          }).catch(function () { /* review server not running: stay inert */ })
+        })()
       })()
     </script>
   </body>
