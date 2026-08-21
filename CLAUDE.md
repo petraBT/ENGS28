@@ -205,3 +205,30 @@ These are the ones that get written wrong from plausibility.
   rename it, add the starter `.c` to `Src/`.
 - Units in prose are Unicode, not LaTeX: µs, ms, kΩ, µF.
 - American spelling throughout (L-7).
+
+## Slide review comments ("watch my slide comments")
+
+Petra reviews slides in the deck player by **circling a region and typing a
+comment** (◎ Review / `R` / `?review` in `assets/class.html`, localhost only).
+Each comment is POSTed to `scripts/review-server.py` (port 8928, started by
+`./preview-slides.sh`) and appended to **`reviews/slide-comments.jsonl`** — one
+JSON object per line: deck, slide (runtime index), `jsonIndex` (index in the
+deck FILE — use this to find the entry in `assets/decks/<deck>.json`), title,
+normalized `bbox` + `stroke` of the circled region, her `text`, and the exact
+`url` to reopen that slide.
+
+When Petra says **"watch my slide comments"** in a session:
+1. Ensure the server is up (`curl -s 127.0.0.1:8928/health`); if not, start
+   `python3 scripts/review-server.py` in the background.
+2. Set a file watcher (Monitor tool) on `reviews/slide-comments.jsonl` and act
+   on each new line as it arrives.
+
+**"Check my slide comments"** = drain the file once, no watcher.
+
+Acting on a comment: to SEE what she circled, render the slide's `url` in
+headless Chrome (puppeteer-core; 1600×900 viewport) and crop to `bbox` (scale
+by stage size). Make the edit her text asks for — slide blocks in
+`source/*.ptx`, deck entries in `assets/decks/*.json`, same rules as any slide
+edit. When a comment has been handled (or is moot), MOVE its line to
+`reviews/slide-comments-archive.jsonl` — the queue file holds only unhandled
+comments, and nothing is ever just deleted.

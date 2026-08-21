@@ -97,6 +97,17 @@ else
   echo "  - edit server on port 8927"
 fi
 
+# Slide review comments (circle + comment -> reviews/slide-comments.jsonl,
+# drained by a Claude session: "watch my slide comments"). Same one-per-port
+# rule as the edit server.
+if lsof -ti tcp:8928 -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "  ! review server: port 8928 is already in use - not starting another."
+else
+  python3 scripts/review-server.py &
+  STARTED+=($!)
+  echo "  - review server on port 8928 (◎ Review / R in the player -> slide comments for Claude)"
+fi
+
 # Rebuilds on every .ptx save, so an edit made in your editor - or in place on
 # a slide - shows up after a refresh instead of needing a manual build.
 if [ "$WATCH" = "yes" ]; then
