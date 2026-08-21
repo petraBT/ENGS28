@@ -144,10 +144,12 @@ every deck:
   answers in `inst-day11x-bitfields` run in task order.
   The activity stays capped at 2 minutes: (d) is the short one.
 - **The checkpoint table had no right-hand rule**, so the answer column ran off
-  into white space. Both `<col>`s carry `right="minor"` now — a rule down the middle
-  and one at the right edge, so it reads as a form. The book's copy of the table
-  got the same two rules, so the two do not diverge. Per-row rules are one
-  `bottom="minor"` away if she wants a full grid to write on.
+  into white space. It is now built exactly like Day 11's
+  `act-day11-speed-params` table, which is the house form for a fill-in:
+  `top="major" bottom="major" left="minor" right="minor"` on the tabular, a
+  `bottom="major"` header row, `bottom="minor"` on every data row but the last,
+  and the answer column `halign="center"`. The book's copy of the table is the
+  same markup, so the two do not diverge.
 
 ## Still open with her, not blocking
 
