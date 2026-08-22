@@ -151,7 +151,28 @@ every deck:
   and the answer column `halign="center"`. The book's copy of the table is the
   same markup, so the two do not diverge.
 
+## Her review rounds of 2026-08-21 — applied
+
+Twelve comments through the circle-and-comment queue, all applied and archived in
+`reviews/slide-comments-archive.jsonl`: nine on the deck (Reference Manual naming,
+the CC1S bullet, naming what each piece of the init accomplishes, the table
+divider, and the L-13 rewrite of "Lab 6 asks…"), then three more (her opening
+sentence for Part 1, and naming `TTmotor_ramp.c` instead of "the program we are
+about to read", in both slides and the Part 2 paragraph).
+
+Two rules came out of them and are now in `AUTHORING-book.md`: **L-13** (a
+document does not act on a student) and **L-14** (say Reference Manual when the
+section number is RM0490's).
+
 ## Still open with her, not blocking
+
+- **What is the driver file called?** She wrote **`TTMotor_Ramp.c`** twice in
+  review. The book uses `TTmotor_ramp.c` — the actual name of the file in
+  `assets/starters`, the name both her own Day 11 and Day 11x decks use, and the
+  spelling of all sixteen references in the chapter (`TTMotorRamp` appears in her
+  Day 11 deck only as the title of the screen capture). Left as `TTmotor_ramp.c`
+  pending her ruling. If she wants the rename, it is one pass: the file, the
+  sixteen references, and `scripts/check_starters.py`.
 
 - Play the closing video once to confirm the "30 → 180 rpm" claim (a video renders
   black in a still, so no reviewer could check it) — and see the sound note above
