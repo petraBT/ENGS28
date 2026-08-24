@@ -119,7 +119,7 @@ if lsof -ti tcp:"$INSTRUCTOR_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
   echo "  ! instructor book: port $INSTRUCTOR_PORT is already in use - not starting another."
   echo "    (Orphan from an earlier run? lsof -ti tcp:$INSTRUCTOR_PORT | xargs kill)"
 else
-  python3 -m http.server "$INSTRUCTOR_PORT" --directory output/web-instructor &
+  python3 scripts/serve-no-cache.py "$INSTRUCTOR_PORT" output/web-instructor &
   STARTED+=($!)
   echo "  - instructor book on port $INSTRUCTOR_PORT"
 fi
@@ -135,6 +135,6 @@ echo ""
 echo "Ctrl-C stops everything."
 echo ""
 
-python3 -m http.server "$PORT" --directory output/web-edit &
+python3 scripts/serve-no-cache.py "$PORT" output/web-edit &
 STARTED+=($!)
 wait

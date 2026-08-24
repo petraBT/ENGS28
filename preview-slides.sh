@@ -130,6 +130,6 @@ echo ""
 echo "Ctrl-C stops everything."
 echo ""
 
-python3 -m http.server "$PORT" --directory output/web-deck-instructor &
+python3 scripts/serve-no-cache.py "$PORT" output/web-deck-instructor &
 STARTED+=($!)
 wait

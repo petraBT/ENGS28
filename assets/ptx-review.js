@@ -50,7 +50,12 @@
     '#ptx-review-toast { position: fixed; z-index: 3020; left: 50%; transform: translateX(-50%); bottom: 60px;' +
     '  background: rgba(20,20,19,.92); color: #f2f2f2; padding: .5em 1em; border-radius: 6px;' +
     '  font: 13px system-ui, sans-serif; display: none; max-width: 80vw; }' +
-    '#ptx-review-toast.err { background: #8e2a20; }'
+    '#ptx-review-toast.err { background: #8e2a20; }' +
+    '#ptx-review-pins { position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2980; }' +
+    '.ptx-review-pin { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;' +
+    '  border-radius: 50%; background: #d98324; color: #fff; font: 700 12px system-ui, sans-serif;' +
+    '  display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.4);' +
+    '  cursor: help; }'
   document.head.appendChild(css)
 
   var overlay = document.createElement('div')
@@ -67,6 +72,12 @@
     '<button type="button" class="rv-send">Send</button></div>'
   var toastEl = document.createElement('div')
   toastEl.id = 'ptx-review-toast'
+  // Persistent markers for comments still waiting in the queue for THIS
+  // page — so a comment that's been sent (and thus cleared from the lasso)
+  // doesn't disappear from view. A marker vanishes on its own once "check
+  // my review comments" archives the line out of reviews/slide-comments.jsonl.
+  var pinsLayer = document.createElement('div')
+  pinsLayer.id = 'ptx-review-pins'
   var btn = document.createElement('button')
   btn.id = 'ptx-review-btn'
   btn.type = 'button'
@@ -75,6 +86,7 @@
   document.body.appendChild(overlay)
   document.body.appendChild(box)
   document.body.appendChild(toastEl)
+  document.body.appendChild(pinsLayer)
   document.body.appendChild(btn)
   var field = box.querySelector('textarea')
 
@@ -136,6 +148,39 @@
     try { sessionStorage.setItem('ptx:review:on', on ? '1' : '') } catch (e) {}
   }
   btn.addEventListener('click', function () { setReview(!reviewOn) })
+
+  // Pins are independent of review mode — they show whether or not you're
+  // actively circling, so reopening or reloading a page surfaces what's
+  // still outstanding on it. Book pages reflow, so a pin's position is
+  // rescaled by the ratio between the page's current width and the width
+  // it was captured at; close enough after reflow, and click-to-reveal
+  // covers the rest.
+  var pinComments = []
+  function renderPins () {
+    pinsLayer.innerHTML = ''
+    pinComments.forEach(function (c, i) {
+      if (!c.bbox) return
+      var scale = c.viewportWidth ? window.innerWidth / c.viewportWidth : 1
+      var pin = document.createElement('div')
+      pin.className = 'ptx-review-pin'
+      pin.style.left = (c.bbox.x * scale) + 'px'
+      pin.style.top = (c.bbox.y * scale) + 'px'
+      pin.textContent = String(i + 1)
+      pin.title = c.text
+      pin.addEventListener('click', function (e) {
+        e.stopPropagation()
+        toast((i + 1) + ': ' + c.text)
+      })
+      pinsLayer.appendChild(pin)
+    })
+  }
+  function refreshPins () {
+    var page = location.pathname.split('/').pop()
+    fetch(REVIEW_SERVER + '/slide-comments').then(function (r) { return r.json() }).then(function (all) {
+      pinComments = all.filter(function (c) { return c.kind === 'book' && c.page === page })
+      renderPins()
+    }).catch(function () {})
+  }
 
   overlay.addEventListener('pointerdown', function (e) {
     if (box.classList.contains('on')) return   // finish the open comment first
@@ -250,6 +295,7 @@
       post(payload)
         .then(function (queued) {
           clearLasso()
+          refreshPins()
           toast('✓ queued for Claude — ' + queued + ' waiting')
         })
         .catch(function () {
@@ -299,7 +345,7 @@
         var rest = outbox().filter(function (c) { return c.ts !== out[0].ts })
         localStorage.setItem(OUTBOX_KEY, JSON.stringify(rest))
         if (rest.length) flushOutbox()
-        else toast('✓ saved comments sent — ' + queued + ' waiting for Claude')
+        else { refreshPins(); toast('✓ saved comments sent — ' + queued + ' waiting for Claude') }
       })
       .catch(function () { scheduleFlush() })
   }
@@ -319,6 +365,12 @@
     else if (e.key === 'Escape' && reviewOn) setReview(false)
   })
 
+  window.addEventListener('resize', function () { renderPins() })
+  // Reasserting focus (e.g. coming back from a Claude session that just
+  // archived a comment) is the cheapest moment to notice a pin should now
+  // be gone.
+  window.addEventListener('focus', refreshPins)
+
   // Appear only when the review server answers (nothing here works without
   // it); re-arm if this tab was already reviewing or the URL asks for it.
   fetch(REVIEW_SERVER + '/health').then(function (r) { return r.json() }).then(function (body) {
@@ -328,6 +380,7 @@
     try { sticky = sessionStorage.getItem('ptx:review:on') === '1' } catch (e) {}
     if (sticky || new URLSearchParams(location.search).has('review')) setReview(true)
     flushOutbox()
+    refreshPins()
   }).catch(function () {
     if (outbox().length) scheduleFlush()   // server down: stay inert, outbox keeps trying
   })

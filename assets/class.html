@@ -2335,7 +2335,12 @@
             '#review-toast { position: absolute; z-index: 7; left: 50%; transform: translateX(-50%); bottom: 46px;' +
             '  background: rgba(20,20,19,.92); color: #f2f2f2; padding: .5em 1em; border-radius: 6px;' +
             '  font-size: 13px; display: none; max-width: 80%; }' +
-            '#review-toast.err { background: #8e2a20; }'
+            '#review-toast.err { background: #8e2a20; }' +
+            '#review-pins { position: absolute; inset: 0; z-index: 4; pointer-events: none; }' +
+            '.review-pin { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;' +
+            '  border-radius: 50%; background: #d98324; color: #fff; font: 700 12px system-ui, sans-serif;' +
+            '  display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.4);' +
+            '  pointer-events: auto; cursor: help; }'
           document.head.appendChild(css)
 
           var overlay = document.createElement('div')
@@ -2352,8 +2357,15 @@
             '<button type="button" class="rv-send">Send</button></div>'
           var toastEl = document.createElement('div')
           toastEl.id = 'review-toast'
+          // Persistent markers for comments still waiting in the queue for
+          // THIS slide — so a comment that's been sent (and thus cleared from
+          // the lasso) doesn't disappear from view entirely. A marker vanishes
+          // on its own once "check my review comments" archives the line.
+          var pinsEl = document.createElement('div')
+          pinsEl.id = 'review-pins'
           // Under #bar in the DOM so the bar still wins hit-testing at z 6.
           var barEl = document.getElementById('bar')
+          stage.insertBefore(pinsEl, barEl)
           stage.insertBefore(overlay, barEl)
           stage.insertBefore(box, barEl)
           stage.appendChild(toastEl)
@@ -2396,6 +2408,36 @@
             else toast('Review mode — circle something, then type. R or Esc leaves.')
           }
           reviewBtn.addEventListener('click', function () { setReview(!reviewOn) })
+
+          // Pins are independent of review mode — they show whether or not
+          // you're actively circling, so a walk through the deck surfaces
+          // what's still outstanding on each slide.
+          var pinComments = []
+          function renderPins() {
+            pinsEl.innerHTML = ''
+            var r = rect()
+            pinComments.forEach(function (c, i) {
+              if (!c.bbox) return
+              var pin = document.createElement('div')
+              pin.className = 'review-pin'
+              pin.style.left = (c.bbox.x * r.width) + 'px'
+              pin.style.top = (c.bbox.y * r.height) + 'px'
+              pin.textContent = String(i + 1)
+              pin.title = c.text
+              pin.addEventListener('click', function (e) {
+                e.stopPropagation()
+                toast((i + 1) + ': ' + c.text)
+              })
+              pinsEl.appendChild(pin)
+            })
+          }
+          function refreshPins() {
+            fetch(REVIEW_SERVER + '/slide-comments').then(function (res) { return res.json() }).then(function (all) {
+              var n = currentIndex()
+              pinComments = all.filter(function (c) { return c.deck === deckId && c.slide === n && !c.kind })
+              renderPins()
+            }).catch(function () {})
+          }
 
           function drawLasso() {
             sizeCanvas(lassoCanvas, lassoCtx)
@@ -2484,6 +2526,7 @@
             post(payload)
               .then(function (queued) {
                 clearLasso(); drawLasso()
+                refreshPins()
                 toast('✓ queued for Claude — ' + queued + ' waiting')
               })
               .catch(function () {
@@ -2544,7 +2587,7 @@
                 rest = rest.filter(function (c) { return c.ts !== out[0].ts })
                 localStorage.setItem(OUTBOX_KEY, JSON.stringify(rest))
                 if (rest.length) flushOutbox()
-                else toast('✓ saved comments sent — ' + queued + ' waiting for Claude')
+                else { refreshPins(); toast('✓ saved comments sent — ' + queued + ' waiting for Claude') }
               })
               .catch(function () { scheduleFlush() })   // still down; try again
           }
@@ -2564,9 +2607,17 @@
             else if (e.key === 'Escape' && reviewOn) setReview(false)
           })
 
-          // A lasso's coordinates mean nothing on another slide.
-          window.addEventListener('hashchange', function () { if (reviewOn) { clearLasso(); drawLasso() } })
-          window.addEventListener('resize', function () { if (reviewOn) drawLasso() })
+          // A lasso's coordinates mean nothing on another slide; pins do, so
+          // refetch them for whatever slide this now is.
+          window.addEventListener('hashchange', function () {
+            if (reviewOn) { clearLasso(); drawLasso() }
+            refreshPins()
+          })
+          window.addEventListener('resize', function () { if (reviewOn) drawLasso(); renderPins() })
+          // Reasserting focus (e.g. coming back from a Claude session that
+          // just archived a comment) is the cheapest moment to notice a pin
+          // should now be gone.
+          window.addEventListener('focus', refreshPins)
 
           // The button appears only when the review server answers — the same
           // self-effacement as the edit layer, so a rehearsal or the deployed
@@ -2578,6 +2629,7 @@
             reviewBtn.style.display = ''
             if (params.has('review')) setReview(true)
             flushOutbox()
+            refreshPins()
           }).catch(function () {
             if (outbox().length) scheduleFlush()   // review server not running: UI stays inert, outbox keeps trying
           })
