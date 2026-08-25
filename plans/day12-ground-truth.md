@@ -222,11 +222,29 @@ rail, the 10 kΩ resistor bridges that rail to the OUT node, and the sensor's bl
 VCC wire runs the length of the board to a jumper that returns it to the same `+`
 rail. So the drawing and the annotation on the same slide disagree.
 
+**One more piece of evidence, and it tips the reading toward 5 V.** Slide 6 carries
+a *second* picture, 0.86 × 1.87 in at the far right — and it is the **barrel-jack
+regulator board**, the same board Day 11 already teaches as `fig-tb6612-regulator`.
+Her "needs a 5V voltage supply" box sits between it and the drawing. So what she
+most likely tells the room is *take the sensor's 5 V from the regulator*, and the
+Fritzing drawing — which predates or simplifies that — is the part that is out of
+date. It does not settle the question, because Lab 6 wires the regulator at §2.3,
+**after** the pot, and Exercise 1 comes before any of that.
+
+**And a fourth source, found at Gate 1, which is the only place she says a rail in
+words.** Her slide 6 speaker note: *"just wire power and ground to **logic** power
+and ground."* Logic power on this build is the Nucleo's 3.3 V, so her own prose
+sides with her drawing against her annotation — for **Exercise 1**. That is
+consistent with the regulator reading above if the 5 V is what the *lab* build
+uses and 3.3 V is what today's bare exercise uses, but the two cannot both be
+inferred at once.
+
 Lab 6 §2.5 is unambiguous about the half that matters for the chip: *"pull the OUT
 terminal up with an internal pullup resistor or a 10 kΩ resistor to **3.3 V**."*
-**Question 2 to Petra.** Until she answers, the book says what is verified: the
-pullup goes to 3.3 V, and the reason it is safe to pull a 5 V-supplied sensor's
-output up to 3.3 V is that the output only ever pulls **down** (§7).
+**Question 2 to Petra, now with all four sources on the table.** Until she answers,
+the book teaches only what is verified — **the pullup goes to 3.3 V** — and says
+nothing about the sensor's own supply. The mechanism that makes the pullup safe is
+in §7, and it now carries its own condition.
 
 ### 4d. The part, and the slot count
 
@@ -295,16 +313,35 @@ decision to be stated rather than assumed.
 Her slide 6 note: *"You'll need a pullup resistor on the orange wire since the
 phototransistor doesn't make any current."*
 
-That is an **open-collector output**, which is the same idea as the open-drain
-outputs Day 10 spent a whole Part on (`subsec-day10-pins`, `fig-open-drain`: *"the
-transistor to 3.3 V is gone"*, so *"the only route from 3.3 V is through the
-pull-up resistor"*). Second encounter, different consequence:
+That is an **open-collector output**, and it behaves the same way as the
+open-drain outputs Day 10 spent a whole Part on (`subsec-day10-pins`,
+`fig-open-drain`: *"the transistor to 3.3 V is gone"*, so *"the only route from
+3.3 V is through the pull-up resistor"*). Second encounter, different consequence:
 
 - on Day 10 the point was that open-drain is what lets several devices share one
   wire without fighting;
 - here the point is that an output which can only pull **down** takes its HIGH
-  level from whatever the pull-up is tied to — so a sensor running on 5 V can
-  deliver a 3.3 V-safe signal into PA15, and the pull-up is what makes that true.
+  level from whatever the pull-up is tied to — so the sensor can hand a 3.3 V-safe
+  signal to PA15 **whatever its own supply is**, and the pull-up is what makes that
+  true.
+
+**Two corrections from Gate 1, and both go into the prose.**
+
+**(a) Say it is the same behavior, not the same mechanism.** Day 10 taught
+open-drain as a specific GPIO configuration — a bit in `OTYPER`. This is a
+discrete BJT's collector and **there is no `OTYPER` bit on the sensor**. One
+clause, so that a student who goes looking for the register does not come up
+empty (`expert-continuity-auditor`, `learner-firstgen-novice`).
+
+**(b) The safety claim has a condition, and it is the highest-consequence claim in
+the day.** "It cannot pull the line above the pull-up's rail" is true **only if the
+sensor's output stage has no internal pull-up to its own supply**. Plenty of
+phototransistor modules ship with one; where that is the case, the external 3.3 V
+pull-up fights it through a divider and the HIGH level lands somewhere between
+3.3 V and 5 V — the very failure the argument exists to prevent. **Nothing in the
+repo settles this**, which is what makes Question 3 (the EE-SX672 datasheet) worth
+asking: with it, the day's central safety argument becomes a lookup instead of an
+assumption (`expert-rigor-hawk`).
 
 It also explains the failure mode Lab 6 warns about in a box (*"The photo
 interrupter requires a pullup on the output to function correctly"*): with no
@@ -373,11 +410,35 @@ recommendation rather than a decision already made.
    the microcontroller?"* Answering it in the prose ahead of the activity is a P-6
    violation.
 
-**Recommendation.** Keep her slide 9's question open and let the room answer it;
-the reveal converges on the **interrupt**, with the 60-versus-100 Hz argument as
-the reason and the polled alternative described honestly rather than dismissed
-(S-19). That honors her wording, satisfies P-5/P-6, pays off Day 9, and lands on
-the objective the chapter already states. **Gate 1 to confirm.**
+**DECIDED AT GATE 1 — converge on the interrupt.** Unanimous among the reviewers
+who spoke to it. Her slide 9's question stays open and the room answers it; the
+reveal converges on the interrupt; the polled alternative is described honestly
+rather than dismissed (S-19). That honors her wording, satisfies P-5/P-6, pays off
+Day 9, and lands on the objective the chapter already states.
+
+**But point 5's argument was wrong as stated, and the plan now states it
+correctly.** Sampling frequency alone does not decide whether a poll misses a
+digital pulse. The condition is **T_poll < the shorter of the pulse's high time and
+its low time**, and that is set by the wheel's **duty cycle**, not by the rate. At a
+roughly even duty and 60 PPS the high time is about 8 ms against a 10 ms beat, so a
+naive poll misses pulses — but the duty cycle is an assumption pending a source, and
+the numbers are fragile in the direction that matters: at **120 rpm** the high time
+would be about 12.5 ms and a naive poll would be arguably safe.
+
+So the numbers are a **demonstration, not a proof**, and the argument that does not
+depend on them is the real one: **the interrupt removes the dependence on the top
+speed altogether.** If Question 5 comes back near 120 rpm, Part 4 is rebuilt on that
+line and the numbers demoted to an illustration — **not patched with a bigger
+number** (`expert-rigor-hawk`, recorded as dissent in `reviews/day12-gate1.md`).
+
+**A second condition, on the arithmetic itself.** `RPM = 60 × PPS / N` assumes **one
+counted edge per slot**. Her own slide 21 says *"rising **or** falling edges"*, and
+Day 9 handed students `FTSR1` **and** `RTSR1` — so a student who wires any-edge
+detection, a completely natural extension of Day 9, gets 2N transitions per
+revolution and reports **twice the true rpm** with a formula that never told them
+why. The condition is stated on `sl-day12-rpm`, in Stretch 3, and in the Reference
+section — and **not in the reading**, where there is no detection mechanism yet and
+stating it would leak toward Part 3's second question.
 
 ## 10. Figure manifest (P-12)
 
@@ -391,17 +452,22 @@ declared `viewBox` size in headless Chrome before being judged
 | Day12 s2, s4 | section dividers, no image | **Drop** — the deck JSON's `section` glue does this |
 | Day12 s3 | none | **Keep as an activity**, no figure |
 | Day12 s5 | 3 photos: EE-SX672 body, two encoder wheels, the 222-rpm assembly | **Third photo already in the book** as `fig-encoder-wheel` — do not duplicate. **First two are new and wanted**: the sensor body and the slotted wheel belong in the pre-class reading, where the sensor's construction is explained. Rebuild as one `<sidebyside>` figure |
-| **Day12 s6** | **Fritzing: the Exercise 1 wiring**, 2 pictures + 5 shapes ("Exercise #1", "The photointerrupter needs a 5V voltage supply", 3 arrows); a second picture carries "~10 KΩ pullup" | **Rebuild — the core figure of Part 2.** Two defects: her "5V" annotation contradicts her own drawing (§4c(ii)), and the composite drops the "~10 KΩ pullup" callout because it sits on a second picture. **Needs her original, or a re-export.** Held pending Question 2 |
+| **Day12 s6** | **Fritzing: the Exercise 1 wiring**, plus a second picture (the barrel-jack regulator board, already in the book as `fig-tb6612-regulator`) and six text shapes | **`fig-day12-wiring`.** Slide-XML geometry, read directly: "~10 KΩ pullup" is at (0.66, 3.42) and "Don't wire the signal wire into the Nucleo yet" at (0.14, 3.96), both **left of** the picture, which starts at 2.69 in. They are **slide text pointing into the drawing by an arrow**, not artwork — so they become slide bullets, exactly as she had them, and **no original is needed**. The **resistor symbol itself is present** in the Fritzing artwork, at breadboard column ~15, so nothing is missing from the drawing. Her "5V voltage supply" box is held out pending Question 2, since it contradicts the drawing it sits on (§4c(ii)). **Gate 1's cheaper route, adopted:** her slide 6 *is* the book's `fig-tb6612-wiring-2` (`images/Day11-Motors/tb6612-wiring-exercise2.png`, `ch-motors.ptx:1166`) with the sensor, one resistor and two wires added — so annotate that drawing and let the caption say what hers says silently, *changed from Wednesday only by the sensor and one resistor*. P-15: no pull-up **value** on the figure, no `OUT → PA15` arrow, and a source comment saying the omission is deliberate |
+| Day12 s6, second picture | the barrel-jack regulator board | **Do not duplicate** — it is already `fig-tb6612-regulator` (`ch-motors.ptx:875`), projected on Day 11 as `sl-day11-regulator`. `<xref>` it |
 | **Day12 s7** | *Wiring the Fancy Photointerrupter* — the cabled EE-SX672 photo | **Keep raw** — a photograph with no annotation shapes. The wire-colour list is slide text, not artwork, and becomes a small table |
+| Day12 s9 | none | **Keep as an activity**, `act-day12-pulses-to-rpm`, merged with Day11x s20 |
 | Day12 s8 | the scope video still | **Drop** — `fig-photointerrupter-video` already carries the video, Day 11x projects it, and Rule 8 says do not project a figure twice. Part 2's activity has students produce their own trace |
 | **Day12 s10** | **Fritzing: the complete Lab 6 build** — Nucleo, breadboard, seven-segment, pot, TB6612, regulator, motor, sensor. 2048 × 1908, one shape | **Rebuild and keep — the anchor figure of the build block.** It is the only picture in the course showing the whole system at once. Legibility at projection size is the risk: the header silkscreen is ~0.5 % of slide height, which is the defect `wiring-2` has carried for three rounds. **Mitigation: the slide's job is the block layout, and the pin names are given as text beside it, not read off the picture** |
 | Day11x s20 | none | **Keep as an activity**, merged with Day12 s9 (§3c) |
 | Day11x s21 | none | text only — becomes a figure? **No.** The three relations are one-line `<m>` each and the player flattens them correctly since 2026-08-18 (S-6). Δθ = 2π / #slots has no fraction bar in the flattened form that matters; **checked at Gate 2′ by looking, not by assuming** |
-| — | **a drawing of the beam being interrupted** — LED, slot, phototransistor, and the resulting square wave | **Does not exist and is wanted** for the reading. Hand-authored SVG, because no photo shows the beam. B-11a: declare both `width` and `height` matching the `viewBox` |
+| — | **`fig-photointerrupter-beam`** — LED, slot, phototransistor, and the resulting square wave | **Does not exist and is wanted, for the reading.** Hand-authored SVG, because no photo shows the beam. **Mechanical only** — no transistor symbol, no pull-up, no node levels; those are Part 2's. B-11a: declare both `width` and `height` matching the `viewBox` |
+| — | **`fig-photointerrupter-states`** — two panels: slot open → beam reaches the phototransistor → it conducts → the node is LOW; spoke blocking → transistor off → the 10 kΩ pull-up holds the node at 3.3 V | **Does not exist and is wanted, for Part 2.** Added at Gate 1. It replaces the `<xref>` to Day 10's `fig-open-drain`, which is a **two-device bus-arbitration** diagram and not this case at all — *"whatever the pull-up is tied to sets the HIGH level"* is currently asserted rather than shown. Keep it separate from the beam figure: the boundary between them is the B-8 line between motivation and machinery |
 
-**Figures needed from Petra:** the slide 6 original at full resolution, if the
-"~10 KΩ pullup" callout cannot be recovered by compositing both of that slide's
-pictures.
+**Figures needed from Petra: none, as of the slide-XML check above.** Both of the
+callouts that looked missing turned out to be slide text rather than artwork, and
+the one genuinely doubtful annotation — "needs a 5V voltage supply" — is doubtful
+because it disagrees with her own drawing, which a higher-resolution export would
+not fix. Question 2 is what settles it.
 
 ## 11. Structural convention — checked against the siblings, not assumed
 
@@ -450,20 +516,33 @@ Sent 2026-08-24. Everything that does not depend on an answer is proceeding.
    that 5 V on the breadboard rail will damage the Nucleo. Is the schematic's
    `+5V` a leftover from the older version of the course, and should students wire
    the pot across **3.3 V and ground**? (Writing 3.3 V until you say otherwise.)
-2. **The photointerrupter's supply, and its pullup.** Your Day 12 slide 6 says it
-   needs **5 V**, and the lab schematic agrees — but the Fritzing drawing on that
-   same slide wires VCC to the **3.3 V** rail. Which do students actually wire?
-   And is it right to teach that the pullup goes to **3.3 V** either way (as Lab 6
-   §2.5 says), because the output only pulls down?
+2. **The photointerrupter's supply, and its pullup — four sources, and they do not
+   agree.** Your Day 12 slide 6 says it needs **5 V**; the Lab 6 schematic agrees
+   and takes it from the regulator; the Fritzing drawing on that same slide wires
+   VCC to the **3.3 V** rail; and your speaker note for that slide says *"just wire
+   power and ground to **logic** power and ground"*, which is 3.3 V. Which do
+   students actually wire in Exercise 1? **This one is not just an ambiguity — if
+   the answer is 5 V, Exercise 1 has no source for it**, because the regulator is
+   not wired until Lab 6 §2.3 and there are no benches. And is it right to teach
+   that the pullup goes to **3.3 V** either way, as Lab 6 §2.5 says?
 3. **The EE-SX672 datasheet.** It is not in the repo. May we add it to
-   `assets/datasheets/`, so the sensor gets a real datasheet lookup? If not, the
-   day's P-11 moment is UM2953 Table 11 — finding for yourself that D7 is PA15.
+   `assets/datasheets/`? It is worth more than a nice-to-have: the day's central
+   safety claim — that pulling this output up to 3.3 V is safe because it can only
+   pull down — is true **only if the output has no internal pull-up to its own
+   supply**, and nothing in the repo settles that. With the datasheet it becomes a
+   lookup students do; without it, it stays an assumption we have to state as one.
+   If the answer is no, the day's P-11 moment is UM2953 Table 11 — finding for
+   yourself that D7 is PA15.
 4. **`TTmotor_ramp.c` or `TTMotor_Ramp.c`?** Still open from Day 11x, and Day 12
    is about to add more references. One pass either way.
 5. **The 30 → 180 rpm claim** in `fig-photointerrupter-video`'s caption. Day 12's
    argument for interrupting rather than polling uses that top speed (20 slots ×
    3 rev/s = 60 pulses per second, against a 100 Hz ADC beat), so it would be good
    to have it confirmed. Is 180 rpm about right for the top of the ramp?
-6. **How much of the 110 minutes is open build time?** The plan budgets **45
-   minutes** of it as a named Part rather than as slack, on the basis that your own
-   Day 12 deck is ten slides. Does that match how you actually run this Thursday?
+6. **How much of the 110 minutes is open build time?** After Gate 1 the plan
+   budgets **35 minutes** of it as a named Part rather than as slack, with a floor
+   of 25, plus a protected 5-minute close — inferred from the shape of your deck
+   (ten slides, ending on *Complete Lab 6 setup* with nothing after it) rather than
+   from anything that states it. Does that match how you actually run this Thursday?
+   If the real number is 45, the ten minutes come out of Parts 1 and 5, not out of
+   the sensor wiring and not out of the close.
