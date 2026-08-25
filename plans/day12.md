@@ -11,9 +11,13 @@ from *"the reading quiz"*, and Day 11x has no reading, so the derivation would
 otherwise be stranded. Day 11x's own hand-off comment in `source/ch-motors.ptx`
 says so, and the Lab 6 PDF confirms it.
 
-**Sixty-six of the 110 minutes are taught or structured; 35 are the students' own
-build, with a floor of 25; five are a protected close.** That split is deliberate
-and it is hers: her Day 12 deck is **ten slides**, of which two are dividers and
+**Ninety-nine of the 110 minutes are the six Parts, of which 32 are the students'
+own build with a floor of 25; five are a protected close, and six are settling and
+the two transitions.** Every Part's row equals the sum of its beats — checked at
+Gate 2′ with a script, because this arithmetic has now failed three times, each time
+one level further down.
+
+That split is deliberate and it is hers: her Day 12 deck is **ten slides**, of which two are dividers and
 two duplicate Day 11x, and it ends on *Complete Lab 6 setup* with no slide after
 it. A thin deck for a 110-minute Thursday is not a defect here — it is a build
 day, and the build is named as a Part rather than left as silent slack. The size
@@ -112,18 +116,21 @@ we can **measure**.)*
 
 ## Datasheet / reference-manual moments (P-11)
 
-- **Part 5:** **UM2953**, the Nucleo-C031C6 user manual
+- **Part 4, opening it:** **UM2953**, the Nucleo-C031C6 user manual
   (`external/nucleo_user_manual.pdf`), **Table 11, *ARDUINO® connector pinout***,
   p. 20. Students find for themselves which STM32C031C6 pin is behind header pin
-  **D7**. The answer is **PA15**, and it is the pin the sensor's output goes to in
-  the lab. *(Moved here from Part 2 at Gate 1: its answer is not used today, her own
-  arc puts PA15 on the slide 10 lab checklist, and Part 2 is the Part most likely
-  to run long. Keep the framing strictly about **which pin**, not which register
-  set, so it does not foreshadow Part 4.)*
-- **Part 4:** **RM0490 §12.5.9, Table 47, *EXTI controller register map***
-  (PDF p. 229) — `EXTI_EXTICR4` at offset 0x06C, top byte `EXTI15[7:0]`. Cited so
-  that students configuring line 15 in the lab can find it, not walked through:
-  Day 9 already taught the five registers on line 4.
+  **D7**. The answer is **PA15**. *(Moved out of Part 2 at Gate 1, and then out of
+  Part 5 at Gate 2′: Part 4 printed PA15 twice before Part 5 asked students to look
+  it up, which made the exercise hollow. It now opens Part 4 and supplies the
+  constant the naive loop uses four slides later. Gate 1's two surviving reasons —
+  her slide-10 checklist, and Part 2's overrun risk — are both still honored. Keep
+  the framing strictly about **which pin**.)*
+- **Part 4:** **RM0490 §12.5.6, *EXTI external interrupt selection register***
+  (PDF p. 226) — the register itself, and the `0x00: PA[m+3]` port encoding.
+  §12.5.9, Table 47, is only the **register map**, where the offset 0x06C and the
+  top byte `EXTI15[7:0]` are. *(Gate 2′ caught §12.5.9 cited for the register, which
+  is exactly the P-11 failure of citing a section a subsection off — and
+  `ch-gpio-interrupts.ptx` sends students to §12.5.6 for this same lookup, twice.)*
 - **Reading:** Lab 6 §2.5 as the source of the 20 in `RPM = 60 × PPS / 20`, with
   the count verified against their own wheel in Part 3.
 
@@ -237,26 +244,31 @@ rather than assuming silently.
 
 | Part | Min | Mode | What |
 | --- | --- | --- | --- |
-| — | 4 | — | Settling, and the two transitions |
-| **1** | 10 | discuss | **Questions about `TTmotor_ramp.c`.** Her slide 3, with an individual commit added |
+| — | 6 | — | Settling, and the two transitions into and out of the build |
+| **1** | 8 | discuss | **Questions about `TTmotor_ramp.c`.** Her slide 3, with an individual commit added |
 | **2** | **26** | **do** | **Wire the sensor and look at what it says.** Three wires, one pull-up, the AD2 on the output, `TTmotor_ramp.c` running. The signal does not reach the Nucleo yet |
 | **3** | 15 | do → reveal | **From a pulse train to a number.** Her slide 9 merged with her Day 11x slide 20; the reveal is her slide 21, **opening on the rpm formula** |
-| **4** | 10 | predict → **commit** → explain | **A loop that does three things at three rates.** `milliseconds()`, the predict-then-fail, an individual commit, then the two answers |
-| **5** | 5 | explain | **The whole build.** Her slide 10 — the D7/PA15 lookup, what is wired where, pass criteria, and the hazards |
-| **6** | **35** | **build** | **Open build time**, opening on the main-loop sketch. **Floor: 25** |
-| **close** | **5** | — | **Protected and announced**: stop, and everyone says where they are and what is left |
+| **4** | 13 | look up → predict → **commit** → explain | **A loop that does three things at three rates.** The D7/PA15 lookup, `milliseconds()`, the predict-then-fail, an individual commit, then the two answers |
+| **5** | 5 | explain | **What Lab 6 asks for.** Her slide 10 — what is wired where, a pass criterion for every stage, and the hazards |
+| **6** | **32** | **build** | **Open build time**, opening on the main-loop sketch. **Floor: 25** |
+| **close** | **5** | — | **Protected and announced**: a private written note first, then round the tables |
 
-**Total 110 minutes**, of which **66 are taught or structured**, **35 are the
-students' own build**, and **5 are the close**.
+**Total 110 minutes**, and it reconciles at the beat level: 6 + 8 + 26 + 15 + 13 + 5
++ 32 + 5. Every Part's row is the sum of the `≈ N min` marks on its own slides and
+activities.
 
 ### The valves, in the order they are spent
 
-1. **Part 6 down to its 25-minute floor.**
-2. **Part 4's poll-versus-interrupt comparison moves into Part 6's opener**, taking
-   Part 4 to 6 minutes. The `milliseconds()` mechanic, the predict-then-fail and the
-   two-minute commit are **never** cut.
-3. **Part 3's reveal drops the quadrature and decode-in-hardware asides**, which
-   survive as Stretch 2 and as a line in the chapter's Reference section.
+1. **Part 6 down to its 25-minute floor — returns 7.**
+2. **Part 4's poll-versus-interrupt comparison moves into Part 6's opener — returns
+   3, not 4.** The lookup, the `milliseconds()` mechanic, the predict-then-fail and
+   the two-minute commit are **never** cut.
+3. **Part 3's reveal drops the quadrature and decode-in-hardware asides — returns
+   2**, and only *after* the minus-sign bullet has moved onto `sl-day12-rpm`, or
+   spending this valve leaves the build-order table's acceptance test unsupported.
+
+**Total valve capacity 12** against Part 2's honestly-flagged 2–8 minute overrun.
+*(Gate 2′ found two of the three over-promising; these are the corrected figures.)*
 
 ### What never absorbs an overrun
 

@@ -216,35 +216,32 @@ photointerrupter needs a 5V voltage supply."* Lab 6's schematic agrees: the
 GND on pin 4 (black or blue), and `ENC_OUT` on pin 3 (white or black). Her
 slide 7 gives the cabled variant the same way (brown = 5 V, blue = ground).
 
-**But her slide 6's own Fritzing drawing wires VCC to the 3.3 V rail** — traced
-pin by pin at 2661 px: the red wire runs from the Nucleo's **3V3** to the top `+`
-rail, the 10 kΩ resistor bridges that rail to the OUT node, and the sensor's blue
-VCC wire runs the length of the board to a jumper that returns it to the same `+`
-rail. So the drawing and the annotation on the same slide disagree.
+**CORRECTED AT GATE 2′ — I traced this wrong, and the correction matters.** The
+first version of this section said her Fritzing wires VCC to the 3.3 V rail and
+therefore contradicts her annotation. Re-traced at 8× on pad centres after two
+reviewers disagreed with each other:
 
-**One more piece of evidence, and it tips the reading toward 5 V.** Slide 6 carries
-a *second* picture, 0.86 × 1.87 in at the far right — and it is the **barrel-jack
-regulator board**, the same board Day 11 already teaches as `fig-tb6612-regulator`.
-Her "needs a 5V voltage supply" box sits between it and the drawing. So what she
-most likely tells the room is *take the sensor's 5 V from the regulator*, and the
-Fritzing drawing — which predates or simplifies that — is the part that is out of
-date. It does not settle the question, because Lab 6 wires the regulator at §2.3,
-**after** the pot, and Exercise 1 comes before any of that.
+| wire | lands on | node |
+| --- | --- | --- |
+| red, short | the **Vcc** pad's column | the `+` rail, fed by the Nucleo's 3V3 — logic power |
+| light-blue jumper, row J | left end on the **VM** pad's column, right end at col ≈61 | motor power |
+| long blue, row I, from the sensor | col ≈61 — the same column as the jumper's right end | therefore **VM** |
 
-**And a fourth source, found at Gate 1, which is the only place she says a rail in
-words.** Her slide 6 speaker note: *"just wire power and ground to **logic** power
-and ground."* Logic power on this build is the Nucleo's 3.3 V, so her own prose
-sides with her drawing against her annotation — for **Exercise 1**. That is
-consistent with the regulator reading above if the 5 V is what the *lab* build
-uses and 3.3 V is what today's bare exercise uses, but the two cannot both be
-inferred at once.
+**The sensor's VCC goes to the TB6612's `VM` pin — the motor supply.** So her
+drawing, her *"needs a 5V voltage supply"* annotation and Lab 6's schematic all say
+the same thing, **there was never a contradiction on that slide**, and the
+open-collector level translation the day teaches is now *sourced* rather than
+assumed.
+
+Two things follow. Her slide 6 **does not draw the regulator**, so `VM` is unpowered
+in that picture — which is why `fig-day12-wiring`'s caption now says the 9 V adapter
+and the regulator are still connected but not drawn. And her speaker note says *"just
+wire power and ground to **logic** power and ground"*, which is the one thing still
+genuinely open: see Question 2, narrowed.
 
 Lab 6 §2.5 is unambiguous about the half that matters for the chip: *"pull the OUT
 terminal up with an internal pullup resistor or a 10 kΩ resistor to **3.3 V**."*
-**Question 2 to Petra, now with all four sources on the table.** Until she answers,
-the book teaches only what is verified — **the pullup goes to 3.3 V** — and says
-nothing about the sensor's own supply. The mechanism that makes the pullup safe is
-in §7, and it now carries its own condition.
+The book teaches only that, and says nothing about the sensor's own supply.
 
 ### 4d. The part, and the slot count
 
@@ -516,15 +513,14 @@ Sent 2026-08-24. Everything that does not depend on an answer is proceeding.
    that 5 V on the breadboard rail will damage the Nucleo. Is the schematic's
    `+5V` a leftover from the older version of the course, and should students wire
    the pot across **3.3 V and ground**? (Writing 3.3 V until you say otherwise.)
-2. **The photointerrupter's supply, and its pullup — four sources, and they do not
-   agree.** Your Day 12 slide 6 says it needs **5 V**; the Lab 6 schematic agrees
-   and takes it from the regulator; the Fritzing drawing on that same slide wires
-   VCC to the **3.3 V** rail; and your speaker note for that slide says *"just wire
-   power and ground to **logic** power and ground"*, which is 3.3 V. Which do
-   students actually wire in Exercise 1? **This one is not just an ambiguity — if
-   the answer is 5 V, Exercise 1 has no source for it**, because the regulator is
-   not wired until Lab 6 §2.3 and there are no benches. And is it right to teach
-   that the pullup goes to **3.3 V** either way, as Lab 6 §2.5 says?
+2. **The photointerrupter's supply — narrowed at Gate 2′.** Three of the four
+   sources agree once the Fritzing is traced properly (§4c(ii)): your slide 6 says
+   5 V, the drawing takes the sensor's VCC to the driver's `VM` pin, and Lab 6's
+   schematic puts it on +5 V. **What is left is one thing:** your speaker note for
+   that slide says *"just wire power and ground to **logic** power and ground"*.
+   In Exercise 1 the regulator is not wired yet — Lab 6 connects it at §2.3, after
+   the potentiometer — so which do students wire on the day? And is it right to
+   teach that the pullup goes to **3.3 V** either way, as Lab 6 §2.5 says?
 3. **The EE-SX672 datasheet.** It is not in the repo. May we add it to
    `assets/datasheets/`? It is worth more than a nice-to-have: the day's central
    safety claim — that pulling this output up to 3.3 V is safe because it can only
