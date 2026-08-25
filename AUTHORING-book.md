@@ -45,6 +45,15 @@ warm-up before the real thing.
 If a chapter cannot name its crucial step in one sentence, the chapter is not
 designed yet.
 
+**When later prose depends on an activity's answer, hand the slowest student a
+lifeline.** A parenthetical one-clause recap of the answer, right where the
+prose next relies on it, costs the fast student nothing and rescues the
+student whose group did not get there. Day 11x, 2026-08-24: *"Since that was
+done in the student activity, we should put here in parentheses what CC1E
+does, in case a student didn't figure it out"* — "We already worked out what
+CC1E does" became "We already worked out what CC1E does (it lets the
+channel's output reach the pin)."
+
 ### P-3 A genuine stretch for the fastest students
 
 Every chapter leaves real challenge for students who finish early. The stretch is
@@ -231,6 +240,44 @@ those repairs adds a rung above the crucial step rather than removing scaffoldin
 below it. And **an activity built on a model should ask where the model stops being
 true**, which is both harder and more useful than asking it to be applied again.
 
+### P-18 A predict-then-reveal question must be stated in the book prose itself
+
+`<slide>` content is stripped from the book (B-1), so a predict-then-reveal beat
+that lives only inside a `<slide>` block's bullets leaves the **book** with a setup
+paragraph that promises a question and a reveal paragraph that answers one nobody
+asked. Day 11x, 2026-08-22, on exactly that gap: *"We seem to be missing the actual
+question."* The setup paragraph said "we'll start... asking a question about it
+that we could not have answered then," the figure came, and the very next
+paragraph opened "The answer is the compare value" — the question itself existed
+only on the slide.
+
+If a `<slide>` predicts, the paragraph or figure caption right before the reveal
+must ask the same question in words a reader of the book alone can act on. Check
+this explicitly wherever a `<slide>` carries a bulleted "so which..." or "predict
+before revealing" beat: grep the surrounding book prose for the literal question,
+not just a gesture at one.
+
+### P-19 A predict slide supplies its own numbers
+
+A predict-then-reveal beat that asks the student to carry a number forward from
+an earlier activity fails for everyone whose earlier measurement did not work, and
+it is one more thing to hold. Petra, Day 12, 2026-08-25, on a naive-loop slide
+built on the rate the room had measured an hour before: *"hard to understand. Just
+give them a fictional rpm?"* — alongside *"avoid this language"* on the phrase the
+callback needed ("the top of the ramp") and *"Don't refer to parts"* (L-18) on the
+pointer itself. One comment fixed all three:
+
+~~"Your motor at the top of the ramp gives the pulse rate you measured in Part 2.
+After one second of this, what does `pulses` hold?"~~ →
+"**Suppose the wheel is taking a slot past the beam 60 times a second.** After one
+second of this loop, what does `pulses` hold?"
+
+The prediction is about the *loop*, not about their motor, so a stated number
+costs the beat nothing and makes it answerable by a student whose sensor never
+worked. Keep the student's own measurement where the point **is** their hardware —
+the rpm conversion in the same day still uses their measured rate and their own
+slot count, and should.
+
 ### P-12 Prefer the old annotated images
 
 `assets/ClassSlidesOLD/` is the authority for the intended in-class arc, and its
@@ -263,6 +310,34 @@ indistinguishable from a composite that lost its right-hand side — on Day 11x 
 sound figures were written up as cropped on that evidence. The method, and the
 habit of checking the render's aspect ratio against the `viewBox`, are in
 `AUTHORING-visual.md` Rule 5.
+
+**When her slide's annotations are the teaching, ask her for the file.** Rebuilding
+an annotated Fritzing loses exactly what the annotations were carrying, and a
+caption cannot put it back — this is an asset request, not caption work. Petra,
+Day 12 (2026-08-25), on a rebuilt wiring figure whose two claims had been moved
+into slide bullets: *"You are missing all of my annotations here. Tell me where to
+put the actual image. You may have to remove some of the wording of my old slide
+from the image I am going to give you, including the page number from my old
+slide."*
+
+So the ask has a shape, and it is worth getting right first time:
+
+1. **Name the drop path in the source**, next to the figure, so she can act without
+   a conversation — `assets/images/DayNN-*/fig-<id>-annotated.png`, and say that the
+   `<image source>` line is the only thing that changes.
+2. **Strip her deck furniture, not her annotations**: the slide heading, its bullets
+   (they are the activity's tasks, already projected elsewhere) and the page number
+   come out; every callout, arrow and label stays.
+3. **The slide goes image-dominant.** Her callouts now carry the claims the bullets
+   were carrying, so keeping both is lever 2 in reverse. A `<caption>` and the
+   `<note>` are enough.
+4. **A rule her own drawing contradicts yields to the drawing.** Day 12's figure
+   had a standing instruction to carry no pull-up *value*; her annotation reads
+   *"~10 KΩ pullup"*, so the value is in the figure now and the source says why.
+5. **Say what the drawing still does not show.** Hers gained the regulator board and
+   its barrel jack — the thing the rebuilt version was missing — and its 5 V, GND
+   and Vin pads are still drawn with nothing on them. The caption says so and sends
+   the student to their own board.
 
 ### P-13 The lab is one consumer, not the goal
 
@@ -410,6 +485,25 @@ and `checker-technical-accuracy` reported its physics *"VERIFIED correct"* — a
 it was. Verification confirms that what is present is right; it says nothing about
 what is absent. Neither does any linter, and neither does a build.
 
+**A deferral marker must name what it owes, by id.** A comment that says only
+*"prose to follow"* is not a deferral, it is a drop with a note attached. Day 12's
+skeleton carried six bare `<!-- DELIVERY 2: prose. -->` markers, and four separate
+Gate 2′ reviewers reported the same four things as *missing* — an `<xref>` to the
+HT16K33 reference, a re-entry pointer, a "what you already have written" list, and
+an explanation of a term a projected slide was already using. All four were
+genuinely intended for the follow-up session and none of them was written down
+anywhere, which is indistinguishable from having forgotten them. Two tests:
+
+- A marker deferring content **lists the specific elements, cross-references and
+  claims the next session owes, by `xml:id`.** `<!-- DELIVERY 2: prose. OWES: … -->`
+- **Only connecting prose may be deferred.** A cross-reference, a pointer, or the
+  explanation of something a figure or slide already *asserts* is written now,
+  because the assertion is already being made.
+
+*(Day 12, 2026-08-24. The same defect that lost Day 11's four slides, one layer up:
+there the coverage table did not say where a step landed; here the marker did not
+say what a Part still owed.)*
+
 ### B-9a Expand an acronym at first use, and name nothing the text never uses again
 
 Two opposite caption faults, both from Day 11 pass 1.
@@ -478,6 +572,19 @@ what the course teaches elsewhere, in either direction — ask, and when the
 answer has a reason behind it, write the reason into the source as a comment so
 the next pass does not helpfully restore the plausible version.
 
+**Name the parts the kit actually has, the way the kit has them.** A component
+that exists in the ground truth but not as a separate thing in the student's hand
+is a fact invented from the documentation. Petra, Day 12 (2026-08-25), on a hazard
+bullet that opened *"The 9 V adapter, the regulator and the Nucleo share one
+ground"*: *"Wait — what do you even mean by this??? We just have the regulator and
+the Nucleo,"* and then *"let's just call this the regulator, not mention 9V
+anywhere."* The adapter is real, and it is the regulator board's own barrel jack
+as far as a student is concerned; naming it separately invented a third component
+and a voltage nobody sets. Every student-facing mention of it across the day came
+out — including one acceptance test that had read *"9 V on its input side and 5 V
+on its output side"* and now checks only the output. **Ask, of every component
+name in a hazard or a build step: would a student point at it?**
+
 ### B-11d No unsupported claims about what is common
 
 "The most frequent mistake", "students usually", "this always trips people up" —
@@ -534,6 +641,17 @@ The one surviving use is **naming**, once, the library a chapter replaces —
 has met it would otherwise wonder. One clause, no mapping, no digression. If it
 needs more than that, it goes.
 
+**And do not borrow its vocabulary.** A word that means one thing in C and
+another in Arduino is worse than a comparison, because nothing marks it as
+borrowed. Petra, Day 12 (2026-08-25), on an activity that asked *"Where in your
+sketch does the count get read?"*: *"that sounds like Arduino language. Let's say
+in your pseudocode or something like that."* Arduino's **sketch** (a program) is
+the one that reaches this book, and it reaches it through the everyday verb — the
+activity was called *"Sketch the main loop before you write it"* and the noun
+followed. Use **pseudocode**, or **plan**, or **outline**; the activity is now
+*"Plan the main loop before you write it."* The verb *sketch* is still ordinary
+English where nothing is being named ("sketch the two output waveforms").
+
 *(History: this rule read "at most a sentence" until Day 9x, when Petra
 restated it as above. Day 9's `attachInterrupt()` slide and its paragraph were
 removed whole; the Day 9x draft grew them back. The reviewer brief that asks
@@ -541,6 +659,29 @@ for real-world grounding — `expert-embedded-industry` — is a likely source a
 should be weighted down, not followed, on this point. `learner-arduino-veteran`
 was retired from the committee for the same reason: an agent whose job is to
 ask for more of a banned thing is worse than no agent.)*
+
+### B-17 No C idiom the course has not taught, in code that gets projected
+
+Petra, Day 12, 2026-08-25, circling `? 1 : 0` on a slide: *"students don't know
+this notation."* The course's students arrive from a Python course (see
+`learner-python-intro`), and a conditional expression is not among the C the book
+teaches. On a slide there is no time to teach it and no reason to: the idiom is
+never the point of the slide it appears on.
+
+~~`now = (GPIOA->IDR & SENSOR_PIN) ? 1 : 0;`~~ →
+
+```c
+if (GPIOA->IDR & SENSOR_PIN)
+    now = 1;
+else
+    now = 0;
+```
+
+The rule is about *teaching* code we write — B-6 code copied from a real driver
+keeps whatever the driver does, and if a driver uses an idiom the course has not
+taught, that is the moment to teach it in prose. Watch for: the conditional
+operator, compound assignment inside a condition, comma expressions, pointer
+arithmetic used as indexing, and `x ? y : z` hidden inside a macro.
 
 ### B-15 No stray apostrophe in a `<program>` listing
 
@@ -553,6 +694,26 @@ while fixing them.
 Reword rather than escape: "the command identity", "the colon pair", "X is
 ignored" instead of "X = don't care". A real character literal (`'a'`) is fine.
 `check_rules.py` enforces it.
+
+### B-16 Cut a connective paragraph that only restates what follows it
+
+A paragraph written to bridge into a table, figure, or activity earns its place
+only if it adds something the table, figure, or activity does not already say on
+its own. Day 11x, 2026-08-22, twice in one pass: *"I would never speak like that.
+This is basically empty of content. Delete?"* on a paragraph that said the section
+would "look at where those registers sit inside the timer" immediately above a
+figure that just did that; and *"Get rid of this — too much repetition"* on an
+activity `<introduction>` paragraph that restated, almost word for word, the
+paragraph directly above the activity ("the three questions below are the ones
+that table does not answer").
+
+This is the book-prose form of B-8 (each concept taught once) and S-10 (no
+debrief): a transition sentence is connective tissue, not new content, and a
+subsection can usually drop straight from its title into the first figure or
+activity (P-18's fix left `subsec-day11x-hardware` with no lead-in paragraph at
+all, and it reads fine — the title already names the subject, per B-11b).
+Before shipping a bridging paragraph, ask whether the sentence that follows it
+already does the same job.
 
 ### B-12 Write for adults — no cute framing
 
@@ -625,13 +786,32 @@ These are the quality rules.
   where its constant comes from, not just the line of code. Assume students who can
   hold more than two lines in their heads. If it will not fit, split the slide;
   do not thin it. (Reverses the earlier "a slide poses, the instructor explains".)
-- **S-10 No debrief slides.** A slide that restates an activity's obvious
-  conclusion reads as condescending. Put the takeaway in a `presenterNote`, or
-  build it into the next slide's content.
-- **S-8 The deck arc.** Title → brief review / where we're headed → agenda → timed
-  `Part N` sections → recap or looking ahead.
+- **S-10 No debrief slides — or debrief paragraphs.** A slide that restates an
+  activity's obvious conclusion reads as condescending. Put the takeaway in a
+  `presenterNote`, or build it into the next slide's content. Book prose gets the
+  same instinct wrong the same way: a closing paragraph that just names what the
+  reader was already shown is cut, not kept for closure. Day 11x, 2026-08-24,
+  deleted two of these — "That is the closure worth carrying out of today: one
+  function to set the channel up, and one register to write for the rest of the
+  program's life," which restated the paragraph above it, and a "the trap is
+  that `TTmotor_ramp.c` looks as though it contains it" teaser whose actual
+  content the very next slide already explained in more detail.
+- **S-8 The deck arc, and its clock, which must reconcile at the beat level.**
+  Title → brief review / where we're headed → agenda → timed `Part N` sections →
+  recap or looking ahead.
+  **The Part table is not the budget; the beats are.** A day whose Part rows sum to
+  the class length can still be over, because the `≈ N min` marks on the individual
+  slides, activities and instructor blocks inside a Part are what the hour actually
+  spends. **Every Part's row must equal the sum of its own beats**, and a beat with
+  no time on it is the failure mode — Day 11x's Gate 3 found four of them and a
+  50-minute plan that was really 58.
+  This has now been caught three times, **each time one level further down**: Day 11
+  had the class length itself wrong; Day 12's Gate 1 found the Part rows summing to
+  115 against 110; Day 12's Gate 2′ found the Part rows correct and **Part 5's beats
+  summing to 9 against a row of 5**. Reconcile it with a script rather than by
+  reading, because every one of the three would have been caught by one.
 
-### S-11 … S-28 — the voice
+### S-11 … S-30 — the voice
 
 Derived from Petra's own hand rewrites, frozen as three specimens. **The
 specimens are the specification; these rules are their summary**, and each
@@ -654,7 +834,11 @@ people (B-7, 5b).
   used as the *name* of a thing, which the reader must decode before they can
   start.
   ~~"LED not blinking? The ladder"~~ → "LED not blinking? Steps to help you
-  diagnose the fault".
+  diagnose the fault". Also caught a defensive-code idiom named rather than
+  described: ~~"`tim14_pwm_set()` **clamps** the value it is given into the
+  range..."~~ → "...**limits** the value it is given to the range..." — "clamp"
+  as the *label* for what the code does goes; describing the mechanism plainly
+  stays. (Day 11x, 2026-08-24: *"don't use that word."*)
 - **S-12 Name what you point at, and where it lives.** No in-group shorthand: a
   student who missed that day must still be able to follow.
   ~~"Now open RM0490 §11.3, Table 40"~~ → "Now open the reference manual,
@@ -691,7 +875,16 @@ people (B-7, 5b).
   than implying it is the whole story.
   ~~"Both `TIM14_IRQn` and the handler name … come from one table in the
   reference manual."~~ → "…come from different places." (because they do), and
-  the added "(Other behaviors are possible here as well.)"
+  the added "(Other behaviors are possible here as well.)" This is a rigor
+  trap, not just a voice one: an absolute technical claim is only as good as
+  its edge case. ~~"A field several bits wide cannot be set by OR-ing a value
+  into it, because OR can only turn bits on"~~ is false whenever the target
+  pattern is all 1s — Petra, Day 11x, 2026-08-24: *"Not technically always
+  true: for example, if we wanted to set all of the bits in the field to 1
+  we'd be just fine with `|`."* Fixed to state the actual failure condition:
+  "...cannot be **reliably** set by OR-ing... if the field already holds a 1
+  where the new pattern wants a 0, that bit stays set." State the mechanism
+  that makes a claim true, not the claim at its most sweeping.
 - **S-20 A day never does the teaching.** *"Don't ever make the weekday the
   grammatical actor"* (Petra, Day 9x). **We** teach, **you** do the work, and a
   weekday is only ever *when*. Banned in every position where a day is the
@@ -795,6 +988,21 @@ been swept against S-11…S-21 and she still changed 692 lines.
   Rule of thumb: if the bold runs past about four words, or ends in a full stop
   or a question mark, it is a sentence. Twenty-five leads in Day 10 broke this.
 
+- **S-30 A slide's headline is a promise, and the slide has to keep it.** Petra,
+  Day 12, 2026-08-25, circling the headline *"Why 3.3 V, and why about 10 kΩ"*:
+  *"the slide doesn't answer that question currently."* The slide argued the
+  **value** and never the **rail** — the rail's reason had been made on the
+  previous slide, so the draft assumed it was covered. It is not covered from the
+  wall: a student reads the headline as the slide's contract, and a two-part
+  headline whose second half is answered nowhere on the slide reads as a slide
+  that lost a bullet. Two ways out, and prefer the first when the missing half is
+  load-bearing: **answer it** in one bullet, or **shorten the headline** to what
+  the slide actually delivers. Applied: a `<term>Why 3.3 V, and not the sensor's
+  own 5 V.</term>` bullet went in, because with the sensor on a 5 V supply that
+  half is the one protecting the pin.
+  Read every two-clause slide title against its own body before a deck ships;
+  this is not lintable and no reviewer had caught it in three gates.
+
 **Two calibrations that matter as much as the rules.**
 
 **Her register is plain and explanatory, not terse.** Many of her replacements
@@ -852,6 +1060,10 @@ them; ask.
 | **L-12** | Complete sentences, always. No fragments. Every paragraph, slide bullet, lead line, task statement and feedback line has a subject and a verb. **Out of scope, by Petra's rulings (2026-08-12):** figure and slide *captions*, which keep the conventional noun-phrase style; the short bold noun-phrase *label* S-29 permits (`<term>Common cathode.</term>` followed by the explanation); **enumerated checklists**, where terse parallel items are the point — the compiler-error list in `ch-debugging.ptx`, the register recap in `ch-adc.ptx`, the three voltages to measure in `ch-intro-blinky.ptx`; titles and headings; code comments and in-listing annotations; table cells and figure labels. |
 | **L-13** | A document does not act on a student. Not "Lab 6 asks you to write three functions", "Lab 6 gives you the signature", "Lab 6 suggests an experiment" — "In Lab 6 you are asked to write…", "The signature is given in Lab 6", "In Lab 6 there is an optional experiment". Petra, on a Day 11x slide (2026-08-21): *"Don't make things do other things."* The rule is about a document commanding or handing something to a person; a document as the subject of a plain descriptive verb is fine, and so is a specification asking for a **value** — she asked for "the PWM mode the Reference Manual (Section 17.3.8) asked for" in the same review. |
 | **L-14** | Say **Reference Manual** when the section number is RM0490's. A bare "section 17.4" reads as a section of this book. Petra, same review: *"say Reference Manual so that they know we are not talking about our book section."* |
+| **L-15** | Don't personify hardware — a register, pin, or timer is not a person, and does not act on one. Banned verbs for where something is: **sit(s)/sitting**, **live(s)/living**, and any verb that gives a register hands ("**handed** the pin to the register"). Not "the block sitting just below the counter", not "the compare value sits above it" / "the two numbers actually live" / "where that gate sits", not a section titled "Where Those Registers **Sit** in the Hardware" — say **is/are** or **located**, or describe what physically happens: the pin is configured, the value is stored, the signal travels through the output stage. Petra, Day 11x (2026-08-22): *"the register is not a person. Don't personify things,"* on a run of "sits"/"lives" across three figures in a row *"too much sitting of and living of numbers and things,"* and, circling a section title, *"let's not have registers 'sit'. How about 'located'?... apply everywhere."* That last instruction is the rule: this was found and fixed in five separate places across one day's material, so grep a draft for these verbs near a register, pin, or bit name before it ships. |
+| **L-17** | **Nothing on the signal path has a voice.** A sensor does not *say*, *tell*, *report*, *speak* or *announce*; a trace does not *talk*. Petra, Day 12 (2026-08-25), twice in three minutes on the same phrase — *"sensors don't speak"* and then, on the Part title carrying it, *"talking again."* Fixed: ~~"Wire the sensor and look at **what it says**"~~ → "Wire the sensor and look at **its output**" (recap item, agenda item, Part 2's section slide and the subsection title all carried it). This is L-15's sibling: L-15 bans giving hardware a *body* (registers that sit, values that live), L-17 bans giving it a *voice*. The honest verbs are the electrical ones — the output *goes* HIGH, the pin *reads* 0, the trace *toggles*. A person reading an instrument is still fine: "what the trace is telling you" survived, because the subject doing the interpreting is the student. |
+| **L-18** | **Never point a student at "Part N".** Petra, Day 12 (2026-08-25): *"Don't refer to parts. Nobody knows what those are."* The Part numbers are the lesson plan's scaffolding and the presenter's, and they are on nothing the student sees. Say **when** instead — ~~"the pulse rate you measured in Part 2"~~ → "as it did **earlier today**" — or, better on a predict slide, give the number outright (P-19). Presenter notes and `<instructor>` blocks keep Part numbers: they are hers. |
+| **L-16** | A paragraph or section does not open on a sentence fragment used for effect — "Then the timer's own numbers." "And the part that makes it a PWM channel." These read as terse transitions into a code listing, echo old-deck slide register, and are still fragments: no subject-verb clause. `check_rules.py`'s L-12 warning only catches a lone fragment inside a list of complete sentences, so a fragment opening a paragraph is invisible to the linter — read every paragraph that leads into a `<program>` listing for a subject and a verb by hand. Petra, Day 11x, 2026-08-24, on two of these in one pass: *"not a complete sentence — use only complete sentences"* and *"sentence fragment."* Fixed: "Then **come** the timer's own numbers." / "**This is** the part that makes it a PWM channel." |
 
 `scripts/check_rules.py` enforces L-1 … L-11 and warns on L-12, plus B-9, B-11,
 B-11a, B-14, B-15 and S-4, image paths, unresolved cross-references and step
@@ -866,8 +1078,15 @@ register of a checklist is enumeration, not prose, whereas one unpunctuated
 bullet in a list of sentences is somebody writing a bullet badly. A trailing
 bracket does not count as terminal punctuation, so "(anode to cathode)" is still
 a fragment. The corpus is clean under this rule (2026-08-12). The rest of L-12 is
-judgment, like S-11 … S-28.
-The rest of S-11 … S-29 needs judgment and is deliberately not linted. Each was
+judgment, like S-11 … S-28. So are L-13 … L-18: none of them are lintable — a
+document-as-agent phrasing, a bare section number, a personifying verb next to a
+register name, a fragment opening a paragraph, a sensor given a voice and a
+pointer at "Part 2" all require reading the sentence, not matching a pattern. Read
+for them explicitly; do not expect `check_rules.py` to catch them. L-17 and L-18
+are the two that a grep gets *close* to: `\bsays\b|\btells\b|\btalking\b` near a
+sensor or a trace, and `\bin Part [0-9]` anywhere outside a `<note>` or an
+`<instructor>` block.
+The rest of S-11 … S-30 needs judgment and is deliberately not linted. Each was
 validated against the corpus as it stood before the voice pass: together they
 catch 7 real violations, three of them phrases Petra deleted by hand in
 `plans/day8-voice-reference.diff`, with no false positive in any chapter file.

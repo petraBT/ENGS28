@@ -222,6 +222,34 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   free. This rule is only about what gets projected. It is worth a grep before
   every deck goes over — an `<xref>` inside an activity is easy to miss, because
   the activity was written for the book first.
+  **`dexref()` is not the safety net.** It rewrites "Figure 11.2.12" and
+  "picture Figure 10.1.2", and everything else keeps its link — a
+  `<xref ref="subsec-…"/>` projects as a live "Subsection 10.4.12". Day 12
+  shipped two past three gates, one inside a table a slide refs and one inside
+  an activity's `<introduction>`, and Petra found both by clicking one:
+  *"Remember that we never want to link to the book from slides. Clicking on a
+  link like that leaves the slides in the middle of class — no good."* So the
+  grep is the rule, not the player: `grep -n '<xref' ` over every block any deck
+  entry names, including the tables and figures those blocks `ref`. Move the
+  pointer into the paragraph **outside** the projected block; the book loses
+  nothing.
+- **A projected table's own `<title>` must not repeat the deck entry's title.**
+  A `ref` slide renders its headline from the deck entry and the table renders
+  its `<title>` again underneath, so a table named the same thing as its slide
+  says it twice on the wall. Petra, Day 12, 2026-08-25, circling the pair:
+  *"duplicate of the title."* Fix the **table's** title, not the headline — the
+  headline is what the room reads first. `table-day12-diagnostics` went from
+  *"What the trace is telling you"* (identical to the slide) to *"Four traces,
+  and their potential causes"*, which then made the slide's `<caption>`
+  redundant and it came out too. Check every `ref` slide that points at a
+  `<table>`: the two strings are in different files, which is why this survived
+  three gates.
+- **Do not project the same slide twice — page back to it.** Leaving a reference
+  table up for a work block reads as a duplicate to the person watching the deck
+  go by, whatever the presenter note says. Petra, Day 12, 2026-08-25, on a
+  second copy of the build-order table placed to stay up through the build:
+  *"This seems to be a repetition of the previous slide. cut."* One entry, and
+  the Part's `presenterNote` says to page **back** to it.
 - **Captions are INSTRUCTIVE, not descriptive.** A slide caption is a one-line
   "what to notice / what this shows / what to do" (e.g. *"CH1 on the button, CH2
   on the LED; minus leads to GND"*), NOT the book's full figure caption. Author it

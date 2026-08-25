@@ -15,7 +15,7 @@ deliveries are the other way round from the standard flow.
 | **The pre-class reading** | **written in full**, `sec-speed-before-class` |
 | **Gate 1.5** — voice probe | done, 7 rewrites applied: `reviews/day12-gate1_5.md` |
 | **The in-class skeleton** | **written**, `sec-motors-day12`, Parts 1–6 — subsections, figures, tables, activities with their `<instructor>` answers, and the `<slide>` blocks. **No connecting prose.** |
-| **The deck** | `assets/decks/day12.json`, **41 slides, 31 refs** — 44/34 until Petra's pass 1 cut three |
+| **The deck** | `assets/decks/day12.json`, **40 slides, 30 refs** — 44/34 until Petra's pass 1 cut four |
 | **Gate 2′** | done, 11 reviewers, 4 BLOCKER: `reviews/day12-gate2.md`, list applied |
 | **→ Petra, pass 1** | **DONE, 2026-08-25.** 42 slide comments, all applied and archived; see the pass-1 section below |
 
@@ -101,17 +101,24 @@ content:
 
 Both are **asset requests, not caption work** — a rule this day proposes.
 
-- **`fig-day12-wiring`** — **she is supplying this one herself.** Pass 1, on
-  `sl-day12-wiring`: *"You are missing all of my annotations here. Tell me where to
-  put the actual image. You may have to remove some of the wording of my old slide
-  from the image I am going to give you, including the page number from my old
-  slide."*  **Drop path: `assets/images/Day12-Motors(3)/fig-day12-wiring-annotated.png`**
-  (any raster extension is fine — the `<image source>` line is the only thing that
-  changes). Crop her old slide's wording and its page number out first. A source
-  comment above the figure says all of this. Until it lands, the rebuilt SVG stays
-  and the two claims ride on the slide's bullets. The original problem stands
-  underneath: her slide 6 **has no regulator board and no barrel jack in it**, and
-  now that the sensor's 5 V is settled the drawing is one wire short of the story.
+- ~~**`fig-day12-wiring`**~~ **LANDED, 2026-08-25.** She supplied her own annotated
+  slide 6; it is `images/Day12-Motors(3)/fig-day12-wiring-annotated.png`, with the
+  "Exercise #1" heading, its three bullets and its page number erased and the canvas
+  re-cropped. The slide is image-dominant now — her three callouts carry what the
+  bullets used to. **It also has the regulator board and its barrel jack in it**,
+  which the rebuilt SVG did not. `fig-day12-wiring.svg` is kept for reference.
+  **Two things still open on it, both hers to decide:**
+  - Its 5 V / GND / Vin pads have **nothing wired to them**, exactly as in her
+    slide 10, so the supply path is not traceable off the picture. The caption
+    says so and sends the student to their own board.
+  - **Her callout text projects at about 20 px on a 1600×900 stage**, against 28 px
+    for a slide bullet — legible, but the smallest type in the deck. The cause is
+    the empty upper-left quarter of her drawing: the canvas is 2488×1836, so the
+    image is height-capped at 648 px and only 878 px of the 1472 px-wide box is
+    used. **Dragging the two callout boxes up into that empty corner in PowerPoint
+    and re-exporting would make her own annotations about 1.65× bigger on the
+    wall** — arrows follow the boxes there, which is why it has to be her export
+    and not a crop here.
 - **`fig-day12-lab6-build`** is her slide 10, and the regulator's `5V`/`GND`/`Vin`
   pads render gold with no wire touching them, so the one power path the caption
   leads with is the one a student cannot trace. Worth asking for it **graded**: a
@@ -183,6 +190,27 @@ of the day:
    `presenterNote`, so the prose does not put scaffolding back. The two instructor
    blocks there stay: **a solution no deck projects is a P-10 failure**
    (`check_deck.py`), so deleting either is her call, not a side effect.
+
+### The second batch, later the same day
+
+Eight more comments, all applied and archived. Two more shape changes:
+
+5. **`sl-day12-build-order` is projected once, not twice.** *"This seems to be a
+   repetition of the previous slide. cut."* The second copy existed to keep the
+   table on the wall through the build; the Part 6 `presenterNote` now says to page
+   **back** to it. New convention in `AUTHORING-slides.md`. Deck 41 → 40.
+6. **No 9 V anywhere in student-facing text.** *"Wait — what do you even mean by
+   this??? We just have the regulator and the Nucleo,"* then *"let's just call this
+   the regulator, not mention 9V anywhere."* Six places came out, including one
+   acceptance test in `table-day12-build-order` that read *"9 V on its input side
+   and 5 V on its output side"* and **now checks only the output** — the one place
+   a check got smaller, so it is the one to put back if she wants it.
+
+And three wording rules that generalise, now written up: L-17 (nothing on the
+signal path has a voice), L-18 (never point a student at "Part N"), B-17 (no C
+idiom the course has not taught, in projected code), S-30 (a slide's headline is a
+promise the slide has to keep), P-19 (a predict slide supplies its own numbers),
+plus additions to P-12, B-11c and B-11e.
 
 **A gotcha worth writing down.** The review server on **8928 is a child of
 `preview-slides.sh`**, whatever `CLAUDE.md` says about it being standalone —
