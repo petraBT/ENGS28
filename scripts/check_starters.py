@@ -66,6 +66,12 @@ FRAGMENTS = [
       "// Generate an update event - this clears counter, prescaler counter, updates registers")),
     ("assets/starters/TTmotor_ramp.c", "tim14_pwm_set", "source/ch-motors.ptx",
      "// Safety first: Allow no pulse values outside the (0, PWM_TIMER_MAX-1 range!"),
+    # sysinit.c ships in every project and had never been opened in the book
+    # until Day 12's Part 4, which is where milliseconds() is finally explained.
+    # The chapter prints SysTickInit() in full; the counter and the accessor are
+    # printed beside it in their own block.
+    ("assets/starters/sysinit.c", "SysTickInit", "source/ch-motors.ptx",
+     "// Assumes 12MHz clock...could be better"),
 ]
 
 
