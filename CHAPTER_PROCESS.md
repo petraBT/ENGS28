@@ -620,7 +620,7 @@ is done when both are true.
 | ch-timers-interrupts.ptx | Day08 | Day 8 through Gate 2 + Petra's review rounds |
 | ch-gpio-interrupts.ptx | Day09 | Day 9 through Gate 2 (Petra pending) |
 | ch-i2c.ptx | Day09X, Day10 | Days 9x and 10 through Gate 2 (Petra pending) |
-| ch-motors.ptx | Day11, Day11x, Day12 | **Day 11 done** (book + deck, Petra passed 2026-08-18); **Day 11x through Gate 3, list applied, awaiting her pass 2** — it is the pilot of Steps 3′/4′, see `plans/day11x-handover.md` and `plans/day11x-prompt.md`; 12 rough |
+| ch-motors.ptx | Day11, Day11x, Day12 | **Day 11 done** (book + deck, Petra passed 2026-08-18); **Day 11x through Gate 3, list applied, awaiting her pass 2** — the pilot of Steps 3′/4′, see `plans/day11x-handover.md`; **Day 12 through Gate 2′, list applied, awaiting her pass 1** — reading + skeleton + deck, no in-class prose yet, see `plans/day12-handover.md`. The chapter's `Reference:` section is still unwritten; its shape is fixed in `plans/day12.md` |
 | ch-accelerometers.ptx | Day13, Day13x, Day14 | rough (Day 13 moved here from ch-i2c, Petra's call) |
 | ch-servos.ptx | Day15, Day15x | rough |
 | ch-photosensors.ptx | Day16 | rough |

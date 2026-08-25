@@ -43,6 +43,7 @@ def main():
         sys.exit("usage: check_deck.py <deck.json> [more.json ...]")
     bad = 0
     marked = source_instructor_ids()
+    src_minutes = source_slide_minutes()
     for deck_path in sys.argv[1:]:
         # index.json is the contents page's deck list, not a deck. It is in this
         # directory (and so in a *.json glob), but has no slides to check —
@@ -56,6 +57,7 @@ def main():
         deck = json.load(open(deck_path, encoding="utf-8"))
         refs = [s for s in deck["slides"] if s.get("type") == "ref"]
         print(f"\n{os.path.basename(deck_path)} — {len(deck['slides'])} slides, {len(refs)} refs")
+        bad += check_part_minutes(deck, src_minutes)
         for s in refs:
             # The deck JSON and the source must agree about instructor-only.
             # They drive different halves: the JSON decides the player's badge
@@ -110,6 +112,75 @@ def main():
     bad += check_every_solution_is_projected(marked)
     print(f"\n{bad} problem(s)")
     sys.exit(1 if bad else 0)
+
+
+MINUTES = re.compile(r"\u2248 ?(\d+) min")
+
+
+def source_slide_minutes():
+    """xml:id -> the minutes in that block's own <note>, for every <slide> in
+    source/*.ptx.  Most of a Part's beats are timed here rather than in the deck
+    JSON, so a budget check that reads only the deck under-counts every Part."""
+    mins = {}
+    for path in glob.glob(os.path.join(REPO, "source", "*.ptx")):
+        src = open(path, encoding="utf-8").read()
+        for m in re.finditer(r'<slide\b[^>]*xml:id="([^"]+)"[^>]*>(.*?)</slide>',
+                             src, re.S):
+            note = re.search(r"<note>(.*?)</note>", m.group(2), re.S)
+            if note:
+                found = MINUTES.findall(note.group(1))
+                if found:
+                    mins[m.group(1)] = int(found[0])
+    return mins
+
+
+def check_part_minutes(deck, src_minutes):
+    """S-8: a Part's row must equal the sum of its own beats.
+
+    The Part table is not the budget; the beats are.  A day whose Part rows sum
+    to the class length can still be over, because the per-slide and
+    per-activity timings inside a Part are what the hour actually spends -- and a
+    beat with no time on it at all is the failure mode.
+
+    Found three times by hand, each time one level further down: Day 11's class
+    length was wrong; Day 12's Gate 1 found the Part rows summing to 115 against
+    110; Day 12's Gate 2' found the rows correct and Part 5's beats summing to 9
+    against a row of 5.  All three were a script's work.
+
+    A beat is timed either on its deck entry's presenterNote or in the <slide>
+    block's own <note>; the deck wins, since it is the more specific of the two.
+    Only OVERSHOOT is reported.  A Part whose beats fall short of its row is the
+    normal case for open work -- a build block is thirty minutes with nothing
+    scheduled in it -- and reporting those would bury the one that matters.  Only
+    Parts where the convention is in use are checked, so older decks that time
+    nothing do not fire.  WARNS rather than failing, because the fix is a
+    judgment about what to cut.
+    """
+    section, beats, rows, order = None, {}, {}, []
+    for s in deck["slides"]:
+        mins = MINUTES.findall(s.get("presenterNote") or "")
+        if s.get("type") == "section":
+            section = s.get("kicker") or s.get("title") or "?"
+            order.append(section)
+            if mins:
+                rows[section] = int(mins[0])
+            continue
+        if not section:
+            continue
+        if mins:
+            beats[section] = beats.get(section, 0) + int(mins[0])
+        elif s.get("slide") in src_minutes:
+            beats[section] = beats.get(section, 0) + src_minutes[s["slide"]]
+    warned = 0
+    for sec in order:
+        if sec not in rows or sec not in beats or beats[sec] <= rows[sec]:
+            continue
+        if not warned:
+            print("  minute budgets that do not reconcile (S-8):")
+        warned += 1
+        print(f"    {sec}: the row says {rows[sec]} min and its beats sum to "
+              f"{beats[sec]} — the Part is over its own budget")
+    return 0
 
 
 def check_every_solution_is_projected(marked):
