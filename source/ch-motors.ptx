@@ -1357,7 +1357,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
             <p>
                 <xref ref="fig-tim14-block-full"/> is the whole of TIM14 as the reference
                 manual, RM0490, prints it in Figure 165.  The core we already know runs
-                across the middle.  What is new is the block sitting just below the counter —
+                across the middle.  What is new is the block located just below the counter —
                 the capture/compare register, <c>CCR1</c> — and the path leading from it out
                 to the pin marked TIMx_CH1, which for us is PA7.  <c>CCR1</c> holds the
                 compare value we introduced on Tuesday: the counter is compared against it on
@@ -1377,7 +1377,8 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 looked only at this timer's core — the prescaler, the counter, and the
                 auto-reload value it counts up to (<xref ref="fig-tim14-block"/>) — and said
                 the capture/compare machinery around it would come back in the motor
-                chapters.  This is it.  The clock still enters at the left and the counter
+                chapters.  This is it: now we introduce a new timer mode that allows us to
+                use the timer to produce a PWM signal on a pin.  The clock still enters at the left and the counter
                 CNT still runs up to the auto-reload register, but now the capture/compare
                 register below it is compared against the counter on the way up, and the
                 result leaves through the output control block at the right, on the pin
@@ -1401,7 +1402,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 which you found on Day 11 is where TIM14's channel 1 comes out.  Getting that pin to
                 carry a PWM waveform takes twelve steps of setup, and most of them write
                 registers we have written before — some on Day 8, when we first used this
-                timer, and some on Day 11, when we handed the pin over to it.  So before we
+                timer, and some on Day 11, when we configured the pin.  So before we
                 go looking for what is new, here is what we already know how to do.
             </p>
             <table xml:id="table-day11x-recall">
@@ -1461,7 +1462,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 output reach the pin at all.  The third is not a missing register so much as
                 a line whose reason is not obvious — the program writes one more register
                 just before it starts the counter, and the interesting part is why that
-                write has to happen first rather than after.  All three are in section 17.4
+                write has to happen before rather than after starting the counter.  All three are in section 17.4
                 of the reference manual, and that is where we'll find them.
             </p>
             <activity xml:id="act-day11x-registers">
@@ -1473,10 +1474,6 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                     section 17 is the one titled <q>General-purpose timers (TIM14)</q>.
                     Section 17.3.8, <em>PWM mode</em>, on page 479, is a few pages earlier
                     and you will want it for the first question.</p>
-                    <p><xref ref="table-day11x-recall"/> lists what we have already set up.
-                    The three questions below are the ones that table does not answer.  We
-                    will go through all of them together afterwards, so you will leave with
-                    the whole mapping whatever your group gets to.</p>
                 </introduction>
                 <task xml:id="task-day11x-pwm-mode">
                     <statement><p>Section 17.3.8 says PWM mode is selected by writing
@@ -1504,7 +1501,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                     that before starting the counter rather than after?</p></statement>
                 </task>
                 <task xml:id="task-day11x-early">
-                    <statement><p>If your group has all three, work this out: our program
+                    <statement><p>If your group has answered all three of the above questions, work this out: our program
                     calls <c>tim14_pwm_set(625)</c>.  Given that the counter runs up to
                     1249, what fraction of each period is the pin HIGH, and what average
                     voltage does the motor see from a 5 V supply?</p></statement>
@@ -1544,7 +1541,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 enable register, and the manual says that with it set the OC1 signal is
                 output on the corresponding output pin.  Without it the counter still
                 counts, the comparator still compares, and the channel still produces its
-                signal internally — but nothing reaches PA7, so the pin sits at whatever
+                signal internally — but nothing reaches PA7, so the pin stays at whatever
                 the output stage leaves it at and the motor never turns.  This is worth
                 dwelling on: it is the one line whose absence produces a board that looks
                 completely correct and does nothing, and they will run into it again in Lab 6.</p>
@@ -1569,13 +1566,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 
         <!-- Part 3 -->
         <subsection xml:id="subsec-day11x-hardware">
-            <title>Part 3: Where Those Registers Sit in the Hardware</title>
-            <p>
-                Part 2 gave us the names.  Now we'll look at where those registers sit
-                inside the timer, which is what makes the two new ones reasonable rather than
-                arbitrary.  We'll start by going back to the trace you measured on Tuesday,
-                and asking a question about it that we could not have answered then.
-            </p>
+            <title>Part 3: Where Those Registers Are Located in the Hardware</title>
 
             <!-- SHARED FILE: this is Day11-Motors/fig-pwm-scope.png, Day 11's own
                  scope capture, and Day 11x is now its only slide user (Day 11
@@ -1587,9 +1578,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 <caption>One frozen moment of the trace you watched on Day 11
                 (<xref ref="fig-pwm-scope"/>).  The window is about two milliseconds wide, so
                 it holds roughly three periods of the 1.6 kHz waveform and the duty cycle
-                barely changes across the screen.  Stopping the picture is what makes it
-                possible to ask which of the two numbers behind it the program is
-                rewriting.</caption>
+                barely changes across the screen.</caption>
                 <image source="images/Day11-Motors/fig-pwm-scope.png" width="92%"/>
             </figure>
             <slide xml:id="sl-day11x-predict-ccr1" ref="fig-pwm-scope-still">
@@ -1602,17 +1591,24 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 </slide>
 
             <p>
+                The width of the HIGH part changed as the motor sped up and slowed down,
+                while the period did not.  So which of the two numbers we set up — the
+                value the counter runs to, or the value it is compared against — is the
+                program rewriting every two seconds?
+            </p>
+
+            <p>
                 The answer is the compare value.  The program writes a new one every two
                 seconds as the ramp climbs and falls, and it never touches the auto-reload
                 register after the initialization, which is why the width of the HIGH portion
                 moves while the period stays exactly where it is.  A program that rewrote the
                 auto-reload value instead would change the frequency of the waveform rather
                 than its duty cycle, and the motor would not speed up at all.
-                <xref ref="fig-tim14-main-circuit"/> is where both of those numbers live.
+                <xref ref="fig-tim14-main-circuit"/> is where both of those numbers are.
             </p>
             <figure xml:id="fig-tim14-main-circuit">
-                <caption>Where the two numbers actually live (RM0490, Figure 176).  The
-                counter runs along the bottom and the compare value sits above it, and the
+                <caption>Where the two numbers actually are (RM0490, Figure 176).  The
+                counter runs along the bottom and the compare value is shown above it, and the
                 comparator to the right of them is what flips the output partway up each period —
                 which is why <c>TIM14_CCR1</c> sets how long the pin stays HIGH and
                 <c>TIM14_ARR</c>, the value the counter runs up to, sets how long the period
@@ -1628,10 +1624,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 </slide>
 
             <p>
-                We already worked out what CC1E does.  What the figures have not shown yet
-                is where that gate sits: the comparator's result travels through an output
-                stage on its way to PA7, and the enable bit is the last thing it passes
-                through.
+                We already worked out what CC1E does (it lets the channel's output reach
+                the pin).  What the figures have not shown yet
+                is the output stage the comparator's result travels through on its way to
+                PA7 — the enable bit is the last thing it passes through.
             </p>
             <figure xml:id="fig-tim14-output-stage">
                 <caption>How the signal gets out to the pin (RM0490, Figure 177).  The
@@ -1677,9 +1673,9 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 Now we'll work out what value goes into each of those registers.  Section
                 17.4 gives every register as a row of bits, and the value our program needs is
                 assembled from the position of a field and the pattern that goes in it.  Three of the registers we need are the easy case, because the thing we
-                set is a single bit; <c>TIM14_CCMR1</c> is the harder case, and the
-                difference between them explains a detail of the code that would otherwise
-                look like clutter.
+                set is a single bit; <c>TIM14_CCMR1</c> is the harder case, because there is
+                more than one bitfield we need to set in it, one of which consists of four
+                bits not all of which are adjacent to each other.
             </p>
 
             <!-- P-6: the decode activity comes BEFORE the walkthrough, and
@@ -1773,9 +1769,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 neither of the things we set in it is a single bit.  OC1M, which chooses what the channel does, is four bits wide
                 and split across the register — three of them together and a fourth up at bit
                 16.  CC1S, which decides whether the channel is an output or an input, is two
-                bits at the bottom.  A field several bits wide cannot be set by OR-ing a value
-                into it, because OR can only turn bits on: whatever was already there stays
-                there, and the result is the two patterns mixed together.  That is why each of
+                bits at the bottom.  A field several bits wide cannot be reliably set by
+                OR-ing a value into it, because OR can only turn bits on: if the field
+                already holds a 1 where the new pattern wants a 0, that bit stays set, and the
+                result is the two patterns mixed together.  That is why each of
                 these two gets a clearing line before its setting line, and why the three
                 single-bit registers do not.
             </p>
@@ -1809,7 +1806,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 active as long as the counter is below the compare value.  In magenta, CC1S
                 gets <c>00</c>, which is what keeps the channel an output.  Two fields, one
                 register, which is why the initialization writes <c>CCMR1</c> twice.</caption>
-                <image source="images/Day11x-Motors(2)/fig-ccmr1-oc1m_cc1s.png" width="88%"/>
+                <image source="images/Day11x-Motors(2)/fig-ccmr1-oc1m_cc1s.png" width="92%"/>
             </figure>
             <slide xml:id="sl-day11x-ccmr1-oc1m" ref="fig-ccmr1-oc1m-bits" stack="yes">
     <ul>
@@ -1833,16 +1830,16 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 
             <p>
                 That is every register the initialization touches, so we can now read it
-                straight through.  The function runs in three stretches: it hands the pin to
-                the timer, it sets the timer's own numbers, and it puts the channel into PWM
-                mode and starts it.  Nothing in it is new at this point, which is the whole
+                straight through.  The function runs in three stretches: it sets up the GPIO
+                pin in the mode the timer needs, it sets the timer's own numbers, and it puts
+                the channel into PWM mode and starts it.  Nothing in it is new at this point, which is the whole
                 idea — by the time you reach the last line every register in it should be one
                 you have already looked up.
             </p>
             <p>
                 The pin first.  These are the same three operations we used on Day 11 —
                 give the port a clock, put the pin in alternate-function mode, and select
-                which alternate function — and you wrote them yourself then.
+                which alternate function.
             </p>
             <program language="c"><code><![CDATA[
 void tim14_pa7_pwm_init(void) {
@@ -1858,7 +1855,7 @@ void tim14_pa7_pwm_init(void) {
 	GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 ]]></code></program>
             <p>
-                Then the timer's own numbers.  <c>PSC_FACTOR</c> and <c>PWM_TIMER_MAX</c> are
+                Then come the timer's own numbers.  <c>PSC_FACTOR</c> and <c>PWM_TIMER_MAX</c> are
                 the two constants at the top of the file, 6 and 1250, and both are written
                 one less than the value we have in mind because the counter starts at zero.
                 The last of these four lines is the only one in the function that is there
@@ -1880,7 +1877,7 @@ void tim14_pa7_pwm_init(void) {
 	TIM14->CCR1 = 0;
 ]]></code></program>
             <p>
-                And the part that makes it a PWM channel.  The two <c>CCMR1</c> pairs are the
+                This is the part that makes it a PWM channel.  The two <c>CCMR1</c> pairs are the
                 read-modify-write we decoded above; <c>CC1E</c> lets the channel reach the
                 pin; <c>UG</c> forces the update event that loads the buffered values; and
                 <c>CEN</c> starts the counter.
@@ -1905,13 +1902,15 @@ void tim14_pa7_pwm_init(void) {
 }
 ]]></code></program>
             <p>
-                And the whole of what changes while the motor is running.  The clamp keeps the
-                value inside the range the counter can represent, and then one assignment sets
-                the speed.  The <c>value &lt; 0</c> test cannot fire on a <c>uint16_t</c>, and
-                it is there for the signature rather than for this call: when you write
-                <c>motor_speed()</c> for Lab 6, taking a signed parameter is the natural
-                choice, and then that line is all that stands between a negative speed and a
-                compare value of sixty-five thousand.
+                Here is the function that controls the motor speed while it is running: the
+                clamp keeps the value inside the range the counter can represent, and then one
+                assignment sets the speed.  The <c>value &lt; 0</c> test is technically not
+                necessary here since a <c>uint16_t</c> value will never be less than zero, but
+                it will help ensure you never set the compare register to a value outside the
+                correct range by accident: when you write <c>motor_speed()</c> for Lab 6,
+                taking a signed parameter is the natural choice, and then that line is all
+                that stands between a negative speed and a compare value of sixty-five
+                thousand.
             </p>
             <program language="c"><code><![CDATA[
 void tim14_pwm_set(uint16_t value) {
@@ -2016,19 +2015,18 @@ void tim14_pwm_set(uint16_t value) {
 
             <p>
                 Once that function has run, the motor's speed is changed by writing one
-                register and nothing else.  <c>tim14_pwm_set()</c> clamps the value it is
-                given into the range the counter can represent and then assigns it to
+                register and nothing else.  <c>tim14_pwm_set()</c> limits the value it is
+                given to the range the counter can represent and then assigns it to
                 <c>CCR1</c>; the prescaler, the auto-reload value, the mode bits and the
                 output enable are all left exactly as the initialization set them, and the
-                timer keeps producing the waveform without any further help from the CPU.
-                That is the closure worth carrying out of today: one function to set the
-                channel up, and one register to write for the rest of the program's life.
+                timer keeps producing the waveform without any further involvement from the
+                CPU.
             </p>
             <activity xml:id="act-day11x-checkpoint">
                 <title>Name the register</title>
                 <statement>
                     <p>On your own, without looking back.  Each step of the initialization
-                    does one of these jobs.  Write in the register it writes.</p>
+                    does one of these jobs.  Write in the register it modifies.</p>
                     <tabular halign="left" top="major" bottom="major" left="minor" right="minor">
                         <col halign="left" width="55%"/>
                         <col halign="center" width="45%"/>
@@ -2102,9 +2100,7 @@ void tim14_pwm_set(uint16_t value) {
                 in a file called <c>tb6612.c</c>.  Two of the three are almost in front of
                 you already: <c>tim14_pa7_pwm_init()</c> becomes the initialization once you
                 fold in the two lines that make PA5 and PA6 outputs, and
-                <c>tim14_pwm_set()</c> becomes the speed-select nearly unchanged.  The third
-                is the one to be careful with, and the trap is that
-                <c>TTmotor_ramp.c</c> looks as though it contains it.
+                <c>tim14_pwm_set()</c> becomes the speed-select nearly unchanged.
             </p>
             <slide xml:id="sl-day11x-lab6-seam">
     <ul>
@@ -2184,9 +2180,9 @@ void tim14_pwm_set(uint16_t value) {
                 The counter divides each period into a fixed number of steps and the compare
                 register holds whole numbers, so the duty cycle moves in steps rather than
                 continuously.  Our period is 625 µs and the counter divides it into 1250
-                steps, so one step of <c>CCR1</c> is 625 µs ÷ 1250 = 500 ns of pulse width —
-                and, from the Day 11 stretch, 5 V ÷ 1250 = 4 mV of average voltage at the
-                motor.  That is what decides whether two speeds you ask for are actually
+                steps, so one step of <c>CCR1</c> is 625 µs ÷ 1250 = 500 ns of pulse width,
+                and 5 V ÷ 1250 = 4 mV of average voltage at the motor.  That is what decides
+                whether two speeds you ask for are actually
                 different, and it is what your Lab 6 screenshot has to be able to show.
             </p>
 
@@ -2207,15 +2203,14 @@ void tim14_pwm_set(uint16_t value) {
 </slide>
 
             <p>
-                That is as far as we can go with the motor on its own.  We can set its speed,
-                and after today we know exactly which register carries that setting and what
-                every other register in the program is doing to make it work.  What we cannot
-                do yet is measure the speed we are getting, and without that we have no way to
-                tell whether the motor is actually turning as fast as we asked — under load it
-                will not be.  The hardware for measuring it is already sitting on your motor.
+                Now that we know how to control the motor's speed along with all of the
+                registers needed to do so, we'll turn to measuring the motor's speed to find
+                out whether the motor is actually turning as fast as we asked for (under load
+                it may not).  The hardware we'll use for measuring speed (a slotted wheel
+                sensor) is already mounted on your motor.
             </p>
             <figure xml:id="fig-encoder-wheel">
-                <caption>The other half of a motor controller: a slotted wheel on the shaft,
+                <caption>Measuring motor speed with a slotted wheel on the shaft,
                 and a photointerrupter that sees the light through it interrupted once per
                 slot.  Counting those pulses is how the display in the background knows the
                 shaft is turning at 222 rpm.  The wheel and the sensor are already part of
@@ -2248,6 +2243,283 @@ void tim14_pwm_set(uint16_t value) {
     <note>≈ 1 min. Play it, do not narrate over it. If it will not load within about ten seconds, describe the trace instead and move on — the point survives without the video. This is her own capture from the Day 11x deck; the point to draw out of them afterwards is that the pulse RATE is what carries the speed, not the pulse shape.</note>
 </slide>
         </subsection>
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-speed-before-class">
+        <title>Before Class: Counting Pulses to Measure Speed</title>
+        <introduction>
+            <p>
+                On Wednesday we set the motor's speed, but we could not yet
+                measure it.  At the end of class we looked at the sensor that will
+                let us: an <term>optical incremental sensor</term>, a slotted wheel
+                on the motor's shaft and a photointerrupter whose beam is
+                interrupted once per slot (<xref ref="fig-encoder-wheel"/>).  It is
+                already mounted on the motor in your kit.  What comes out of it is a
+                train of pulses, and the rate those pulses arrive at is proportional
+                to how fast the shaft is turning.  In this reading we'll work out how
+                to turn that rate into the speed of the shaft in revolutions per
+                minute (rpm) — the number we'll count out, convert, and put on the
+                seven-segment display in class.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-speed-sensor">
+            <title>How the Photointerrupter Turns Rotation Into Pulses</title>
+            <p>
+                The optical incremental sensor we saw at the end of Wednesday's class has
+                two parts.  The first is the slotted wheel, which is fixed to the
+                motor's shaft and turns with it.  The second is the photointerrupter,
+                the U-shaped part wrapped around the rim of that wheel.  There is an
+                LED (light-emitting diode) on one side of the U and a
+                <term>phototransistor</term> on the other.  A phototransistor is a
+                transistor that is switched by light falling on it rather than by a
+                current we supply.  The LED shines steadily across the gap between
+                the two sides, and the rim of the wheel passes through that gap
+                (<xref ref="fig-photointerrupter-beam"/>).
+            </p>
+            <p>
+                Every time a slot comes around, the light gets through to the
+                phototransistor; every time the solid part of the rim between two
+                slots comes around, the light is blocked.  So the sensor's output
+                switches back and forth once for every slot that goes past, and a
+                wheel that is turning steadily produces a steady square wave.
+            </p>
+            <p>
+                For now the two ideas to hold onto are that the <em>number</em> of
+                pulses tells us how far the shaft has turned, and that the
+                <em>rate</em> at which they arrive is proportional to how fast it is
+                turning.
+            </p>
+
+            <figure xml:id="fig-photointerrupter-beam">
+                <caption>The two parts of the optical incremental sensor, and the pulse
+                train they produce.  The slotted wheel turns on the motor's shaft, and
+                its rim passes through the gap in the photointerrupter, where an LED
+                on one side shines across to a phototransistor on the other.  A slot
+                lets the light through and the solid rim between two slots blocks it,
+                so the sensor's output switches once for every slot that goes past —
+                which makes the rate of those pulses proportional to the speed of the
+                shaft.  The wheel in your kit has slots cut all the way around its
+                rim, and in class we'll start by counting how many there are.</caption>
+                <image source="images/Day12-Motors(3)/fig-photointerrupter-beam.svg" width="92%"/>
+            </figure>
+
+            <p>
+                The photointerrupter has three connections: power, ground, and an
+                output.  The output needs a <term>pull-up resistor</term> — a
+                resistor of about 10 kΩ between the output and the supply rail — and
+                the same resistor appears in the Lab 6 wiring.  We'll wire it in
+                class, put the oscilloscope on the output, and work out there why the
+                pull-up is needed.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-speed-rpm">
+            <title>From Pulses per Second to Revolutions per Minute</title>
+            <p>
+                The slotted wheel has some number of slots cut around its rim, and
+                we'll write that number <m>N</m>.  One full turn of the shaft carries
+                all <m>N</m> of them past the photointerrupter, so one revolution
+                produces <m>N</m> pulses.  Everything else is a matter of units.
+            </p>
+            <p>
+                Suppose we count the pulses for exactly one second and call that
+                count <term>PPS</term>, for pulses per second.  Dividing by <m>N</m>
+                turns pulses into revolutions, so the shaft turned <m>PPS/N</m> times
+                during that second.  A minute is sixty seconds, and at a steady speed
+                the shaft turns sixty times as far in a minute as it does in a
+                second, which gives us its speed in revolutions per minute:
+            </p>
+
+            <figure xml:id="fig-rpm-formula">
+                <caption>The speed of the shaft in revolutions per minute, from a
+                count of pulses taken over one second.  <m>PPS</m> is the number of
+                pulses counted in that second and <m>N</m> is the number of slots in
+                the wheel.  Dividing by <m>N</m> converts pulses into revolutions,
+                and multiplying by 60 converts a rate per second into a rate per
+                minute.</caption>
+                <image source="images/Day12-Motors(3)/rpm-formula.svg" width="42%"/>
+            </figure>
+
+            <p>
+                For the wheel in your kit <m>N</m> is 20, which is the number the
+                expression in Lab 6 uses, and that makes the arithmetic easy enough
+                to do in your head: <m>RPM = 3 \times PPS</m>.  So a count of 60
+                pulses in one second means the shaft is turning at 180 rpm.  In class
+                we'll count the slots on our own wheels and check that 20 is right,
+                because the number in the denominator is the one thing in this
+                expression that comes from the hardware rather than from the
+                arithmetic.
+            </p>
+            <p>
+                Every pulse looks like every other pulse: the phototransistor is
+                either seeing the LED or it is not, and one slot is the same as the
+                next.  So does anything about this signal change if the shaft turns
+                the other way?  In Lab 6 you are asked to display a negative rpm when
+                the motor is running in reverse, so it is a question we have to
+                answer, and we'll answer it in class.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-speed-sensing">
+            <exercise xml:id="rq-speed-derivation">
+                <statement><p>The slotted wheel on your motor has 20 slots.  You
+                count 40 pulses from the photointerrupter in one second.  How fast is
+                the shaft turning?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>120 rpm.</p></statement>
+                        <feedback><p>Correct.  Forty pulses at 20 slots per
+                        revolution is two revolutions in that second, and two
+                        revolutions per second is 120 per minute — which is
+                        <m>60 \times 40 / 20</m>.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>2400 rpm.</p></statement>
+                        <feedback><p>This is <m>60 \times 40</m>, which converts the
+                        pulse rate from per-second to per-minute but never converts
+                        pulses into revolutions.  Twenty of those pulses make one
+                        revolution, so the count has to be divided by 20 as
+                        well.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>800 rpm.</p></statement>
+                        <feedback><p>This multiplies by the slot count instead of
+                        dividing by it.  More slots on the wheel means more pulses
+                        for the same rotation, so a larger slot count makes the speed
+                        that a given pulse rate corresponds to
+                        <em>smaller</em>.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>40 rpm.</p></statement>
+                        <feedback><p>Forty is the pulse count, not a speed.  It has
+                        to be converted twice: pulses into revolutions by dividing by
+                        the slot count, and seconds into minutes by multiplying by
+                        60.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-speed-what-carries-it">
+                <statement><p>You have the photointerrupter's output on the
+                oscilloscope while the motor speeds up.  Which feature of the trace
+                is telling you that the speed has changed?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The rate at which the pulses arrive — they
+                        crowd together as the shaft speeds up.</p></statement>
+                        <feedback><p>Correct.  The slots go past the sensor faster,
+                        so the pulses arrive faster.  That rate is the only thing on
+                        the trace that follows the shaft's speed, and it is what the
+                        conversion to rpm is built on.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The height of the pulses — they get
+                        taller.</p></statement>
+                        <feedback><p>The height of a pulse is set by the circuit the
+                        sensor's output is connected to, not by how fast the wheel is
+                        turning.  A wheel turning slowly and a wheel turning fast
+                        produce pulses of the same height.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The total number of pulses since the motor
+                        started.</p></statement>
+                        <feedback><p>That total tells you how far the shaft has
+                        turned altogether, which is a useful thing to know but is not
+                        a speed.  Speed is a count taken over a known interval of
+                        time.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>How sharp the edges of the pulses
+                        are.</p></statement>
+                        <feedback><p>How quickly the output switches is a property of
+                        the sensor, not of the shaft.  It is the same whether the
+                        wheel is turning fast or slowly.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-speed-slot-count">
+                <statement><p>Two motors are turning at exactly the same speed.  One
+                has a wheel with 20 slots and the other has a wheel with 12.  Which
+                one produces more pulses per second?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The 20-slot wheel.</p></statement>
+                        <feedback><p>Correct.  Both shafts complete the same number
+                        of revolutions each second, and each revolution of the
+                        20-slot wheel carries 20 slots past the sensor against the
+                        other wheel's 12.  This is why the slot count has to appear
+                        in the conversion: the same pulse rate means different speeds
+                        on different wheels.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The 12-slot wheel.</p></statement>
+                        <feedback><p>Fewer slots means fewer interruptions of the
+                        beam per revolution, so at the same shaft speed the 12-slot
+                        wheel produces fewer pulses per second, not
+                        more.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>They produce the same number, because the
+                        shafts are turning at the same speed.</p></statement>
+                        <feedback><p>The pulse rate depends on two things, not one:
+                        how fast the shaft turns and how many slots each revolution
+                        carries past the sensor.  Holding the first fixed and
+                        changing the second changes the pulse rate.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>It cannot be worked out without knowing the
+                        supply voltage of each motor.</p></statement>
+                        <feedback><p>The supply voltage is what sets a motor's speed
+                        in the first place, but here we are told the speeds are
+                        already equal.  From that point on the pulse rate follows
+                        from the shaft speed and the slot count
+                        alone.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
+
+        <!--
+        CANVAS QUIZ: "Before class - Measuring Motor Speed"
+        (Due 1 hour before class; auto-graded multiple choice; low stakes.)
+
+        Q1. A slotted wheel on a motor shaft has N slots.  How many pulses does the
+            photointerrupter produce in one full revolution of the shaft?
+            A) One.
+            B) N.  <- CORRECT
+            C) 2N.
+            D) 60/N.
+
+        Q2. You count PPS pulses in one second from a wheel with N slots.  Which
+            expression gives the shaft speed in revolutions per minute?
+            A) PPS x N / 60
+            B) 60 x PPS / N  <- CORRECT
+            C) PPS / (60 x N)
+            D) 60 x N / PPS
+
+        Q3. The wheel in your kit has 20 slots.  You count 30 pulses in one second.
+            What is the shaft speed?
+            A) 30 rpm
+            B) 90 rpm  <- CORRECT  (60 x 30 / 20)
+            C) 600 rpm
+            D) 1800 rpm
+
+        Q4. As the motor speeds up, what happens to the photointerrupter's output on
+            an oscilloscope?
+            A) The pulses get taller.
+            B) The pulses crowd closer together.  <- CORRECT
+            C) The pulses get shorter in height but stay equally spaced.
+            D) Nothing changes until the motor reaches full speed.
+
+        Q5. What does the photointerrupter's output need in order to work at all?
+            A) A pull-up resistor on its output.  <- CORRECT
+            B) A capacitor across its supply.
+            C) A separate ground wire for each of its three pins.
+            D) An amplifier between it and the microcontroller.
+        -->
     </section>
 
     <!-- Day 12's in-class section and the chapter's end-of-chapter Reference
