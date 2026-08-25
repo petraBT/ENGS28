@@ -14,8 +14,9 @@ deliveries are the other way round from the standard flow.
 | **Gate 1** — plan and outline | done, 8 reviewers, 3 BLOCKER: `reviews/day12-gate1.md`, list applied |
 | **The pre-class reading** | **written in full**, `sec-speed-before-class` |
 | **Gate 1.5** — voice probe | done, 7 rewrites applied: `reviews/day12-gate1_5.md` |
-| **The in-class skeleton** | **written**, `sec-motors-day12`, Parts 1–6 — subsections, figures, tables, activities with their `<instructor>` answers, and the `<slide>` blocks. **No connecting prose.** |
+| **The in-class skeleton** | **written**, `sec-motors-day12`, Parts 1–6 — subsections, figures, tables, activities with their `<instructor>` answers, and the `<slide>` blocks |
 | **The deck** | `assets/decks/day12.json`, **40 slides, 30 refs** — 44/34 until Petra's pass 1 cut four |
+| **The in-class prose** | **WRITTEN 2026-08-25**, all six Parts, from the slides she passed. Every `DELIVERY 2` marker is discharged and says where its content landed |
 | **Gate 2′** | done, 11 reviewers, 4 BLOCKER: `reviews/day12-gate2.md`, list applied |
 | **→ Petra, pass 1** | **DONE, 2026-08-25.** 42 slide comments, all applied and archived; see the pass-1 section below |
 
@@ -23,17 +24,18 @@ deliveries are the other way round from the standard flow.
 **Every student-facing slide fits** at 1600×900 with the crossfade killed and a
 900 ms settle; the three that overflow are instructor-only, which is allowed.
 
-## What the follow-up session does
+## What is left
 
-1. **The in-class connecting prose**, Parts 1–6, written **from the slides Petra
-   has passed** — never before. Each paragraph expands the slide beside it, and
-   **the prose is expected to be longer than the slide**: compression toward the
-   bullet is the failure mode of this ordering.
-2. **Gate 1.5 again**, on the first subsection of that prose, before the rest is
-   written. It is a real gate in this ordering, not a formality.
-3. **Gate 3′**, the prose gate: `checker-voice` leads, `checker-arc-fidelity` runs
-   the paragraph↔slide mapping.
-4. **The chapter's `Reference:` section**, whose five subsections are specified in
+1. ~~**The in-class connecting prose**~~ **DONE 2026-08-25**, Parts 1–6, written
+   from the slides she passed. `checker-voice` ran over it once and its list was
+   applied (one BLOCKER, thirteen MAJOR, mostly S-23/S-25/S-28 register leakage and
+   three L-18 hits in my own prose). **Gate 1.5 was not run as a separate gate** —
+   the voice pass covered the whole thing at once instead, which is the shortcut
+   worth knowing about and worth admitting to.
+2. **Gate 3′, the prose gate**, has *not* run: `checker-voice` has seen this prose
+   but `checker-arc-fidelity` has not, so the paragraph↔slide mapping is unchecked.
+   That is the next thing.
+3. **The chapter's `Reference:` section**, whose five subsections are specified in
    `plans/day12.md`. If that session runs short, `subsec-motors-ref-tim14` is the
    one that must exist — it is the table students will have open while writing
    `tb6612.c`, and it is writable from Day 11x alone.
@@ -62,13 +64,16 @@ content:
 
 **None of these blocks her pass 1.** The draft is written to survive any answer.
 
-1. **The EE-SX672's output stage.** The day's load-bearing hardware claim is that
-   the phototransistor is a switch to ground with **no internal pull-up to its own
-   supply**. There is no datasheet for this sensor in `assets/datasheets/` and
-   nothing in the repo settles it. Mitigation already shipped: `task-day12-scope`
-   tells students to stop if the trace goes above 3.3 V, and the output does not
-   reach the Nucleo today — so the failure is caught on the oscilloscope. **Worth
-   keeping even after she answers.**
+1. ~~**The EE-SX672's output stage.**~~ **SETTLED 2026-08-25.** Petra: *"the short
+   answer is that we need the pullup on the signal wire (the output transistor is
+   open-collector),"* and she added the datasheet — `assets/datasheets/ee-sx67.pdf`,
+   linked as `external/datasheets/ee-sx67.pdf`. Its ratings table gives the control
+   output as **NPN open collector** and the supply voltage as **5 to 24 VDC**, so
+   the 5 V is *required* and that is now the reason the book gives for the two
+   rails. Cited in `fig-photointerrupter-states`'s caption and in
+   `inst-day12-wire-and-scope`; recorded in `plans/day12-ground-truth.md` §4d,
+   which also records the one number deliberately left out (0.5 mA off-state
+   leakage). The `task-day12-scope` stop-above-3.3 V check stays anyway.
 2. ~~**The sensor's supply, narrowed.**~~ **SETTLED at pass 1.** *"The power for
    the photointerruptor needs to be 5V, taken from the regulator just as the motor
    input."* And on the hazards slide: *"not true, it also powers the photo

@@ -70,6 +70,8 @@ assets/
   sim-starters/    Per-exercise starter .c files loaded by <sim starter="…"/>
   datasheets/      Component datasheets, linked as external/datasheets/<name>.pdf.
                    Day 5X worksheet: TMP235, DRV5053, DS3231, LIS3DH, Si7021.
+                   Day 12: ee-sx67 (the Omron photointerrupter — NPN open collector,
+                   supply 5-24 VDC, which is why its power is 5 V and its pull-up 3.3 V).
                    Day 6 transistor tables: KSC2073, TIP41A (covers TIP42),
                    PZT3904, PZT3906, IRFZ24N, IRF9Z24N, BS107P, BS250P
   Labs/            Lab PDFs — the downstream constraint on each chapter

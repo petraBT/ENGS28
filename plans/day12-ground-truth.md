@@ -263,12 +263,30 @@ The photointerrupter is an **Omron EE-SX672** — read off the body in her slide
 photo at 3× zoom (`EE-SX672`, and `OUT` silkscreened beside the pins). Adafruit
 sells it as product 3985; the encoder wheels are Adafruit 3782.
 
-**There is no EE-SX672 datasheet in `assets/datasheets/`** (checked: the folder
-holds TB6612FNG and the Day 5X/Day 6 parts only). So no numeric claim about the
-sensor — supply range, output current, response time — may be written from
-plausibility (B-11c). **Question 3 to Petra: may we add it to the repo?** Without
-it the day's datasheet moment is UM2953 Table 11, which is in the repo and is a
-better lookup anyway.
+~~**There is no EE-SX672 datasheet in `assets/datasheets/`**~~ **SETTLED
+2026-08-25. Petra added it**, and it answers Question 1 as well: *"the short answer
+is that we need the pullup on the signal wire (the output transistor is
+open-collector)."* It is `assets/datasheets/ee-sx67.pdf` (renamed from
+`EE-SX67 Datasheet.pdf` to match the folder's convention), linked as
+`external/datasheets/ee-sx67.pdf`.
+
+Three facts off its *Ratings and Specifications* table, now sourced rather than
+assumed:
+
+| fact | why it matters here |
+| --- | --- |
+| **Control output: NPN open collector**, 5 to 24 VDC, 100 mA max. | The day's load-bearing claim, in the manufacturer's words. `EE-SX672` is the NPN model; the `P`/`R` suffixes are the PNP ones |
+| **Supply voltage: 5 to 24 VDC** ±10% | **The 5 V is required, not a preference** — the part does not run on the Nucleo's 3.3 V at all, which is exactly why its supply and its HIGH level have to be two different rails. This is now the reason the day gives |
+| **Response frequency: 1 kHz min. (3 kHz average)** | Far above the tens of hertz this wheel produces, so the sensor never limits the measurement. Instructor-only |
+
+**One number deliberately left out of the book.** The table gives off-state
+leakage as **0.5 mA max**. Taken literally with a 10 kΩ pull-up that is 5 V of
+drop, which would stop the line rising at all — so it is plainly a worst case over
+the whole family, the full 24 V range and the full temperature range, and not what
+these parts do at room temperature on 3.3 V. Since Lab 6 works with 10 kΩ, writing
+the arithmetic would teach a wrong conclusion; **but it is worth Petra knowing the
+spec says it**, because a student whose line sits at 1–2 V rather than at 0 V is
+looking at leakage, and a smaller resistor is the fix.
 
 **Twenty slots.** Lab 6 §2.5 prints `RPM = 60 × PPS / 20`, which fixes the count at
 20. Her wheel photo is consistent with 20 but a photograph is not a source. The
