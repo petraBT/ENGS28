@@ -236,8 +236,12 @@ composed, which is reasonable lab work.
 
 **The caveat, added at Gate 1:** the signed counter and its minus sign were
 *homework, never reviewed in class*, and they are now load-bearing for a graded
-deliverable. Part 5 points at `subsec-i2c-ref-ht16k33`, the HT16K33 Quick Reference,
-rather than assuming silently.
+deliverable. **Gate 3′ found the pointer was wrong**: `subsec-i2c-ref-ht16k33` is
+the HT16K33 command/RAM reference and contains no signed counter. The pattern exists
+only in `sl-day10-hw-solution`, which is instructor-only and stripped. Part 5 now
+points at `act-i2c-hw-t2` (the homework task itself) and says plainly that the worked
+version is not printed in the book — **which leaves a real gap under a graded Lab 6
+deliverable, and is a question for Petra.**
 
 ---
 
@@ -330,7 +334,7 @@ carries **exactly three** elements, cut back at Gate 1 from five.*
 Readable at a desk with no hardware and no IDE. Three elements, one figure, one
 derivation.)*
 
-### Part 1: Questions About `TTmotor_ramp.c` *(10 min, discuss)*
+### Part 1: Questions About `TTmotor_ramp.c` *(8 min, discuss)*
 
 - Her slide 3, as a table-group activity: how does the program work, do you
   understand every register bit it sets, what questions do you have.
@@ -437,7 +441,7 @@ derivation.)*
   reverse, so the sign has to come from what the program **commanded**. That is the
   first stretch.
 
-### Part 4: A Loop That Does Three Things at Three Rates *(10 min, predict → commit → explain)*
+### Part 4: A Loop That Does Three Things at Three Rates *(8 min, look up → commit → explain)*
 
 - **Opens on the problem, not the function.** By the end of the lab the program has
   to sample the pot at 100 Hz, count pulses as they arrive, and refresh the display —
@@ -449,30 +453,27 @@ derivation.)*
   `delay_ms()` has been built on it since Day 2. **This is the first time the book
   names it**, and it is the last piece of course scaffolding that has been in every
   program all term without being opened.
-- **Predict:** here is a loop that reads the pin and samples the ADC in the same
-  100 Hz beat. At the top of the ramp the wheel gives about 60 pulses per second.
-  What does the counter report? *(Fewer than 60, unpredictably — the same failure
-  Day 9 Part 2 demonstrated with a button.)*
+- ~~**Predict:** a loop that reads the pin and samples the ADC in the same 100 Hz
+  beat.~~ **CUT at Petra's pass 1** — *"We can also skip that code section that was
+  given to them."* `sl-day12-naive-loop` is parked, and the argument it carried is
+  body prose in `subsec-day12-main-loop` instead.
 - **Then a two-minute commit, individually and then to the room, before either
   answer is given:** *given the pulse rate you measured in Part 2, will your loop
   poll or interrupt — and why?* This is the only task in the day that asks a student
   to make the decision Objective 5 names. **It is not a valve.**
-- **Then the two answers, honestly**, at the strength the evidence supports (see the
-  design-decision section above): the real condition is **T_poll < the shorter of the
-  high time and the low time**, set by the duty cycle rather than the rate; the ~50 %
-  duty is an assumption pending a source; and **the interrupt's real advantage is
-  that it removes the dependence on the top speed altogether**. A falling-edge
-  interrupt on PA15 is Day 9's five registers with 15 substituted for 4, landing in
-  the same `EXTI4_15_IRQHandler` they already wrote. `EXTI_EXTICR4` is RM0490
-  Table 47, offset 0x06C, top byte `EXTI15[7:0]`.
-  *(This comparison is valve 2 — it moves into Part 6's opener if the clock is
-  against us.)*
+- ~~**Then the two answers**, on a slide.~~ **CUT at Petra's pass 1** —
+  *"This is too much stuff… Just one slide is enough that asks them whether they
+  should poll or use an interrupt."* `sl-day12-two-answers` is parked; the two
+  answers, the real condition (**T_poll < the shorter of the high and low times**,
+  set by the duty cycle rather than the rate) and the five-register substitution are
+  body prose, with `table-day12-exti-lines` added at Gate 3′ so the substitution is a
+  table rather than one sentence. `EXTI_EXTICR4` is RM0490 §12.5.6. The resolution is
+  led from `inst-day12-poll-or-interrupt`. **Valve 2 is spent.**
 
 ### Part 5: The Whole Build *(5 min, explain)*
 
-- **The D7 → PA15 lookup**, UM2953 Table 11 — about two minutes, and it opens the
-  Part because this is where the pin is needed. Strictly *which pin*, not which
-  register set.
+- ~~The D7 → PA15 lookup opens this Part.~~ **Moved to Part 4 at Gate 2′** so that
+  nothing prints PA15 before students look it up. See §"Two P-6 orderings".
 - Her slide 10, rebuilt: the complete Lab 6 system in one picture.
 - **What is already written**, said out loud so nobody starts from nothing: the I2C
   library and the seven-segment driver from Day 10, `SevenSeg_number()` and the minus
@@ -515,7 +516,7 @@ derivation.)*
     ground on the board must be that ground. Day 11's rule, restated for the third
     supply.
 
-### Part 6: Build *(35 min, floor 25)*
+### Part 6: Build *(37 min, floor 30)*
 
 - **Opens on the main-loop sketch**, moved here from Part 4 so it gets unhurried
   thinking time with instructors already circulating: what does the loop do every

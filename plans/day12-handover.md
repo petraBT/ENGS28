@@ -114,16 +114,24 @@ Both are **asset requests, not caption work** — a rule this day proposes.
   which the rebuilt SVG did not. `fig-day12-wiring.svg` is kept for reference.
   **Two things still open on it, both hers to decide:**
   - Its 5 V / GND / Vin pads have **nothing wired to them**, exactly as in her
-    slide 10, so the supply path is not traceable off the picture. The caption
-    says so and sends the student to their own board.
-  - **Her callout text projects at about 20 px on a 1600×900 stage**, against 28 px
-    for a slide bullet — legible, but the smallest type in the deck. The cause is
-    the empty upper-left quarter of her drawing: the canvas is 2488×1836, so the
-    image is height-capped at 648 px and only 878 px of the 1472 px-wide box is
-    used. **Dragging the two callout boxes up into that empty corner in PowerPoint
-    and re-exporting would make her own annotations about 1.65× bigger on the
-    wall** — arrows follow the boxes there, which is why it has to be her export
-    and not a crop here.
+    slide 10, so the supply path is not traceable off the picture. The caption says
+    so and sends the student to their own board. **Still true in the second
+    export.**
+  - **Her callout text projects at about 21 px on a 1600×900 stage**, against 28 px
+    for a slide bullet. She re-exported on 2026-08-25 with the orange callout moved
+    up into what had been empty canvas — 2289×1790 after cropping — and **it bought
+    almost nothing: scale 0.353 → 0.362, text 20.5 px → 21 px.** My estimate of
+    1.65× was wrong and the reason is worth writing down: the binding constraint is
+    `#ref.figure-focus .ref-media img { max-height: 72cqh }` in `assets/class.html`,
+    which caps the image at 648 px of the 900 px stage. A drawing whose own content
+    is roughly 4:3 is height-bound whatever is done to its margins — filling the
+    empty corner removed width as well as height, so the aspect went 1.35 → 1.28 and
+    the cap still bound. **No re-export can fix this; only the cap can.** Raising
+    72cqh to about 82cqh uses the ~100 px of slack under the caption and gives
+    scale 0.41, text ≈24 px. That is the whole available gain, it is a one-line CSS
+    change, and it makes every figure-focus slide in every deck 14% larger — which
+    is also why the cap is 72 in the first place. **Petra's call, not a silent
+    fix.**
 - **`fig-day12-lab6-build`** is her slide 10, and the regulator's `5V`/`GND`/`Vin`
   pads render gold with no wire touching them, so the one power path the caption
   leads with is the one a student cannot trace. Worth asking for it **graded**: a
