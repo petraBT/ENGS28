@@ -239,6 +239,20 @@ and the regulator are still connected but not drawn. And her speaker note says *
 wire power and ground to **logic** power and ground"*, which is the one thing still
 genuinely open: see Question 2, narrowed.
 
+**SETTLED at Petra's pass 1, 2026-08-25 — Question 2 is closed.** On
+`act-day12-wire-and-scope` she wrote: *"The power for the photointerruptor needs to
+be 5V, taken from the regulator just as the motor input."* And on `sl-day12-hazards`,
+against the bullet that read *"the regulator's 5 V is motor power only"*: *"not true,
+it also powers the photo interruptor."* So the slide-6 speaker note is the outlier,
+and the drawing, the annotation and Lab 6's schematic were right. **The sensor's VCC
+is the regulator's 5 V, the same node as the TB6612's `VM`**, from Exercise 1 onward —
+which means the regulator is wired for Exercise 1, not first connected at Lab 6 §2.3.
+Written into `task-day12-wire`, `fig-day12-wiring`'s caption, `sl-day12-hazards`,
+`fig-day12-lab6-build`'s caption and the Part 5 hazard paragraph. The output still
+goes only to a 10 kΩ pull-up to **3.3 V**, and `task-day12-scope` still stops the
+student if the trace goes above 3.3 V — Question 1 (the EE-SX672's output stage) is
+untouched by this and stays open.
+
 Lab 6 §2.5 is unambiguous about the half that matters for the chip: *"pull the OUT
 terminal up with an internal pullup resistor or a 10 kΩ resistor to **3.3 V**."*
 The book teaches only that, and says nothing about the sensor's own supply.

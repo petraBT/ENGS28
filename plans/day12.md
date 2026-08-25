@@ -11,9 +11,10 @@ from *"the reading quiz"*, and Day 11x has no reading, so the derivation would
 otherwise be stranded. Day 11x's own hand-off comment in `source/ch-motors.ptx`
 says so, and the Lab 6 PDF confirms it.
 
-**Ninety-nine of the 110 minutes are the six Parts, of which 32 are the students'
-own build with a floor of 25; five are a protected close, and six are settling and
-the two transitions.** Every Part's row equals the sum of its beats — checked at
+**Ninety-nine of the 110 minutes are the six Parts, of which 37 are the students'
+own build with a floor of 30; five are a protected close, and six are settling and
+the two transitions.**  *(The build was 32 with a floor of 25 until Petra's pass 1
+cut two slides out of Part 4 — see the note under the table.)* Every Part's row equals the sum of its beats — checked at
 Gate 2′ with a script, because this arithmetic has now failed three times, each time
 one level further down.
 
@@ -246,28 +247,36 @@ rather than assuming silently.
 | --- | --- | --- | --- |
 | — | 6 | — | Settling, and the two transitions into and out of the build |
 | **1** | 8 | discuss | **Questions about `TTmotor_ramp.c`.** Her slide 3, with an individual commit added |
-| **2** | **26** | **do** | **Wire the sensor and look at what it says.** Three wires, one pull-up, the AD2 on the output, `TTmotor_ramp.c` running. The signal does not reach the Nucleo yet |
+| **2** | **26** | **do** | **Wire the sensor and look at its output.** Three wires, one pull-up, the AD2 on the output, `TTmotor_ramp.c` running. The signal does not reach the Nucleo yet |
 | **3** | 15 | do → reveal | **From a pulse train to a number.** Her slide 9 merged with her Day 11x slide 20; the reveal is her slide 21, **opening on the rpm formula** |
-| **4** | 13 | look up → predict → **commit** → explain | **A loop that does three things at three rates.** The D7/PA15 lookup, `milliseconds()`, the predict-then-fail, an individual commit, then the two answers |
+| **4** | 8 | look up → **commit** → explain | **A loop that does three things at three rates.** The D7/PA15 lookup, `milliseconds()`, and an individual commit on poll-versus-interrupt. The predict-then-fail listing and the two-answers reveal were cut at Petra's pass 1 |
 | **5** | 5 | explain | **What Lab 6 asks for.** Her slide 10 — what is wired where, a pass criterion for every stage, and the hazards |
-| **6** | **32** | **build** | **Open build time**, opening on the main-loop sketch. **Floor: 25** |
+| **6** | **37** | **build** | **Open build time**, opening on the main-loop sketch. **Floor: 30**. No more training wheels — her words |
 | **close** | **5** | — | **Protected and announced**: a private written note first, then round the tables |
 
-**Total 110 minutes**, and it reconciles at the beat level: 6 + 8 + 26 + 15 + 13 + 5
-+ 32 + 5. Every Part's row is the sum of the `≈ N min` marks on its own slides and
+**Total 110 minutes**, and it reconciles at the beat level: 6 + 8 + 26 + 15 + 8 + 5
++ 37 + 5. Every Part's row is the sum of the `≈ N min` marks on its own slides and
 activities.
+
+**Changed at Petra's pass 1.** She cut `sl-day12-naive-loop` and
+`sl-day12-two-answers` from the deck — *"This is too much stuff… Just one slide is
+enough that asks them whether they should poll or use an interrupt and have a quick
+discussion. Then give them time to work. This is a lab. It doesn't have to be
+pre-chewed for them."* Part 4 goes 13 → 8 and the five minutes go to the build,
+which is where she asked for them. Valve 2 below is spent by that cut and is gone.
 
 ### The valves, in the order they are spent
 
 1. **Part 6 down to its 25-minute floor — returns 7.**
-2. **Part 4's poll-versus-interrupt comparison moves into Part 6's opener — returns
-   3, not 4.** The lookup, the `milliseconds()` mechanic, the predict-then-fail and
-   the two-minute commit are **never** cut.
+2. ~~**Part 4's poll-versus-interrupt comparison moves into Part 6's opener —
+   returns 3, not 4.**~~ **Spent at Petra's pass 1**: the comparison slide is cut
+   outright and Part 4 is already down to its floor. The lookup, the
+   `milliseconds()` mechanic and the two-minute commit are **never** cut.
 3. **Part 3's reveal drops the quadrature and decode-in-hardware asides — returns
    2**, and only *after* the minus-sign bullet has moved onto `sl-day12-rpm`, or
    spending this valve leaves the build-order table's acceptance test unsupported.
 
-**Total valve capacity 12** against Part 2's honestly-flagged 2–8 minute overrun.
+**Total valve capacity 9** against Part 2's honestly-flagged 2–8 minute overrun — Part 6 down to its 30-minute floor returns 7, and Part 3's asides return 2.
 *(Gate 2′ found two of the three over-promising; these are the corrected figures.)*
 
 ### What never absorbs an overrun
@@ -336,7 +345,7 @@ derivation.)*
 - Then to the room. **No reveal slide** — the answers are Day 11x's, already in the
   book and already projected on Wednesday, and a slide restating them is S-10.
 
-### Part 2: Wire the Sensor and Look at What It Says *(26 min, do)*
+### Part 2: Wire the Sensor and Look at Its Output *(26 min, do)*
 
 - **Starting configuration**, in a presenter `<note>` rather than student text
   (S-25): Wednesday left probes on the PWM node, and her own note says *"take down

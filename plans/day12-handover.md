@@ -15,9 +15,9 @@ deliveries are the other way round from the standard flow.
 | **The pre-class reading** | **written in full**, `sec-speed-before-class` |
 | **Gate 1.5** — voice probe | done, 7 rewrites applied: `reviews/day12-gate1_5.md` |
 | **The in-class skeleton** | **written**, `sec-motors-day12`, Parts 1–6 — subsections, figures, tables, activities with their `<instructor>` answers, and the `<slide>` blocks. **No connecting prose.** |
-| **The deck** | `assets/decks/day12.json`, **44 slides, 34 refs** |
+| **The deck** | `assets/decks/day12.json`, **41 slides, 31 refs** — 44/34 until Petra's pass 1 cut three |
 | **Gate 2′** | done, 11 reviewers, 4 BLOCKER: `reviews/day12-gate2.md`, list applied |
-| **→ Petra, pass 1** | **this is what happens next.** She reviews the reading and the slides |
+| **→ Petra, pass 1** | **DONE, 2026-08-25.** 42 slide comments, all applied and archived; see the pass-1 section below |
 
 `build-all`, `check_rules`, `check_deck` and `check_starters` are all clean.
 **Every student-facing slide fits** at 1600×900 with the crossfade killed and a
@@ -69,13 +69,15 @@ content:
    tells students to stop if the trace goes above 3.3 V, and the output does not
    reach the Nucleo today — so the failure is caught on the oscilloscope. **Worth
    keeping even after she answers.**
-2. **The sensor's supply, narrowed.** Three of the four sources agree once her
-   Fritzing is traced properly: her slide 6 says 5 V, her drawing takes the
-   sensor's VCC to the driver's **`VM`** pad, and Lab 6's schematic puts it on
-   +5 V. What is left is one thing — **her slide-6 speaker note says *"just wire
-   power and ground to logic power and ground"***, and in Exercise 1 the regulator
-   is not wired yet (Lab 6 connects it at §2.3, after the potentiometer). Which do
-   students wire on the day?
+2. ~~**The sensor's supply, narrowed.**~~ **SETTLED at pass 1.** *"The power for
+   the photointerruptor needs to be 5V, taken from the regulator just as the motor
+   input."* And on the hazards slide: *"not true, it also powers the photo
+   interruptor."* So the sensor's VCC is the regulator's 5 V from Exercise 1 onward,
+   the slide-6 speaker note is the outlier, and the regulator is wired for
+   Exercise 1 rather than first at Lab 6 §2.3. Applied in `task-day12-wire`,
+   `fig-day12-wiring`'s caption, `sl-day12-hazards`, `fig-day12-lab6-build`'s
+   caption and the Part 5 hazard paragraph; recorded in
+   `plans/day12-ground-truth.md` §4c(ii).
 3. **The potentiometer's rail.** Lab 6's schematic wires it to +5 V with the wiper
    on PA0; the lab text describes 0 / 1.65 / 3.3 V. The book says 3.3 V and the
    hazard paragraph says so plainly. Confirm the schematic's `+5V` is legacy.
@@ -99,11 +101,17 @@ content:
 
 Both are **asset requests, not caption work** — a rule this day proposes.
 
-- **`fig-day12-wiring`** is her Day 12 slide-6 Fritzing, and **it has no regulator
-  board and no barrel jack in it**, while the motor has to run for two of that
-  activity's tasks. The caption now says the supply is still connected but not
-  drawn, which is true and is the best a caption can do. **She has a drawing with
-  the regulator in it — it is her slide 10.**
+- **`fig-day12-wiring`** — **she is supplying this one herself.** Pass 1, on
+  `sl-day12-wiring`: *"You are missing all of my annotations here. Tell me where to
+  put the actual image. You may have to remove some of the wording of my old slide
+  from the image I am going to give you, including the page number from my old
+  slide."*  **Drop path: `assets/images/Day12-Motors(3)/fig-day12-wiring-annotated.png`**
+  (any raster extension is fine — the `<image source>` line is the only thing that
+  changes). Crop her old slide's wording and its page number out first. A source
+  comment above the figure says all of this. Until it lands, the rebuilt SVG stays
+  and the two claims ride on the slide's bullets. The original problem stands
+  underneath: her slide 6 **has no regulator board and no barrel jack in it**, and
+  now that the sensor's 5 V is settled the drawing is one wire short of the story.
 - **`fig-day12-lab6-build`** is her slide 10, and the regulator's `5V`/`GND`/`Vin`
   pads render gold with no wire touching them, so the one power path the caption
   leads with is the one a student cannot trace. Worth asking for it **graded**: a
@@ -115,8 +123,9 @@ Both with the Fritzing watermark cropped, if that is easy.
 ## Standing facts, so they are not re-derived
 
 - **110 minutes, Thursday.** 6 settling and two transitions, Parts of
-  **8 / 26 / 15 / 13 / 5**, **32** for the build with a floor of 25, and a
-  **protected 5-minute close**. It reconciles at the beat level, and
+  **8 / 26 / 15 / 8 / 5**, **37** for the build with a floor of 30, and a
+  **protected 5-minute close**.  *(Part 4 was 13 and the build 32 until pass 1 cut
+  two slides out of Part 4 and she asked for the time to go to the build.)* It reconciles at the beat level, and
   `check_deck.py` now checks that a Part's row is not under its own beats.
 - **There is a pre-class reading**, because Lab 6 p. 5 sources
   `RPM = 60 × PPS / 20` from the reading quiz and Day 11x has none.
@@ -147,6 +156,38 @@ Both with the Fritzing watermark cropped, if that is easy.
 and it is real: **`day11x` Part 5 is 6 minutes of beats against a 5-minute row.**
 Day 11x is awaiting Petra's pass 2, so it is hers to absorb, not this session's to
 fix.
+
+## Petra's pass 1 — what it changed structurally
+
+42 comments, 2026-08-25, all applied and archived to
+`reviews/slide-comments-archive.jsonl`. Most were wording. Four changed the shape
+of the day:
+
+1. **Part 4 lost two slides.** *"This is too much stuff. We can also skip that code
+   section that was given to them. Just one slide is enough that asks them whether
+   they should poll or use an interrupt and have a quick discussion. Then give them
+   time to work. This is a lab. It doesn't have to be pre-chewed for them. We are
+   holding their hands too much."* `sl-day12-naive-loop` and `sl-day12-two-answers`
+   are **parked**: still in the source, with her four wording edits applied to the
+   naive loop, but **no deck refs them**, so restoring either is one entry in
+   `assets/decks/day12.json`. `act-day12-poll-or-interrupt` is the one slide she
+   describes, and the resolution is now led off `inst-day12-poll-or-interrupt`.
+   **DELIVERY 2 owes `subsec-day12-main-loop` the polling argument and the interrupt
+   decision in body prose**, because neither is on the wall any more.
+2. **`sl-day12-deadband-table` is parked too** — *"nice but they need to figure this
+   out."* `table-day12-deadband` stays in the book.
+3. **The five minutes went to the build**, which is what she asked for: Part 4
+   13 → 8, Part 6 32 → 37 with the floor 25 → 30.
+4. **No more training wheels from Part 6 on** — her words, on the Part 6 opener.
+   Recorded in that subsection's `DELIVERY 2` comment and in the Part 6
+   `presenterNote`, so the prose does not put scaffolding back. The two instructor
+   blocks there stay: **a solution no deck projects is a P-10 failure**
+   (`check_deck.py`), so deleting either is her call, not a side effect.
+
+**A gotcha worth writing down.** The review server on **8928 is a child of
+`preview-slides.sh`**, whatever `CLAUDE.md` says about it being standalone —
+killing that wrapper takes 8928 down with it. Kill the port-8352/8931/8932
+listeners by PID instead, or restart `review-server.py` immediately afterwards.
 
 ## Rules this day added to `AUTHORING-book.md`
 
