@@ -8,6 +8,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Reserve layout space for every figure: without an aspect-ratio the image
+# boxes are ~22px until each image loads, so pages reflow by hundreds of pixels
+# as they settle. Regenerated here so the block in assets/book.css cannot go
+# stale. See scripts/image_ratios.py.
+python3 scripts/image_ratios.py
+
 # Delete the external output folder so PreTeXt recreates it fresh.
 # (shutil.copy2 preserves source permissions, which can make copies read-only;
 # deleting avoids the "Permission denied" error on subsequent builds.)

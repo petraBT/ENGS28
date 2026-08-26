@@ -44,6 +44,14 @@ edits it in place. The student book is on :8931, the instructor book on :8932.
 `./preview-slides.sh` does the same for the deck player. Useful for finding the
 source of something you can see rendered.
 
+Both build scripts first run `scripts/image_ratios.py`, which regenerates a
+marked block of per-image `aspect-ratio` rules in `assets/book.css` — every
+HTML target loads that file. Without it a page's figures reserve no space and
+it reflows by hundreds of pixels as they load, which is what made a review
+comment's pixel `bbox` fail to replay. **Commit `assets/book.css` when you add
+or resize a figure**; `python3 scripts/image_ratios.py --check` says whether it
+is stale.
+
 Before every commit:
 
 ```bash

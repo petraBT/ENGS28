@@ -24,6 +24,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
+# assets/book.css carries a generated block of per-image aspect ratios, and
+# every target loads that file via html.css.extra. Regenerate once, before any
+# target is built, so none of them ships a stale copy.
+python3 scripts/image_ratios.py
+
 TARGETS=(web web-edit web-deck web-deck-instructor web-instructor)
 if [ "$1" = "--with-print" ]; then
     TARGETS+=(print)
