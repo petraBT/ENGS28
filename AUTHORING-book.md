@@ -529,6 +529,37 @@ steps", count the subsections — this drifts every time content is added or mer
 Lookup material that students will return to (bit twiddling, register tables) lives in
 a `Reference:` section at the end of the chapter, not inline in the teaching flow.
 
+### B-18 A committee change list needs a length budget
+
+Seven reviewers each asking for one more clause produced a Day 12 in-class
+section **42 body paragraphs long beside a passed Day 11 of 25**, over the same
+110 minutes, and every individual fix was defensible. Petra stopped reading part
+way through Part 2: *"The style in this in-class section is entirely different
+from other chapters. We were going to de-clutter the preclass and in-class stuff
+from too much technical stuff and instead add that to the reference section for
+students who are interested."*
+
+**Before applying a gate's change list, measure the section against a passed
+one — paragraph count, not sentence length — and make each addition name what it
+displaces.** A reviewer's brief should say so explicitly; findings that add words
+without a `DISPLACES` line get discarded, however correct they are. The order of
+preference for a real finding is: delete, then **move to the chapter's
+`Reference:` section** (B-10), then rewrite in place at equal length, then add.
+
+This does **not** license compressing her sentences — that is the opposite error,
+and the two calibrations under S-11…S-30 still hold. The unit of cutting is the
+whole paragraph. Depth is not deleted when it is cut from the teaching flow; it
+is relocated, and the finding has to say where.
+
+The same budget governs captions. One Day 12 caption reached 209 words by
+enumerating wire colours and stating what was *absent* from the drawing. Petra:
+*"are you doing this for accessibility? If so, then great, but shouldn't that go
+into some kind of alternative tag for screen readers? The way it reads is just
+ridiculous right now and not how we have done other figure captions."* and
+*"You've gotta be kidding. All of this about a wire? SHORTEN."* A caption says
+what the picture shows and why it matters. It never says what the picture leaves
+out.
+
 ### B-11a Figures must be legible when projected
 
 Type in a figure is read from the back of a room, not from a laptop. Size it

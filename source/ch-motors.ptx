@@ -9,6 +9,8 @@
             motor and varying the motor's speed — neither of which the microcontroller
             can do on its own.  This chapter covers the H-bridge circuit for direction
             control and Pulse-Width Modulation (PWM) for speed control.
+            <xref ref="sec-motors-reference"/> collects the registers, the driver's
+            modes and the pulse-counting arithmetic for looking up later.
         </p>
         <objectives>
             <ul>
@@ -2280,15 +2282,12 @@ void tim14_pwm_set(uint16_t value) {
             </p>
             <p>
                 Every time a slot comes around, the light gets through to the
-                phototransistor; every time a <term>spoke</term> — the solid part of
-                the rim between two slots — comes around, the light is blocked.  So the sensor's output
-                switches back and forth once for every slot that goes past, and a
-                wheel that is turning steadily produces a steady square wave.
-            </p>
-            <p>
-                For now the two ideas to hold onto are that the <em>number</em> of
-                pulses tells us how far the shaft has turned, and that the
-                <em>rate</em> at which they arrive tells us how fast.
+                phototransistor; every time a <term>spoke</term> — the solid part of the
+                rim between two slots — comes around, the light is blocked.  So the
+                sensor's output switches back and forth once for every slot that goes
+                past, and a wheel that is turning steadily produces a steady square wave.
+                The <em>number</em> of pulses tells us how far the shaft has turned, and
+                the <em>rate</em> at which they arrive tells us how fast.
             </p>
 
             <figure xml:id="fig-day12-sensor-parts">
@@ -2309,18 +2308,17 @@ void tim14_pwm_set(uint16_t value) {
                 on one side shines across to a phototransistor on the other.  A slot
                 lets the light through and a spoke blocks it,
                 so the sensor's output completes one cycle — two edges — for every
-                slot that goes past.  The wheel in your kit has slots cut all the way around its
-                rim, and in class we'll start by counting how many there are.</caption>
+                slot that goes past.</caption>
                 <image source="images/Day12-Motors(3)/fig-photointerrupter-beam.svg" width="92%"/>
             </figure>
 
             <p>
-                The photointerrupter has three connections: power, ground, and an
-                output.  The output needs a <term>pull-up resistor</term> — a
-                resistor of about 10 kΩ between the output and 3.3 V — and the same
-                resistor appears in the Lab 6 wiring.  We'll wire it in
-                class, put the oscilloscope on the output, and work out there why the
-                pull-up is needed.
+                The photointerrupter has three connections: power, ground, and an output.
+                The output needs a <term>pull-up resistor</term> — about 10 kΩ between the
+                output and 3.3 V, or the pin's own internal one, which is the choice
+                Lab 6 gives you.  Why
+                it is needed is what we work out in class, with the oscilloscope on that
+                output.
             </p>
         </subsection>
 
@@ -2366,8 +2364,7 @@ void tim14_pwm_set(uint16_t value) {
                 either seeing the LED or it is not, and one slot is the same as the
                 next.  So does anything about this signal change if the shaft turns
                 the other way?  In Lab 6 you are asked to display a negative rpm when
-                the motor is running in reverse, so it is a question we have to
-                answer, and we'll answer it in class.
+                the motor is running in reverse, so we'll answer it in class.
             </p>
         </subsection>
 
@@ -2545,7 +2542,7 @@ void tim14_pwm_set(uint16_t value) {
         <introduction>
             <p>
                 On Wednesday we worked through <c>TTmotor_ramp.c</c> one register at a
-                time.  Today we'll find out how fast it is actually turning.  We'll wire the
+                time.  Today we'll find out how fast the motor is actually turning.  We'll wire the
                 photointerrupter and put its output on the oscilloscope, work out
                 together how to turn a train of pulses into a number in revolutions
                 per minute, and then build the rest of the Lab 6 system with that
@@ -2560,8 +2557,8 @@ void tim14_pwm_set(uint16_t value) {
             <!-- DELIVERY 2 prose: WRITTEN 2026-08-25.  Owed nothing by id. -->
             <p>
                 Everything we do today is built on top of <c>TTmotor_ramp.c</c>: the
-                program you write for Lab 6 keeps that driver and adds a measurement to
-                it.  So we'll start with whatever is still unclear in that file.
+                program you write for Lab 6 keeps much of that driver and adds a
+                measurement to it.  So we'll start with whatever is still unclear in that file.
             </p>
 
             <activity xml:id="act-day12-driver-questions">
@@ -2593,15 +2590,9 @@ void tim14_pwm_set(uint16_t value) {
                  transistor, and there is no OTYPER bit on the sensor.  It is now the
                  paragraph above table-day12-diagnostics, with the xref. -->
             <p>
-                Today we'll measure how fast the motor's shaft is actually turning.
-                We'll use the photointerrupter from the reading, watching a slotted wheel
-                turn on the shaft: three wires connect it, and one resistor goes with
-                it.  We'll look at the signal that comes out of it on the oscilloscope
-                before it goes anywhere near a pin on the Nucleo.
-            </p>
-            <p>
-                Before we wire anything, make a prediction — about the sensor on its
-                own, with nothing but an oscilloscope on its output.
+                We'll wire the photointerrupter from the reading and put its signal wire
+                on the oscilloscope before reading it with a pin.  Before we wire
+                anything, make a prediction.
             </p>
 
             <!-- P-6: the prediction comes BEFORE the resistor is wired, and
@@ -2612,12 +2603,36 @@ void tim14_pwm_set(uint16_t value) {
             <activity xml:id="act-day12-predict-trace">
                 <title>Predict the trace</title>
                 <statement>
-                    <p>Suppose we power the photointerrupter, put the oscilloscope on
-                    its output, and connect nothing else to that output at all.  The
-                    motor is running, so slots are going past the beam.  What would
-                    the trace look like, and why?</p>
+                    <p>You are about to wire the photointerrupter as in
+                    <xref ref="fig-day12-wiring"/>: power, ground, its signal wire to a
+                    row of its own on the breadboard, and a 10 kΩ resistor from that row
+                    up to 3.3 V.  Now suppose we leave the resistor out.  The sensor is
+                    powered, the oscilloscope is on its signal wire, and nothing else is
+                    connected to that wire at all.  The motor is running, so slots are
+                    going past the beam.  What would the trace
+                    look like, and why?</p>
                 </statement>
             </activity>
+
+            <!-- PETRA, 2026-08-26, on the prediction slide: "Is it possible to
+                 actually show the image from the following slide here?"  An
+                 activity ref drops the figures the activity embeds
+                 (AUTHORING-slides.md), so the prompt is repeated in a <slide>
+                 block that refs the wiring picture.  The deck entry that used to
+                 ref act-day12-predict-trace now refs this.  P-6 still holds in the
+                 BOOK: the activity is above fig-day12-wiring, and the reveal is
+                 still fig-photointerrupter-states two slides on.  Showing the
+                 circuit here is safe only because the prompt now says out loud
+                 that the resistor is left out — her other comment on this slide was
+                 "Do you mean we even omit the pullup here?" -->
+            <slide xml:id="sl-day12-predict-trace" ref="fig-day12-wiring" room="yes">
+    <ul>
+        <li>You are about to wire the photointerrupter like this: power, ground, its signal wire to a row of its own, and a 10 kΩ resistor from that row up to 3.3 V.</li>
+        <li>Now suppose we <em>leave the resistor out</em>. The sensor is powered, the oscilloscope is on its signal wire, and nothing else is connected to that wire at all.</li>
+        <li>The motor is running, so slots are going past the beam. What would the trace look like, and why?</li>
+    </ul>
+    <note>≈ 2 min. Collect two or three answers and write them on the board without ruling on any of them. Say the second bullet out loud — the picture on this slide HAS the resistor in it, and the prediction is about the circuit without it. Do NOT say what the pull-up is for: sl-day12-states is the reveal.</note>
+</slide>
 
             <!-- HER OWN DRAWING, second export, 2026-08-25 (pass 1: "You are missing
                  all of my annotations here").  fig-day12-wiring-annotated.png is her
@@ -2628,8 +2643,8 @@ void tim14_pwm_set(uint16_t value) {
                  replaced a first export in which my own erase rectangle had clipped
                  42 px off the breadboard's top rail — if this figure ever needs editing
                  again, erase around the artwork, not through it.
-                 fig-day12-wiring.svg is the rebuilt version both replaced, kept for
-                 reference.
+                                  The rebuilt fig-day12-wiring.svg that both of these replaced has been
+                 deleted; her own export is the only version.
 
                  P-15 is superseded HERE by her own annotation: the drawing states the
                  pull-up VALUE ("~10 KΩ pullup"), because she drew it that way.  There
@@ -2646,58 +2661,42 @@ void tim14_pwm_set(uint16_t value) {
                 The photointerrupter has three connections, and all three are in
                 <xref ref="fig-day12-wiring"/>.  Its ground goes to the breadboard's
                 ground rail.  Its power is 5 V, taken from the regulator — the same node
-                that already feeds the driver's <c>VM</c> pin — and it has to be 5 V,
-                because the datasheet for this part gives its supply voltage as 5 to
-                24 V DC, so 3.3 V is below anything the part is rated for.  Its signal wire goes to a
-                row of its own, and a 10 kΩ resistor goes from that row up to 3.3 V.
-                So the sensor runs from 5 V and the resistor is tied to 3.3 V.  Those are
-                deliberately two different rails, and we'll see why in a moment.
+                that already feeds the motor driver's <c>VM</c> pin — because the datasheet
+                gives the part's supply voltage as 5 to 24 V DC.  Its signal wire goes to
+                a row of its own on the breadboard, and a 10 kΩ resistor goes from that
+                row up to 3.3 V.  So the sensor runs from 5 V and the resistor is tied to
+                3.3 V.  We'll see below why those are two different rails.
             </p>
             <figure xml:id="fig-day12-wiring">
                 <caption>The circuit for today's measurement: Wednesday's circuit with
-                the photointerrupter and one resistor added.  The board marks the sensor's
-                three connections <c>OUT</c>, <c>GND</c> and <c>VCC</c>, and here they
-                carry the orange, black and blue wires respectively.  The blue one is
-                power, and it goes to the regulator's 5 V — the same node that feeds the
-                driver's <c>VM</c> pin; the blue callout is there to say why that has to
-                be 5 V.  The signal wire goes to a row of its own, and the resistor that
-                the thin blue arrow labels <q>~10 KΩ pullup</q> runs from that row up to
-                the rail the dark red wire brings 3.3 V to.  Put the oscilloscope on that
-                same row; the oscilloscope itself is not drawn.  The signal wire stops at
-                that row and does not go on to the Nucleo, which is what the orange
-                callout says.  The regulator board and its barrel jack are at the right,
-                and its 5 V, GND and Vin pads are drawn with nothing on them — that
-                connection is not drawn in any of this chapter's pictures, so trace it on
-                your own board.  The TB6612, the motor and the three signal wires from
-                PA5 (D13), PA6 (D12) and PA7 (D11) are unchanged.</caption>
+                the photointerrupter and one resistor added.  The sensor's power goes to
+                the regulator's 5 V, the same node that feeds the driver's <c>VM</c> pin.
+                Its signal wire goes to a row of its own, with the 10 kΩ pull-up from that
+                row to 3.3 V.</caption>
                 <image source="images/Day12-Motors(3)/fig-day12-wiring-annotated.png" width="96%"/>
             </figure>
             <slide xml:id="sl-day12-wiring" ref="fig-day12-wiring">
     <caption>Everything but the sensor and one resistor is what you wired on Wednesday.</caption>
-    <note>≈ 2 min to read the picture, then the activity. Her slide 6, her own annotations. Say first that we are back to the bare circuit — take the scope and the multimeter off the PWM node from Wednesday before anything else. The signal wire is orange in this drawing and white on the part in your kit; say so or somebody will look for an orange wire. Do NOT ask them to read pin names off this image, the silkscreen is far too small to project. And do NOT say what the pull-up is FOR yet: the prediction has just been made and fig-photointerrupter-states is the reveal — her callout gives the value, not the reason, so the reveal still lands. The regulator's pads are drawn unconnected; if somebody asks, it is wired as it was on Wednesday.</note>
+    <note>≈ 2 min to read the picture, then the activity. Her slide 6, her own annotations. Say first that we are back to the bare circuit — take the scope and the multimeter off the PWM node from Wednesday before anything else. The signal wire is orange in this drawing and white on the part in your kit; say so or somebody will look for an orange wire. Do NOT ask them to read pin names off this image, the silkscreen is far too small to project. And do NOT say what the pull-up is FOR yet: the prediction has just been made and fig-photointerrupter-states is the reveal — her callout gives the value, not the reason, so the reveal still lands. The regulator's pads are drawn unconnected; if somebody asks, it is wired as it was on Wednesday. Say out loud that the signal wire does NOT go into the Nucleo yet — it stops at its own row, and today we only look at it with the scope. This is the second slide running to carry this picture (Petra asked for it on the prediction slide); name that from the front — "same picture, now we wire it" — rather than skipping past it.</note>
 </slide>
 
             <p>
-                One thing to check before you wire it: not every kit has the same part.
-                Some have the sensor on a small board with its three connections marked on
-                it, and some have it on a length of four-core cable, where the wires are
-                told apart by color instead — <xref ref="fig-day12-cabled-sensor"/> is
-                that version.
+                Not every kit has the same part.  Some have the sensor on a small board
+                with its three connections marked on it, and some have it on a length of
+                four-core cable, where the wires are told apart by color instead
+                (<xref ref="fig-day12-cabled-sensor"/>).  Either way, put the oscilloscope
+                on the sensor's row with its minus lead on the shared ground, and turn the
+                wheel slowly by hand before you start the motor.  If what you see ever goes
+                above 3.3 V, stop there.  Five volts on a Nucleo
+                pin damages it, which is why we check this signal on the oscilloscope
+                before plugging the wire into the header.
             </p>
             <figure xml:id="fig-day12-cabled-sensor">
                 <caption>The photointerrupter as some kits have it, on a length of
-                four-core cable rather than on a small board.  Only some kits have
-                this cable; others have just the three wires — signal, power and
-                ground.  It is the same kind of
-                sensor and the same three connections, but the wires are identified by color
-                instead of by a silkscreen: brown is power, blue is ground, and black
-                is the output.  The pink wire is the sensor's <term>L terminal</term>,
-                which selects whether the output switches on light or on dark; leave it
-                unconnected, and — the datasheet asks for this — cut it back and tape it
-                so it cannot touch anything, because an unconnected L wire picks up
-                noise.  Lab 6's own figure names the same four wires with some of the
-                colors given as alternatives, so check yours against the part rather than
-                against either list.</caption>
+                four-core cable rather than on a small board.  Brown is power, blue is
+                ground, and black is the output.  The pink wire is the sensor's
+                <term>L terminal</term>; leave it unconnected
+                (<xref ref="subsec-motors-ref-sensor"/>).</caption>
                 <image source="images/Day12-Motors(3)/fig-day12-cabled-sensor.jpg" width="62%"/>
             </figure>
             <slide xml:id="sl-day12-cabled-sensor" ref="fig-day12-cabled-sensor" stack="yes">
@@ -2706,20 +2705,12 @@ void tim14_pwm_set(uint16_t value) {
         <li>Brown — power.</li>
         <li>Blue — ground.</li>
         <li>Black — the output, and the one that gets the pull-up.</li>
-        <li>Pink — the <term>L terminal</term>. Leave it unconnected, cut it back and tape it.</li>
+        <li>Pink — the <term>L terminal</term>. Leave it unconnected, and keep it clear of everything else.</li>
     </ul>
     <note>≈ 1 min, and only if somebody has this variant — her slide 7 exists because some kits have it and some do not. If nobody in the room is holding one, skip it and say the colors are in the lab handout.</note>
 </slide>
 
-            <p>
-                The signal wire stops at the breadboard.  Put the oscilloscope on that
-                row instead, with its minus lead on the shared ground, and turn the
-                wheel slowly by hand before you start the motor — turning it by hand is
-                the only test today where you control the input and already know what
-                the output should do.  If what you see ever goes above 3.3 V, stop
-                there.  Five volts on a Nucleo pin damages it, so we check this signal
-                on the oscilloscope before that wire goes into the header.
-            </p>
+            
             <activity xml:id="act-day12-wire-and-scope">
                 <title>Wire the sensor, and watch it while the motor ramps</title>
                 <task xml:id="task-day12-wire">
@@ -2746,103 +2737,65 @@ void tim14_pwm_set(uint16_t value) {
             </activity>
 
             <p>
-                What should be on the screen is a square wave between 0 V and 3.3 V,
-                one cycle for every slot that goes past.  The sensor runs on 5 V, but that
-                HIGH level is 3.3 V, and the 3.3 V does not come from the sensor at all.
-                The phototransistor inside the part is a switch to ground and nothing else.
-                In one of the two states it conducts and pulls the signal wire down to
-                0 V; in the other it stops conducting and lets go of the line entirely, and
-                then the only things connected to that row are the 10 kΩ resistor and the
-                3.3 V at the far end of it.  The resistor is what brings the line back up,
-                which means the rail the resistor is tied to is what sets the HIGH level —
-                and we tied it to 3.3 V because 3.3 V is what the STM32C031C6's pins
-                expect.  <xref ref="fig-photointerrupter-states"/> draws both states.
+                The square wave you are looking at runs between 0 V and 3.3 V, and that
+                3.3 V does not come from the sensor at all: the sensor runs on 5 V.  The
+                phototransistor inside the part is a switch to ground and nothing
+                else.  In one of the two states it conducts and pulls the signal wire down
+                to 0 V; in the other it stops conducting and lets go of the line, at which
+                point the wire is pulled up through the 10 kΩ resistor to 3.3 V.  So the
+                rail the resistor is tied to is what sets the HIGH level, and we tied it
+                to 3.3 V because 3.3 V is what the STM32C031C6's pins expect.
+                <xref ref="fig-photointerrupter-states"/> draws both states.
             </p>
             <p>
-                Which state is which is worth reading off your own screen rather than
-                taking on trust.  This sensor can be wired to switch on light or on dark —
-                its datasheet calls the two <term>light-ON</term> and
-                <term>dark-ON</term>, and a fourth terminal called L selects between
-                them — so turn the wheel by hand and watch which way the trace moves as a
-                slot comes into the gap.  Nothing in the rpm arithmetic depends on the
-                answer, because either way there is one pulse for every slot; it matters
-                when you come to choose which edge to count.
+                Which state is which is worth reading off your own screen.  This sensor
+                can be wired to switch on light or on dark, so turn the wheel by hand and
+                watch which way the trace moves as a slot comes into the gap.  Nothing in
+                the rpm arithmetic depends on the answer, because either way there is one
+                pulse for every slot, but it matters when you come to choose which edge to
+                count.
             </p>
             <figure xml:id="fig-photointerrupter-states">
                 <caption>Why the sensor's output needs a pull-up resistor.  In the left
                 panel the beam reaches the phototransistor and it conducts, pulling OUT
                 down; in the right panel a spoke blocks the beam, the transistor stops
                 conducting, and the 10 kΩ resistor is the only thing left holding the line
-                up.  That is the whole point of the resistor: whatever it is connected to
-                is what sets the HIGH level — here 3.3 V, which is what the STM32C031C6's
-                pins expect.  Take the resistor away and nothing holds the line up when
-                the transistor lets go, which is the floating node the prediction was
-                about.
-                This is not a guess about the part: the sensor in your kit is an Omron
-                EE-SX672, and its datasheet gives the control output as
-                <q>NPN open collector</q>
-                (<url href="external/datasheets/ee-sx67.pdf">EE-SX67 series datasheet</url>,
-                <em>Ratings and Specifications</em>).  The same table is where the 5 V
-                comes from: the part's supply voltage is specified as 5 to 24 V DC, which
-                is why its supply and its HIGH level have to be two different rails.</caption>
+                up.  Whatever that resistor is connected to is what sets the HIGH level —
+                here 3.3 V, which is what the STM32C031C6's pins expect.</caption>
                 <image source="images/Day12-Motors(3)/fig-photointerrupter-states.svg" width="96%"/>
             </figure>
             <slide xml:id="sl-day12-states" ref="fig-photointerrupter-states">
     <caption>The phototransistor can only pull OUT down. Whatever the resistor is tied to is what sets the HIGH level.</caption>
-    <note>≈ 3 min, and this is the reveal for the prediction. Draw out the consequence rather than stating it: the sensor cannot put a voltage on the line, it can only take one away, so the HIGH level is ours to choose. That is why the pull-up goes to 3.3 V. This is the same behavior as the open-drain outputs of Day 10, on a different kind of transistor — say that, and say there is no OTYPER bit on the sensor, or somebody will go looking for one.</note>
+    <note>≈ 3 min, and this is the reveal for the prediction. Draw out the consequence rather than stating it: the sensor cannot put a voltage on the line, it can only take one away, so the HIGH level is ours to choose. That is why the pull-up goes to 3.3 V. This is the same behavior as the open-drain outputs of Day 10, on a different kind of transistor — say that, and say there is no OTYPER bit on the sensor, or somebody will go looking for one. Then send them back to their own screens for WHICH state is which: turn the wheel by hand and watch which way the trace moves as a slot comes into the gap. This part can be wired to switch on light or on dark, the artwork commits to one of them, and nobody should take it on trust — nothing in the rpm arithmetic depends on the answer, but Lab 6's falling-edge interrupt does.</note>
 </slide>
 
             <p>
-                That also answers the prediction.  With nothing on the output but the
-                oscilloscope there is no resistor and no 3.3 V, so between pulses the row
-                is connected to nothing at all: the trace is neither a square wave nor a
-                flat line, but a wandering one, because a floating node picks up whatever
-                is nearby.  It can even look as though it is responding to the motor.
+                That also answers the prediction.  With the resistor left out there is
+                nothing to bring the line back up, so between pulses the row is connected
+                to nothing at all: the trace is neither a square wave nor a flat line, but
+                a wandering one, because a floating node picks up whatever is nearby.  It
+                can even look as though it is responding to the motor.
             </p>
             <p>
-                You have met this behavior before under a different name.  On Day 10 the
+                You have seen this behavior before under a different name.  On Day 10 the
                 two I2C pins were configured as <term>open-drain</term> outputs
                 (<xref ref="subsec-day10-pins"/>), which can pull a line down and cannot
                 drive it up, and the bus needed pull-up resistors for exactly the reason
                 above.  The photointerrupter's output does the same job with a different
                 kind of transistor — its datasheet calls it an <term>open
                 collector</term> — and the one difference that matters to you is that
-                there is no <c>OTYPER</c> bit to set here.  The behavior is built into
-                the part and cannot be configured away, so the resistor is not optional,
-                and choosing which rail to tie it to is the design decision you have to
-                make.
+                there is no <c>OTYPER</c> bit to set here.  The behavior is built into the
+                part and cannot be configured away, so the resistor is not optional.  The
+                resistor's value is a trade-off with a wide middle, and 10 kΩ is comfortably inside
+                it;
+                <xref ref="subsec-motors-ref-sensor"/> works both ends of that trade-off
+                out, and gives the internal-pull-up alternative Lab 6 allows.
             </p>
             <p>
-                That leaves the value of the resistor, and it is a trade-off rather than
-                a calculation.  Using a much smaller resistor wastes current and makes
-                the transistor work harder to pull the line down, because every moment
-                the line is LOW that resistor is carrying 3.3 V divided by its own
-                resistance straight to ground.  A much larger resistor takes too long to
-                bring the line back up against the stray capacitance of the wiring, and
-                picks up more noise while it is doing it.  Between those two ends is a
-                wide middle where nothing goes wrong, and 10 kΩ is comfortably inside
-                it, which is why 10 kΩ is a common default for a pull-up.
-            </p>
-            <p>
-                The rail matters more than the value.  Whatever the resistor is tied to
-                is what the line rises to, and that is the voltage this wire will one day
-                present to a pin on the Nucleo — so it is 3.3 V, which is what the
-                STM32C031C6's pins expect, and not the sensor's own 5 V.
-            </p>
-            <p>
-                In Lab 6 you can keep this external resistor, or you can leave it out and
-                enable the pin's own internal pull-up with <c>PUPDR</c>, the way you did
-                on Day 3.  Today we use the external one, because we are putting a scope
-                probe on that node.
-            </p>
-            <p>
-                When the trace on your screen is not the one described above, work the
+                If the trace on your screen is not the one described above, work the
                 circuit in the same order every time: power first, then ground, then the
                 signal path.  <xref ref="table-day12-diagnostics"/> is that order applied
-                to the four traces this particular circuit produces when something is
-                wrong, and each row is a consequence of
-                <xref ref="fig-photointerrupter-states"/> rather than a piece of general
-                advice.
+                to this circuit.
             </p>
             <table xml:id="table-day12-diagnostics">
                 <title>Four traces, and their potential causes</title>
@@ -2862,8 +2815,8 @@ void tim14_pwm_set(uint16_t value) {
                         <cell>Nothing is changing the beam, so check first that the wheel's rim really passes through the gap.  If it does, the sensor is not switching: check its power and ground, and check that they are not swapped.</cell>
                     </row>
                     <row>
-                        <cell>A clean square wave that does not change when the motor speeds up</cell>
-                        <cell>The probe is on the wrong node.  Follow it back to the row the signal wire lands in.</cell>
+                        <cell>A clean square wave whose frequency does not change when the motor speeds up</cell>
+                        <cell>The probe is still on Wednesday's PWM node, which runs at a fixed 1.6 kHz whatever the motor does.  Move it to the row the sensor's signal wire lands in.</cell>
                     </row>
                 </tabular>
             </table>
@@ -2924,12 +2877,9 @@ void tim14_pwm_set(uint16_t value) {
                  subsec-motors-ref-speed, since the paragraph had room for it. -->
 
             <p>
-                You now have two things: a pulse train on a screen, and a number for how
-                many of those pulses arrive in a second at the fastest the motor will go.
-                Neither of them is a speed.  Turning one into the other takes one fact
-                about your own hardware and one line of arithmetic, and the fact is on no
-                datasheet anywhere — it is how many slots are cut in the wheel on your
-                motor.  So the first thing to do is count them.
+                You now have a pulse train on the screen and a number for how many pulses
+                arrive in a second.  To convert this to a speed we need to know how many
+                slots are cut in the slotted wheel on your motor.
             </p>
 
             <!-- P-6: task-day12-detect is deliberately left open here.  Part 4 is
@@ -2945,15 +2895,13 @@ void tim14_pwm_set(uint16_t value) {
                     does one full revolution of the shaft produce?</p></statement>
                 </task>
                 <task xml:id="task-day12-detect">
-                    <statement><p>How could the STM32C031C6 notice each pulse as it
-                    arrives?  Describe every way you can think of, and list what each
-                    one would need in terms of code.</p></statement>
+                    <statement><p>How do you detect the pulses on the STM32C031C6?
+                    Describe every way you can think of.</p></statement>
                 </task>
                 <task xml:id="task-day12-count">
-                    <statement><p>Given a way of noticing them, how do you
-                    <em>count</em> them?  The rpm has to come from a count taken over
-                    a known stretch of time — where does that count live, and what
-                    starts and ends the stretch?</p></statement>
+                    <statement><p>How do you <em>count</em> the pulses?  The rpm comes
+                    from a count taken over a known stretch of time: what starts and
+                    ends that stretch?</p></statement>
                 </task>
                 <task xml:id="task-day12-convert">
                     <statement><p>Take the pulse rate you measured at the fastest
@@ -2971,28 +2919,24 @@ void tim14_pwm_set(uint16_t value) {
             <p>
                 Whatever the technology behind it — mechanical, optical or magnetic — a
                 sensor like this one gives us a pulse train, and we have to turn that
-                pulse train into a position or a velocity.  Write
-                <m>PPS</m> for the number of pulses counted in one second and <m>N</m>
-                for the number of slots you counted on your own wheel.  Dividing by
-                <m>N</m> turns pulses into revolutions, and multiplying by 60 turns
-                revolutions per second into revolutions per minute, which is the
-                expression from the reading in <xref ref="fig-rpm-formula"/>.  Both
-                numbers going into it are now yours: you counted the slots, and you
-                measured the rate.
+                pulse train into a position or a velocity.  The expression is the one from
+                the reading, <xref ref="fig-rpm-formula"/>, and both numbers going into it
+                are now yours.
             </p>
-            <p>
-                Count <em>one edge per slot</em> — the rising edge or the falling edge,
-                not both.  You have the rising- and falling-edge trigger registers from Day 9, and
-                enabling both is a natural thing to try, but it counts two pulses for every slot
-                that goes past, and then the expression needs <m>2N</m> where it now has
-                <m>N</m>.  Nothing on the screen would tell you this had happened.  The
-                number would simply be twice the real speed, and it would look entirely
-                plausible.
-            </p>
+            <ul>
+                <li><m>PPS</m> is the count of pulses in one second, <m>N</m> the number
+                of slots you counted.  Divide by <m>N</m> for revolutions, multiply by 60
+                for a rate per minute.</li>
+                <li>Count <em>one edge per slot</em> — rising or falling, not both.
+                Counting both doubles the count, and the expression then needs <m>2N</m>
+                in place of <m>N</m>.</li>
+                <li>Nothing on the screen would tell you that had happened.  The number
+                would simply be twice the real speed, and it would look plausible.</li>
+            </ul>
             <slide xml:id="sl-day12-wheel-recall" ref="fig-photointerrupter-beam"/>
             <slide xml:id="sl-day12-rpm" room="yes">
     <p>Regardless of the technology — mechanical, optical or magnetic — a sensor like this one gives us a pulse train, and we have to turn that pulse train into position or velocity information.</p>
-    <image source="images/Day12-Motors(3)/rpm-formula.svg" width="30%"/>
+    <image source="images/Day12-Motors(3)/rpm-formula.svg" width="22%"/>
     <ul>
         <li><term>PPS</term> is the count of pulses in one second, and <m>N</m> is the number of slots you counted. Divide by <m>N</m> to get revolutions, multiply by 60 to get a rate per minute.</li>
         <li>Count <em>one edge per slot</em> — the rising edge or the falling edge, not both. Counting both doubles the pulse count, and then the formula needs <m>2N</m> in place of <m>N</m>.</li>
@@ -3001,25 +2945,21 @@ void tim14_pwm_set(uint16_t value) {
 </slide>
 
             <p>
-                The same count answers a second question, and which answer you get
-                depends only on what you divide by.  Each pulse is one slot going past,
-                so each pulse is <m>2\pi/N</m> radians of shaft rotation, or
-                <m>360/N</m> degrees, or one <m>N</m>th of a revolution.  Multiply the
-                pulse count by that and you have how far the shaft has turned since you
-                started counting, which is a position rather than a speed — a position
-                relative to wherever the shaft happened to be when the count started,
-                because nothing in this measurement records where that was.  Divide the
-                same count by the time you counted over instead, and you are back to a
-                speed.
+                The same count answers a second question, and which answer you get depends
+                only on what you divide by.
             </p>
-            <p>
-                Either way the answer is an <em>average</em> over the counting interval,
-                and that matters.  A count taken over one second says
-                nothing at all about what the shaft did inside that second: it might have
-                turned steadily, or stalled for half the interval and run at twice the
-                speed for the rest.  A shorter interval buys you detail and costs you
-                resolution, because there are fewer pulses inside it to count.
-            </p>
+            <ul>
+                <li>Each pulse is one slot going past, so each pulse is
+                <m>\Delta\theta = 2\pi/N</m> radians of shaft rotation, or
+                <m>360/N</m> degrees, or <m>1/N</m> of a revolution.</li>
+                <li>So <m>\text{pulse count} \times \Delta\theta</m> is how far the
+                shaft has turned since you started counting — its position, relative to
+                wherever it was then, because nothing here records where that was.</li>
+                <li>Divide that by the time you counted over and you have its speed
+                instead.  Note the word <em>average</em>: this says nothing about what
+                the shaft did inside the interval, and a shorter interval buys detail at
+                the cost of resolution.</li>
+            </ul>
             <slide xml:id="sl-day12-decoding">
     <ul>
         <li>The same count read as an angle: each pulse is <m>\Delta\theta = 2\pi / N</m> radians of shaft rotation, or <m>360/N</m> degrees, or <m>1/N</m> of a revolution.</li>
@@ -3030,23 +2970,16 @@ void tim14_pwm_set(uint16_t value) {
 </slide>
 
             <p>
-                One thing this signal does not carry at all is direction.  Every slot
-                looks like every other slot, and it looks the same whichever way the
-                wheel is turning, so the sign on the rpm your program displays in Lab 6
-                cannot come from the measurement.  It has to come from the mode your
-                program most recently commanded.  So the sign on the display is only right if the
-                motor is doing what it was told: a motor that has stalled, or one that a
-                hand is turning backwards, would still be shown with the sign the program
-                asked for.
-            </p>
-            <p>
-                Getting direction out of the measurement itself takes a second sensor.  A
-                <term>quadrature encoder</term> uses two of them, offset so that one
-                pulse train leads the other by a quarter of a cycle, so that the two pulse trains are offset from each other; which one
-                leads tells you which way the shaft is turning, and an up-down counter
-                driven by both gives position and speed together.  Some parts do all of
-                that decoding in hardware and make the finished count available over a
-                bus, so the counting never happens in your program at all.
+                One thing this signal does not carry at all is direction.  Every slot looks
+                like every other slot, and it looks the same whichever way the wheel is
+                turning, so the sign on the rpm your program displays in Lab 6 cannot come
+                from the measurement — it has to come from the mode your program most
+                recently commanded.  That sign is therefore only right if the motor is
+                doing what it was told: a motor that has stalled, or one that a hand is
+                turning backwards, would still be shown with the sign the program asked
+                for.  Getting direction out of the measurement itself takes a second
+                sensor a quarter of a cycle away from the first, which is a
+                <term>quadrature encoder</term> (<xref ref="subsec-motors-ref-direction"/>).
             </p>
             <slide xml:id="sl-day12-quadrature">
     <ul>
@@ -3069,9 +3002,9 @@ void tim14_pwm_set(uint16_t value) {
                 where it gets settled.  What to collect from the tables now, without
                 ruling on any of it: read the pin in the main loop; use a GPIO
                 interrupt on a falling edge, as on Day 9; use a timer's input capture,
-                which this course has not taught; and let a timer count the edges in
-                hardware, which we have not covered and which would in any case need
-                the sensor on a pin that has a timer channel on it.  If a
+                which this course has not taught and which PA15 could in fact do on
+                <c>TIM1_CH1</c>; and let a timer count the edges in hardware, which we
+                have not covered either.  If a
                 table says <q>an interrupt, like the button on Day 9</q>, that is the
                 right answer and it still does not get confirmed here.</p>
                 <p><term>The conversion.</term>  Whatever they measured, divided by
@@ -3116,8 +3049,8 @@ void tim14_pwm_set(uint16_t value) {
                     <em>ARDUINO connector pinout</em>, on page 20.</p>
                 </introduction>
                 <task xml:id="task-day12-d7">
-                    <statement><p>The sensor's output goes to the header pin labeled
-                    <c>D7</c> on the Nucleo (so that's the Arduino name).  Find the
+                    <statement><p>We'll plug the sensor's output into the header pin
+                    labeled <c>D7</c> on the Nucleo (an Arduino name).  Find the
                     row for <c>D7</c> in that table and write down which STM32C031C6
                     pin it is.</p></statement>
                 </task>
@@ -3138,50 +3071,46 @@ void tim14_pwm_set(uint16_t value) {
                 column is the board's view, not the chip's: the STM32C031C6 datasheet does
                 list alternate functions on PA15 — <c>SPI1_NSS/I2S1_WS</c>,
                 <c>USART2_RX</c>, <c>TIM1_CH1</c>, <c>MCO2</c>,
-                <c>USART1_RTS_DE_CK</c> and <c>EVENTOUT</c> — but <em>no TIM14 channel</em>, so
-                nothing on this pin can capture or count edges in hardware and the counting
-                has to be done in software either way.  And the lookup is a two-minute job
-                that saves a wrong guess in the lab, which is the whole reason for doing it
-                in the room rather than printing the answer.</p>
+                <c>USART1_RTS_DE_CK</c> and <c>EVENTOUT</c>.  There is no TIM14 channel on it,
+                so the PWM could not come out here — but <c>TIM1_CH1</c> is a timer channel,
+                and TIM1's input capture (RM0490 §15.3.7) could time these pulses in
+                hardware.  We count them in software because this course has not taught
+                input capture, not because the pin cannot do it.  Doing the lookup in the
+                room rather than printing the answer saves a wrong guess in the lab.</p>
             </instructor>
 
             <p>
-                Now that we know <c>D7</c> is <c>PA15</c>, we'll look at the three rates
-                together.  <xref ref="fig-three-rates"/> draws them over one second, and
-                the pulses along the bottom are what make the loop's shape a real
-                question.  The other
-                two jobs are on a schedule that the program itself sets: it decides when
-                10 ms have passed and when a second has passed.  The pulses are on no
-                schedule at all.  A pulse arrives when the shaft brings a slot around,
-                which lines up with none of the three rates, so the loop has to be free
-                to notice one at any moment.
+                Now that we know <c>D7</c> is <c>PA15</c>, look at the three rates
+                together.  <xref ref="fig-three-rates"/> draws them over one second.  Two
+                of the three jobs are on a schedule the program itself sets: it decides
+                when 10 ms have passed and when a second has passed.  The pulses are on no
+                schedule at all — one arrives when the shaft brings a slot around, which
+                lines up with none of the three rates — so the loop has to be free to
+                notice one at any moment.  That is what rules out <c>delay_ms()</c>: it can serve
+                exactly one of the three jobs, because while it is counting out its
+                milliseconds the program is doing nothing else whatsoever — the same
+                problem we watched a polled button counter have on Day 9.  In Lab 6 you
+                are asked not to use <c>delay_ms()</c> for timing at all, and to use
+                <c>milliseconds()</c> instead.
             </p>
             <figure xml:id="fig-three-rates">
                 <caption>The three rates the Lab 6 program has to keep, drawn over one
-                second: something happens on every pass of the loop, the potentiometer is
-                read every 10 ms, and the count becomes an rpm once a second.  The tick
-                marks are schematic — a hundred of them would be unreadable — so count the
-                rows, not the ticks.  The pulses along the bottom arrive when the shaft
-                brings a slot around, which lines up with none of the three.</caption>
+                second: the loop asks the time on every pass, the potentiometer is read every
+                10 ms, and the count becomes an rpm once a second.  The pulses
+                along the bottom arrive when the shaft brings a slot around, which lines
+                up with none of the three.  The tick marks are schematic.</caption>
                 <image source="images/Day12-Motors(3)/fig-three-rates.svg" width="94%"/>
             </figure>
             <slide xml:id="sl-day12-three-rates" ref="fig-three-rates" stack="yes">
     <ul>
         <li>By the end of Lab 6 your program has three jobs, and they run at three different rates: sample the potentiometer 100 times a second, notice every pulse from the sensor as it arrives, and put a new number on the display.</li>
-        <li><c>delay_ms()</c> can only do one of them. While it is counting out its milliseconds, the program is doing nothing else at all — which is the same problem we watched a polled button counter have on Day 9.</li>
+        <li><c>delay_ms()</c> can only do one of them at a time. While it is counting out its milliseconds, the program is doing nothing else at all — which is the same problem we watched a polled button counter have on Day 9.</li>
     </ul>
     <caption>The pulses along the bottom line up with none of the three rates.</caption>
     <note>≈ 1 min. Do not explain milliseconds() yet — the next slide is the code. The Day 9 callback is the one to lean on: they have already seen a loop miss an event because it was busy waiting.</note>
 </slide>
 
-            <p>
-                That is what rules out <c>delay_ms()</c>.  It can serve exactly one of
-                the three jobs, because while it is counting out its milliseconds the
-                program is doing nothing else whatsoever — which is the same problem we
-                watched a polled button counter have on Day 9.  In Lab 6 you are asked
-                not to use <c>delay_ms()</c> for timing at all, and to use
-                <c>milliseconds()</c> instead.
-            </p>
+            
             <p>
                 <c>milliseconds()</c> is a function you have actually had all term, in
                 <c>sysinit.c</c>, and we just have never opened it.  SysTick is a counter
@@ -3222,17 +3151,15 @@ void SysTickInit(void) {
 ]]></code></program>
 
             <p>
-                A few things in those lines are worth drawing out.  SysTick is a second
-                timer, and this is the first time we have opened it — Day 8's timer was
-                TIM14, with its own registers.  What carries over from Day 8 is the shape:
-                a counter, an interrupt when it reaches the end, and a handler that runs
-                on the way past.  <c>SysTick->LOAD</c> gets 12000 − 1 because the clock is
-                12 MHz, and 12 MHz divided by 12000 is 1 kHz, which is one interrupt every
-                millisecond.  <c>SystemInit()</c> calls <c>SysTickInit()</c> before
-                <c>main()</c> starts, so the count is already running before your first
-                line of code does.  And <c>milliseconds()</c> does not wait for anything:
-                it returns a number immediately, so asking what time it is costs
-                essentially nothing, and you can afford to ask on every pass.
+                SysTick is another timer, with its own registers — Day 8's was TIM14 — but
+                it has the same shape as Day 8's: a counter, an interrupt when it reaches
+                the end, and a handler that runs each time.  <c>SysTick->LOAD</c> gets 12000 − 1 because the clock is 12 MHz, and 12 MHz divided by 12000 is
+                1 kHz, which is one interrupt every millisecond.  <c>SystemInit()</c>
+                calls <c>SysTickInit()</c> before <c>main()</c> starts, so the count is
+                already running before your first line of code does.  And
+                <c>milliseconds()</c> does not wait for anything: it returns a number
+                immediately, so asking what time it is costs one memory read, and you
+                can afford to ask on every pass.
             </p>
             <!-- ONE WORD OF PETRA'S WAS CHANGED HERE ON PURPOSE.  Her pass-1 comment
                  read "...its handler, which is called every time one SECOND has passed...".
@@ -3302,42 +3229,19 @@ void SysTickInit(void) {
 </slide>
 
             <p>
-                So the shape of the loop is becoming clear.  Ask the time on every pass;
-                when 10 ms have gone by, sample the potentiometer and command the motor;
-                when a second has gone by, convert the pulse count and send it to the
-                display.  The one thing still unplaced is where the sensor's pin gets
-                read.  The obvious place is inside the 10 ms beat, where the read costs nothing and
-                everything is already happening.  That does not work, and the reason is what
-                a pin read actually tells you.
-            </p>
-            <p>
+                So the loop asks the time on every pass; when 10 ms have gone by it samples
+                the potentiometer and commands the motor, and when a second has gone by it
+                converts the pulse count and sends it to the display.  What is left to
+                place is the read of the sensor's pin, and the obvious place — inside the
+                10 ms step, where everything else already happens — does not work.
                 Reading a pin tells you only what that pin is doing at the instant you
-                read it.  A pulse that arrives and leaves between two reads is never seen
-                at all.  A loop that looks a hundred times a second at a signal whose
-                pulses are a few milliseconds long will miss some of them, and because
-                the pulse train and the 10 ms beat are not synchronized with each other
-                it will miss a different number in every second.  The count comes out
-                low, and it comes out low by an amount that changes — not by a fixed
-                factor you could divide back out.
-            </p>
-            <p>
-                Noticing a pulse takes two reads, not one: a read that catches the line
-                HIGH, and a later read that catches it LOW, so the loop can see that it
-                changed.  That is why both halves of the cycle matter.  A polled read
-                catches every pulse only if the gap between reads is shorter than the
-                <em>shorter</em> of the pulse's HIGH time and its LOW time — if either
-                one is shorter than the gap, it can fall entirely between two reads and
-                the change is never seen.
-            </p>
-            <p>
-                Put a number on it.  On a wheel whose slots and spokes are about equally
-                wide, 60 pulses a second means the line is HIGH for about 8 ms and LOW for
-                about 8 ms.  A loop that reads every 10 ms is looking less often than
-                that, so it will miss changes — and the two times are set by how wide the
-                slots are compared with the spokes, not by the pulse rate on its own.
-                Which is why it is worth resisting the short version, <q>a 100 Hz loop
-                cannot see a 60 Hz signal</q>: it is not quite true, and it points at the
-                wrong quantity.
+                read it, so a pulse that arrives and leaves between two reads is never
+                seen at all.  As <xref ref="fig-three-rates"/> shows, the pulses line up
+                with none of the loop's three rates, so the count comes out low by a
+                different amount each time, not by a fixed fraction you could divide back
+                out.  Polling
+                fast enough is a condition on the pulse's HIGH and LOW times rather than
+                on its rate; see <xref ref="subsec-motors-ref-counting"/>.
             </p>
             <activity xml:id="act-day12-poll-or-interrupt">
                 <title>Poll or interrupt</title>
@@ -3349,87 +3253,25 @@ void SysTickInit(void) {
             </activity>
 
             <p>
-                Both answers are correct, and they cost different things.
-            </p>
-            <p>
+                Both answers can work.
                 <term>Reading the pin on every pass.</term>  Move the read out of the
-                10 ms beat so that the loop looks at the pin as fast as it can go, and
-                use <c>milliseconds()</c> only to decide when to sample the potentiometer
-                and when to close the one-second counting window.  At the rates this
-                motor produces, this works, and it is what Lab 6's own wording allows.
-                What it costs is a promise: nothing anywhere in that loop may ever block,
-                for as long as the program lives.  Every line added to that loop
-                afterwards is bound by that promise.
+                10 ms beat so that the loop looks at the pin as fast as it can go, and use
+                <c>milliseconds()</c> only to decide when to sample the potentiometer and
+                when to close the one-second counting window.  At the rates this motor
+                produces, this works.  What it costs is a constraint on everything you add later: nothing in that loop
+                may block, ever.
             </p>
             <p>
-                <term>Taking a falling-edge interrupt on PA15.</term>  This is the same
-                five moves you made on Day 9 for the button on PB4, with 15 in place of 4,
-                and <xref ref="table-day12-exti-lines"/> puts the two side by side.
-                <c>EXTI_EXTICR4</c> is section 12.5.6 of the Reference Manual — section
-                12.5.9 is only the register map.  The counter
-                the handler increments has to be declared <c>volatile</c>, as on Day 9:
-                without it the compiler may keep the count in a register and never look at
-                memory again, because nothing in the main loop changes it — and then the
-                handler's increments are invisible and the display stops moving.
-            </p>
-            <table xml:id="table-day12-exti-lines">
-                <title>The five writes, on Day 9's line and on this one</title>
-                <tabular halign="left" top="major" bottom="major" left="minor" right="minor">
-                    <col width="34%"/>
-                    <col width="33%"/>
-                    <col width="33%"/>
-                    <row header="yes" bottom="major">
-                        <cell>What it does</cell>
-                        <cell>Day 9, the button on PB4</cell>
-                        <cell>Today, the sensor on PA15</cell>
-                    </row>
-                    <row bottom="minor">
-                        <cell>Choose which port drives the line</cell>
-                        <cell><c>EXTI->EXTICR[1]</c>, <c>EXTI_PB</c></cell>
-                        <cell><c>EXTI->EXTICR[3]</c>, <c>EXTI_PA</c></cell>
-                    </row>
-                    <row bottom="minor">
-                        <cell>Trigger on the falling edge</cell>
-                        <cell><c>EXTI_FTSR1</c>, bit 4</cell>
-                        <cell><c>EXTI_FTSR1</c>, bit 15</cell>
-                    </row>
-                    <row bottom="minor">
-                        <cell>Unmask the line</cell>
-                        <cell><c>EXTI_IMR1</c>, bit 4</cell>
-                        <cell><c>EXTI_IMR1</c>, bit 15</cell>
-                    </row>
-                    <row bottom="minor">
-                        <cell>Clear the pending bit, in the handler</cell>
-                        <cell><c>EXTI_FPR1</c>, bit 4</cell>
-                        <cell><c>EXTI_FPR1</c>, bit 15</cell>
-                    </row>
-                    <row bottom="minor">
-                        <cell>Enable it in the NVIC</cell>
-                        <cell><c>EXTI4_15_IRQn</c></cell>
-                        <cell><c>EXTI4_15_IRQn</c> — unchanged</cell>
-                    </row>
-                    <row>
-                        <cell>The handler's name</cell>
-                        <cell><c>EXTI4_15_IRQHandler</c></cell>
-                        <cell><c>EXTI4_15_IRQHandler</c> — unchanged</cell>
-                    </row>
-                </tabular>
-            </table>
-            <p>
-                The last two rows are the ones to be careful with.  One vector covers
-                lines 4 through 15 together, so the 4 in <c>EXTI4_15_IRQn</c> and in
-                <c>EXTI4_15_IRQHandler</c> is part of a name and stays a 4.  Every other 4,
-                the ones that identify the <em>line</em>, becomes a 15.
+                <term>Taking a falling-edge interrupt on PA15.</term>  You have set one up
+                before, on Day 9, for the button on PB4.
             </p>
             <p>
-                We'll use the interrupt, and the reason is not the arithmetic.  You have
-                measured the pulse rate, but the condition above needs the HIGH and LOW
-                times, and those depend on how wide the slots are compared with the spokes
+                We'll use the interrupt.  Whether polling is fast enough depends on the
+                pulse's HIGH and LOW times rather than on the pulse rate you measured, and
+                those times depend on how wide the slots are compared with the spokes
                 between them — which nobody has measured, and which changes if you swap a
-                wheel.  The interrupt does not depend on any of it: the pulse is counted
-                whatever else the loop is doing, at any speed.  So the polled version is
-                not wrong at these rates; it is right for reasons you have not checked, and
-                that is what makes the interrupt the better answer.
+                wheel.  The interrupt does not depend on any of that: the pulse is counted
+                whatever else the loop is doing, at any speed this motor reaches.
             </p>
 
             <!-- PARKED at Petra's pass 1: "This is too much stuff... Just one
@@ -3447,7 +3289,7 @@ void SysTickInit(void) {
         <li><term>Take a falling-edge interrupt on PA15.</term> This is what we set up on Day 9 for the button on PB4, with 15 in place of 4 — and PA15 is on the same handler you already wrote, <c>EXTI4_15_IRQHandler</c>. The port selection is in <c>EXTI_EXTICR4</c>, which is section 12.5.6 of the Reference Manual — section 12.5.9 is only the register map.</li>
         <li>The second one is the one this course goes with, and the reason is not the arithmetic. The arithmetic depends on how fast this particular motor turns and how wide these particular slots are. The interrupt does not: the pulse is counted whatever else the loop is doing, at any speed.</li>
     </ul>
-    <note>≈ 3 min. Take three or four answers from the room BEFORE this slide goes up — the commit is the only place all day where a student makes this decision themselves. Describe the polled answer honestly rather than dismissing it: it is what Lab 6's text allows, and at these rates it works. What retires it is not that it fails here but that whether it fails depends on numbers nobody measured.</note>
+    <note>≈ 3 min. The body prose no longer explains volatile or lists the five EXTI writes — Petra, 2026-08-26: "You are doing the work for them. This is THEIR work." The answers live in inst-day12-main-loop-sketch and in subsec-motors-ref-counting; do not hand them over here. Take three or four answers from the room BEFORE this slide goes up — the commit is the only place all day where a student makes this decision themselves. Describe the polled answer honestly rather than dismissing it: it is what Lab 6's text allows, and at these rates it works. What retires it is not that it fails here but that whether it fails depends on numbers nobody measured.</note>
 </slide>
 
             <instructor xml:id="inst-day12-poll-or-interrupt">
@@ -3501,24 +3343,18 @@ void SysTickInit(void) {
 
             <p>
                 Every piece of the Lab 6 system is something you have wired before or
-                written before.  What is new is that all of it is on the board at the
-                same time, and that all of those pieces now have to share one supply, one
-                ground and one set of pins.
+                written before.  What is new is that all of it is on the board at once,
+                sharing one supply, one ground and one set of pins — and, most
+                importantly, controlled from one program.
             </p>
             <figure xml:id="fig-day12-lab6-build">
-                <caption>The complete Lab 6 system.  The regulator board on the right
-                supplies 5 V, which powers the motor through the TB6612 and the
-                photointerrupter and nothing else — as in the earlier picture, its pads are
-                drawn with nothing on them, so that one path has to be traced on your own
-                board.  Two other things this drawing leaves out: there is no pull-up
-                resistor on the sensor's output, because it is drawn with the pin's own
-                internal pull-up enabled instead, and the display's own connections are
-                simplified.  The Nucleo supplies 3.3 V for
-                the logic, and every part on the board shares one ground.  Working
-                from the left: the seven-segment display on the I2C bus, the
-                potentiometer feeding A0, the TB6612 with the motor on its A channel,
-                and the photointerrupter at the bottom left with its output going to
-                D7.</caption>
+                <caption>The complete Lab 6 system.  Working from the left: the
+                seven-segment display on the I2C bus, the potentiometer feeding A0, the
+                TB6612 with the motor on its A channel, and the photointerrupter at the
+                bottom left with its output going to D7.  The regulator on the right
+                supplies 5 V to the motor and the sensor, the Nucleo supplies 3.3 V for
+                the logic, and every part on the board shares one ground.  Here the pull-up is the pin's own internal one
+                (<xref ref="subsec-motors-ref-sensor"/>).</caption>
                 <image source="images/Day12-Motors(3)/fig-day12-lab6-build.svg" width="94%"/>
             </figure>
             <slide xml:id="sl-day12-lab6-build" ref="fig-day12-lab6-build">
@@ -3527,20 +3363,16 @@ void SysTickInit(void) {
 </slide>
 
             <p>
-                The same is true of the code, and it is worth listing what you already
-                have before you write anything new.  The driver itself —
-                <c>motor_init()</c>, <c>motor_mode()</c> and <c>motor_speed()</c> — is
-                what Lab 6 asks you to write, and Wednesday's <c>TTmotor_ramp.c</c> is
-                where its register writes come from: <c>tim14_pa7_pwm_init()</c> and
-                <c>tim14_pwm_set()</c> are the two functions in that file to build them
-                out of.  <c>start_conversion()</c> and <c>adc_read()</c> you already have,
-                from Day 7 and <c>ADCPot.c</c>.  <c>SevenSeg_number()</c> is from Day 10, and
+                The same is true of the code.  The driver itself — <c>motor_init()</c>,
+                <c>motor_mode()</c> and <c>motor_speed()</c> — is what you are asked to write
+                in Lab 6, and Wednesday's <c>TTmotor_ramp.c</c> is where its register writes
+                come from: build them out of <c>tim14_pa7_pwm_init()</c> and
+                <c>tim14_pwm_set()</c>.  <c>start_conversion()</c> and <c>adc_read()</c>
+                you already have, from Day 7 and <c>ADCPot.c</c>.
+                <c>SevenSeg_number()</c> is from Day 10, and
                 <xref ref="subsec-i2c-ref-ht16k33"/> is the HT16K33 reference to have open
                 while you use it.  The signed counter that puts a minus sign in front of a
-                negative reading is Day 10's too, from <xref ref="act-i2c-hw-t2"/> — but
-                that was homework, we have not gone over it in class, and the worked
-                version is not printed anywhere in this book, so it is the piece you are
-                least likely to have finished already.
+                negative reading is Day 10's too, from <xref ref="act-i2c-hw-t2"/>.
             </p>
             <table xml:id="table-day12-build-order">
                 <title>The order to build in, and how you know each stage works</title>
@@ -3561,14 +3393,14 @@ void SysTickInit(void) {
                     </row>
                     <row bottom="minor">
                         <cell>The regulator board, with nothing else connected to it</cell>
-                        <cell>5 V on its output side — multimeter on DC volts, black probe on the shared ground</cell>
+                        <cell>9 V on its <c>Vin</c> pin and 5 V on its <c>5V</c> pin — multimeter on DC volts, black probe on the shared ground.  Measure at the pins, not at the barrel connector</cell>
                     </row>
                     <row bottom="minor">
                         <cell>The motor, through the TB6612</cell>
                         <cell>The knob drives it both ways and stops it in the middle</cell>
                     </row>
                     <row bottom="minor">
-                        <cell>The photointerrupter on D7 (PA15)</cell>
+                        <cell>The photointerrupter on PA15 (D7)</cell>
                         <cell>The trace toggles once per slot, as it did earlier today</cell>
                     </row>
                     <row bottom="minor">
@@ -3582,15 +3414,13 @@ void SysTickInit(void) {
                 </tabular>
             </table>
             <p>
-                When a stage does not pass its test, work it the way we worked the
-                trace on the oscilloscope earlier today: power first, then ground,
-                then the signal path.  And this is Lab 6's own build, so it continues
-                after class — getting the rpm onto your screen is a milestone on its
-                own, whether or not the display is working yet.
+                When a stage does not pass its test, work it the way we worked the trace
+                on the oscilloscope earlier today: power first, then ground, then the
+                signal path.
             </p>
             <slide xml:id="sl-day12-build-order" ref="table-day12-build-order">
     <caption>Test each stage before adding the next one. The last two are firmware only, and the display is deliberately last.</caption>
-    <note>≈ 2 min. This is Lab 6's own order for the hardware and her slide 10's order for the firmware. Two things to say out loud: the driver is tested with no motor connected, which is the habit worth keeping; and getting the rpm onto the screen is a milestone that does not depend on the display working, so nobody spends the evening stuck on I2C with nothing to show. Worth saying out loud rather than printing: check the Day 10 signed counter tonight rather than on the evening the lab is due, because it was homework and nobody reviewed it.</note>
+    <note>≈ 2 min. This is Lab 6's own order for the hardware and her slide 10's order for the firmware. The regulator stage is Lab 6 §3's own step, not ours: "You should be able to measure 9V on the input side of the regulator and 5V on the output side." Most tables will already have it wired from Wednesday, so for them it is a check, not a new connection. Both halves of the lab's check are in the row, and both name a PIN — Petra, 2026-08-26: "spell out the pin so that they don't attempt to measure the barrel connector itself." Two things to say out loud: the driver is tested with no motor connected, which is the habit worth keeping; and getting the rpm onto the screen is a milestone that does not depend on the display working, so nobody spends the evening stuck on I2C with nothing to show. Worth saying out loud rather than printing: check the Day 10 signed counter tonight rather than on the evening the lab is due, because it was homework and nobody reviewed it.</note>
 </slide>
 
             <figure xml:id="fig-deadband">
@@ -3646,16 +3476,15 @@ void SysTickInit(void) {
             </table>
             <p>
                 One design decision in Lab 6 is genuinely yours.  The potentiometer runs
-                the motor at full speed in one direction at one end of its travel and at
-                full speed the other way at the other end, and somewhere in the middle it
-                has to stop the motor — not at a single count, but across a band of
-                counts, so that a hand resting on the knob does not flip the direction
-                back and forth.  How wide that band should be is a judgment, and the
-                arithmetic you need for it is that 12 bits gives 4096 counts across
-                3.3 V, so one count is a little under a millivolt and the center of the
-                travel is a count of about 2048.  Too narrow a band and the motor jitters
-                between directions; too wide and you have eaten the useful travel of the
-                knob.  There is no right answer, and the reasoning is the point.  <xref ref="table-day12-deadband"/> gives the three positions Lab 6 names, in volts and in counts.
+                the motor at full speed one way at one end of its travel and at full speed
+                the other way at the other end, and somewhere in the middle it has to stop
+                the motor — not at a single count, but across a band of counts, so that a
+                hand resting on the knob does not flip the direction back and forth.  Too
+                narrow a band and the motor jitters between directions; too wide and you
+                have eaten the useful travel of the knob.  The arithmetic you need is that
+                12 bits gives 4096 counts across 3.3 V, so one count is a little under a
+                millivolt and the center of the travel is a count of about 2048.
+                <xref ref="table-day12-deadband"/> gives the three positions Lab 6 names.
             </p>
             <!-- PARKED at Petra's pass 1, on this slide: "nice but they need to
                  figure this out."  table-day12-deadband stays in the book; no deck
@@ -3666,18 +3495,16 @@ void SysTickInit(void) {
 </slide>
 
             <p>
-                A few things about this circuit are worth being careful with, because
-                getting them wrong damages hardware rather than simply not working.  The potentiometer's two outer legs go to <term>3.3 V and
-                ground</term>, and never to the 5 V rail: its wiper feeds A0 (PA0),
-                which is an analog input on a 3.3 V part.  The regulator's 5 V output powers
-                the motor and the photointerrupter, and nothing else: it goes to the
-                TB6612's motor supply and to the sensor's VCC, and to no rail.  The
-                Nucleo's 3.3 V feeds one of the breadboard's power rails, so 5 V put
-                on a rail arrives on the Nucleo and damages it.  And the regulator and the Nucleo share one ground, which
-                every part on the board has to be connected to; a circuit whose grounds are not common does not work, and the
-                symptoms look like everything else.  And the regulator gets hot with the
-                motor running: if something smells hot or is hot to the touch,
-                disconnect the power and check the wiring before anything else.
+                Four things about this circuit damage hardware rather than simply not
+                working.  The potentiometer's two outer legs go to <term>3.3 V and
+                ground</term>, never to the 5 V rail: its wiper feeds A0 (PA0), which is an
+                analog input on a 3.3 V part.  The regulator's 5 V output goes to the
+                TB6612's motor supply and to the sensor's VCC, and to no rail: the Nucleo's
+                3.3 V is on one of those rails.  The regulator and the Nucleo
+                share one ground, and so does every other part on the board.  And the
+                regulator gets hot with the motor running: if
+                something smells hot or is hot to the touch, disconnect the power and
+                check the wiring before anything else.
             </p>
             <slide xml:id="sl-day12-hazards">
     <ul>
@@ -3686,7 +3513,7 @@ void SysTickInit(void) {
         <li>The regulator and the Nucleo <term>share one ground</term>, and so does every part on the board.</li>
         <li>The regulator gets hot with the motor running. If something smells hot or is hot to the touch, disconnect the power and check the wiring before anything else.</li>
     </ul>
-    <note>≈ 1 min, and say it once rather than repeating it during the build. The first bullet is the one that is easy to get wrong: Lab 6's own schematic draws the pot on the 5 V net — most likely a leftover, but Petra has not confirmed it — while the lab text describes a 3.3 V pot.</note>
+    <note>≈ 1 min, and say it once rather than repeating it during the build. The first bullet is the one that is easy to get wrong: Lab 6's own schematic draws the pot on the 5 V net — most likely a leftover, but Petra has not confirmed it — while the lab text describes a 3.3 V pot. SECOND THING FOR PETRA, found at Gate 3″: Lab 6 §2.2/§2.3 say the regulator's 5 V goes to the “motor only”, but the EE-SX672 needs 5–24 V DC and your own deck slide 6 says so, so the sensor has to share that node. The book follows the datasheet and your slide. Lab 6 wants one word changed — “motor only” → “motor and speed sensor only” — or a student holding the handout sees a straight contradiction.</note>
 </slide>
         </subsection>
 
@@ -3709,8 +3536,7 @@ void SysTickInit(void) {
             <p>
                 The rest of the class is yours to build in.  Start on paper: the loop you
                 are about to write has three rates in it and one counter shared between an
-                interrupt handler and <c>main()</c>, and both of those are far easier to
-                get right before there is a keyboard involved than afterwards.  Then work
+                interrupt handler and <c>main()</c>, and both are easier to get right on paper than in the editor.  Then work
                 down the build order, and test each stage before you add the next one.
             </p>
 
@@ -3804,7 +3630,7 @@ int main(void) {
             <activity xml:id="act-day12-stretch">
                 <title>Going further</title>
                 <introduction>
-                    <p>These are optional, for when the rpm is on your display.</p>
+                    <p>These are optional, once you are able to display the rpm.</p>
                 </introduction>
                 <task xml:id="task-day12-stretch-sign">
                     <statement><p>The sign on the displayed rpm comes from what your
@@ -3815,7 +3641,7 @@ int main(void) {
                 </task>
                 <task xml:id="task-day12-stretch-quadrature">
                     <statement><p>A quadrature encoder puts a second sensor a quarter
-                    of a slot away from the first.  Sketch the two output waveforms
+                    of a cycle away from the first.  Sketch the two output waveforms
                     for a wheel turning clockwise, then for the same wheel turning
                     counter-clockwise, and say precisely what a program would have to
                     look at to tell them apart.</p></statement>
@@ -3845,7 +3671,7 @@ int main(void) {
                 which one leads.  What a program looks at is the state of one channel
                 at the moment the other one changes: on a rising edge of A, channel B
                 is LOW in one direction and HIGH in the other.  That is a two-bit
-                state machine, and it also doubles or quadruples the resolution,
+                state machine, and it also quadruples the resolution,
                 because there are now four distinguishable edges per slot instead of
                 one.</p>
                 <p><term>Resolution.</term>  One pulse in a one-second window is
@@ -3872,20 +3698,450 @@ int main(void) {
         </subsection>
     </section>
 
-    <!-- Day 12's in-class section and the chapter's end-of-chapter Reference
-         material are authored in separate sessions.  Day 12 continues motor speed
-         sensing (counting the photointerrupter's pulses, converting to rpm, the
-         seven-segment display and the potentiometer as a throttle) and the full
-         Lab 6 build.  Her Day 11x slides 20 and 21 (the table discussion, and
-         decoding shaft position, dtheta = 2*pi/#slots) were moved here whole at
-         Day 11x's Gate 1; see reviews/day11x-gate1.md.
-
-         REQUIRED at Day 12's Gate 0: Lab 6 p.5 says students derive
-         RPM = 60 x PPS / 20 "in the reading quiz".  Day 11x has no pre-class
-         reading, so that derivation has to live in Day 12's Before Class section
-         or it is stranded.
+        <!-- Her Day 11x slides 20 and 21 (the table discussion, and decoding shaft
+         position, dtheta = 2*pi/#slots) were moved into Day 12 whole at Day 11x's
+         Gate 1; see reviews/day11x-gate1.md.  Lab 6 p.5 sources
+         RPM = 60 x PPS / 20 from "the reading quiz", which is why that derivation
+         lives in sec-speed-before-class.
 
          Do not reconstruct driver code from memory (B-6). -->
+
+
+    <!-- ============================================================ -->
+    <!-- The chapter's Reference section.  Shape fixed in plans/day12.md;
+         written 2026-08-26 in the same pass that shortened the Day 12 in-class
+         prose.  Petra: "We were going to de-clutter the preclass and in-class
+         stuff from too much technical stuff and instead add that to the
+         reference section for students who are interested."
+
+         What moved here OUT of sec-motors-day12, and from where:
+           - the pull-up VALUE trade-off and the internal-PUPDR alternative
+             (was two paragraphs in subsec-day12-wire-and-scope)
+           - the EE-SX672 datasheet detail: open collector, 5-24 V DC, response
+             frequency, the L terminal and light-ON / dark-ON (was in the
+             fig-photointerrupter-states and fig-day12-cabled-sensor captions)
+           - the polling condition stated properly (was three paragraphs in
+             subsec-day12-main-loop)
+           - table-day12-exti-lines, moved whole, with the paragraph that reads
+             its last two rows
+           - quadrature and decode-in-hardware, and the measurement's own
+             resolution
+                  Every register offset below is read out of RM0490 section 17.4 and
+         section 12.5 rather than reconstructed (B-6).
+
+         plans/day12.md specifies ONE subsection, subsec-motors-ref-speed, for all
+         of the pulse-counting material.  Gate 3" split it into four —
+         -speed (the arithmetic), -direction, -sensor, -counting — because
+         learner-firstgen-novice found four different xrefs all landing on one
+         eight-topic subsection: "clicking that lands me at 'The conversion', not
+         'The pull-up value'".  PreTeXt does not number a <p>, so xrefs need real
+         subsections as targets.  subsec-motors-ref-speed keeps its id and its
+         planned role; the other three are new. -->
+    <section xml:id="sec-motors-reference">
+        <title>Reference: PWM on TIM14, the TB6612, and Counting Pulses</title>
+        <introduction>
+            <p>
+                Lookup material for the whole chapter.  Nothing here is new: it is the
+                same information arranged for a quick look-up, with some additional
+                detail for those who want it.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-motors-ref-tim14">
+            <title>Register Summary: TIM14 in PWM Mode</title>
+            <p>
+                The table below gives the registers <c>tim14_pa7_pwm_init()</c> writes.  Offsets are from each peripheral's own base address, and the
+                section numbers are RM0490's.
+            </p>
+            <table xml:id="table-motors-tim14-registers">
+                <title>The registers TIM14 PWM output uses</title>
+                <tabular halign="left" top="major" bottom="major">
+                    <row header="yes" bottom="major">
+                        <cell>Register</cell><cell>Offset</cell><cell>Field</cell>
+                        <cell>Purpose</cell><cell>RM0490</cell>
+                    </row>
+                    <row>
+                        <cell><c>RCC_IOPENR</c></cell><cell>0x34</cell><cell><c>GPIOAEN</c></cell>
+                        <cell>Clock to GPIOA</cell><cell>§5.4.11</cell>
+                    </row>
+                    <row>
+                        <cell><c>GPIOA_MODER</c></cell><cell>0x00</cell><cell><c>MODE7</c></cell>
+                        <cell>PA7 to alternate-function mode (<c>10</c>)</cell><cell>§6.4.1</cell>
+                    </row>
+                    <row>
+                        <cell><c>GPIOA_AFR[0]</c></cell><cell>0x20</cell><cell><c>AFSEL7</c></cell>
+                        <cell>Which alternate function: TIM14_CH1 on PA7</cell><cell>§6.4.9</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell><c>RCC_APBENR2</c></cell><cell>0x40</cell><cell><c>TIM14EN</c></cell>
+                        <cell>Clock to TIM14</cell><cell>§5.4.14</cell>
+                    </row>
+                    <row>
+                        <cell><c>TIM14_PSC</c></cell><cell>0x28</cell><cell>—</cell>
+                        <cell>Prescaler; the counter is clocked at the timer clock divided by <c>PSC</c>+1</cell><cell>§17.4.9</cell>
+                    </row>
+                    <row>
+                        <cell><c>TIM14_ARR</c></cell><cell>0x2C</cell><cell>—</cell>
+                        <cell>The value the counter runs up to, which sets the period</cell><cell>§17.4.10</cell>
+                    </row>
+                    <row>
+                        <cell><c>TIM14_CCMR1</c></cell><cell>0x18</cell><cell><c>OC1M</c></cell>
+                        <cell>PWM mode: <c>0110</c> holds the pin HIGH until the counter reaches the compare value</cell><cell>§17.4.6</cell>
+                    </row>
+                    <row>
+                        <cell><c>TIM14_CCMR1</c></cell><cell>0x18</cell><cell><c>CC1S</c></cell>
+                        <cell>Channel 1 as an output (<c>00</c>) rather than an input</cell><cell>§17.4.6</cell>
+                    </row>
+                    <row>
+                        <cell><c>TIM14_CCER</c></cell><cell>0x20</cell><cell><c>CC1E</c></cell>
+                        <cell>Let the channel's waveform reach the pin.  Leave it out and the counter runs with nothing on PA7</cell><cell>§17.4.7</cell>
+                    </row>
+                    <row>
+                        <cell><c>TIM14_EGR</c></cell><cell>0x14</cell><cell><c>UG</c></cell>
+                        <cell>Force an update event, so the buffered <c>PSC</c> and <c>ARR</c> reach their working copies before the first period.  Write-only, so the driver's <c>|=</c> reads back zero and is harmless</cell><cell>§17.4.4</cell>
+                    </row>
+                    <row>
+                        <cell><c>TIM14_CR1</c></cell><cell>0x00</cell><cell><c>CEN</c></cell>
+                        <cell>Start the counter</cell><cell>§17.4.1</cell>
+                    </row>
+                    <row>
+                        <cell><c>TIM14_CCR1</c></cell><cell>0x34</cell><cell>—</cell>
+                        <cell>The compare value: how much of each period the pin is HIGH.  The only one that changes while the motor turns</cell><cell>§17.4.11</cell>
+                    </row>
+                </tabular>
+            </table>
+            <p>
+                <c>TIM14_CCMR1</c> is the register written twice, because <c>OC1M</c> and
+                <c>CC1S</c> are two fields in it.  <c>OC1M</c> is a multi-bit field, so it
+                is cleared and then set rather than OR'd into: OR alone would leave
+                whatever was there and mix the two patterns together.  <c>CC1E</c> and
+                <c>CEN</c> are single bits, which is why <c>|=</c> on its own is safe for
+                them.  The full register layouts are in
+                <xref ref="subsec-day11x-registers"/>.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-motors-ref-timing">
+            <title>The PWM Arithmetic</title>
+            <p>
+                The counter is clocked at the timer clock divided by the prescaler, and
+                it resets after a fixed number of counts.  With the 12 MHz default clock,
+                a prescaler factor <m>P</m> and a top value <m>M</m>, the switching frequency is
+                <m>f_{PWM} = 12\,\text{MHz} / (P \times M)</m>.
+            </p>
+            <p>
+                <c>TTmotor_ramp.c</c> uses <m>P = 6</m> and <m>M = 1250</m>, so the
+                counter is clocked at 2 MHz and the waveform is at
+                <m>2\,000\,000 / 1250 = 1600</m> Hz — a period of 625 µs.  The registers
+                are set with one less than each: <c>TIM14_PSC</c> gets 5 and <c>TIM14_ARR</c> gets
+                1249, because both count from zero.
+            </p>
+            <p>
+                <term>Resolution.</term>  A period divided into <m>M</m> steps gives
+                <m>M</m> distinct duty cycles, so one count of <c>TIM14_CCR1</c> is
+                <m>1/M</m> of the period and <m>V/M</m> of average voltage.  At
+                <m>M = 1250</m> on the 5 V motor supply that is 500 ns of pulse width and
+                4 mV of average voltage.  Resetting at 100 instead would make one step
+                50 mV, which is coarse enough to hear as steps in the motor.
+            </p>
+            <p>
+                <term>The 50 Hz alternative.</term>  At 50 Hz the period is 20 ms rather than
+                625 µs, long enough for the motor to accelerate and decelerate within each
+                period rather than averaging across it.  That torque ripple is a cost at
+                speed and can help starting torque at very low speed, which is what
+                Lab 6's optional section asks you to try.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-motors-ref-tb6612">
+            <title>The TB6612 as a Lookup</title>
+            <p>
+                The driver has three logic inputs per channel, and a fourth pin for the whole
+                chip.  On
+                the breakout the channel-A inputs are marked <c>AIN1</c>, <c>AIN2</c> and
+                <c>PWMA</c>; the datasheet's table calls the same three <c>IN1</c>,
+                <c>IN2</c> and <c>PWM</c>.  <c>STBY</c> must be HIGH for the driver to do
+                anything at all, and on our breakout it is pulled up already.
+            </p>
+            <table xml:id="table-motors-tb6612-pins">
+                <title>Channel A: the pins</title>
+                <tabular halign="left" top="major" bottom="major">
+                    <row header="yes" bottom="major">
+                        <cell>Breakout pin</cell><cell>Datasheet name</cell><cell>Nucleo pin</cell>
+                    </row>
+                    <row><cell><c>AIN1</c></cell><cell><c>IN1</c></cell><cell>PA5 (D13)</cell></row>
+                    <row><cell><c>AIN2</c></cell><cell><c>IN2</c></cell><cell>PA6 (D12)</cell></row>
+                    <row bottom="minor"><cell><c>PWMA</c></cell><cell><c>PWM</c></cell><cell>PA7 (D11) — TIM14_CH1</cell></row>
+                </tabular>
+            </table>
+            <table xml:id="table-motors-tb6612-modes">
+                <title>Channel A: the four modes, with <c>STBY</c> HIGH</title>
+                <tabular halign="left" top="major" bottom="major">
+                    <col width="12%"/>
+                    <col width="12%"/>
+                    <col width="14%"/>
+                    <col width="62%"/>
+                    <row header="yes" bottom="major">
+                        <cell><c>IN1</c></cell><cell><c>IN2</c></cell><cell><c>PWM</c></cell>
+                        <cell>What the motor does</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>H</cell><cell>L</cell><cell>PWM</cell>
+                        <cell>Turns one way, at the duty cycle on <c>PWM</c></cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>L</cell><cell>H</cell><cell>PWM</cell>
+                        <cell>Turns the other way</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>H</cell><cell>H</cell><cell>either</cell>
+                        <cell><term>Short brake</term>: both motor terminals driven LOW, so the back-EMF drives a current that opposes the rotation</cell>
+                    </row>
+                    <row>
+                        <cell>L</cell><cell>L</cell><cell>H</cell>
+                        <cell><term>Stop</term>: both outputs go high-impedance, so the motor coasts</cell>
+                    </row>
+                </tabular>
+            </table>
+            <p>
+                Brake and stop are not the same thing.  Brake shorts the two terminals
+                together and the motor resists being turned; stop disconnects them and the
+                motor spins down on its own.  Use the brake for a wheel that must hold its
+                position, and the coast for a flywheel that should spin down gently.  The full
+                table is <xref ref="fig-tb6612-truth-table"/>, on page 4 of the
+                <url href="external/datasheets/TB6612FNG_datasheet_en_20141001.pdf">TB6612FNG datasheet</url>.
+            </p>
+            <p>
+                <term>The supply split.</term>  <c>VM</c>, the motor supply, comes from the
+                regulator board at 5 V.  <c>VCC</c>, the logic supply, comes from the
+                Nucleo at 3.3 V, which is what makes the driver's inputs safe to drive
+                straight from a GPIO pin.  Both share the board's one ground.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-motors-ref-speed">
+            <title>Counting Pulses: the Arithmetic</title>
+            <p>
+                <term>The conversion.</term>  For a wheel of <m>N</m> slots and a count of
+                <m>PPS</m> pulses taken over one second,
+                <m>RPM = 60 \times PPS / N</m>, and for the 20-slot wheel in the kit that
+                is <m>3 \times PPS</m>.  The expression holds only if the program counts
+                <em>one edge per slot</em>.  Counting both edges doubles the count, and
+                the denominator then has to become <m>2N</m> or the answer comes out at
+                twice the true speed.
+            </p>
+            <p>
+                <term>The same count as an angle.</term>  Each pulse is one slot going
+                past, so each pulse is <m>\Delta\theta = 2\pi/N</m> radians, or
+                <m>360/N</m> degrees, or <m>1/N</m> of a revolution.  The pulse count
+                times <m>\Delta\theta</m> is how far the shaft has turned since counting
+                started — a position, and one relative to wherever the shaft happened to
+                be at that moment.
+            </p>
+            <p>
+                <term>The measurement's own resolution.</term>  Counting whole pulses in a
+                one-second window quantizes the answer: one pulse of miscount is
+                <m>60/N</m> rpm, which on a 20-slot wheel is 3 rpm.  At 180 rpm the window
+                holds 60 pulses and one pulse is under 2 % of the reading; at 30 rpm it
+                holds 10 and one pulse is 10 %.  Three ways to do better, and what each
+                costs: a two-second window halves the quantization and doubles how long the
+                display takes to notice a change; counting both edges halves it too, and
+                needs <m>2N</m> in the denominator; and timing the interval between two
+                pulses instead of counting them inverts the trade entirely.  At 3 rpm the
+                interval is about a second and a 1 ms tick resolves it to about a tenth of
+                a percent, where counting sees a single pulse in its whole window; at
+                180 rpm the interval is about 17 ms and the same tick gives about 6 %,
+                which is worse than counting.  Counting wins at speed, interval-timing
+                wins at rest, and a real instrument does both and crosses over.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-motors-ref-direction">
+            <title>Direction, and Quadrature</title>
+            <p>
+                One sensor and identical slots
+                give a signal that is the same in both directions, so a program that only
+                counts pulses cannot know which way the shaft turned.  A
+                <term>quadrature encoder</term> puts a second sensor a quarter of a cycle
+                away from the first, so its two pulse trains are a quarter of a cycle
+                apart and which one leads says which way the shaft is turning.  What a
+                program looks at is the state of one channel at the moment the other
+                changes: on a rising edge of A, channel B is LOW in one direction and HIGH
+                in the other.  That is a two-bit state machine, and it also multiplies the
+                resolution, because there are now four distinguishable edges per slot
+                instead of one.  Some parts do the whole decode in hardware and make the
+                finished count available over a bus.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-motors-ref-sensor">
+            <title>The Photointerrupter, and Its Pull-Up</title>
+            <p>
+                <term>The sensor.</term>  The phototransistor inside the part can only pull
+                the output down to ground when it conducts; when it stops conducting it
+                lets go of the line entirely, and only the pull-up resistor brings the
+                voltage back up, which is why the resistor's rail is what sets the HIGH
+                level (<xref ref="fig-photointerrupter-states"/>).  The part in the kit is
+                an Omron EE-SX672, and its datasheet
+                (<url href="external/datasheets/ee-sx67.pdf">EE-SX67 series</url>,
+                <em>Ratings and Specifications</em>) gives that behavior its name: the
+                control output is an <q>NPN open collector</q>.  The same table gives the
+                supply voltage as 5 to 24 V DC, which is why the sensor's supply and its
+                HIGH level have to be two different rails, and the response frequency as
+                1 kHz minimum — at the ramp's fastest, 20 slots at 180 rpm is 60 pulses a
+                second, comfortably under that, so the sensor never limits the
+                measurement.  The fourth wire on the cabled
+                version is the part's <term>L terminal</term>, which selects whether the
+                output switches on light (<term>light-ON</term>) or on dark
+                (<term>dark-ON</term>).  Leave it unconnected, and keep it clear of anything
+                else on the board: an unconnected L wire picks up noise.
+            </p>
+            <p>
+                <term>The pull-up value.</term>  Choosing it is a trade-off rather than a
+                calculation.  A
+                much smaller resistor wastes current and makes the transistor work harder
+                to pull the line down, because every moment the line is LOW that resistor
+                carries 3.3 V divided by its own resistance straight to ground: at 10 kΩ that
+                is 0.33 mA, and at 1 kΩ it would be ten times that.  A much larger one
+                takes too long to bring the line back up against the stray
+                capacitance of the wiring, and picks up more noise while it is doing it.
+                Between those two ends is a wide middle where nothing goes wrong, and
+                10 kΩ is comfortably inside it, which is why 10 kΩ is a common default.
+                The rail is not a trade-off: whatever the resistor is tied to is the
+                voltage the wire presents to the pin, so it is 3.3 V.  In Lab 6 you can
+                keep the external resistor or leave it out and enable the pin's own
+                internal pull-up with <c>PUPDR</c>, the way you did on Day 3 — that one is about
+                40 kΩ, four times the external resistor.  The external one
+                is what Day 12 uses, because there is a scope probe on that node;
+                <xref ref="fig-day12-lab6-build"/> draws the finished build with the
+                internal one instead, once that probe is gone.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-motors-ref-counting">
+            <title>Polling or an Interrupt</title>
+            <p>
+                <term>When polling is fast enough.</term>  Noticing a pulse takes two
+                reads, not one: a read that catches the line HIGH and a later read that
+                catches it LOW, so the loop can see that it changed.  So a polled read
+                catches every pulse only if the gap between reads is shorter than the
+                <em>shorter</em> of the pulse's HIGH time and its LOW time.  If either one
+                is shorter than the gap, it can fall entirely between two reads and the
+                change is never seen.  Those two times are set by how wide the slots are
+                compared with the spokes between them, and by the shaft speed — on a wheel
+                whose slots and spokes are about equally wide, a pulse rate of <m>f</m>
+                gives a HIGH time of about <m>1/(2f)</m>, so 60 pulses a second means
+                about 8 ms HIGH and 8 ms LOW and a loop reading every 10 ms will miss
+                changes.  The short version, that a 100 Hz loop cannot see a 60 Hz signal,
+                is not quite true and points at the wrong quantity.
+            </p>
+            <p>
+                <term>The interrupt.</term>  Counting the pulses on a GPIO interrupt is
+                Day 9's five writes with the line number changed.  On the STM32C031C6 the
+                port selection for line 15 is in <c>EXTI_EXTICR4</c> — <c>EXTI</c> is the
+                extended interrupts and events controller — whose offset is
+                <m>0\text{x}060 + 4(x-1)</m> for <m>x = 4</m>, so <c>0x06C</c>; the field
+                is <c>EXTI15[7:0]</c>, in bits 31:24, and <c>0x00</c> there selects
+                <c>PA15</c>.  The table below calls that same register
+                <c>EXTI->EXTICR[3]</c>, because the CMSIS array is indexed from zero.  RM0490 §12.5.6 is the register; §12.5.9 is only the map.
+                The counter the handler increments must be declared <c>volatile</c>.
+            </p>
+            <table xml:id="table-day12-exti-lines">
+                <title>The five writes, on Day 9's line and on Day 12's</title>
+                <tabular halign="left" top="major" bottom="major" left="minor" right="minor">
+                    <col width="34%"/>
+                    <col width="33%"/>
+                    <col width="33%"/>
+                    <row header="yes" bottom="major">
+                        <cell>What it does</cell>
+                        <cell>Day 9, the button on PB4</cell>
+                        <cell>Day 12, the sensor on PA15</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>Choose which port drives the line</cell>
+                        <cell><c>EXTI->EXTICR[1]</c>, <c>EXTI_PB</c></cell>
+                        <cell><c>EXTI->EXTICR[3]</c>, <c>EXTI_PA</c></cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>Trigger on the falling edge</cell>
+                        <cell><c>EXTI_FTSR1</c>, bit 4</cell>
+                        <cell><c>EXTI_FTSR1</c>, bit 15</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>Unmask the line</cell>
+                        <cell><c>EXTI_IMR1</c>, bit 4</cell>
+                        <cell><c>EXTI_IMR1</c>, bit 15</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>Clear the pending bit, in the handler</cell>
+                        <cell><c>EXTI_FPR1</c>, bit 4</cell>
+                        <cell><c>EXTI_FPR1</c>, bit 15</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>Enable it in the NVIC</cell>
+                        <cell><c>EXTI4_15_IRQn</c></cell>
+                        <cell><c>EXTI4_15_IRQn</c> — unchanged</cell>
+                    </row>
+                    <row>
+                        <cell>The handler's name</cell>
+                        <cell><c>EXTI4_15_IRQHandler</c></cell>
+                        <cell><c>EXTI4_15_IRQHandler</c> — unchanged</cell>
+                    </row>
+                </tabular>
+            </table>
+            <p>
+                The last two rows are the ones to be careful with.  One vector covers
+                lines 4 through 15 together, so the 4 in <c>EXTI4_15_IRQn</c> and in
+                <c>EXTI4_15_IRQHandler</c> is part of a name and stays a 4.  Every other 4
+                — the ones that identify the <em>line</em> — becomes a 15.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-motors-ref-lookups">
+            <title>Where to Look Things Up</title>
+            <table xml:id="table-motors-lookups">
+                <title>The documents this chapter sends you to</title>
+                <tabular halign="left" top="major" bottom="major">
+                    <col width="34%"/>
+                    <col width="30%"/>
+                    <col width="36%"/>
+                    <row header="yes" bottom="major">
+                        <cell>What you want</cell><cell>Which document</cell><cell>Where</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>What PWM mode is, and which <c>OC1M</c> pattern to write</cell>
+                        <cell><url href="external/stm32c031_rm.pdf">RM0490</url></cell>
+                        <cell>§17.3.8, <em>PWM mode</em></cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>Any TIM14 register, bit by bit</cell>
+                        <cell>RM0490</cell>
+                        <cell>§17.4, <em>TIM14 registers</em></cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>Which EXTI register does what, and the line-15 fields</cell>
+                        <cell>RM0490</cell>
+                        <cell>§12.5.6 for <c>EXTICRx</c>; §12.5.9 Table 47 for the map</cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>The driver's four modes</cell>
+                        <cell><url href="external/datasheets/TB6612FNG_datasheet_en_20141001.pdf">TB6612FNG datasheet</url></cell>
+                        <cell>Page 4, <em>H-SW Control Function</em></cell>
+                    </row>
+                    <row bottom="minor">
+                        <cell>Which STM32C031C6 pin is behind an Arduino header label</cell>
+                        <cell><url href="external/nucleo_user_manual.pdf">UM2953</url></cell>
+                        <cell>Table 11, <em>ARDUINO connector pinout</em>, page 20; Table 12 is the same fact by port pin</cell>
+                    </row>
+                    <row>
+                        <cell>The photointerrupter's output type, supply range and response frequency</cell>
+                        <cell><url href="external/datasheets/ee-sx67.pdf">EE-SX67 series datasheet</url></cell>
+                        <cell><em>Ratings and Specifications</em></cell>
+                    </row>
+                </tabular>
+            </table>
+        </subsection>
+    </section>
 
 
 </chapter>
