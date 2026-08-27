@@ -86,9 +86,9 @@ Deliverable 2 puts both devices on one bus.
   CTRL_REG1/4 fields and *work out* the settings (the answers 0x77/0x00 are
   revealed in class, not in the reading); plus one short subsection on what a
   stationary accelerometer reads (the ±1000 mg expectation Part 5's tests
-  depend on) — pending Petra's answer on the proper-acceleration framing
-  (ground truth Q8). Blocked on the datasheet PDF (Q1) for exact
-  table/section citations, not for the plan.
+  depend on) — **in her decks' framing** (Petra, 2026-08-27, Q8 closed; the
+  rough chapter's proper-acceleration hook is out). Table/section citations
+  verified against `assets/datasheets/lsm303agr.pdf` (Q1 closed).
 
 ## Where the driver-writing lands (a Gate 1 exhibit)
 
@@ -101,14 +101,12 @@ Split across the week exactly as her decks do it:
 | `lsm303_AccelInit` | settings derived in Day 14's reading + Part 2; body completed Day 14 Part 4 | student |
 | `lsm303_AccelReadRaw` | given; walked on Day 13x (auto-increment is its teaching payload) | Petra |
 
-The given-vs-blank split is **confirmed from her own Day 13x slide-13
-speaker note** ("Have given you the single register read function. You'll
-write the write function. Given you skeleton for the init function. Giving
-you the readraw function."). What still needs the real files (ground truth
-Q2, narrowed at Gate 1): what the skeleton leaves blank *inside*
-`AccelInit`, the `int`-vs-`uint8_t` return type, and `accel_test.c`'s elided
-variable types — so Day 14's Part 4 is re-timed against the real file before
-Gate 2.
+**Q2 is closed** (2026-08-27): all four real files are in `assets/starters/`
+and verified — `RegisterWrite`'s body is entirely blank; `AccelInit` is given
+whole except the two register values (Day 14 Part 4's 17-minute shape matches
+the file exactly, so the provisional marker is retired); `AccelInit` returns
+`uint8_t`; `accel_x/y/z` are `int16_t`. Details and the stale-comment flags
+are ground truth §2.
 
 ## The L-2 floating-point decision (a Gate 1 exhibit)
 
@@ -137,22 +135,23 @@ it and Lab 7 Deliverable 4 grades it.
    library hangs after a NACK; that makes Day 13's capture-A exercise a
    *single-shot* capture (trigger armed, then reset the board) and makes
    `whoami_test.c`'s "Could not connect" print unreachable for an absent
-   device. Until Petra confirms (Q3), the plans teach the wrong-address
-   experiment with the single-sweep-then-reset technique and **do not assert**
-   in student-facing text what the program prints in that case.
+   device. Petra will check at her own pace (2026-08-27) and may switch the
+   library to the NACK-reporting variant — **do not press it**; the plans
+   teach the single-sweep-then-reset technique and **do not assert** in
+   student-facing text what the program prints in that case. Her capture A
+   (one transaction, then nothing) is consistent with the hang.
 2. **Day 13x is the densest 50 minutes of the week** — physics, applications,
    the datasheet table, and the data format. The cut order is inside its plan;
    the data-format part is uncuttable (Day 14's scaling line and Lab 7's tilt
    both stand on it).
-3. **The HiTA water-bottle activity** (Day 14 slide 3) is **out of the plan
-   of record** — Gate 1 found the first Day 14 table 10 minutes over budget,
-   and HiTA's 10 minutes were exactly the deficit. The restore path (if
-   Petra keeps it, Q4) is stated in `plans/day14.md`: it takes the lab-start
-   buffer and five of Part 7's minutes, and the crucial-step day then runs
-   with zero slack.
-4. **Missing artifacts**: the LSM303AGR datasheet PDF, the four driver files,
-   AN-1057 (questions 1, 2, 5). None blocks the plans; all block book
-   listings and P-11 citations.
+3. **The HiTA water-bottle activity** (Day 14 slide 3) is **dropped —
+   Petra's call, 2026-08-27** (Q4 closed). The Day 14 table is final.
+4. **Missing artifacts — mostly resolved 2026-08-27**: the datasheet
+   (`assets/datasheets/lsm303agr.pdf`, citations verified), the four driver
+   files (`assets/starters/`), and her three Waveforms capture originals
+   (`assets/images/Day13-I2C(3)/`) are all in the repo. Still missing:
+   **AN-1057** — approved for hosting, but analog.com refuses downloads from
+   this network; Petra drops it into `assets/datasheets/an-1057.pdf`.
 
 ## Week-level cut order
 

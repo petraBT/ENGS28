@@ -63,9 +63,11 @@ Scaffolding (P-2):
 
 Inside Part 6, second tier: after the wrong-address capture, predict what a
 **wrong register address** produces (ACKs all the way, a value that is not
-0x33 — the else-branch prints), then capture it. Fast finishers also predict
-what the *display's* address (0x70) would return for WHO_AM_I — a concrete
-question with a discoverable answer sitting on their own desk.
+0x33 — the else-branch prints), then capture it. Her own capture B uses
+register 0x20 and the wire returns **0x07 — CTRL_REG1_A's power-on default,
+the header's DEFAULT column made visible**; use that pairing. Fast finishers
+also predict what the *display's* address (0x70) would return for WHO_AM_I —
+a concrete question with a discoverable answer sitting on their own desk.
 
 ## Coverage against her deck
 
@@ -108,18 +110,19 @@ screen as reference while the room captures.
 | 3 | 6 | explain | **What just ran.** Walk `whoami_test.c` top down: the two `#define`s (`(0x32 >> 1)` noted, not yet explained — planted for Part 5), the loop, and `lsm303_AccelRegisterRead()` = one call into the Day 10 library — the five operations from Day 10 Part 7a, `i2c1_memRead()` among them (4). What 0x33 proves and doesn't (2) |
 | 4 | 24 | predict → do | **Put the analyzer on it.** Wire DIO0/DIO1/GND — Day 9x's setup, named (5). **Commit, `room="yes"`:** what will the decoder show when this loop runs? — with `whoami_test.c` on screen as reference, her slides 16/17's pairing (4). Capture + decode: find the address, the register address, the 0x33 — **CRUCIAL, second half** (12). Checkpoint minute 65; projected capture as rescue (3) |
 | 5 | 15 | do → explain | **Digging Deeper — against the room's own traces.** *Why 0x19, not 0x32?* answered call-and-response — Day 9x's shift set-piece paying out. Then **two** committed questions, `room="yes"`: *why does the same address go out twice?* — framed as confirmation: Day 10 Part 7a told you our `i2c1_memRead()` does stop-then-start where the datasheet draws a repeated START; find it on your own trace — and *who ACKs?* (5). The transfer diagram (her slide 29) beside their capture: where the register address is said, where the data appears, who ACKs each byte — the remaining questions answered on the diagram as recap — **and the two kinds of NACK, named**: the NACK before the STOP is the *controller's*, sent on purpose to end the read; the other NACK, the one Part 6 is about to produce, comes from nobody at all (4). Then the `i2c1_memRead()` **code walk** — its first in-class walk (the code lives in ch-i2c's Reference; the *fact* was Day 10's): two CR2 writes, STOP then START, and what that means on a bus with two controllers — xref `subsec-i2c-ref-library` (6) |
-| 6 | 15 | predict → do → explain | **Break it on purpose.** Change the address to 0x60 — predict what CoolTerm and the analyzer will each show, commit — and one spoken line before anyone runs: *if nothing happens on your screen, that is expected here — wait for the reset cue* (4). Capture: a NACK after the address, once — single sweep armed, then reset the board; **projected capture as rescue here too** (7). Debrief the asymmetry the room just saw; stretch tier: wrong register address (4) |
+| 6 | 15 | predict → do → explain | **Break it on purpose.** Change `0x32` to `0x30` in the `#define` (her own demo — capture A's decoder reads `h18`) — predict what CoolTerm and the analyzer will each show, commit — and one spoken line before anyone runs: *if nothing happens on your screen, that is expected here — wait for the reset cue* (4). Capture: a NACK after the address, once — single sweep armed, then reset the board; **projected capture (her WaveformsA) as rescue here too** (7). Debrief the asymmetry the room just saw; stretch tier: wrong register address (4) |
 | 7 | 12 | explain → do | **A driver begins.** The firmware-layers figure — Day 10's, re-shown (2). The five-step recipe, recalled and applied (3). `lsm303agr.h` toured against the recipe: the datasheet's register table become `#define`s; download into `mylib` (4). The four prototypes; one is already running, one is tonight's homework (3) |
 | 8 | 3 | tell | **Homework:** daily-page reading (the datasheet scavenger hunt: CTRL_REG1/4 settings, on paper); write `lsm303_AccelRegisterWrite()` on paper, mimicking the read function. One sentence on the week: tomorrow how it works inside, Thursday data out |
 
 Total: 3+2+8+22+6+24+15+15+12+3 = **110**.
 
 **Part 2 is the day's tooling bottleneck** (download, project copy, first
-build, four wires). **Part 6's wrong-address behavior is pending Petra's
-confirmation** (ground truth Q3): the "expected here" line is worded true
-whichever way it lands (hang or repeating error), so drafting need not wait;
-no student-facing text asserts what the program *prints* on a NACK until she
-confirms.
+build, four wires). **Part 6's wrong-address behavior stays open at Petra's
+own pace** (ground truth Q3 — she will check later and may switch `i2c.c` to
+a NACK-reporting variant; do not press it): the "expected here" line is
+worded true whichever way it lands, so drafting need not wait; no
+student-facing text asserts what the program *prints* on a NACK, and
+sessions check `i2c.c`'s git log before quoting the library.
 
 **If a part overruns, cut in this order:** Part 6's stretch tier → Part 6's
 capture B to an instructor demo → Part 1's reveal discussion to one sentence
@@ -153,10 +156,10 @@ their own screen is worse than not capturing at all.
 addresses, the five library functions by name, leaning on ch-i2c xrefs; the
 LSM303AGR introduced: an I2C accelerometer on a **breakout board — a small
 board that carries the chip and the extra parts (pull-ups, a regulator) it
-needs — connected by a STEMMA QT cable, a 4-wire plug**; it has a WHO_AM_I
-register, and why self-identifying registers exist. (Whether the connector's
-keying can be *stated* — "it only fits one way" — waits on ground truth Q9;
-until she answers, give the wire colors and stop.) **Must not contain:** MEMS
+needs — connected by a STEMMA QT cable, a 4-wire plug that only goes in one
+way, so it cannot be miswired** (Petra's own words, 2026-08-27 — Q9 closed);
+it has a WHO_AM_I register, and why self-identifying registers exist.
+**Must not contain:** MEMS
 internals (Wednesday), the 0x19 derivation, any trace walkthrough, or the
 wrong-address outcome.
 

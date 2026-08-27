@@ -5,15 +5,10 @@ rule in `CLAUDE.md`). Chapter: `source/ch-accelerometers.ptx`. Old deck:
 `Day14-Accelerometer(2).pptx` (21 slides). Ground truth:
 `plans/week7-ground-truth.md`. Gate 1 applied: `reviews/week7-gate1.md`.
 
-**The plan of record is HiTA-free.** Her slide 3 (the water-bottle-station
-activity) is pending Petra's call (ground truth Q4), belongs to no chapter,
-and its 10 minutes are exactly what Gate 1 found the first draft of this
-table over budget by. **Restore path, if she keeps it:** Part 1 returns at
-10 minutes, funded by the lab-start buffer (5 → 0) and Part 7 (12 → 7, flip
-and shake only); the checkpoint moves to minute 68; the day then carries the
-crucial step with zero slack — which is why the plan of record drops it. If
-it returns, it opens with a one-minute individual written guess (one sensor,
-one actuator) before any group talk.
+**The HiTA water-bottle activity (her slide 3) is dropped — Petra's call,
+2026-08-27 (ground truth Q4, closed).** Its 10 minutes were exactly what
+Gate 1 found the first draft of this table over budget by; the table below
+is the plan of record, final.
 
 ## Objectives
 
@@ -81,7 +76,7 @@ the board upright, like a phone, so gravity lies in the x–y plane.
 | Her slides | Where |
 | --- | --- |
 | 2 (agenda) | deck glue |
-| 3 (HiTA water-bottle activity) | **cut from the plan of record** (Q4 pending); restore path at the top of this file |
+| 3 (HiTA water-bottle activity) | **cut — Petra, 2026-08-27** (Q4 closed) |
 | 5–6 (CTRL settings discussion + answers 0x77/0x00) | Part 2 |
 | 7–8 (download partial + test; exclude whoami; complete two functions) | Parts 3–4 |
 | 9 (RegisterWrite reveal) | Part 4 |
@@ -105,10 +100,10 @@ slot), so cross-references in `plans/week7.md` stay valid.
 | --- | --- | --- | --- |
 | — | 3 | — | Settling |
 | 0 | 2 | tell | Announcements |
-| 2 | 10 | do → reveal | **The settings, committed then revealed.** The CTRL_REG1/4 bit-field tables go on screen for sixty seconds first — *if you didn't finish the scavenger hunt, take your best guess from this table now* (1). The commit, `room="yes"`: *what byte goes in CTRL_REG1_A? In CTRL_REG4_A?* (4). The reveal on the same tables: 0b01110111 (rate, normal mode, all three axes on) and 0b00000000 (±2 g, normal resolution) — 10-bit, yesterday's sensitivity, and one reconciling clause: *the table rounds our derived 3.9 to 4 mg/digit*. No re-derivation — Day 13x owns that (5) |
+| 2 | 10 | do → reveal | **The settings, committed then revealed.** The CTRL_REG1/4 bit-field tables go on screen for sixty seconds first — *if you didn't finish the scavenger hunt, take your best guess from this table now* (1). The commit, `room="yes"`: *what byte goes in CTRL_REG1_A? In CTRL_REG4_A?* (4). The reveal on the same tables: 0b01110111 (rate, normal mode, all three axes on) and 0b00000000 (±2 g, normal resolution) — 10-bit, yesterday's sensitivity, and yesterday's 3.9 mg sensitivity named, not re-derived — Day 13x owns that (the datasheet's Table 3 prints 3.9; only her old slide's callout rounded it to 4) (5) |
 | 3 | 8 | do | **Wiring verified, project staged.** Run Tuesday's `whoami_test.c` unchanged — hardware-vs-software split established (3). Download `lsm303agr_partial.c` + `accel_test.c` into `Src`; **exclude `whoami_test.c` from the build** — one `main` per build, how to exclude a file, and one displayed line: *if the build fails with `multiple definition of 'main'`, you skipped this step — here is the menu path* (5) |
-| 4 | 17 | do → reveal | **Complete the driver.** What the partial file gives and what is blank — her own note confirms the split: RegisterRead given, RegisterWrite yours, the AccelInit skeleton given, ReadRaw given (2). `RegisterWrite`: **two minutes' silent attempt** — from Tuesday's paper draft, or fresh against `RegisterRead` as the model — then the reveal: one `i2c1_memWrite()` call, the write transfer they captured Tuesday (datasheet Table 20) (2+4). `AccelInit`: write the two committed values through their own `RegisterWrite`; what the return value reports (9). *Provisional: re-time this Part against the real `lsm303agr_partial.c` before Gate 2; if the skeleton is more than two writes plus a status check, drop the return-value beat and let Part 5's ladder carry it* |
-| 5 | 18 | do | **Run it — CRUCIAL.** First, **read `accel_test.c` before you run it**: the init check, the two CTRL readbacks — proof the writes landed, and the ladder's probe — and the scaling line `accel_x = (ACC_FS * accel_raw.x * MILLI) >> ACC_REGISTERWIDTH`: yesterday's #defines in C, with `>>16` where the formula said ÷2¹⁶ (3). Build, run: the init line, the readbacks, live x/y/z in mg (6). The tests: at rest ≈ +1000 mg on z; flip → −1000; rotate to move g between axes (5). Checkpoint minute 58; ladder on screen throughout (4) |
+| 4 | 17 | do → reveal | **Complete the driver.** What the partial file gives and what is blank — **verified against the real `lsm303agr_partial.c` (in `assets/starters/`, 2026-08-27)**: RegisterRead given; RegisterWrite's body entirely blank; AccelInit given whole except the two register values (her intent comments beside each blank); ReadRaw given (2). `RegisterWrite`: **two minutes' silent attempt** — from Tuesday's paper draft, or fresh against `RegisterRead` as the model — then the reveal: one `i2c1_memWrite()` call, the write transfer they captured Tuesday (datasheet §6.1.1, Table 20) (2+4). `AccelInit`: fill the two committed values; the WHOAMI check and the `uint8_t` 0/1 return are given code — one beat on what that return reports and how `accel_test.c` uses it (9) |
+| 5 | 18 | do | **Run it — CRUCIAL.** First, **read `accel_test.c` before you run it**: the init check, the two CTRL readbacks — proof the writes landed, and the ladder's probe — the scaling line `accel_x = (ACC_FS * accel_raw.x * MILLI) >> ACC_REGISTERWIDTH` (yesterday's #defines in C, `>>16` where the formula said ÷2¹⁶; the variables are `int16_t` — the big product lives only inside the promoted arithmetic), and the paired print lines: **the raw values in hex beside the converted mg** — yesterday's left-justified reading and its conversion, side by side on every line of output (3). Build, run: the init line, the readbacks, live x/y/z in mg (6). The tests: at rest ≈ +1000 mg on z; flip → −1000; rotate to move g between axes (5). Checkpoint minute 58; ladder on screen throughout (4) |
 | 6 | 6 | do | **Make it a library.** Rename `lsm303agr_partial.c` → `lsm303agr.c`, move to `mylib`, delete from `Src`, rebuild, re-run — Day 10's discipline, second device (6) |
 | 7 | 12 | do | **Plot it.** Swap the prints for `printf("%d,%d,%d\n\r", …)`, `delay_ms(100)` (3). CoolTerm's chart view — new tool, shown from her setup shot (3). Experiments: flip, rotate, raise-and-lower periodically, shake, bang the table — what does each look like? (6) |
 | 8 | 11 | predict → explain | **Tilt.** Commit, `room="yes"`: *the board tilts 30° — which readings change, and how?* (3). The geometry from AN-1057: one axis, θ = arcsin(ax/g) — and the mechanism, not just the verdict: Aₓ = g sin θ *flattens* as θ→90° (its slope, g cos θ, goes to zero there), so a fixed amount of sensor noise barely moves θ near 0° but can swing the computed angle by tens of degrees near 90°; and no full circle (4). Two axes: θ = the arctangent of ax/ay — constant sensitivity, full 360° if the quadrant is handled, which is exactly what C's `atan2()` is for. One clause: ax and ay are the mg numbers already on your screen — the angle comes out the same from the raw values (4) |
@@ -133,10 +128,12 @@ before.
 ## Datasheet moments (P-11)
 
 1. **Part 2**: the CTRL_REG1_A / CTRL_REG4_A bit-field tables — settings
-   *derived*, field by field, from the reading's scavenger hunt (her slide 6
-   images; exact table numbers pending the PDF, Q1).
-2. **Part 4**: Table 20 (the register-write transfer) connected to Tuesday's
-   captured write pattern.
+   *derived*, field by field, from the reading's scavenger hunt. Verified
+   against `assets/datasheets/lsm303agr.pdf`: **§8.6, Tables 33–35 (p. 47)**
+   for CTRL_REG1_A (Table 35 is the data-rate table the 0b0111 = 400 Hz
+   derivation reads) and **§8.9, Tables 41–42 (p. 49)** for CTRL_REG4_A.
+2. **Part 4**: **§6.1.1, Table 20 (p. 38)** — the register-write transfer —
+   connected to Tuesday's captured write pattern.
 
 ## Writing room (S-2)
 
@@ -153,8 +150,10 @@ before.
 **Pre-class reading (B-2):** the datasheet scavenger hunt — the CTRL_REG1/4
 bit fields, with the reading quiz asking lookup questions (her design; the
 *answers* 0x77/0x00 are revealed in class, not printed in the reading); plus
-one short subsection on what a stationary accelerometer reads (±1000 mg and
-why — framing pending Q8). **Must not contain:** the completed `AccelInit`
+one short subsection on what a stationary accelerometer reads (±1000 mg,
+flipped goes negative — **her decks' framing, Petra's call 2026-08-27, Q8
+closed**; the rough chapter's proper-acceleration/free-fall hook is out).
+**Must not contain:** the completed `AccelInit`
 or `RegisterWrite` bodies, or the tilt geometry (Part 8's commit dies).
 
 **Homework:** Lab 7's pre-lab — which is this class. Students leave with it

@@ -90,29 +90,38 @@ Same shape as Day 12's session (Petra's preference after Day 11x's pilot):
 
 ## Code and figures
 
-- `whoami_test.c` is recoverable **verbatim from her slides 10/11/16**
-  (ground truth §2) — the book listing may be built from them, with the
-  missing `#include` block left as a marked TODO until her file arrives
-  (Q2). Do not invent includes (B-6). No starter file is registered in
-  `check_starters.py` until her real file lands.
+- **All four real files are in `assets/starters/`** (Petra, 2026-08-27).
+  The book's `whoami_test.c` listing comes from the real file, and the pair
+  gets **registered in `check_starters.py`** in this session. Note ground
+  truth §2's flags: her `main()` ends `return 0;` (B-14 says `return 1`, but
+  her file wins — do not "fix" it), and her read-function comments cite
+  "Table 13", which in the hosted datasheet is a maximum-ODR table — the
+  single-byte read transfer is **Table 22**. The book cites the hosted PDF;
+  her files stay untouched, with the comment drift flagged at delivery.
+- The datasheet is `assets/datasheets/lsm303agr.pdf`, citations verified in
+  ground truth §3 — Part 7's header-beside-the-map moment cites **§7,
+  Table 26 (p. 43)**; Part 5's transfer diagram is **§6.1.1, Tables 20–23
+  (p. 38)**.
 - `i2c1_memRead()` is quoted from `assets/starters/i2c.c` (verbatim match
   with her slides — verified).
 - Figures, per the manifest (ground truth §6): rebuild with
   `pptx_annotate.py --max-text 200` and **look at each** — 13/8 (STEMMA
   wiring + colors), 13/14 (AD2 wiring, collapse the duplicates), 13/29
   (transfer patterns; check the existing `i2c_transfer_pattern.svg` first).
-  Keep as-is: 13/9 (setup photo), 13/19–21 (her Waveforms captures — if
-  illegible at projection size, ask for originals, Q6 covers it). Commit
-  `assets/book.css` when figures are added (`image_ratios.py`).
+  Keep as-is: 13/9 (setup photo). **The Waveforms captures are her
+  full-resolution originals** — `assets/images/Day13-I2C(3)/WaveformsA/B/C.png`
+  (decoded contents in ground truth §1); crop to the trace area, do not use
+  the old deck extractions. Commit `assets/book.css` when figures are added
+  (`image_ratios.py`).
 
 ## Open questions that touch this day
 
-Q1 (datasheet PDF — blocks the P-11 table citation in Part 7, not the
-build), Q2 (real files — blocks the includes and `check_starters.py`
-registration), Q3 (NACK behavior — blocks one student-facing sentence),
-Q6 (capture originals), Q9 (connector keying — blocks one reading
-reassurance). All have workarounds marked in the plan; none blocks the
-session.
+Only **Q3** (NACK behavior) remains open, at Petra's pace — she may switch
+the library to a NACK-reporting `i2c` variant, so **check `assets/starters/
+i2c.c`'s git log before quoting it**, and keep the one affected
+student-facing sentence unwritten (the plan's "expected here" line is worded
+true either way; do not press her on it). Q1, Q2, Q6, and Q9 are closed —
+their answers are already folded into `plans/day13.md` and the ground truth.
 
 ## Standing traps — each cost something once
 

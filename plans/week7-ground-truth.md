@@ -13,10 +13,11 @@ Sources mined:
 - `assets/starters/i2c.c` — the I2C library, already in the repo and already
   taught (Days 9x/10)
 
-**The sensor is the LSM303AGR on an Adafruit STEMMA QT breakout.** Not the
-LIS3DH — `assets/datasheets/lis3dh.pdf` is Day 5X worksheet material and must
-not be cited anywhere this week. **There is no LSM303AGR datasheet in the
-repo** (§3, question 1).
+**The sensor is the LSM303AGR on the Adafruit LSM303AGR Accelerometer
+Magnetometer — STEMMA breakout (product 4413; Petra confirmed 2026-08-27).**
+Not the LIS3DH — `assets/datasheets/lis3dh.pdf` is Day 5X worksheet material
+and must not be cited anywhere this week. The LSM303AGR datasheet is
+`assets/datasheets/lsm303agr.pdf` (§3, verified).
 
 ---
 
@@ -33,10 +34,10 @@ repo** (§3, question 1).
 | 8 | The breakout + STEMMA QT wiring: GND black, VIN red, SCL yellow, SDA blue. Board text says "3.3V–5V" (regulator on breakout) |
 | 9 | The activity: build the circuit, copy `TemplateProject` → `Accelerometer`, download `whoami_test.c` into `Src`, build, run CoolTerm. WHO_AM_I contains 0x33; reading it right proves the I2C setup |
 | 10–11 | `whoami_test.c` in full (§2), incl. `lsm303_AccelRegisterRead()` |
-| 12 | `i2c1_memRead()` walked line by line — "Recall:" (it is Reference material in ch-i2c, not in-class — §5) |
+| 12 | `i2c1_memRead()` walked line by line — "Recall:" (the *fact* it teaches was in-class on Day 10 Part 7a; only the code walk is Reference-only — §5, corrected at Gate 1) |
 | 13–15 | AD2 **digital channels** (larger flying-lead bundle): GND black, D0 (pink) → SDA, D1 (green) → SCL |
 | 16 | **Predict**: what will the logic analyzer show when `whoami_test.c` runs? (Full listing repeated.) Speaker note expects a NACK + "press single then hit reset to catch that first interaction" — see §2a, this note is doing more work than it looks |
-| 19–21 | Waveforms captures A/B/C: **A** wrong device address → NACK after address; **B** correct address, wrong register address → some value returned, but not 0x33; **C** correct/correct → 0x33 on the wire |
+| 19–21 | Waveforms captures A/B/C — **her full-resolution originals are now in `assets/images/Day13-I2C(3)/WaveformsA/B/C.png` (Petra, 2026-08-27), all three verified by eye.** The decoder rows read: **A** — `h18 WR`, NACK, STOP: one transaction, nothing more in the 400 µs window (the wrong *device* address; h18 = `0x30 >> 1`, i.e. the demo changes `0x32` to `0x30` in the `#define`). **B** — `h19 WR · A · h20 · A · P`, then `h19 RD · A · h07 · N · P`: the wrong *register* address (0x20 = CTRL_REG1_A) ACKs all the way and returns that register's power-on default 0x07 — a teachable detail: the "wrong" value is the header's DEFAULT column made visible. **C** — `h19 WR · A · h0F · A · P`, then `h19 RD · A · h33 · N · P`: both transactions, the stop-then-start between them, the register address, the 0x33, and the controller's deliberate NACK before the final STOP — every Part 5 teaching point on one screen |
 | 24 | "Digging Deeper" — six questions on the trace: why 0x19 not 0x32; who sends the address; who ACKs; why the address goes out **twice**; where the register address is said; where the data appears |
 | 25 | AD2 wiring repeated (rescue slide) |
 | 26–28 | Device driver begins: firmware-layers figure (the Day 10 figure, reused); the five-step "writing a device driver" recipe (datasheet transfers → `#define`s → functions → implement via i2c calls → unit tests) |
@@ -95,24 +96,30 @@ topic-logical rewrite that puts MEMS physics first is the arc destruction
 
 ---
 
-## §2 The code — what is recovered verbatim, what must be asked for
+## §2 The code — all four real files are in the repo (Petra, 2026-08-27)
 
-**No accelerometer starter exists in `assets/starters/`.** Recovered from
-code slides (B-6: never reconstruct from memory; what the slides do not carry
-verbatim goes on the question list):
+`assets/starters/` now holds `whoami_test.c`, `lsm303agr.h`,
+`lsm303agr_partial.c`, `accel_test.c` — **her files, verbatim; they are the
+authority for every listing (B-6)**. Read against the decks, they settle:
 
-| File | Status |
+| File | What it settles |
 | --- | --- |
-| `whoami_test.c` | **Recovered nearly whole** (Day 13 slides 10, 11, 16): `#define LSM303_ADDRESS_ACCEL (0x32 >> 1)`, `#define LSM303_WHO_AM_I_A 0x0F`, `main()` loop, and `lsm303_AccelRegisterRead()`. Missing: the `#include` block. Ask for the real file (question 2) |
-| `lsm303agr.h` | **Excerpt only** — slide 30 says "Includes macros and addresses for all the registers, **e.g.**," so the slide is a sample, not the file. Recovered: device address, WHO_AM_I_A 0x0F, CTRL_REG1..6_A 0x20–0x25, REFERENCE_A 0x26, STATUS_REG_A 0x27, OUT_{X,Y,Z}_{L,H}_A 0x28–0x2D, the `lsm303AccelData_s` struct, the four prototypes. Missing: everything else (bit-value macros for CTRL registers, if any). Ask (question 2) |
-| `lsm303agr_partial.c` | **Not recoverable.** Slides show `AccelRegisterRead` (full), `AccelRegisterWrite` (full — the Day 14 reveal), `AccelReadRaw` (full, 13x slide 18). The `AccelInit` **skeleton** — what is given vs blank — exists on no slide. Ask (question 2) |
-| `accel_test.c` | **Elided** — Day 14 slide 10 has a `⋮` where the includes and the declarations of `accel_x/y/z` sit (their type matters: the mg product reaches ±131 M, so they must be `int32_t`; the listing does not show it). Ask (question 2) |
-| `i2c.c` / `i2c.h` | **In the repo**, `assets/starters/`. Day 13 slide 12's `i2c1_memRead()` listing matches the starter **verbatim** (whitespace aside). Nothing to ask |
+| `whoami_test.c` | Includes are `stdio.h`, `ES28.h`, `uart.h`, `i2c.h`. Matches the slides otherwise. `main()` ends `return 0;` — the course convention is `return 1;` (B-14, Week 5 flag 6); **her file wins, do not "fix" it**; the book listing must match the starter (`check_starters.py`) |
+| `lsm303agr.h` | The full register map runs to 0x3D (FIFO/INT/CLICK/TIME registers beyond the slide's excerpt); calibration constants `ACCEL_GRAVITY 9.8`, `ACCEL_RANGE 2`; **`lsm303_AccelInit()` returns `uint8_t`** (the Day 14 slide was right, Day 13/13x's `int` was stale); ReadRaw's prototype is `* const result` in the `.h` but `*result` in the `.c` — compatible in C, note it, don't touch it. The header comment credits Adafruit_LSM303_U.h — internal provenance, never book prose (B-11e) |
+| `lsm303agr_partial.c` | **The skeleton, exactly as the plans assumed**: `AccelRegisterWrite`'s body entirely blank ("// complete this function"); `AccelInit` given whole **except the two register values** (`uint8_t ctrl_reg1 =      ;` / `ctrl_reg4 =      ;`, with her intent comments "normal power mode @ 400 Hz, all axes enabled" / "continuous update, 2g full scale, I2C"); the WHOAMI check given, returning 0 fail / 1 success; `ReadRaw` given whole, with the §6.1.1 auto-increment quote, the alternative two-single-reads route, and the mg-conversion comment in it. **Day 14 Part 4 is no longer provisional — the plan's 17-minute shape matches the real file** |
+| `accel_test.c` | `accel_x/y/z` are **`int16_t`** — not the `int32_t` this document previously presumed: the product `ACC_FS * raw * MILLI` is computed in promoted `int` arithmetic (reaches ±131 M there safely) and only the post-shift result (±2000) is stored. It also prints the **raw values in hex** (`accel_raw_x=%x …`) beside the converted mg line — a line the deck's elided listing never showed, and a teaching hook: the left-justified raw and its mg conversion, side by side. Banner is "LSM303AGR test program"; `delay_ms(2000)` |
+| `i2c.c` / `i2c.h` | Unchanged — slide 12's `i2c1_memRead()` matches the starter verbatim |
 
-Inconsistencies within her own decks, to settle when the files arrive:
-`lsm303_AccelInit()` returns `int` on Day 13/13x slides but `uint8_t` on Day 14
-slide 7; `AccelReadRaw` takes `lsm303AccelData_s *result` in most places but
-`* const result` on 13x slide 13.
+**Stale datasheet citations inside her files** (they were written against an
+older datasheet revision; the hosted PDF is the authority — §3): the
+read-one-byte comments say "Table 13", which in the hosted PDF is a
+maximum-ODR table — the single-byte read transfer is **Table 22**;
+`lsm303agr.h` cites "Sec 6, 7.1" where the hosted PDF's register map is
+**§7, Table 26**; `lsm303agr_partial.c` says "there are 8 control registers
+(Section 8.6)" where the hosted PDF has **six** accelerometer control
+registers (§8.6–8.11; §8.6 is CTRL_REG1_A alone — her deck slide 11's "six"
+agrees). Do not edit her files; the book cites the hosted PDF, and the
+comment drift is flagged to her at delivery as a one-word-per-comment fix.
 
 ### §2a How the code actually fails, and why it matters for Day 13's captures
 
@@ -145,36 +152,50 @@ This also re-opens **week5-map flag 20** (may `i2c.c` gain a NACK-reporting
 variant?), which explicitly anticipated "and the accelerometer later". Not
 ours to decide; on the question list (question 3).
 
+*Status (Petra, 2026-08-27):* she does not remember the wrong-address
+behavior and will check later; if the NACK-reporting variant works she will
+switch to it. **Do not press this** — the plans are already worded to be true
+either way, and her capture A is at least consistent with the hang (one
+transaction in a 400 µs window, and her old "press single then hit reset"
+note). Whatever she decides simply lands in the drafted text later.
+
 ---
 
-## §3 The datasheet
+## §3 The datasheet — in the repo and verified (Petra, 2026-08-27)
 
-**`assets/datasheets/` has no LSM303AGR datasheet.** Needed for the P-11
-moments this week (question 1). The specific citations her decks make, to be
-verified against the PDF page/table numbers when it arrives — paste, don't
-type (P-11):
+**`assets/datasheets/lsm303agr.pdf`** (72 pages; link as
+`external/datasheets/lsm303agr.pdf`). The P-11 citations, verified against
+this PDF — pasted, not typed:
 
-- The sensor-characteristics table (range, sensitivity per mode, zero-g
-  offset) — Day 13x slide 8's images.
-- **§6.1.1** — subaddress MSB enables auto-increment (quoted verbatim on 13x
-  slide 17).
-- **§7.1** (per the prototype comments) — "gain and update rate settings" for
-  `AccelInit`.
-- **Table 20** (per the `AccelRegisterWrite` comment) — the register write
-  transfer.
-- The CTRL_REG1_A and CTRL_REG4_A bit-field tables (Day 14 slide 6's four
-  images) — needed to teach deriving **0b01110111** (ODR bits + Zen/Yen/Xen,
-  LPen off) and **0b00000000** (±2 g, HR off ⇒ normal 10-bit mode).
-- WHO_AM_I_A default 0b00110011 = 0x33.
+- **§2.1, Table 3 "Sensor characteristics" (pp. 13–14)** — full-scale ranges;
+  sensitivity per mode (the table's own note: *"1 LSb = 3.9 mg in normal mode
+  (10-bit) at FS=±2 g"* — so the datasheet prints **3.9**, matching our
+  derived 3.90625; it is **her slide's callout** that rounds to "4 mg/digit");
+  zero-g offset **LA_TyOff ±40 mg** — her speaker note's figure, confirmed.
+- **§6.1.1 "I2C operation" (p. 38)** — the auto-increment SUB-MSB paragraph,
+  verbatim as her 13x slide 17 quotes it; and **Tables 20–23**: 20 write one
+  byte, 21 write multiple, **22 read one byte**, 23 read multiple. (The read
+  cites in her `.c` files say "Table 13", which in this revision is a
+  maximum-ODR table — stale, see §2.)
+- **§7, Table 26 (p. 43)** — the register address map, the source of
+  `lsm303agr.h`'s `#define` block (Day 13 Part 7's datasheet moment).
+- **§8.4 WHO_AM_I_A (0Fh), p. 46** — default 0b00110011 = 0x33.
+- **§8.6 CTRL_REG1_A (20h), Tables 33–35, p. 47** — ODR[3:0]/LPen/Zen/Yen/Xen;
+  Table 35 is the data-rate table the 0b0111 = 400 Hz derivation reads.
+- **§8.9 CTRL_REG4_A (23h), Tables 41–42, p. 49** — BDU/BLE/FS[1:0]/HR/
+  self-test/SPI_ENABLE; FS 00 = ±2 g, HR 0 = normal (10-bit) mode.
 
-Facts the decks assert that only the datasheet can confirm: the ±40 mg zero-g
-offset figure; which ODR 0b0111 selects; that CTRL4 = 0x00 means normal mode.
-**Note the settings pair (0x77/0x00) selects normal mode = 10-bit** — the rough
-chapter's "12-bit low-power mode" is wrong twice over (§7).
+**The settings pair (0x77/0x00) selects normal mode = 10-bit** — the rough
+chapter's "12-bit low-power mode" is wrong twice over (§7). The accelerometer
+has **six** control registers, CTRL_REG1_A–CTRL_REG6_A (§8.6–8.11), as her
+deck slide 11 says; `lsm303agr_partial.c`'s "8 control registers" comment is
+stale against this revision.
 
 Also cited: Analog Devices **AN-1057**, "Using an Accelerometer for
-Inclination Sensing" (Day 14 slide 17; Lab 7 names it too). Not in the repo —
-question 5 asks whether to host it in `assets/`.
+Inclination Sensing" (Day 14 slide 17; Lab 7 names it too). Petra approved
+hosting it (2026-08-27), but analog.com refuses downloads from this network —
+**she drops the PDF into `assets/datasheets/an-1057.pdf`** the same way as
+the datasheet, and the book links it as `external/datasheets/an-1057.pdf`.
 
 ---
 
@@ -301,7 +322,7 @@ where the composite disagrees with the original, ask for the original.
 | 13/8 | Breakout photo + STEMMA wiring (2 images, color callouts) | **Rebuild with annotations** — this is the week's wiring figure |
 | 13/9 | Full test-setup photo | Keep (photo, no annotations needed); check crop |
 | 13/14–15/25 | AD2 digital-channel wiring (4 images, "Connect me!" callout) | Rebuild once, reuse; near-duplicate slides collapse to one figure |
-| 13/19–21 | Waveforms captures A/B/C | **Screenshots, keep as-is** — but they are her captures; if illegible at projection size, ask for originals (question 6) |
+| 13/19–21 | Waveforms captures A/B/C | **Her full-resolution originals are in the repo** (`WaveformsA/B/C.png`, 2880-px wide, verified by eye — decoded contents in §1). Use these, not the deck extractions; crop to the trace area for the book figures |
 | 13/27 | Firmware layers | **Do not rebuild** — xref `fig-firmware-layers` in ch-i2c |
 | 13/29 | I2C write/read transfer patterns (annotated) | Rebuild; also `i2c_transfer_pattern.svg` already exists in the Day 13 image dir — check it first |
 | 13x/3 | Mass-spring-case diagram | Rebuild with labels (rough chapter uses plain pull) |
@@ -371,57 +392,39 @@ without checking:
 
 ---
 
-## §9 Questions for Petra (blocking noted per item)
+## §9 Questions for Petra — answered 2026-08-27, one item still open
 
-1. **The LSM303AGR datasheet PDF** — please add it (or send it) so it can live
-   in `assets/datasheets/` like the others. Blocks the P-11 citations
-   (register tables, §6.1.1, §7.1, Table 20) and final CTRL-register teaching;
-   does not block the plans.
-2. **The four real files**: `whoami_test.c`, `lsm303agr.h`,
-   `lsm303agr_partial.c`, `accel_test.c`. *Narrowed at Gate 1:* your Day 13x
-   slide-13 speaker note already confirms the given/blank split (RegisterRead
-   given, RegisterWrite student-written, AccelInit **skeleton** given,
-   ReadRaw given). What still needs the files: what the skeleton leaves blank
-   *inside* `AccelInit`; whether `AccelInit` returns `int` or `uint8_t`
-   (your decks disagree); and `accel_test.c`'s elided includes and the
-   declared types of `accel_x/y/z` (the mg product reaches ±131 M, so
-   presumably `int32_t`). Blocks book listings (B-6) and the final timing of
-   Day 14 Part 4, not the plans.
-3. **Wrong-address behavior** (§2a): Week 5 established the library hangs
-   after a NACK. So on capture A the program should freeze after one
-   transaction — the "Could not connect" print never appears for an absent
-   device. Does that match what you see in class? (One run settles it.) And is
-   this the week flag 20's NACK-reporting variant should land, or do we teach
-   the hang as-is?
-4. **The HiTA water-bottle activity** (Day 14 slide 3): what is it (and what
-   does HiTA stand for), how long does it run, and does it stay in Day 14?
-   It is ~10 unbudgeted minutes of a 110-minute class that otherwise ends in
-   Lab-7 build time.
-5. **AN-1057**: host the PDF in `assets/` (like the RM) so the book can link
-   it, or link ST's/ADI's site?
-6. **Which breakout exactly** — slide 8 shows the Adafruit STEMMA QT LSM303AGR
-   (product 4413?). Wanted for the schematic figure caption and purchasing
-   accuracy; also: are her Waveforms captures A/B/C available as image files,
-   in case the deck extractions are too low-res to project?
-7. **CoolTerm chart view**: your slide says View → View Chart; current CoolTerm
-   builds may differ. Which CoolTerm version do students have?
-8. **The "proper acceleration" framing** in the rough chapter's reading (a
-   stationary accelerometer reads +1 g because it measures the table's push;
-   free fall reads 0) — keep it as the reading's physics hook, or stick
-   strictly to your decks' simpler "it measures gravity's projection" framing?
-9. **Safety and the connector** *(added at Gate 1)*: can a miswired STEMMA QT
-   connection — reversed power, or swapped SDA/SCL — damage the breakout or
-   the Nucleo? The connector appears to be keyed (JST-SH, one orientation),
-   but nothing we can cite says so, and your slide 8 marks the breakout's
-   power pin "3.3V–5V". One sentence from you and both the Day 13 safety
-   line and the reading's "it only fits one way" reassurance can be written;
-   until then the plans give the wire colors and stop (B-11c).
-10. **Spare breakouts** *(added at Gate 1)*: are there spare LSM303AGR
-    breakouts (or STEMMA cables) in the room on Days 13/14? Both days'
-    rescue ladders currently end at "priority triage" because a swap-the-part
-    rung cannot be written without knowing spares exist — and a Day 13
-    hardware failure carried forward is the costliest failure the week has.
+Her answers, recorded here so no session re-asks:
 
-Nothing above blocks the plans; 1, 2, and 6 block book listings and figures.
-Q3 no longer blocks drafting — Day 13 Part 6's in-class line is worded true
-whichever way it lands.
+1. **Datasheet** — ANSWERED: `assets/datasheets/lsm303agr.pdf` is in the
+   repo; citations verified against it in §3.
+2. **The four real files** — ANSWERED: all four are in `assets/starters/`;
+   what they settle (and the stale-comment flags) is §2. `AccelInit` returns
+   `uint8_t`; `accel_x/y/z` are `int16_t`.
+3. **Wrong-address behavior** — OPEN, at her pace: she will check later, and
+   if the NACK-reporting variant (week5 flag 20) works she will switch to it.
+   **Do not press this.** The plans are worded true either way; the one
+   affected student-facing sentence waits.
+4. **HiTA** — ANSWERED: dropped. The Day 14 plan of record stands; the
+   restore-path note is retired.
+5. **AN-1057** — ANSWERED: yes, host it. analog.com refuses downloads from
+   this network, so **she drops `an-1057.pdf` into `assets/datasheets/`**
+   (like the datasheet); linked as `external/datasheets/an-1057.pdf`.
+6. **The breakout** — ANSWERED: Adafruit LSM303AGR Accelerometer Magnetometer
+   — STEMMA (product 4413, adafruit.com/product/4413). And her Waveforms
+   originals are in the repo (§1, §6).
+7. **CoolTerm** — ANSWERED: students will have the newest version. Her
+   slide's screenshot is the authority for the chart-view path; session 4
+   confirms the menu wording against the current build when writing that
+   beat.
+8. **Reading framing** — ANSWERED: stick to her decks' framing. The rough
+   chapter's proper-acceleration/free-fall hook is **out**; the Day 14
+   reading's stationary-reading subsection says what the decks say (the
+   sensor reads gravity's projection; flat ≈ +1000 mg, flipped ≈ −1000 mg).
+9. **Connector safety** — ANSWERED: **"You can't miswire the STEMMA
+   connector, it only goes in one way."** Citable now (her words); the
+   Day 13 reading's reassurance and the safety line may state it.
+10. **Spares** — ANSWERED: spares exist, **but this must appear nowhere on
+    slides or in the book** — she handles the classroom. The rescue ladders
+    keep "priority triage" with no mention of spare hardware, and that is
+    final, not provisional.

@@ -1,9 +1,17 @@
-# Week 7 handover — where things stand after session 1 (2026-08-26)
+# Week 7 handover — where things stand after session 1 (updated 2026-08-27)
 
 Session 1 of four (per `plans/week7-prompt.md`) is **done**: ground truth,
 the week arc, the three lesson plans, one Gate 1 over the whole week with
 its 18-item list applied and verified item by item, and the three build
 prompts. **No book prose and no slides were written** — that was the deal.
+
+**Update 2026-08-27 — Petra answered the question list**, and her assets are
+in the repo: `assets/datasheets/lsm303agr.pdf` (citations verified, ground
+truth §3), the four real driver/test files in `assets/starters/` (what they
+settle, §2), and her three full-resolution Waveforms captures in
+`assets/images/Day13-I2C(3)/` (decoded contents, §1). All plans and prompts
+are updated to match. **Session 2 (`plans/day13-prompt.md`) is ready to
+run.**
 
 ## What exists now
 
@@ -35,30 +43,28 @@ stated), Day 13x re-based with the sign as first teaching (`0xC000` →
 list, including everything explicitly rejected, is at the end of
 `reviews/week7-gate1.md`.
 
-## Questions sent to Petra (ground truth §9 — the short list)
+## The question list — answered 2026-08-27 (full record: ground truth §9)
 
-1. **The LSM303AGR datasheet PDF** (Q1) — blocks P-11 citations and the
-   spec-table figures; nothing else.
-2. **The four real files** (Q2, narrowed): what `lsm303agr_partial.c` leaves
-   blank inside `AccelInit`; `int` vs `uint8_t` return; `accel_test.c`'s
-   includes and variable types. Her own slide-13 note already confirmed the
-   given/blank split.
-3. **Wrong-address behavior** (Q3): Week 5's finding says the library hangs
-   after a NACK, so "Could not connect" never prints for an absent device —
-   match what you see in class? (No longer blocks drafting; one
-   student-facing sentence waits on it.)
-4. **HiTA** (Q4): out of the plan of record — its 10 minutes were exactly
-   Day 14's overrun. The restore arithmetic is in `plans/day14.md` if she
-   keeps it.
-5. **AN-1057 hosting** (Q5), **the exact breakout + capture originals**
-   (Q6), **CoolTerm chart menu path** (Q7), **proper-acceleration framing**
-   (Q8).
-6. **New at Gate 1**: can a miswired STEMMA connection damage anything /
-   is the connector keyed (Q9), and are there spare breakouts in the room
-   (Q10) — both block one safety/rescue sentence each.
-
-**None blocks session 2.** Q1+Q2 block book listings and two figures; Q4
-blocks only which Day 14 table is final.
+- **Q1 datasheet** — in the repo, citations verified. **Q2 files** — in the
+  repo; `AccelInit` returns `uint8_t`, its skeleton leaves exactly the two
+  register values blank, `accel_x/y/z` are `int16_t`.
+- **Q3 wrong-address behavior** — the one still-open item, at her pace: she
+  will check later, and may switch `i2c.c` to the NACK-reporting variant.
+  **Do not press it**; sessions check `i2c.c`'s git log before quoting it.
+- **Q4 HiTA** — dropped; the Day 14 table is final.
+- **Q5 AN-1057** — approved for hosting, but analog.com refuses downloads
+  from this network: **Petra drops `an-1057.pdf` into `assets/datasheets/`**
+  like the datasheet. The only file still missing.
+- **Q6 breakout** — Adafruit LSM303AGR STEMMA, product 4413; capture
+  originals delivered. **Q7 CoolTerm** — newest version; her screenshot is
+  the menu-path authority, session 4 confirms wording.
+- **Q8 framing** — her decks' framing only; the rough chapter's
+  proper-acceleration hook is out.
+- **Q9 connector** — "you can't miswire the STEMMA connector, it only goes
+  in one way" (her words; now citable in the reading and safety line).
+- **Q10 spares** — spares exist, **never mentioned on slides or in the
+  book**; she handles the classroom. The ladders keep "priority triage"
+  with no hardware mention — final.
 
 ## What runs next
 

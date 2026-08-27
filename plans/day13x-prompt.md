@@ -31,10 +31,9 @@ ideas, never the text.
    Parts per `plans/day13x.md`'s table (2+1+11+3+9+19+3+2 = 50), figures
    settled, `<activity>` blocks with `<instructor>` answers, no connecting
    prose. Salvage from the rough chapter's old `sec-accel-concepts` material
-   only what survives ground truth §7 — its proper-acceleration framing is
-   **pending Q8**; do not silently keep or cut it (if unanswered, park it
-   under the Day 14 Before Class placeholder where the plan puts the
-   stationary-reading subsection).
+   only what survives ground truth §7 — and note its proper-acceleration
+   framing is **out** (Petra, 2026-08-27, Q8): the chapter uses her decks'
+   framing everywhere.
 2. **`<slide>` blocks + `assets/decks/day13x.json`**, condensing the
    skeleton. Fit-measure; look at every figure slide.
 3. **Gate 2′** over skeleton + deck (same panel and length briefing as the
@@ -80,9 +79,14 @@ base with Day 13's 13/29; reuse, don't duplicate ids). Commit
 
 ## Open questions that touch this day
 
-Q1 (datasheet — the spec-table figure and §6.1.1/§7.1 citations), Q8
-(proper-acceleration framing). Neither blocks the skeleton; both are marked
-in the plan where they land.
+None — Q1 and Q8 are closed (2026-08-27). The datasheet is
+`assets/datasheets/lsm303agr.pdf` (spec table: §2.1 Table 3, pp. 13–14 —
+sensitivity 3.9 mg at ±2 g normal, zero-g offset ±40 mg; auto-increment:
+§6.1.1, p. 38; register map: §7 Table 26, p. 43); build the masked-column
+commit figure and the full-table reveal from it. Petra ruled the reading
+framing: **her decks' framing only** — the rough chapter's
+proper-acceleration/free-fall hook is out everywhere, including anything
+salvaged from `sec-accel-concepts`.
 
 ## Standing traps
 

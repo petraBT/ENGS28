@@ -18,30 +18,28 @@ Paste this into a fresh session in `~/repos/ENGS28`. Read first, in order:
 frozen specimens. Mine her deck
 (`python3 scripts/pptx_mine.py "assets/ClassSlidesOLD/Day14-Accelerometer(2).pptx"`).
 
-## Before anything: two gating checks
+## Both former gating checks are resolved (2026-08-27)
 
-1. **Has `lsm303agr_partial.c` arrived (Q2)?** Day 14 Part 4's 17 minutes
-   are provisional on what the skeleton leaves blank inside `AccelInit`.
-   **Re-time Part 4 against the real file before Gate 2′** — and apply the
-   pre-committed fallback if the skeleton is more than two writes plus a
-   status check (drop the return-value beat; Part 5's ladder carries it).
-   If the file has not arrived, say so in the handover and keep the beat
-   marked provisional; the skeleton can still be built.
-2. **Has Petra answered Q4 (HiTA)?** The plan of record is HiTA-free; the
-   restore path and its cost are the first thing in `plans/day14.md`. If she
-   keeps it, apply the restore arithmetic exactly (buffer 5 → 0, Part 7
-   12 → 7, checkpoint minute 68) and add the one-minute individual written
-   guess before group talk.
+1. **`lsm303agr_partial.c` is in `assets/starters/` and verified**: the
+   skeleton matches the plan's Part 4 exactly (RegisterWrite body blank;
+   AccelInit whole except the two register values; `uint8_t` 0/1 return with
+   the WHOAMI check given). No re-timing needed; the provisional markers are
+   already retired from `plans/day14.md`. Register the book's listings
+   against the real files in `check_starters.py`.
+2. **HiTA is dropped — Petra's call.** The Day 14 table in `plans/day14.md`
+   is final.
 
 ## The ordering for this session
 
 1. **Day 14's Before Class reading**, full prose: the datasheet scavenger
    hunt (CTRL_REG1/4 bit fields; lookup questions in the reading quiz; the
    *answers* 0x77/0x00 stay out of the reading) — plus the short
-   stationary-reading subsection (±1000 mg and why), framed per Petra's
-   answer to Q8 (her decks' simpler framing if unanswered). Blocked on the
-   datasheet PDF (Q1) only for exact table numbers — leave them as marked
-   TODOs rather than typed-from-memory citations (P-11).
+   stationary-reading subsection (±1000 mg and why), **in her decks' framing
+   (Q8 closed; no proper-acceleration/free-fall hook)**. Table citations are
+   verified (ground truth §3): CTRL_REG1_A is §8.6 Tables 33–35 (p. 47),
+   CTRL_REG4_A is §8.9 Tables 41–42 (p. 49) of
+   `assets/datasheets/lsm303agr.pdf` — paste from there, never from memory
+   (P-11).
 2. **Gate 1.5** on the reading's first subsection.
 3. **The in-class skeleton**: Parts 2–10 per the plan
    (3+2+10+8+17+18+6+12+11+13+5+5 = 110, checkpoint minute 58), figures
@@ -124,9 +122,16 @@ callouts). Commit `assets/book.css` with figure changes.
 
 ## Open questions that touch this day
 
-Q1 (datasheet tables), Q2 (files — gates Part 4's timing and two listings),
-Q4 (HiTA restore), Q5 (AN-1057 hosting), Q7 (CoolTerm menu), Q8 (reading
-framing). The plan marks where each lands; none blocks the skeleton.
+Q1, Q2, Q4, Q8 — closed (answers folded into the plan and ground truth).
+Still live: **Q5's file** — Petra approved hosting AN-1057 but analog.com
+blocks downloads from this network, so check whether
+`assets/datasheets/an-1057.pdf` has appeared before writing Part 8's link
+(if not, link the citation as a marked TODO and note it in the handover);
+**Q7** — students run the newest CoolTerm; her slide's screenshot is the
+authority for the chart-view path, confirm the menu wording against the
+current build when writing Part 7's beat; and **Q3** — at her pace; check
+`assets/starters/i2c.c`'s git log in case she has switched to a
+NACK-reporting variant.
 
 ## Standing traps
 
