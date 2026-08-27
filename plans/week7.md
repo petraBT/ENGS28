@@ -149,9 +149,9 @@ it and Lab 7 Deliverable 4 grades it.
 4. **Missing artifacts — mostly resolved 2026-08-27**: the datasheet
    (`assets/datasheets/lsm303agr.pdf`, citations verified), the four driver
    files (`assets/starters/`), and her three Waveforms capture originals
-   (`assets/images/Day13-I2C(3)/`) are all in the repo. Still missing:
-   **AN-1057** — approved for hosting, but analog.com refuses downloads from
-   this network; Petra drops it into `assets/datasheets/an-1057.pdf`.
+   (`assets/images/Day13-I2C(3)/`) are all in the repo, and **AN-1057
+   landed 2026-08-27** (`assets/datasheets/an-1057.pdf`). Nothing is
+   missing.
 
 ## Week-level cut order
 

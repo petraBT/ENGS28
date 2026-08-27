@@ -1,4 +1,57 @@
-# Week 7 handover — where things stand after session 1 (updated 2026-08-27)
+# Week 7 handover — where things stand after session 2 (updated 2026-08-27)
+
+## Session 2 (build Day 13) is DONE — the delivery is with Petra
+
+Everything in `plans/day13-prompt.md`'s ordering ran: the chapter skeleton
+for the whole week (rough content parked or deleted per ground truth §7;
+Day 13x/14/Reference sections are placeholders whose TODO comments name
+their sessions), the Day 13 Before Class reading (Gate 1.5 voice probe
+applied), the in-class Parts 1–8 skeleton with activities and instructor
+answers, the 43-slide deck (`assets/decks/day13.json`, fit-measured at
+1600×900, every figure slide looked at), and Gate 2′
+(`reviews/day13-gate2.md`: eleven reports, the synthesizer's 30-item list
+applied and verified item by item — including two correctness BLOCKERs
+that had reached the draft: a four-vs-three ACK count and an
+"every acknowledge is an ACK" caption over a visible N).  **Stopped for
+Petra's pass 1.  In-class connecting prose is a later session, from the
+slides she passes** (the DELIVERY 2 markers in the source name what each
+Part still owes).
+
+### Ask-Petra list from session 2
+
+1. **Re-export Waveforms B and C** with the signal rows dragged taller (or
+   the window shorter): their decode glyphs project at ~1.3% of slide
+   height against the 1.9% floor, and cropping cannot fix a 12.9:1 strip.
+   Capture A was re-cut tight to its single transaction and reads well.
+2. **One setup photo** for Part 4: the breakout with its STEMMA cable, the
+   SCL/SDA breadboard rows with the display still on them, the 3.3 V and
+   GND feeds (never 5 V), and the AD2's DIO0/DIO1/ground leads landed.
+   Her slide 9's Fritzing turned out to be a stale MPU-6050 drawing and
+   was not used; the AD2-with-bundle product photo covers the day
+   meanwhile.
+3. **Stale comments in her files** (one-word fixes, book already prints
+   the corrected values): `whoami_test.c` cites "Table 13" where the
+   hosted PDF's single-byte read is Table 22; `lsm303agr.h` marks
+   `LSM303_REFERENCE_A` as `r` where Table 26 says R/W, and cites
+   "Sec 6, 7.1" where the hosted map is §7 Table 26.
+4. **Two one-line confirmations**: the breakout's 3.3–5 V input tolerance
+   (needs the schematic; the book currently avoids the claim), and "the
+   STEMMA plug goes into either socket" (rests on the product photo).
+5. **Q3 unchanged** — at her pace; the affected sentences are listed at
+   the end of `reviews/day13-gate2.md` ("Ask-Petra list and handover").
+
+### Verify-later list
+
+- Reference Manual §23.4: whether the controller's final NACK on a read
+  is NBYTES-driven — if confirmed, `sl-day13-memread-read`'s caption
+  sharpens to name it (Gate 2′ item 25).
+- Recorded so later passes do not undo them: L-17 is deliberately not
+  applied to bus-protocol talk; the wall listings deliberately omit the
+  `// 7-bit address` comment (P-15); capture C deliberately stays whole
+  (the two-transaction count is the discovery) — if her re-export does
+  not arrive and the room cannot read it, the write/read-half split is
+  the named fallback.
+
 
 Session 1 of four (per `plans/week7-prompt.md`) is **done**: ground truth,
 the week arc, the three lesson plans, one Gate 1 over the whole week with

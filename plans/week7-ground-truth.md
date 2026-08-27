@@ -320,9 +320,9 @@ where the composite disagrees with the original, ask for the original.
 | 13/5 | I2C bus diagram (controller, peripherals, pullups) | Prefer ch-i2c's existing protocol figures via xref; only rebuild if the plan keeps a recap figure |
 | 13/6 | Protocol walk figure | Same — ch-i2c already owns this teaching |
 | 13/8 | Breakout photo + STEMMA wiring (2 images, color callouts) | **Rebuild with annotations** — this is the week's wiring figure |
-| 13/9 | Full test-setup photo | Keep (photo, no annotations needed); check crop |
-| 13/14–15/25 | AD2 digital-channel wiring (4 images, "Connect me!" callout) | Rebuild once, reuse; near-duplicate slides collapse to one figure |
-| 13/19–21 | Waveforms captures A/B/C | **Her full-resolution originals are in the repo** (`WaveformsA/B/C.png`, 2880-px wide, verified by eye — decoded contents in §1). Use these, not the deck extractions; crop to the trace area for the book figures |
+| 13/9 | Full test-setup "photo" | **CORRECTED on inspection (session 2): not a photo — a stale Fritzing diagram whose sensor is an MPU-6050, red lead on a 5 V pin.  NOT USED.**  A real setup photo (breakout + STEMMA, the SCL/SDA rows with the display still on them, 3.3 V and GND feeds, the AD2's DIO leads landed) is on the ask-Petra list |
+| 13/14–15/25 | AD2 digital-channel wiring (4 images, "Connect me!" callout) | **CORRECTED on inspection (session 2): two of the four images are unusable (an ADALM2000 pinout — wrong instrument; an Arduino UNO + MPU-6050 Fritzing).  The clean AD2-with-bundle product photo (slide14_img4) IS used, as `ad2_digital_bundle.png` in `fig-ad2-digital-wiring`; the Waveforms steps are Day 9x's `fig-waveforms-decode` by refPage** |
+| 13/19–21 | Waveforms captures A/B/C | Her originals cropped to the trace rows (`waveforms_capture_a/b/c.png`).  **A is re-cut tight to its one transaction (x 0–1300 of the original) and reads well projected; B and C fill their frames and still project below the legibility floor — a re-export with taller signal rows is on the ask-Petra list.**  Note her captures are at **50 µs/div**, not Day 9x's 20 — Gate 2′ made this a taught change |
 | 13/27 | Firmware layers | **Do not rebuild** — xref `fig-firmware-layers` in ch-i2c |
 | 13/29 | I2C write/read transfer patterns (annotated) | Rebuild; also `i2c_transfer_pattern.svg` already exists in the Day 13 image dir — check it first |
 | 13x/3 | Mass-spring-case diagram | Rebuild with labels (rough chapter uses plain pull) |
@@ -407,9 +407,10 @@ Her answers, recorded here so no session re-asks:
    affected student-facing sentence waits.
 4. **HiTA** — ANSWERED: dropped. The Day 14 plan of record stands; the
    restore-path note is retired.
-5. **AN-1057** — ANSWERED: yes, host it. analog.com refuses downloads from
-   this network, so **she drops `an-1057.pdf` into `assets/datasheets/`**
-   (like the datasheet); linked as `external/datasheets/an-1057.pdf`.
+5. **AN-1057** — ANSWERED and DELIVERED: her `AN-1057.pdf` landed
+   2026-08-27 and is committed as `assets/datasheets/an-1057.pdf`
+   (lowercased to the planned path); linked as
+   `external/datasheets/an-1057.pdf`.  Nothing is missing any more.
 6. **The breakout** — ANSWERED: Adafruit LSM303AGR Accelerometer Magnetometer
    — STEMMA (product 4413, adafruit.com/product/4413). And her Waveforms
    originals are in the repo (§1, §6).
