@@ -224,10 +224,15 @@ teaches axes and signs, not the LED logic.
   0x32?" is that set-piece paying out; the chapter may **recall**, not
   re-teach (B-8).
 - The five library operations and `i2c1_memWrite()` (Day 10 in-class).
-  **`i2c1_memRead()` is Reference-only in ch-i2c** (`sec-i2c-reference`, which
-  notes ours does stop-then-start rather than a true repeated START — "worth
-  knowing before you meet a bus with two"). Day 13's walk of `memRead` is
-  therefore the first *in-class* treatment — it deepens, not repeats. Note the
+  **`i2c1_memRead()` — corrected at Gate 1:** the prototype *and* the
+  stop-then-start behavioral fact ("ours sends the register address, lets the
+  transaction end, and starts a second one — worth knowing before you meet a
+  bus with two") are taught **in class, Day 10 Part 7a**
+  (`subsec-day10-library`, with slides). Only the register-level **code
+  walk** is Reference-only (`subsec-i2c-ref-library`). So Day 13's walk is
+  still the first in-class walk (it deepens, not repeats), but the *fact* it
+  explains is a recall — frame the "address goes out twice" question as
+  confirm-on-your-own-trace, not fresh discovery. Note the
   ST transfer diagram (13x slide 17 / Day 13 slide 29) shows a **repeated
   START**; our library issues STOP then START. The trace students capture will
   show two transactions. The book must not paper over that difference —
@@ -259,9 +264,12 @@ wiring, and do not let "yellow" leak in from anywhere (the breakout's SCL
 STEMMA wire IS yellow — keep "yellow" strictly attached to the STEMMA cable,
 never to the AD2).
 
-**Two's complement**: taught in the course before (signed display work on
-Day 10's stretch/Lab 5 signed counter). The **left-justified 16-bit** framing
-is new; `learner-python-intro` is flagged at Gate 1 for it.
+**Two's complement — corrected at Gate 1: first taught on Day 13x.** Nothing
+before Week 7 decodes a signed bit pattern: Day 10's signed-counter task
+(`act-i2c-hw-t2`) routes *around* the encoding with `abs()` and a printed
+minus sign, and no chapter teaches bit-level signed representation. The
+left-justified 16-bit framing is new **on top of a new idea** — budget it as
+first teaching, not recall.
 
 **Floating point / L-2**: the standing rule is no `%f` (off by default; Lab 4
 Appendix A shows the flag). Her Day 14 route avoids `%f` entirely — compute in
@@ -370,10 +378,15 @@ without checking:
    (register tables, §6.1.1, §7.1, Table 20) and final CTRL-register teaching;
    does not block the plans.
 2. **The four real files**: `whoami_test.c`, `lsm303agr.h`,
-   `lsm303agr_partial.c` (the skeleton as students receive it — what is given
-   vs. blank in `AccelInit` matters to the Day 14 plan), `accel_test.c`
-   (the elided includes and the declared types of `accel_x/y/z`). Blocks book
-   listings (B-6), not the plans.
+   `lsm303agr_partial.c`, `accel_test.c`. *Narrowed at Gate 1:* your Day 13x
+   slide-13 speaker note already confirms the given/blank split (RegisterRead
+   given, RegisterWrite student-written, AccelInit **skeleton** given,
+   ReadRaw given). What still needs the files: what the skeleton leaves blank
+   *inside* `AccelInit`; whether `AccelInit` returns `int` or `uint8_t`
+   (your decks disagree); and `accel_test.c`'s elided includes and the
+   declared types of `accel_x/y/z` (the mg product reaches ±131 M, so
+   presumably `int32_t`). Blocks book listings (B-6) and the final timing of
+   Day 14 Part 4, not the plans.
 3. **Wrong-address behavior** (§2a): Week 5 established the library hangs
    after a NACK. So on capture A the program should freeze after one
    transaction — the "Could not connect" print never appears for an absent
@@ -396,5 +409,19 @@ without checking:
    stationary accelerometer reads +1 g because it measures the table's push;
    free fall reads 0) — keep it as the reading's physics hook, or stick
    strictly to your decks' simpler "it measures gravity's projection" framing?
+9. **Safety and the connector** *(added at Gate 1)*: can a miswired STEMMA QT
+   connection — reversed power, or swapped SDA/SCL — damage the breakout or
+   the Nucleo? The connector appears to be keyed (JST-SH, one orientation),
+   but nothing we can cite says so, and your slide 8 marks the breakout's
+   power pin "3.3V–5V". One sentence from you and both the Day 13 safety
+   line and the reading's "it only fits one way" reassurance can be written;
+   until then the plans give the wire colors and stop (B-11c).
+10. **Spare breakouts** *(added at Gate 1)*: are there spare LSM303AGR
+    breakouts (or STEMMA cables) in the room on Days 13/14? Both days'
+    rescue ladders currently end at "priority triage" because a swap-the-part
+    rung cannot be written without knowing spares exist — and a Day 13
+    hardware failure carried forward is the costliest failure the week has.
 
-Nothing above blocks Step 2 (the plans) or Gate 1.
+Nothing above blocks the plans; 1, 2, and 6 block book listings and figures.
+Q3 no longer blocks drafting — Day 13 Part 6's in-class line is worded true
+whichever way it lands.

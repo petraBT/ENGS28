@@ -21,7 +21,7 @@ x-day → Wednesday, **50 min**. Day 14 is even → Thursday, **110 min**.
 | New machinery | none — a new *device* on known machinery | the sensor physics and its data format | two driver functions, CoolTerm's chart, float arithmetic |
 | What students build | a verified I2C link (WHOAMI = 0x33), and their own captured, decoded trace of it | a by-hand raw→mg conversion | their own working driver streaming live x/y/z |
 | Load lands on | doing and debugging | concepts and arithmetic | production |
-| Inherits from | Days 9x/10, entirely (I2C, the library, the analyzer, the driver discipline) | Day 13, plus Phys 13/Engs 22 mass-spring intuition | Days 13 and 13x, plus Day 10's library discipline |
+| Inherits from | Days 9x/10, entirely (I2C, the library, the analyzer, the driver discipline) | Day 13 — the physics is derived in class from F = ma and F = kx; no physics prerequisite assumed | Days 13 and 13x, plus Day 10's library discipline |
 | Pre-class reading | yes — I2C recall + meet the device | **none — x-day** | yes — the datasheet scavenger hunt (her "daily page readings") |
 
 **The ordering is hers and deliberate: use the device Tuesday, learn how it
@@ -43,8 +43,10 @@ assumes Tuesday's wiring survived (the Week 5 standing rule).
   transaction on the AD2 and reads the shifted address (0x19), the register
   address (0x0F), and the returned 0x33 off the decoded trace.
 - **Day 13x** — every student converts a raw 16-bit left-justified two's
-  complement reading to milli-g on paper, and can say why
-  <em>a = FS·raw/2¹⁶</em> works in all three resolution modes.
+  complement reading — a negative one — to milli-g on paper, and can say why
+  <em>a = FS·raw/2¹⁶</em> works in all three resolution modes. (Two's
+  complement is **first taught** here — Gate 1 established that nothing
+  earlier in the course decodes a signed bit pattern.)
 - **Day 14** — every student's own completed driver streams live x/y/z
   accelerations in mg to CoolTerm: ≈ +1000 mg on the downward axis, and
   flipping the board flips the sign.
@@ -99,9 +101,14 @@ Split across the week exactly as her decks do it:
 | `lsm303_AccelInit` | settings derived in Day 14's reading + Part 2; body completed Day 14 Part 4 | student |
 | `lsm303_AccelReadRaw` | given; walked on Day 13x (auto-increment is its teaching payload) | Petra |
 
-The exact given-vs-blank split in `lsm303agr_partial.c` is unverified until
-the real file arrives (ground truth Q2) — Day 14's plan marks Part 4
-provisional on it.
+The given-vs-blank split is **confirmed from her own Day 13x slide-13
+speaker note** ("Have given you the single register read function. You'll
+write the write function. Given you skeleton for the init function. Giving
+you the readraw function."). What still needs the real files (ground truth
+Q2, narrowed at Gate 1): what the skeleton leaves blank *inside*
+`AccelInit`, the `int`-vs-`uint8_t` return type, and `accel_test.c`'s elided
+variable types — so Day 14's Part 4 is re-timed against the real file before
+Gate 2.
 
 ## The L-2 floating-point decision (a Gate 1 exhibit)
 
@@ -110,10 +117,19 @@ Day 14 Part 9 teaches float arithmetic because tilt needs real math
 float, `round()` back to integers, print with `%d`. The one-line caveat that
 `printf` does not print floats by default (Lab 4 Appendix A shows the
 enabling flag) is taught **there, once**, and that element is marked
-`<!-- check-rules: allow L-2 -->`. No `%f` appears anywhere in the chapter.
-The deeper material — IEEE 754 layout, precision-vs-range, code size — is
-Reference-section depth, not in-class prose (the Day 12 lesson applied in
-advance).
+`<!-- check-rules: allow L-2 -->` — and it is a **delta on Day 5**, which
+already taught the no-`%f` rule in ch-uart; the new piece is `round()` in
+place of Day 5's truncating cast. No `%f` appears anywhere in the chapter.
+The deeper material is Reference-section depth, not in-class prose (the
+Day 12 lesson applied in advance): IEEE 754 layout; precision-vs-range said
+precisely (`int32_t` is *exact* over its full ±2³¹ range, `float` carries
+~24 significant bits of relative precision with an exponent spanning
+~10⁻³⁸ to 10³⁸ — traded against the same 32 bits, not two free lunches);
+and the signed-shift note (`>>` on a signed value is an arithmetic floor
+shift, not interchangeable with `/` — `accel_test.c` multiplies by 4000
+before shifting 16, so a hand check of a negative reading can land 1 mg off
+CoolTerm's). **Not** Reference material: code size — Day 14 Part 9 teaches
+it and Lab 7 Deliverable 4 grades it.
 
 ## Week-level risks and their costs
 
@@ -128,21 +144,26 @@ advance).
    the datasheet table, and the data format. The cut order is inside its plan;
    the data-format part is uncuttable (Day 14's scaling line and Lab 7's tilt
    both stand on it).
-3. **The HiTA water-bottle activity** (Day 14 slide 3) is ~10 unbudgeted
-   minutes; provisionally budgeted, question 4 pending. If cut, its minutes
-   fall to Part 5/lab-start time.
+3. **The HiTA water-bottle activity** (Day 14 slide 3) is **out of the plan
+   of record** — Gate 1 found the first Day 14 table 10 minutes over budget,
+   and HiTA's 10 minutes were exactly the deficit. The restore path (if
+   Petra keeps it, Q4) is stated in `plans/day14.md`: it takes the lab-start
+   buffer and five of Part 7's minutes, and the crucial-step day then runs
+   with zero slack.
 4. **Missing artifacts**: the LSM303AGR datasheet PDF, the four driver files,
    AN-1057 (questions 1, 2, 5). None blocks the plans; all block book
    listings and P-11 citations.
 
 ## Week-level cut order
 
-Day 14's HiTA activity (pending Q4 anyway) → Day 13's capture-B variant
-(wrong register) to instructor demo → Day 13x's applications part compressed
-to three examples → Day 14's plotting experiments trimmed (flip and shake
-only). **Not cuttable**: Day 13's WHOAMI + capture-C, Day 13x's data format,
-Day 14's driver completion and test, the tilt trig, and the float mechanics
-(Lab 7 needs every one).
+Day 13's capture-B variant (wrong register) to instructor demo → Day 13x's
+applications part to a single example → Day 14's plotting experiments
+trimmed (flip and shake only). (HiTA is already out of the plan of record,
+and Gate 1 spent Day 13x's applications/schematic cuts funding its Parts 1
+and 4 — the remaining slack is thin and named per day.) **Not cuttable**:
+Day 13's WHOAMI + capture-C and the two-kinds-of-NACK explanation, Day 13x's
+data format and its Part 5 (the homework setup), Day 14's driver completion
+and test, the tilt trig, and the float mechanics (Lab 7 needs every one).
 
 ## Hand-offs to Lab 7, checked (P-13 — constraint, not goal)
 
