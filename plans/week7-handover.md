@@ -19,10 +19,14 @@ Part still owes).
 
 ### Ask-Petra list from session 2
 
-1. **Re-export Waveforms B and C** with the signal rows dragged taller (or
-   the window shorter): their decode glyphs project at ~1.3% of slide
-   height against the 1.9% floor, and cropping cannot fix a 12.9:1 strip.
-   Capture A was re-cut tight to its single transaction and reads well.
+1. ~~Re-export Waveforms B and C~~ **RESOLVED 2026-08-27 — Petra exports
+   one way, so the gate's named fallback shipped instead**: B and C are
+   split into write-half/read-half close-ups
+   (`waveforms_capture_{b,c}_{write,read}.png`), projected on a close-up
+   slide after the whole-strip view (C) and as the stretch reveal (B).
+   The whole strips stay as the discovery and the rescue's marking
+   target — do not merge the views back.  Capture A was re-cut tight to
+   its single transaction and reads well.
 2. **One setup photo** for Part 4: the breakout with its STEMMA cable, the
    SCL/SDA breadboard rows with the display still on them, the 3.3 V and
    GND feeds (never 5 V), and the AD2's DIO0/DIO1/ground leads landed.
