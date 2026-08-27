@@ -77,6 +77,14 @@ FRAGMENTS = [
     # printed beside it in their own block.
     ("assets/starters/sysinit.c", "SysTickInit", "source/ch-motors.ptx",
      "// Assumes 12MHz clock...could be better"),
+    # Day 13 Part 5's code walk projects i2c1_memRead() in two halves --
+    # sl-day13-memread-write (the first transaction) and sl-day13-memread-read
+    # (the second) -- the way Day 11x split tim14_pa7_pwm_init().  The pair of
+    # markers is concatenated and compared against the one function, so the
+    # slide copies must keep matching the library.
+    ("assets/starters/i2c.c", "i2c1_memRead", "source/ch-accelerometers.ptx",
+     ("// Ping target address for writing 1 byte (the register address)",
+      "// Restart, with read request for n bytes")),
 ]
 
 
