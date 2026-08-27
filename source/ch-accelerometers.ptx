@@ -5,12 +5,13 @@
         <p>
             The goal of this chapter is to measure acceleration with the
             LSM303AGR, a three-axis accelerometer, and to use what it measures
-            to compute how a board is tilted — the same computation your phone
+            to compute how far the sensor is tilted — the same computation your phone
             does when it decides to rotate its screen.  The sensor is an I2C
-            device, so everything we built in <xref ref="ch-i2c"/> carries
-            over: we will wire it onto the same two-wire bus the seven-segment
-            display is already using, verify the link, look at what is inside
-            the sensor, and complete a device driver for it.
+            (Inter-Integrated Circuit) device, so everything we built in
+            <xref ref="ch-i2c"/> carries
+            over: we will wire it to the STM32C031C6's I2C bus, verify the
+            link, look at what is inside the sensor, and complete a device
+            driver for it.
             <xref ref="sec-accel-reference"/> collects the register map, the
             data-format arithmetic, and the floating-point details for looking
             up later.
@@ -18,8 +19,8 @@
         <objectives>
             <ul>
                 <li>Wire a second device onto the I2C bus and verify the link by reading its WHO_AM_I register.</li>
-                <li>Debug an I2C bus with the AD2's logic analyzer and protocol decoder.</li>
-                <li>Explain how a MEMS accelerometer converts acceleration into a digital reading.</li>
+                <li>Debug an I2C bus with the Analog Discovery 2's logic analyzer and protocol decoder.</li>
+                <li>Explain how a MEMS (Micro-Electro-Mechanical Systems) accelerometer converts acceleration into a digital reading.</li>
                 <li>Convert the sensor's raw output — 16-bit, left-justified, two's complement — into milli-g.</li>
                 <li>Complete, test, and package a device driver for the LSM303AGR.</li>
                 <li>Compute tilt angles from gravity's projection, using floating-point arithmetic on a processor without floating-point hardware.</li>
@@ -39,9 +40,238 @@
          ============================================================ -->
     <section xml:id="sec-accel-before-class">
         <title>Before Class: A Second I2C Device</title>
-        <p>
-            This section is still being written.
-        </p>
+        <introduction>
+            <p>
+                On Day 13 we'll add a new device to our I2C bus: an
+                accelerometer.  This reading recalls how the bus works and
+                introduces the sensor; in class we will wire it up, prove that
+                we can talk to it, and look at the signals on the two wires
+                with the logic analyzer.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-accel-i2c-recall">
+            <title>The Bus You Already Have</title>
+            <p>
+                The I2C bus we built in
+                <xref ref="ch-i2c"/> has two wires: SDA (serial data) and SCL
+                (serial clock), both held HIGH by pull-up resistors whenever no
+                device is transmitting.  One device is in charge of the bus —
+                the <term>controller</term>, which for us is the STM32C031C6 —
+                and every other device on the bus is a <term>target</term>.
+                Each target has its own 7-bit address, and every transaction
+                begins with the controller sending the address of the device it
+                wants to talk to.  All the targets hear that address; the one
+                that recognizes it as its own acknowledges and takes part in
+                the rest of the transaction, and the other devices on the bus
+                don't respond.  If you'd like to review more than this
+                paragraph covers, go to <xref ref="sec-i2c-reference"/>, which
+                has the protocol in full — START and STOP, the ACK handover,
+                and the byte-by-byte framing.
+            </p>
+            <p>
+                The STM32C031C6's I2C peripheral produces all of that bit-level
+                traffic in hardware, and the I2C library we handed you is what
+                tells it what to send.  We have been calling that library ever
+                since we first wired up the display, and its five functions —
+                <c>i2c1_init()</c>, <c>i2c1_byteWrite()</c>,
+                <c>i2c1_byteRead()</c>, <c>i2c1_memWrite()</c>, and
+                <c>i2c1_memRead()</c> — are all we need for the accelerometer,
+                too.  The seven-segment display driver you wrote is built on
+                top of them.  The code for all five functions, with the
+                register-level detail of how each one works, is in
+                <xref ref="subsec-i2c-ref-library"/>.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-accel-meet-lsm303agr">
+            <title>The LSM303AGR and Its Breakout Board</title>
+            <p>
+                The new device is the LSM303AGR, a sensor chip made by
+                STMicroelectronics that measures acceleration along three
+                perpendicular axes.  The chip also contains a magnetometer, but
+                we'll only use the accelerometer in this class.  We interact
+                with it via I2C; the other option would be SPI (Serial
+                Peripheral Interface), another serial communication protocol,
+                but the board we use is wired for I2C by default.
+            </p>
+            <p>
+                The chip itself is a couple of millimeters across, far too
+                small to handle directly.  It comes to us on a
+                <term>breakout board</term> — a small board that carries the
+                chip and the extra parts it needs, in this case the bus's
+                pull-up resistors and a voltage regulator.  The breakout
+                connects by a STEMMA QT cable, a 4-wire plug that only goes in
+                one way, so it cannot be miswired.  We'll do the wiring
+                together in class.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-accel-whoami">
+            <title>The WHO_AM_I Register</title>
+            <p>
+                Like the HT16K33 on the display's backpack
+                (<xref ref="ch-i2c"/>), the accelerometer is operated entirely
+                through its internal registers: each register has an address inside the device, we
+                configure the sensor by writing to some of them, and we get
+                measurements out by reading others.  Which registers exist, and
+                what each bit in them means, comes from the device's datasheet
+                — for this chapter, the
+                <url href="external/datasheets/lsm303agr.pdf">LSM303AGR
+                datasheet</url>.
+            </p>
+            <p>
+                One of those registers exists purely so that you can check the
+                connection: the special register called WHO_AM_I always
+                contains the value 0x33.  It is read-only, and its contents are
+                fixed when the chip is manufactured
+                (Datasheet §8.4, register WHO_AM_I_A, address 0x0F — the
+                default value 00110011 is 0x33).  If you read the WHO_AM_I
+                register and get the right result, you can be confident in
+                your I2C setup: the wiring, the device address, and your whole
+                read path all had to work for that 0x33 to arrive.
+            </p>
+            <p>
+                Nearly every I2C sensor has a register like this, because a
+                value that is known in advance gives you something to check
+                against before you rely on any of the sensor's measurements.  Device drivers
+                use it the same way: a driver's initialization function
+                typically reads WHO_AM_I first, and reports failure if the
+                expected value does not come back.  In class we'll run a short
+                test program that does exactly this check over your own wiring.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-accel-day13">
+            <exercise xml:id="rq-accel-addressing">
+                <statement><p>The I2C bus has only two wires, shared by every
+                device on it.  When the controller starts a transaction, how
+                does the right device know the transaction is meant for
+                it?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Every transaction begins with a 7-bit
+                        device address.  All the targets hear it, and only the
+                        device that recognizes the address as its own
+                        acknowledges and takes part.</p></statement>
+                        <feedback><p>Correct.  Addressing is what lets many
+                        devices share the same two wires — each target answers
+                        only to its own address.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Each device is wired to the controller
+                        through its own pair of SDA and SCL lines.</p></statement>
+                        <feedback><p>Separate wires per device is exactly what
+                        I2C avoids — that was UART's limitation.  All I2C
+                        devices share one SDA and one SCL, and the address at
+                        the start of each transaction says who is being
+                        spoken to.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The devices take turns in a fixed order,
+                        one transaction each.</p></statement>
+                        <feedback><p>There is no rotation schedule on the bus.
+                        The controller decides whom to address, whenever it
+                        wants, by sending that device's address first.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The controller raises SCL to a higher
+                        voltage for the device it wants.</p></statement>
+                        <feedback><p>SCL is the shared clock, and it only ever
+                        switches between LOW and 3.3 V.  Selection happens with
+                        data — the 7-bit address sent at the start of every
+                        transaction — not with voltage levels.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-accel-memread">
+                <statement><p>To read the accelerometer's WHO_AM_I register,
+                the program must tell the sensor <em>which</em> register it
+                wants and then collect the byte stored there.  Which I2C
+                library function does that whole job?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p><c>i2c1_memRead()</c> — it takes the
+                        device address <em>and</em> a register address, and
+                        reads one or more bytes from that location inside the
+                        target.</p></statement>
+                        <feedback><p>Correct.  Reading a specific register is a
+                        two-step conversation — say which register, then read —
+                        and <c>i2c1_memRead()</c> carries out both
+                        steps.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p><c>i2c1_byteRead()</c> — it reads one
+                        byte from a target device.</p></statement>
+                        <feedback><p><c>i2c1_byteRead()</c> takes only a device
+                        address — there is no way to tell the sensor which of
+                        its many registers you mean.  Reading a specific
+                        register needs <c>i2c1_memRead()</c>, which takes the
+                        register address too.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p><c>i2c1_memWrite()</c> — it sends the
+                        register address to the device.</p></statement>
+                        <feedback><p><c>i2c1_memWrite()</c> does send a
+                        register address, but what follows is data written
+                        <em>into</em> the device.  To get the register's
+                        contents back out, the function is
+                        <c>i2c1_memRead()</c>.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p><c>i2c1_init()</c> — it sets up the bus,
+                        which includes scanning the registers.</p></statement>
+                        <feedback><p><c>i2c1_init()</c> configures the
+                        STM32C031C6's own I2C peripheral and pins.  It sends
+                        nothing to any target device, and it does not read
+                        registers.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-accel-whoami-purpose">
+                <statement><p>Your program reads the accelerometer's WHO_AM_I
+                register and gets 0x33, the expected value.  What does that
+                tell you?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The I2C link works end to end: the
+                        wiring, the device address, and the read path all
+                        functioned, because the expected value arrived over
+                        them.</p></statement>
+                        <feedback><p>Correct.  WHO_AM_I's value is known in
+                        advance, so getting it back is evidence about the
+                        <em>communication</em>, which is what the register is
+                        for.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The accelerometer is configured and its
+                        measurements are ready to use.</p></statement>
+                        <feedback><p>WHO_AM_I says nothing about
+                        configuration — its value is fixed at manufacture and
+                        never changes.  Setting the sensor's mode and range is
+                        separate work, done through other registers.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The sensor's I2C address is
+                        0x33.</p></statement>
+                        <feedback><p>0x33 is the <em>contents</em> of the
+                        WHO_AM_I register, not the device's bus address.  To
+                        read the register at all, the program already had to
+                        know the device's address and use it.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The sensor passed its power-on self-test
+                        of the measurement hardware.</p></statement>
+                        <feedback><p>Reading WHO_AM_I exercises none of the
+                        measurement hardware — the register is a fixed
+                        constant.  What the successful read demonstrates is
+                        that the bus and your read path work.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
     </section>
 
     <!-- ============================================================
