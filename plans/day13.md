@@ -39,10 +39,13 @@ Scaffolding (P-2):
   `TemplateProject` → `Accelerometer`, file into `Src`, build, CoolTerm.
 - The wiring is four STEMMA wires into a breakout that carries its own
   pull-ups and regulator; wiring photo on screen for the whole part.
-- The analyzer setup is **Day 9x's own, unchanged**: digital channels, DIO0
-  (pink) → SDA, DIO1 (green) → SCL, black → GND, falling-edge trigger, single
-  sweep, then the I2C decoder. The slide names it as the setup from Day 9x
-  rather than teaching it fresh.
+- The analyzer setup is **Day 9x's own, with one change**: digital channels,
+  DIO0 (pink) → SDA, DIO1 (green) → SCL, black → GND, falling-edge trigger,
+  single sweep, then the I2C decoder — but the time base is **50 µs/div, not
+  Day 9x's 20**: this read is two transactions and spans ≈400 µs, and a
+  20 µs/div window (200 µs wide) cannot hold it (Gate 2′ tech-A #1; her own
+  captures are at 50 µs/div). The slide names the rest as the setup from
+  Day 9x rather than teaching it fresh.
 - **Checkpoint at minute 35** (end of Part 2): if the room is not mostly
   printing, the rescue splits hardware from software — re-seat the four wires
   against the photo; a failed build gets the verified-good file. **A second
