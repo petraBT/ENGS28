@@ -48,9 +48,9 @@ STARTERS = [
      "uint8_t display_subaddr = 0;"),
     ("assets/starters/SevenSegPartial.c", "source/ch-i2c.ptx",
      "TODO 4 -- one call."),
-    # Day 13's link test.  Her file's read-function comment cites "Table 13"
-    # (stale against the hosted datasheet revision); the book's listing says
-    # Table 22.  Comments differ freely -- the CODE must match.
+    # Day 13's link test.  The file's stale "Table 13" comment was corrected
+    # to Table 22 with Petra's approval (2026-08-30), so book and starter
+    # comments agree; the CODE is what this pair checks either way.
     ("assets/starters/whoami_test.c", "source/ch-accelerometers.ptx",
      "who_am_i = lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A);"),
 ]

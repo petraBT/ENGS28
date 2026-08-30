@@ -41,7 +41,7 @@ int main(void) {
 	return 0;
 }
 
-/* Read one byte from an accelerometer register (Datasheet, Table 13) */
+/* Read one byte from an accelerometer register (Datasheet, Table 22) */
 uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 	uint8_t data;
 	i2c1_memRead(LSM303_ADDRESS_ACCEL, RegisterAddress, 1, &data);

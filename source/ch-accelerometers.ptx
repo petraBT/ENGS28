@@ -42,11 +42,11 @@
         <title>Before Class: A Second I2C Device</title>
         <introduction>
             <p>
-                On Day 13 we'll add a new device to our I2C bus: an
-                accelerometer.  This reading recalls how the bus works and
-                introduces the sensor; in class we will wire it up, prove that
-                we can talk to it, and look at the signals on the two wires
-                with the logic analyzer.
+                On Tuesday we'll add a new device to our I2C bus: an
+                accelerometer.  This reading recalls how the I2C bus works and
+                introduces the sensor; in class we will wire it up, verify
+                that we can talk to it, and look at the signals on the two
+                wires with the logic analyzer.
             </p>
         </introduction>
 
@@ -70,16 +70,18 @@
                 and the byte-by-byte framing.
             </p>
             <p>
-                The STM32C031C6's I2C peripheral produces all of that bit-level
+                The STM32C031C6's I2C peripheral produces the bit-level
                 traffic in hardware, and the I2C library we handed you is what
-                tells it what to send.  We have been calling that library ever
-                since we first wired up the display, and its five functions —
+                initializes the hardware and interfaces with it.  Recall that
+                the I2C library contains five functions —
                 <c>i2c1_init()</c>, <c>i2c1_byteWrite()</c>,
                 <c>i2c1_byteRead()</c>, <c>i2c1_memWrite()</c>, and
-                <c>i2c1_memRead()</c> — are all we need for the accelerometer,
-                too.  The seven-segment display driver you wrote is built on
-                top of them.  The register-level detail of how they work is in
-                <xref ref="subsec-i2c-ref-library"/>.
+                <c>i2c1_memRead()</c> — and they are all we need for the
+                accelerometer, too.  The seven-segment display driver you
+                wrote is built on top of the functions in the I2C library.  If
+                you'd like a refresher see
+                <xref ref="subsec-i2c-ref-library"/>.  We'll build a similar
+                device driver for the accelerometer.
             </p>
         </subsection>
 
@@ -109,7 +111,7 @@
         <subsection xml:id="subsec-accel-whoami">
             <title>The WHO_AM_I Register</title>
             <p>
-                Where the HT16K33 on the display's backpack took one-byte
+                Whereas the HT16K33 on the display's backpack took one-byte
                 commands (<xref ref="ch-i2c"/>), the accelerometer is operated
                 entirely through its internal registers: each register has an address inside the device, we
                 configure the sensor by writing to some of them, and we get
@@ -131,13 +133,14 @@
                 read path all had to work for that 0x33 to arrive.
             </p>
             <p>
-                Nearly every I2C sensor has a register like this, because a
+                Many I2C sensors have a register like this, because a
                 value that is known in advance gives you something to check
                 against before you rely on any of the sensor's measurements.  Device drivers
                 use it the same way: a driver's initialization function
                 typically reads WHO_AM_I first, and reports failure if the
                 expected value does not come back.  In class we'll run a short
-                test program that does exactly this check over your own wiring.
+                test program that does exactly this check once your sensor is
+                wired up.
             </p>
         </subsection>
 
@@ -300,7 +303,7 @@
             <slide xml:id="sl-day13-back-to-i2c">
     <ul>
         <li>The LSM303AGR is an I2C device: it joins the same two-wire bus we have been using — SDA and SCL, held HIGH by pull-up resistors, every device tapped onto the same two wires.</li>
-        <li>It speaks the same protocol and uses the same library: the five functions we have been calling since the display are all we need to talk to it.</li>
+        <li>It speaks the same protocol and uses the same I2C library: the five functions we have been calling since the display are all we need to talk to it.</li>
         <li>It also has a magnetometer, but we'll only use the accelerometer in this class.</li>
     </ul>
     <note>≈ 3 min. The sixty-second resurface: same bus, same protocol, same library — then the device in one look. The bus picture is deliberately NOT on this slide (it is the picture-form answer to the commit that follows); it projects on the reveal instead. Do NOT answer the display question here.</note>
@@ -350,7 +353,7 @@
 
         <!-- Part 2 -->
         <subsection xml:id="subsec-day13-wire-and-prove">
-            <title>Part 2: Wire It and Prove the Link</title>
+            <title>Part 2: Wire It and Verify the Link</title>
 
             <!-- DELIVERY 2: prose.  OWES: the lead-in paragraph tying
                  fig-accel-wiring to the standing workflow (TemplateProject,
@@ -371,19 +374,47 @@
                 fits one way.  Its four wires go to the Nucleo: black to GND,
                 red to 3.3 V, yellow to SCL (D15, PB8), and blue to SDA
                 (D14, PB9) — the same SCL and SDA rows the display is already
-                using.  The pin the red wire feeds is VIN; the breakout
-                carries its own regulator, so on our Nucleo it goes to
-                3.3 V.</caption>
+                using.  The pin the red wire feeds is VIN; the photo labels
+                that wire 5 V, and the board accepts either 3.3 or 5 V logic
+                — in this course we use 3.3 V.</caption>
                 <image source="images/Day13-I2C(3)/stemma_wiring.svg" width="92%"/>
             </figure>
 
             <slide xml:id="sl-day13-wiring" ref="fig-accel-wiring">
     <caption>Black to GND, red to 3.3 V, yellow to SCL (D15, PB8), blue to SDA (D14, PB9) — and the display stays wired.</caption>
-    <note>≈ 5 min. Leave this up while the room wires, and page back to it during the build. The pin the red wire feeds is VIN; the breakout carries its own regulator, so on our Nucleo the red wire goes to 3.3 V. Early finishers can start Part 4's analyzer wiring now (DIO0/DIO1/black to ground); it does not depend on Part 3. If a display looks dead after three days in a kit, don't stop to fix it now — the point still holds.</note>
+    <note>≈ 3 min. Leave this up while the room wires, and page back to it during the build. The pin the red wire feeds is VIN; the breakout carries its own regulator, so on our Nucleo the red wire goes to 3.3 V. Early finishers can start Part 4's analyzer wiring now (D0/D1/black to ground); it does not depend on Part 3. If a display looks dead after three days in a kit, don't stop to fix it now — the point still holds.</note>
+</slide>
+
+            <!-- Her own Fritzing, dropped 2026-08-30 (Accel_bb.png): the
+                 whole bus with the display still wired and the sensor
+                 joining the same rows.  Two things to know before "fixing"
+                 it: the breakout drawn is Fritzing's MPU-6050 part standing
+                 in for the LSM303AGR (her library has no LSM303AGR part),
+                 and the red lead leaves the Nucleo's 5 V pin — the course
+                 wires 3.3 V (her words, 2026-08-30: the board takes either;
+                 we stick with 3.3 V).  Flagged to her; the caption
+                 instructs 3.3 V. -->
+            <figure xml:id="fig-accel-bb">
+                <caption>The whole bus after today's wiring: the display
+                stays where it has been since <xref ref="ch-i2c"/>, and the
+                accelerometer's four wires join it — yellow to the SCL row,
+                blue to the SDA row, black to GND, and red to power (on our
+                Nucleo, use 3.3 V).  The breakout drawn here stands in for
+                yours; the pin order is the one on your own board's
+                silkscreen.</caption>
+                <image source="images/Day13-I2C(3)/Accel_bb.png" width="52%"/>
+            </figure>
+
+            <slide xml:id="sl-day13-bb" ref="fig-accel-bb">
+    <ul>
+        <li>The display stays where it is — both devices share the same SDA and SCL rows.</li>
+        <li>The accelerometer's four wires join the bus: yellow to the SCL row, blue to the SDA row, black to GND, and red to 3.3 V.</li>
+    </ul>
+    <note>≈ 2 min. The whole-bus picture: wire against it, then build. The drawn breakout is a stand-in part — say so if anyone squints at its silkscreen — and the drawing's red lead is on the 5 V pin; say out loud that we use 3.3 V.</note>
 </slide>
 
             <activity xml:id="act-day13-whoami">
-                <title>Wire the accelerometer and prove the link</title>
+                <title>Wire the accelerometer and verify the link</title>
                 <introduction>
                     <p>Reading the WHO_AM_I register is what
                     <c>whoami_test.c</c> does, once a second, forever.</p>
@@ -394,7 +425,7 @@
                     to GND, red to 3.3 V, yellow to SCL (D15, PB8), blue to
                     SDA (D14, PB9).  The display stays where it is — both
                     devices share the bus, on the same two breadboard rows
-                    (<xref ref="fig-display-wiring"/>).</p></statement>
+                    (<xref ref="fig-accel-bb"/>).</p></statement>
                 </task>
                 <task xml:id="task-day13-project">
                     <statement><p>Make a copy of your <c>TemplateProject</c>
@@ -434,13 +465,11 @@
                 is a question for the logic analyzer.
             </p>
 
-            <!-- The listing below is her whoami_test.c verbatim in CODE
-                 (check_starters.py enforces it); ONE comment deliberately
-                 differs: her file cites "(Datasheet, Table 13)", which in
-                 the hosted PDF is a maximum-ODR table — the single-byte
-                 read transfer is Table 22, and the book prints 22 (ground
-                 truth §2/§3).  Flag the one-word comment fix to Petra at
-                 delivery; do not "restore" Table 13 here. -->
+            <!-- The listing below is her whoami_test.c verbatim
+                 (check_starters.py enforces the code).  Her file's stale
+                 "Table 13" citation was corrected to Table 22 in the
+                 starter itself with her approval (2026-08-30), so book and
+                 file agree; ground truth §2/§3 has the history. -->
             <program language="c"><code><![CDATA[
 #include <stdio.h>
 #include "ES28.h"
@@ -526,7 +555,7 @@ int main(void) {
 </slide>
 
             <slide xml:id="sl-day13-whoami-read">
-    <p><c>lsm303_AccelRegisterRead()</c> is a single call into the I2C library we have been using since the display — <c>i2c1_init()</c>, <c>i2c1_byteWrite()</c>, <c>i2c1_byteRead()</c>, <c>i2c1_memWrite()</c> and <c>i2c1_memRead()</c> are the whole of it, and this is the last of them, asked for one byte from one register:</p>
+    <p>Recall that the I2C library contains five functions: <c>i2c1_init()</c>, <c>i2c1_byteWrite()</c>, <c>i2c1_byteRead()</c>, <c>i2c1_memWrite()</c> and <c>i2c1_memRead()</c>.  To read the contents of a register from the accelerometer we use <c>i2c1_memRead()</c>, via the following function:</p>
     <program language="c"><code><![CDATA[
 /* Read one byte from an accelerometer register (Datasheet, Table 22) */
 uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
@@ -576,20 +605,31 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                  ships instead: her slide 14's clean AD2 product photo
                  (which-bundle), pin mapping in the caption; the real
                  loaded-breadboard setup photo is on the ask-Petra list. -->
+<!-- The connector-labels diagram is the pinout sheet from her slide 25
+     (its printed title, cropped off here, says ADALM2000 — the lead
+     numbering and colors match the AD2 harness she teaches from, and it
+     is her own long-standing slide asset).  Flagged in the delivery
+     report in case she has a true AD2 pinout to swap in. -->
             <figure xml:id="fig-ad2-digital-wiring">
                 <caption>The AD2's digital channels are the larger flying-lead
-                bundle, shown here plugged into the AD2.  Three leads go onto
-                the bus: DIO0 (pink) to the SDA row, DIO1 (green) to the SCL
-                row, and black to ground.  The STEMMA leads and the display
-                stay where they are.</caption>
-                <image source="images/Day13-I2C(3)/ad2_digital_bundle.png" width="55%"/>
+                bundle (left, plugged into the AD2), and the pinout sheet
+                (right) says which lead is which: the digital leads are
+                numbered 0–15, and the ground leads carry the ⏚ symbol.
+                Three leads go onto the bus: D0 (pink) to the SDA row, D1
+                (green) to the SCL row, and a ground lead (black) to ground.
+                Waveforms calls the two data leads DIO 0 and DIO 1.  The
+                STEMMA leads and the display stay where they are.</caption>
+                <sidebyside widths="50% 40%" margins="4%" valign="middle">
+                    <image source="images/Day13-I2C(3)/ad2_digital_bundle.png"/>
+                    <image source="images/Day13-I2C(3)/ad2_connector_labels.png"/>
+                </sidebyside>
             </figure>
 
             <slide xml:id="sl-day13-analyzer-wiring" ref="fig-ad2-digital-wiring">
     <ul>
-        <li>The AD2's digital channels — the larger flying-lead bundle — go DIO0 (pink) to the SDA row, DIO1 (green) to the SCL row, and black to ground.</li>
+        <li>The AD2's digital channels — the larger flying-lead bundle — go D0 (pink) to the SDA row, D1 (green) to the SCL row, and a ground lead (black) to ground.</li>
     </ul>
-    <note>≈ 3 min. The wiring is the recall from Day 9x; early finishers did it during the build. The STEMMA leads and the display stay where they are.</note>
+    <note>≈ 3 min. The wiring is the recall from Day 9x; early finishers did it during the build. The pinout sheet on the right is how to find lead 0, lead 1 and a ground lead in the bundle. The STEMMA leads and the display stay where they are.</note>
 </slide>
 
             <slide xml:id="sl-day13-analyzer-waveforms" ref="fig-waveforms-decode">
@@ -613,12 +653,10 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             </activity>
 
             <slide xml:id="sl-day13-predict-code" room="yes">
-    <p>Predict, in writing, before you capture: when this loop runs, what will the protocol decoder show?  How many transactions, and what bytes in each one?</p>
+    <p>Predict, before you capture: when this loop runs, what will the protocol decoder show?  How many transactions, and what bytes in each one?</p>
     <program language="c"><code><![CDATA[
 #define LSM303_ADDRESS_ACCEL  (0x32 >> 1)
 #define LSM303_WHO_AM_I_A     0x0F          // default value: 00110011
-
-// void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint8_t *data);
 
 // called from the loop in main(), once a second:
 uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
@@ -634,12 +672,10 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             <activity xml:id="act-day13-capture">
                 <title>Capture the WHO_AM_I read</title>
                 <task xml:id="task-day13-sweep">
-                    <statement><p>Wire the AD2's digital leads (DIO0 pink to
-                    the SDA row, DIO1 green to the SCL row, black to ground),
-                    then in Waveforms' logic mode trigger on DIO0 falling,
-                    set the time base to 50 µs per division, take a single
-                    sweep, and add the I2C decoder with DIO1 as clock and
-                    DIO0 as data.</p></statement>
+                    <statement><p>Put the AD2's digital leads on the bus as
+                    above, set up Waveforms and the decoder as on Day 9x —
+                    with the time base at 50 µs per division — and take a
+                    single sweep.</p></statement>
                 </task>
                 <task xml:id="task-day13-read-decode">
                     <statement><p>Read your decoded trace and find three
@@ -868,22 +904,23 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                 <title>Break it: a wrong device address</title>
                 <introduction>
                     <p>A NACK is easier to recognize the first time if you
-                    produce one on purpose, on a bus you know is healthy.</p>
+                    produce one on purpose, on a bus you know is properly
+                    configured.</p>
                 </introduction>
                 <task xml:id="task-day13-break-predict">
                     <statement><p>Change the <c>0x32</c> in
-                    <c>LSM303_ADDRESS_ACCEL</c> to <c>0x30</c> and rebuild —
-                    but before you run it, predict: what will CoolTerm show,
-                    and what will the logic analyzer show?  Write both
-                    predictions down.</p></statement>
+                    <c>LSM303_ADDRESS_ACCEL</c> to <c>0x30</c>.  Before you
+                    run it, predict: what will CoolTerm show, and what will
+                    the logic analyzer show?  Write both predictions
+                    down.</p></statement>
                 </task>
                 <task xml:id="task-day13-break-capture">
-                    <statement><p>Arm a single sweep on the analyzer (trigger
-                    on DIO0 falling), then press the board's reset button to
-                    catch the first transaction after startup.  The trace
-                    stays blank until you press reset — that is the sweep
-                    waiting, not a fault.  Read the decoded row: what happened
-                    after the address byte?</p></statement>
+                    <statement><p>Rebuild and upload; then arm a single sweep
+                    on the analyzer (trigger on D0 falling) and press the
+                    board's reset button to catch the first transaction after
+                    startup.  The trace stays blank until you press reset —
+                    that is the sweep waiting, not a fault.  Read the decoded
+                    row: what happened after the address byte?</p></statement>
                 </task>
                 <task xml:id="task-day13-break-restore">
                     <statement><p>Change the address back to <c>0x32</c>,
@@ -906,7 +943,8 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                 <image source="images/Day13-I2C(3)/waveforms_capture_a.png" width="97%"/>
             </figure>
 
-            <slide xml:id="sl-day13-capture-a" ref="fig-whoami-capture-nack">
+            <slide xml:id="sl-day13-capture-a">
+    <image source="images/Day13-I2C(3)/waveforms_capture_a.png" width="74%"/>
     <caption>One transaction: h18 WR goes out, nothing pulls SDA LOW at the acknowledge bit — the decoder prints N — and a STOP ends it.  This is the second kind of NACK: the one from nobody at all.</caption>
     <note>≈ 3 min, the projected rescue for this capture too, and the reveal — debrief on it. h18 is 0x30 &gt;&gt; 1. Collect what the room's CoolTerm windows showed rather than asserting it — the library's wrong-address behavior is still being checked (Q3), and nothing student-facing may claim what the program prints here. (Day 10 Part 9 and the ch-i2c Reference already give the wire-and-program story from the Reference Manual §23.4.9; Petra is re-checking it, and any change lands in ch-i2c too.)</note>
 </slide>
@@ -996,14 +1034,15 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
 
             <p>
                 Writing a device driver follows five steps — the same
-                discipline you followed for the display on Day 10
+                steps you followed for the display on Day 10
                 (<xref ref="fig-firmware-layers"/> is the map — the driver
                 talks to the device only through the I2C library, and the
                 application talks only to the driver):
             </p>
             <ol>
                 <li><p>From the datasheet, understand the basic I2C transfers
-                for reading and writing.</p></li>
+                for reading and writing for the device you want to talk
+                to.</p></li>
                 <li><p>From the datasheet, <c>#define</c> the device's
                 addresses and commands.</p></li>
                 <li><p>Define functions for the actions you need from the
@@ -1014,14 +1053,14 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
             </ol>
 
             <slide xml:id="sl-day13-layers" ref="fig-firmware-layers">
-    <caption>Day 10's map, back for a second device: the driver reaches the device only through the I2C library, and the application only through the driver.</caption>
+    <caption>The firmware layers from Day 10: the driver reaches the device only through the I2C library, and the application only through the driver.</caption>
     <note>≈ 2 min. Re-shown, not re-taught. The display's driver was the first pass through this map; this week you'll build the second — the difference is only which device is at the bottom.</note>
 </slide>
 
             <slide xml:id="sl-day13-recipe">
-    <p>Writing a device driver follows five steps — the same discipline you followed for the display:</p>
+    <p>Writing a device driver follows five steps — the same steps you followed for the display:</p>
     <ol>
-        <li>From the datasheet, understand the basic I2C transfers for reading and writing.</li>
+        <li>From the datasheet, understand the basic I2C transfers for reading and writing for the device you want to talk to.</li>
         <li>From the datasheet, <c>#define</c> the device's addresses and commands.</li>
         <li>Define functions for the actions you need from the device.</li>
         <li>Write those functions using the <c>i2c.c</c> library functions.</li>
@@ -1046,8 +1085,10 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                  "(Sec 6, 7.1)" after "Accelerometer registers" and
                  "Section 7.1 of" before "the datasheet" — because both cite
                  a stale datasheet revision (the hosted PDF's map is §7,
-                 Table 26; ground truth §2).  Flag with the stale-comment
-                 list at delivery; do not restore them here. -->
+                 Table 26; ground truth §2) — and the WHO_AM_I_A line's tab
+                 whitespace is normalized to spaces so the DEFAULT/TYPE
+                 columns line up (Petra, 2026-08-30).  Do not restore
+                 either. -->
 
             <program language="c"><code><![CDATA[
 // I2C address for the sensor
@@ -1055,14 +1096,14 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
 
 // ACCELEROMETER SECTION
 // Accelerometer registers                // DEFAULT    TYPE
-#define LSM303_WHO_AM_I_A		   0x0F	  // 00110011	r
+#define LSM303_WHO_AM_I_A          0x0F   // 00110011   r
 #define LSM303_CTRL_REG1_A         0x20   // 00000111   rw
 #define LSM303_CTRL_REG2_A         0x21   // 00000000   rw
 #define LSM303_CTRL_REG3_A         0x22   // 00000000   rw
 #define LSM303_CTRL_REG4_A         0x23   // 00000000   rw
 #define LSM303_CTRL_REG5_A         0x24   // 00000000   rw
 #define LSM303_CTRL_REG6_A         0x25   // 00000000   rw
-#define LSM303_REFERENCE_A         0x26   // 00000000   r
+#define LSM303_REFERENCE_A         0x26   // 00000000   rw
 #define LSM303_STATUS_REG_A        0x27   // 00000000   r
 #define LSM303_OUT_X_L_A           0x28
 #define LSM303_OUT_X_H_A           0x29
@@ -1085,19 +1126,19 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
             </p>
 
             <slide xml:id="sl-day13-header">
-    <p>Open the datasheet to §7, Table 26 — the register address map — and put <c>lsm303agr.h</c> beside it: the header is that table, transcribed into <c>#define</c>s.</p>
+    <p>Open the accelerometer datasheet to §7, Table 26 — the register address map — and put <c>lsm303agr.h</c> beside it: the header is that table, transcribed into <c>#define</c>s.</p>
     <program language="c"><code><![CDATA[
 #define LSM303_ADDRESS_ACCEL    (0x32 >> 1)         // 0011001x
 
 // Accelerometer registers                // DEFAULT    TYPE
-#define LSM303_WHO_AM_I_A		   0x0F	  // 00110011	r
+#define LSM303_WHO_AM_I_A          0x0F   // 00110011   r
 #define LSM303_CTRL_REG1_A         0x20   // 00000111   rw
 #define LSM303_CTRL_REG2_A         0x21   // 00000000   rw
 #define LSM303_CTRL_REG3_A         0x22   // 00000000   rw
 #define LSM303_CTRL_REG4_A         0x23   // 00000000   rw
 #define LSM303_CTRL_REG5_A         0x24   // 00000000   rw
 #define LSM303_CTRL_REG6_A         0x25   // 00000000   rw
-#define LSM303_REFERENCE_A         0x26   // 00000000   r
+#define LSM303_REFERENCE_A         0x26   // 00000000   rw
 #define LSM303_STATUS_REG_A        0x27   // 00000000   r
 #define LSM303_OUT_X_L_A           0x28
 #define LSM303_OUT_X_H_A           0x29
@@ -1148,9 +1189,10 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
 ]]></code></program>
 
             <p>
-                One of the four is already running on your board —
-                <c>lsm303_AccelRegisterRead()</c> ran all class.  Writing
-                <c>lsm303_AccelRegisterWrite()</c> is tonight's homework.
+                One of the four is already running on your board — we used
+                <c>lsm303_AccelRegisterRead()</c> to read the WHO_AM_I
+                register.  Writing <c>lsm303_AccelRegisterWrite()</c> is
+                tonight's homework.
             </p>
 
             <slide xml:id="sl-day13-prototypes">
@@ -1172,7 +1214,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress);
 // contains raw (unscaled) acceleration values.
 void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
 ]]></code></program>
-    <caption>One of the four is already running — RegisterRead ran all class.  RegisterWrite is tonight's homework, on paper.</caption>
+    <caption>One of the four is already running — we used RegisterRead to read the WHO_AM_I register.  RegisterWrite is tonight's homework, on paper.</caption>
     <note>≈ 3 min. Do not open AccelInit or ReadRaw beyond their comments — the settings are the homework's scavenger hunt, and ReadRaw's walk comes with the data format.</note>
 </slide>
         </subsection>
@@ -1182,10 +1224,11 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
             <title>Part 8: Homework for Thursday</title>
 
             <p>
-                Three things, all on paper — nothing to submit:
+                Three things, all on paper — nothing to submit.  This will
+                help you prepare for Lab 7.
             </p>
             <ul>
-                <li><p>Do the accelerometer reading on the daily page
+                <li><p>Do the pre-class reading for Thursday
                 (<xref ref="sec-accel-day14-before"/>) — it is a guided walk
                 through the datasheet.</p></li>
                 <li><p>On paper, write <c>lsm303_AccelRegisterWrite()</c>.
@@ -1200,9 +1243,9 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
             </p>
 
             <slide xml:id="sl-day13-homework">
-    <p>Three things for Thursday, all on paper — nothing to submit:</p>
+    <p>Three things for Thursday, all on paper — nothing to submit.  This will help you prepare for Lab 7.</p>
     <ul>
-        <li>Do the accelerometer reading on the daily page — it is a guided walk through the datasheet.</li>
+        <li>Do the pre-class reading for Thursday — it is a guided walk through the datasheet.</li>
         <li>On paper, write <c>lsm303_AccelRegisterWrite()</c>.  Mimic the read function — you do not have to test it.</li>
         <li>From the datasheet, work out what settings belong in CTRL_REG1_A and CTRL_REG4_A, and take notes.</li>
     </ul>

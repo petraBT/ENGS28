@@ -19,7 +19,7 @@
 #define LSM303_CTRL_REG4_A         0x23   // 00000000   rw
 #define LSM303_CTRL_REG5_A         0x24   // 00000000   rw
 #define LSM303_CTRL_REG6_A         0x25   // 00000000   rw
-#define LSM303_REFERENCE_A         0x26   // 00000000   r
+#define LSM303_REFERENCE_A         0x26   // 00000000   rw
 #define LSM303_STATUS_REG_A        0x27   // 00000000   r
 #define LSM303_OUT_X_L_A           0x28
 #define LSM303_OUT_X_H_A           0x29
