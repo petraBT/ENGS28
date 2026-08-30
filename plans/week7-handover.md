@@ -1,4 +1,54 @@
-# Week 7 handover — where things stand after session 2 (updated 2026-08-27)
+# Week 7 handover — where things stand after session 2+ (updated 2026-08-30)
+
+## Session 2+ (2026-08-30): her pass 1 is applied, the prose is written, Gate 3′ ran — awaiting her pass 2
+
+All 37 of her pass-1 annotations were rendered, applied and archived
+(`reviews/slide-comments-archive.jsonl`); her three new images are integrated
+(`stemma.png` → the wiring figure's right panel, `Accel_bb.png` →
+`fig-accel-bb`, `accelerometerSlide.png` → the hi-res AD2 pinout crop); the
+two stale starter comments she approved are corrected (whoami_test.c Table 22;
+lsm303agr.h REFERENCE_A r/w); the in-class connecting prose is written
+(17 body paragraphs, under Day 11's yardstick); and Gate 3′
+(`reviews/day13-gate3.md`, 7 reports + synthesis) ran with all 19 items
+applied.  One recorded fallback was exercised: the transfer-patterns slide
+measured below the legibility floor at every width, so it ships **split into
+write/read halves** (`i2c_transfer_writes/reads.svg`, glosses enlarged in the
+derived copies only; the shared book SVG untouched except the sanctioned
+gloss-row nudge), with Part 5's diagram beat re-cut 4 → 2 + (1+1).  The deck
+is 46 slides, fit-swept at 1600×900, every named slide looked at.
+
+### Ask-Petra list (refreshed 2026-08-30)
+
+1. **D0/D1 vs DIO0/DIO1 — your two texts disagree.** Your slide 25 and your
+   Day 13 ruling say D0/D1 for the physical leads; your passed `ch-i2c:750`
+   writes DIO0/DIO1 for the Waveforms channels.  Nothing was swept; the
+   captions treat D0/D1 as the lead and DIO0/DIO1 as the software channel.
+   Confirm and the distinction gets made explicit.
+2. **`Accel_bb.png` re-export: WITHDRAWN.** The earlier report that its red
+   lead sits on 5 V was wrong — measured, it is on +3V3 (the 5V socket is
+   drawn empty; the +3V3 label hides under the wire).  Your drawing is
+   correct as it stands.
+3. **Wednesday vs Thursday.** Your slide 32's printed line — kept verbatim as
+   the homework slide's caption — says "Wednesday and Thursday"; its speaker
+   note (and the book prose, and what Day 13x actually does) says
+   tomorrow = theory, Thursday = data.  Which ships on the wall?
+4. **DIO and VIN are never expanded anywhere in the book** (both appear bare
+   in text you passed).  Expand on first use, or is bare the house style for
+   instrument-panel and silkscreen labels?
+5. **The AD2 pinout sheet is the ADALM2000's** (the AD2's silkscreen reads
+   T1/T2, the sheet TI/TO).  Your slide 25 shows you have taught from it for
+   years, so it ships — cropped from your hi-res export to the digital half.
+   An AD2-native sheet at full resolution would be for next year, not this
+   delivery.
+6. **Q3 unchanged, at your pace** — nothing student-facing asserts what the
+   program prints on a wrong-device-address NACK; Part 6's debrief paragraph
+   stays owed on it (it lands in ch-i2c too when answered).
+
+Resolved since 2026-08-27: the setup-photo ask (your three images cover it),
+the two stale starter comments (your go-ahead, applied), the either-socket
+confirmation (now in `fig-accel-wiring`'s caption), and the 3.3/5 V question
+(your ruling — the board takes either logic level, the course sticks with
+3.3 V — is now `fig-accel-wiring`'s caption wording).
 
 ## Session 2 (build Day 13) is DONE — the delivery is with Petra
 
