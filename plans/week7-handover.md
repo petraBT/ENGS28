@@ -22,12 +22,10 @@ is 46 slides, fit-swept at 1600×900, every named slide looked at.
 1. ~~D0/D1 vs DIO0/DIO1~~ **RESOLVED by her pass 2 ("let's go with DIO0
    after all"): DIO0/DIO1 swept everywhere in Day 13 — bullets, captions,
    titles, notes, the break-it task.**
-2. **`Accel_bb.png` — one ask: a display-free re-export.** The drawing is
-   correct (red lead on +3V3, measured) and now projects WHOLE, per her
-   pass 2.  She'd rather the display not appear: deleting the display part
-   in her Fritzing project and re-exporting gives the clean version —
-   pixel-erasing it from the PNG would leave its four leads floating, so
-   that was not attempted.
+2. ~~`Accel_bb.png` display-free re-export~~ **RESOLVED — she delivered
+   `accelerometer_noDisplay.png` (2026-08-30), now the `fig-accel-bb`
+   image; captions reworked so nothing claims the display is in the
+   drawing.  Red lead confirmed on +3V3 in the new export too.**
 3. **Wednesday vs Thursday.** Your slide 32's printed line — kept verbatim as
    the homework slide's caption — says "Wednesday and Thursday"; its speaker
    note (and the book prose, and what Day 13x actually does) says
