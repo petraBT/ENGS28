@@ -17,17 +17,17 @@ derived copies only; the shared book SVG untouched except the sanctioned
 gloss-row nudge), with Part 5's diagram beat re-cut 4 → 2 + (1+1).  The deck
 is 46 slides, fit-swept at 1600×900, every named slide looked at.
 
-### Ask-Petra list (refreshed 2026-08-30)
+### Ask-Petra list (refreshed 2026-08-30, pass 2 applied)
 
-1. **D0/D1 vs DIO0/DIO1 — your two texts disagree.** Your slide 25 and your
-   Day 13 ruling say D0/D1 for the physical leads; your passed `ch-i2c:750`
-   writes DIO0/DIO1 for the Waveforms channels.  Nothing was swept; the
-   captions treat D0/D1 as the lead and DIO0/DIO1 as the software channel.
-   Confirm and the distinction gets made explicit.
-2. **`Accel_bb.png` re-export: WITHDRAWN.** The earlier report that its red
-   lead sits on 5 V was wrong — measured, it is on +3V3 (the 5V socket is
-   drawn empty; the +3V3 label hides under the wire).  Your drawing is
-   correct as it stands.
+1. ~~D0/D1 vs DIO0/DIO1~~ **RESOLVED by her pass 2 ("let's go with DIO0
+   after all"): DIO0/DIO1 swept everywhere in Day 13 — bullets, captions,
+   titles, notes, the break-it task.**
+2. **`Accel_bb.png` — one ask: a display-free re-export.** The drawing is
+   correct (red lead on +3V3, measured) and now projects WHOLE, per her
+   pass 2.  She'd rather the display not appear: deleting the display part
+   in her Fritzing project and re-exporting gives the clean version —
+   pixel-erasing it from the PNG would leave its four leads floating, so
+   that was not attempted.
 3. **Wednesday vs Thursday.** Your slide 32's printed line — kept verbatim as
    the homework slide's caption — says "Wednesday and Thursday"; its speaker
    note (and the book prose, and what Day 13x actually does) says

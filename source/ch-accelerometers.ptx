@@ -321,8 +321,8 @@
             <activity xml:id="act-day13-keep-display">
                 <title>Do I have to take the display down?</title>
                 <statement>
-                    <p>The seven-segment display is still connected to the I2C
-                    pins of your Nucleo, and today we are adding the
+                    <p>Suppose your seven-segment display is still connected
+                    to the I2C pins of your Nucleo, and today we are adding the
                     accelerometer — a second I2C device.  Do you
                     need to take the display down first?  What if you wanted to
                     use both the accelerometer and the display in one project?
@@ -334,7 +334,8 @@
             <instructor xml:id="ins-day13-keep-display">
                 <p>No — the display stays.  Both devices share the same two
                 wires, and each has its own address: every transaction opens
-                with the address of the device the controller wants, so the
+                with the address of the device the controller wants to
+                communicate with, so the
                 display simply does not respond to transactions addressed to
                 the accelerometer, and the other way around.  Letting several
                 devices share two wires is the reason the bus exists.  In
@@ -351,7 +352,8 @@
             <p>
                 No — the display stays: both devices share the same two
                 wires, and each has its own address.  Every transaction opens
-                with the address of the device the controller wants, so the
+                with the address of the device the controller wants to
+                communicate with, so the
                 display simply does not respond to transactions addressed to
                 the accelerometer, and the other way around.  Letting several
                 devices share two wires is the reason the bus exists, and in
@@ -379,34 +381,34 @@
                 one way.  Its four wires go to the Nucleo: black to GND,
                 red to 3.3 V, yellow to SCL (D15, PB8), and blue to SDA
                 (D14, PB9) — the same SCL and SDA rows the display is already
-                using.  The pin the red wire feeds is VIN; the photo labels
-                that wire 5 V, and the board accepts either 3.3 or 5 V logic
-                — in this course we use 3.3 V.</caption>
+                using.  The pin the red wire feeds is VIN; the board accepts
+                either 3.3 or 5 V logic — in this course we use 3.3 V.</caption>
                 <image source="images/Day13-I2C(3)/stemma_wiring.svg" width="92%"/>
             </figure>
 
             <slide xml:id="sl-day13-wiring" ref="fig-accel-wiring">
-    <caption>Black to GND, red to 3.3 V (the photo labels that wire 5 V; the breakout takes either, and our Nucleo gives 3.3 V), yellow to SCL (D15, PB8), blue to SDA (D14, PB9) — and the display stays wired.</caption>
-    <note>≈ 3 min. Leave this up while the room wires, and page back to it during the build. 3.3 V again — the caption has the reason. Early finishers can start Part 4's analyzer wiring now (D0/D1/black to ground); it does not depend on Part 3. If a display looks dead after three days in a kit, don't stop to fix it now — the point still holds.</note>
+    <caption>Black to GND, red to 3.3 V, yellow to SCL (D15, PB8), blue to SDA (D14, PB9) — and the display stays wired.</caption>
+    <note>≈ 3 min. Leave this up while the room wires, and page back to it during the build. The photo's wire label was edited to 3.3 V at her request (her export said 5 V; the breakout takes either). Early finishers can start Part 4's analyzer wiring now (DIO0/DIO1/ground); it does not depend on Part 3. If a display looks dead after three days in a kit, don't stop to fix it now — the point still holds.</note>
 </slide>
 
-            <!-- Her own Fritzing, dropped 2026-08-30 (Accel_bb.png; the
-                 slide projects the accel_bb_bus.png crop): the whole bus
-                 with the display still wired and the sensor joining the
-                 same rows.  The breakout drawn is Fritzing's MPU-6050 part
+            <!-- Her own Fritzing, dropped 2026-08-30 (Accel_bb.png,
+                 projected WHOLE — her pass-2 ruling: show the board wired
+                 to the right rows; the earlier top crop cut the Nucleo
+                 off).  The breakout drawn is Fritzing's MPU-6050 part
                  standing in for the LSM303AGR (her library has no LSM303AGR
-                 part), and the red lead is on +3V3 (measured at Gate 3',
-                 2026-08-30: the 5V socket is drawn empty; the +3V3 label is
-                 hidden under the wire).  Do NOT "correct" this drawing or
-                 ask her to re-export it. -->
+                 part; she struck the caption's disclosure of it), and the
+                 red lead is on +3V3 (measured at Gate 3', 2026-08-30: the
+                 5V socket is drawn empty; the +3V3 label is hidden under
+                 the wire).  Do NOT "correct" this drawing.  She would
+                 rather the display not appear: a display-free version
+                 needs her Fritzing re-export (asked); pixel-erasing it
+                 would leave its four leads floating. -->
             <figure xml:id="fig-accel-bb">
                 <caption>The whole bus after today's wiring: the display
                 stays where we wired it on Day 10, and the accelerometer's
                 four wires join it — yellow to the SCL row, blue to the SDA
-                row, black to GND, and red to 3.3 V.  The breakout drawn
-                here is a stand-in part; go by the silkscreen on your own
-                board.</caption>
-                <image source="images/Day13-I2C(3)/accel_bb_bus.png" width="85%"/>
+                row, black to GND, and red to 3.3 V.</caption>
+                <image source="images/Day13-I2C(3)/Accel_bb.png" width="52%"/>
             </figure>
 
             <slide xml:id="sl-day13-bb" ref="fig-accel-bb">
@@ -417,9 +419,9 @@
             <activity xml:id="act-day13-whoami">
                 <title>Wire the accelerometer and verify the link</title>
                 <introduction>
-                    <p>The program we'll run, <c>whoami_test.c</c>, reads the
-                    WHO_AM_I register once a second and prints whether it got
-                    the value it expected.</p>
+                    <p>The program we'll run, <c>whoami_test.c</c>, reads a
+                    certain register, called WHO_AM_I, once a second and
+                    prints whether it got the value it expected.</p>
                 </introduction>
                 <task xml:id="task-day13-wire">
                     <statement><p>Plug the STEMMA QT cable into the breakout
@@ -507,15 +509,17 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 The program has the same shape as the programs we have been
                 writing all term: initialize the two peripherals, print a
                 startup message, and then a loop that does one thing once a
-                second — read WHO_AM_I, compare what came back to 0x33, and
+                second — read WHO_AM_I, compare what came back to the number
+                0x33, and
                 print one of two lines.  The only function it
                 defines besides <c>main()</c>,
                 <c>lsm303_AccelRegisterRead()</c>, is a single call into the
                 I2C library from <xref ref="ch-i2c"/> —
                 <c>i2c1_memRead()</c>, asked for one byte from one register.
-                Reading 0x33 back verifies the whole read path: the wiring,
-                the device address, the protocol and the code all had to work
-                for that value to arrive.  If it prints
+                Receiving 0x33 back from the accelerometer as the contents of
+                the WHO_AM_I register verifies the whole read path: the
+                wiring, the device address, the protocol and the code all had
+                to work for that value to arrive.  If it prints
                 <c>Could not connect to accelerometer</c> instead, that is
                 data too — the analyzer we are about to put on the bus shows
                 exactly what the wire is doing.
@@ -568,7 +572,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 
             <slide xml:id="sl-day13-whoami-proves">
     <ul>
-        <li>Reading 0x33 back verifies the whole read path: the wiring, the device address, the protocol, and the code all had to work for that value to arrive.</li>
+        <li>Receiving 0x33 back from the accelerometer as the contents of the WHO_AM_I register verifies the whole read path: the wiring, the device address, the protocol, and the code all had to work for that value to arrive.</li>
         <li>It is not yet evidence about how the sensor is configured — the control registers are still at their power-on defaults, and setting them up is work still ahead of us.</li>
     </ul>
     <note>≈ 2 min. This is the reading's WHO_AM_I point, said once in class: proof of communication, not of configuration.</note>
@@ -620,9 +624,9 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 bundle (left, plugged into the AD2), and the pinout sheet
                 (right) says which lead is which: the digital leads are
                 numbered 0–15, and the ground leads carry the ⏚ symbol.
-                Three leads go onto the bus: D0 (pink) to the SDA row, D1
-                (green) to the SCL row, and a ground lead (black) to ground.
-                Waveforms calls the two data leads DIO0 and DIO1.  The
+                Three leads go onto the bus: DIO0 (pink, lead 0 on the
+                sheet) to the SDA row, DIO1 (green, lead 1) to the SCL row,
+                and a ground lead (black) to ground.  The
                 STEMMA leads and the display stay where they are.  (The sheet
                 is drawn for the AD2's sibling instrument; the digital
                 numbering, colors and grounds are identical, only the trigger
@@ -637,19 +641,19 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
     <p>The AD2's digital channels are the larger flying-lead bundle.  Three leads go onto the bus:</p>
     <ul>
         <li>A ground lead (black) to ground.</li>
-        <li>D0 — the first pink lead — to the SDA row.</li>
-        <li>D1 — the first green — to the SCL row.</li>
+        <li>DIO0 — the first pink lead — to the SDA row.</li>
+        <li>DIO1 — the first green — to the SCL row.</li>
     </ul>
-    <caption>The digital leads are numbered 0–15, and the ground leads carry the ⏚ symbol.  Waveforms calls the two data leads DIO0 and DIO1.</caption>
+    <caption>The digital leads are numbered 0–15 on the sheet — lead 0 is DIO0, lead 1 is DIO1 — and the ground leads carry the ⏚ symbol.</caption>
     <note>≈ 3 min. The wiring is the recall from Day 9x; early finishers did it during the build. The pinout strip is how to find lead 0, lead 1 and a ground lead in the bundle. The STEMMA leads and the display stay where they are.</note>
 </slide>
 
-            <slide xml:id="sl-day13-analyzer-waveforms">
+            <slide xml:id="sl-day13-analyzer-waveforms" ref="fig-waveforms-decode">
     <ul>
         <li>The setup is Day 9x's, unchanged: DIO1 as clock, DIO0 as data, DIO0 falling as the trigger, single sweep.</li>
         <li>One change: 50 µs/div.  This read is two transactions and spans about 400 µs; a 20 µs/div window is 200 µs wide and cannot hold it.</li>
     </ul>
-    <note>≈ 2 min. The room did this on Day 9x; do not re-teach the decoder steps. The one thing that is new is the time base.</note>
+    <note>≈ 2 min. The room did this on Day 9x; do not re-teach the decoder steps. The one thing that is new is the time base — the screenshot is Day 9x's and its axis still shows 20 µs/div; the second bullet carries the change.</note>
 </slide>
 
             <activity xml:id="act-day13-predict-decoder">
@@ -819,7 +823,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 <em>controller's</em>, and it is part of a successful read:
                 the controller asked for one byte, got it, and deliberately
                 does not acknowledge, which tells the target to stop sending.
-                The other kind is the one you met on Day 9x and produced on
+                The other kind is the one we saw on Day 9x and produced on
                 Day 10: nothing pulls SDA LOW during the acknowledge bit, and
                 the wire simply stays HIGH.
             </p>
@@ -938,7 +942,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                 </task>
                 <task xml:id="task-day13-break-capture">
                     <statement><p>Rebuild and upload; then arm a single sweep
-                    on the analyzer (trigger on D0 falling) and press the
+                    on the analyzer (trigger on DIO0 falling) and press the
                     board's reset button to catch the first transaction after
                     startup.  The trace stays blank until you press reset —
                     that is the sweep waiting, not a fault.  Read the decoded
@@ -1019,7 +1023,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
             </instructor>
 
 <!-- CTRL_REG1_A named here, ahead of Part 7's register map, is INTENDED
-     mystery-then-explain — Part 7's "You met one of those defaults
+     mystery-then-explain — Part 7's "You saw one of those defaults
      already" is the tie-back (Gate 2' continuity #3, confirmed). -->
             <figure xml:id="fig-whoami-capture-wrong-register">
                 <caption>The right device address, the wrong register
@@ -1145,7 +1149,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                 has its own, which we don't touch.  Notice the comment
                 columns: for each control and status register, the header
                 records the power-on default from the datasheet's table.  You
-                met one of those defaults already if you did the
+                saw one of those defaults already if you did the
                 wrong-register capture.
             </p>
 
