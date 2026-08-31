@@ -60,8 +60,10 @@ DELIVERY 2 markers name what each Part owes).
 
 ### Recorded so later passes do not undo them (session 3)
 
-- The MEMS figure deliberately shows only the at-rest panel until A2 is
-  answered; the displaced panel contradicts the mass commit's reveal.
+- ~~The MEMS figure shows only the at-rest panel~~ superseded by her
+  pass 1: both panels are back (comment 13).  If anyone asks about the
+  right panel's arrow direction, that conversation is hers to have — do
+  not re-crop.
 - The worked 0xC000 slide deliberately does NOT use a = 4g·raw/2¹⁶ — the
   collapse slide derives it one beat later (P-1); its note closes the loop.
 - `sl-day13x-block` deliberately names no INT pin identifiers (cut at
