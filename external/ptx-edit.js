@@ -393,3 +393,15 @@
   ].join('\n')
   document.head.appendChild(style)
 })()
+
+// The book review layer (circle + comment -> reviews/slide-comments.jsonl)
+// rides this file's one html.js.extra slot into the web-edit build. A
+// separate file so the two layers evolve independently; it gates itself
+// (localhost + review server answering) exactly like the code above.
+;(function () {
+  var s = document.createElement('script')
+  s.src = (document.currentScript && document.currentScript.src)
+    ? document.currentScript.src.replace(/ptx-edit\.js.*$/, 'ptx-review.js')
+    : 'external/ptx-review.js'
+  document.head.appendChild(s)
+})()

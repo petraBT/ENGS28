@@ -82,6 +82,13 @@
          bullet list doesn't sit top-left with dead space beneath it. */
       #ref .ref-cols { flex: 1; min-height: 0; display: flex; gap: 4%; align-items: center; }
       #ref .ref-body { flex: 1; min-width: 0; min-height: 0; }
+      /* .ref-cols centres its children, so an over-full bullet column did not
+         clip — it GREW past the slide in both directions, printing its first
+         bullets over the title and losing its last off the bottom, while
+         scrollHeight === clientHeight and the fit check answered "fits".
+         Day 11's counter/compare slide was 196 px over and measured clean.
+         Cap it against the column so the overflow is real and measurable. */
+      #ref .ref-cols .ref-body { max-height: 100%; overflow: auto; }
       #ref .ref-media { flex: 1.05; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
       #ref.single .ref-media { display: none; }
       /* Single-column (activity / code) slides fill the height and top-align; if
@@ -120,6 +127,12 @@
       }
       #ref .ref-body ol { margin: .2em 0; padding-left: 1.5em; }
       #ref .ref-body ol > li { font-size: 2.7vmin; font-size: 2.7cqmin; line-height: 1.55; margin-bottom: .65em; padding-left: .2em; }
+      /* The bullet list has had this since it was written; the NUMBERED list did
+         not, so the last item's trailing margin — 65 px on a 1600x900 stage —
+         counted as overflow and pushed slides over that were visibly fine. Day
+         11x's questions slide measured 18 px over with 65 px of empty space
+         under it. */
+      #ref .ref-body ol > li:last-child { margin-bottom: 0; }
       /* Practice slides (room="yes" on a slide, or "room": true on a deck ref):
          leave a couple of blank lines after each item / task for students — and
          the instructor — to write an answer during class. */
@@ -130,6 +143,18 @@
       #ref .ref-body.roomy > p > ol > li,
       #ref .ref-body.roomy > p > ul > li,
       #ref .ref-body.roomy .task { margin-bottom: 2.7em; }
+      /* Not after the LAST one. The writing space between items is the point;
+         the copy of it below the final item is against the bottom of the slide,
+         where it buys nothing and counts as overflow — 65 px of it put Day 11x's
+         questions slide 18 px over once Petra promoted the early-finisher line
+         to a fourth question. */
+      #ref .ref-body.roomy > ol > li:last-child,
+      #ref .ref-body.roomy > ul > li:last-child,
+      #ref .ref-body.roomy > .para > ol > li:last-child,
+      #ref .ref-body.roomy > .para > ul > li:last-child,
+      #ref .ref-body.roomy > p > ol > li:last-child,
+      #ref .ref-body.roomy > p > ul > li:last-child,
+      #ref .ref-body.roomy .task:last-child { margin-bottom: 0; }
       /* The opposite setting (room="compressed" / "room": "compressed"): tighten
          the gaps between items so a long activity fits on one slide without any
          of its content being cut. Type size is untouched — only the spacing —
@@ -265,8 +290,54 @@
          (and register diagrams built as tables) showed no grid lines. */
       /* Standalone tables (register diagrams, etc.) get clear space above and
          below so they don't crowd the lead line and the bullets. */
+      /* An <image> that is NOT in a <figure> — a typeset equation inside an
+         activity, say — keeps its PreTeXt image-box, but nothing was sizing the
+         <img> inside it, so it rendered at its intrinsic pixel size and the
+         declared width did nothing. Day 11's equilibrium equation measured the
+         same at 38% and at 30%. */
+      #ref .ref-body .image-box { margin-left: auto !important; margin-right: auto !important; }
+      #ref .ref-body .image-box img { display: block; width: 100%; height: auto; }
+      /* A <video> has the same problem one step worse. PreTeXt sizes its
+         .video-box with the padding-top aspect-ratio trick and absolutely
+         positions the <iframe> inside it — both of which live in the book
+         stylesheet the player does not load, so the embed collapsed to a
+         thumbnail in the bottom-left corner while the box reserved a screenful
+         of empty space above it. Drive the box from its HEIGHT instead: an
+         explicit aspect-ratio with `width: auto` keeps 16:9 while the cap keeps
+         the player inside the slide, which the width-driven padding trick
+         cannot do. */
+      #ref .ref-body .video-box {
+        position: relative; padding-top: 0 !important;
+        aspect-ratio: 16 / 9; height: 58cqh; width: auto !important;
+        max-width: 100%; margin: .6em auto !important;
+      }
+      #ref .ref-body .video-box iframe, #ref .ref-body .video-box .video {
+        position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+      }
+      /* A table ref'd onto a slide brings its book label with it — "Table
+         11.3.3." and all — with margin 0 on every side, so the label sat hard
+         against the header row with not one pixel between them. And the
+         numbering is book chrome: nobody reads "Table 11.3.3" off a wall. Keep
+         the descriptive half of the label, drop the number, and give it room. */
+      #ref .ref-body figcaption {
+        display: block; margin: .2em 0 .85em; line-height: 1.35; opacity: .8;
+      }
+      #ref .ref-body figcaption > .type,
+      #ref .ref-body figcaption > .codenumber,
+      #ref .ref-body figcaption > .heading-divison-mark { display: none; }
+      /* room="yes" on a slide whose body is a TABLE: the writing room has to go
+         into the rows, not between paragraphs. A fill-in table (the register
+         checkpoint on Day 11x) is the case — students write one answer per row
+         and the instructor fills the column in on the projector. */
+      #ref .ref-body.roomy table.tabular td { padding-top: .3em; padding-bottom: .3em; }
       #ref .ref-body > table.tabular { margin: 1.2em 0; }
       #ref table.tabular { border-collapse: collapse; }
+      /* Extracted book markup arrives without the book stylesheet, so a table
+         kept the browser's 16px while the prose around it scaled with the
+         projector — Day 11's parameter table was a quarter smaller than the
+         question above it. Size it like a list item instead, so it grows with
+         the slide. The wide-table rule below is more specific and still wins. */
+      #ref table.tabular { font-size: 2.7vmin; font-size: 2.7cqmin; }
       #ref table.tabular td, #ref table.tabular th { padding: .28em .5em; }
       /* A wide register diagram (10+ columns, e.g. a full 16-bit register) shrinks
          its type so the whole row fits the slide width; narrower tables (truth
@@ -281,6 +352,14 @@
       #ref table.tabular td.r2, #ref table.tabular th.r2 { border-right: 2px solid #6b6a67; }
       #ref table.tabular td.t2, #ref table.tabular th.t2 { border-top: 2px solid #6b6a67; }
       #ref table.tabular td.b2, #ref table.tabular th.b2 { border-bottom: 2px solid #6b6a67; }
+      /* PreTeXt numbers its rules 1 minor, 2 medium, 3 MAJOR, and only 1 and 2
+         were styled here — so top="major" / bottom="major" drew nothing on a
+         slide. Day 11's parameter table projected with no line under its header
+         row while every minor line between the data rows showed. */
+      #ref table.tabular td.l3, #ref table.tabular th.l3 { border-left: 3px solid #3a3936; }
+      #ref table.tabular td.r3, #ref table.tabular th.r3 { border-right: 3px solid #3a3936; }
+      #ref table.tabular td.t3, #ref table.tabular th.t3 { border-top: 3px solid #3a3936; }
+      #ref table.tabular td.b3, #ref table.tabular th.b3 { border-bottom: 3px solid #3a3936; }
       /* Inline colour for slide text (see the <clr> element in engs28-html.xsl),
          e.g. matching oscilloscope-channel colours. */
       #ref .deck-clr-orange { color: #c26a1f; font-weight: 600; }
@@ -694,10 +773,55 @@
           ;[].forEach.call(root.querySelectorAll('.autopermalink, script, .knowl-output'), function (el) {
             if (el.parentNode) el.parentNode.removeChild(el)
           })
+          dexref(root)
+        }
+        /* A cross-reference projects as a BOOK NUMBER — "Figure 11.2.12" — which
+           names nothing anybody in the room can see. The book needs the xref and
+           the slide does not, so the link is rewritten here rather than removed
+           from the source (most of these live in activities the deck refs by
+           their own xml:id, so the book's reading depends on them).
+
+           Three cases, in order:
+             "(Figure 11.2.12)"        the whole parenthetical goes
+             "as in picture Figure 3"  a naming word already precedes it: link goes
+             "Derive it from Figure 3" nothing else names the target: "the figure"
+
+           The type word comes from the link's own text, so a Table stays a table
+           and a Section stays a section. */
+        var XREF_TYPE = { figure: 'the figure', table: 'the table', section: 'that section',
+                          chapter: 'that chapter', example: 'the example', activity: 'the activity',
+                          listing: 'the listing', item: 'the step', part: 'that part' }
+        var XREF_NAMES = /(picture|figure|table|section|chapter|diagram|listing|example)\s*$/i
+        function dexref(root) {
+          ;[].forEach.call(root.querySelectorAll('a.xref'), function (a) {
+            var word = (a.textContent || '').trim().split(/[\s\u00a0]+/)[0].toLowerCase()
+            var prev = a.previousSibling, next = a.nextSibling
+            var before = prev && prev.nodeType === 3 ? prev.nodeValue : ''
+            var after  = next && next.nodeType === 3 ? next.nodeValue : ''
+            // "(Figure 11.2.12)" — drop the parentheses with it, and the space before them.
+            if (/\(\s*$/.test(before) && /^\s*\)/.test(after)) {
+              prev.nodeValue = before.replace(/\s*\(\s*$/, '')
+              next.nodeValue = after.replace(/^\s*\)/, '')
+              a.parentNode.removeChild(a)
+              return
+            }
+            // "as in picture Figure 10.1.2" — the sentence already names the thing.
+            if (XREF_NAMES.test(before)) {
+              prev.nodeValue = before.replace(/\s+$/, '')
+              a.parentNode.removeChild(a)
+              return
+            }
+            // Otherwise the sentence needs a noun where the number was.
+            a.parentNode.replaceChild(
+              document.createTextNode(XREF_TYPE[word] || 'the figure'), a)
+          })
         }
         // The player doesn't load MathJax, so PreTeXt <m> math arrives as raw LaTeX
         // in .process-math spans (e.g. "\(V_{CC}\)"). Convert the simple inline math
         // the in-class content uses into readable plain text.
+        var GREEK = { omega: 'ω', theta: 'θ', tau: 'τ', gamma: 'γ', sigma: 'σ',
+                      alpha: 'α', delta: 'δ', Delta: 'Δ', phi: 'φ', lambda: 'λ',
+                      rho: 'ρ', pi: 'π' }
         function demath(root) {
           ;[].forEach.call(root.querySelectorAll('.process-math'), function (el) {
             var t = el.textContent
@@ -708,6 +832,18 @@
                  .replace(/\\Omega/g, 'Ω').replace(/\\mu/g, 'µ').replace(/\\beta/g, 'β')
                  .replace(/\\cdot/g, '·').replace(/\\times/g, '×').replace(/\\approx/g, '≈')
                  .replace(/\\leq?/g, '≤').replace(/\\geq?/g, '≥').replace(/\\pm/g, '±')
+                 // The rest of the Greek and the operators the book's math uses.
+                 // Without these the catch-all below DELETES them, so Day 11's
+                 // parameter table projected as "Does increase or decrease?" and
+                 // "Torque constant, K_t, where = K_t i" — the symbol the row is
+                 // about, gone. \b matters: bare /\\to/ eats the front of \theta.
+                 .replace(/\\(omega|theta|tau|gamma|sigma|alpha|delta|Delta|phi|lambda|rho|pi)\b/g,
+                          function (_, g) { return GREEK[g] })
+                 .replace(/\\lfloor\b/g, '⌊').replace(/\\rfloor\b/g, '⌋')
+                 .replace(/\\to\b/g, '→').replace(/\\propto\b/g, '∝').replace(/\\implies\b/g, '⇒')
+                 .replace(/\\ldots\b/g, '…').replace(/\\lt\b/g, '<').replace(/\\gt\b/g, '>')
+                 // Named functions keep their names; only the backslash goes.
+                 .replace(/\\(arctan|sin|cos|tan|log|ln|min|max|bmod)\b/g, '$1')
                  .replace(/\\,|\\;|\\ /g, ' ')
                  .replace(/_\{([^{}]*)\}/g, '_$1').replace(/\^\{([^{}]*)\}/g, '^$1')
                  .replace(/\\[a-zA-Z]+/g, '')                      // any leftover command
@@ -862,6 +998,16 @@
                 tbl.style.width = '100%'
               }
             }
+            // A <tabular> inside a projected ACTIVITY can't reach that path:
+            // data-deck-colwidths is authored on a <slide>, and an activity is
+            // book content the deck refs by its own xml:id. Content-sized, Day
+            // 11's parameter table came out 503px on a 1178px slide. Give it the
+            // width it is projected at; the columns still size by content.
+            if (isActivity) {
+              ;[].forEach.call(refBody.querySelectorAll('table.tabular'), function (t) {
+                if (!t.querySelector('colgroup')) t.style.width = '100%'
+              })
+            }
             // A demo slide (its body is a board simulator) gets the whole slide.
             refBody.classList.toggle('has-sim', !!refBody.querySelector('.sim-embed'))
             // PreTeXt puts a <task>'s own <title> inside the same .heading as its
@@ -937,6 +1083,18 @@
                 } else {
                   // An activity or other non-image element (already slide-sized):
                   // render it full width, under any framing text the slide carries.
+                  // A VIDEO is a figure like any other and gets the same treatment as
+                  // the image branch above: drop its book caption so the slide's own
+                  // instructive one is the only line under it. Without this the Day 11
+                  // scope video projected the full textbook caption AND the slide
+                  // caption, one on top of the other. A ref'd TABLE is deliberately
+                  // NOT included -- its figcaption is the table's title, which the
+                  // room does read.
+                  if (mediaClone.querySelector('.video-box, iframe')) {
+                    ;[].forEach.call(mediaClone.querySelectorAll('figcaption, .figure-caption'), function (el) {
+                      if (el.parentNode) el.parentNode.removeChild(el)
+                    })
+                  }
                   refBody.appendChild(mediaClone)
                   // Non-image refs (e.g. a table) still get the slide's own
                   // instructive caption — shown below, in the body column.
@@ -980,6 +1138,18 @@
               var noteClone = noteBlock.cloneNode(true)
               strip(noteClone); absolutize(noteClone, res.url); demath(noteClone)
               refBody.appendChild(noteClone)
+            }
+            /* A note written on the DECK ENTRY rather than in the source. Until
+               2026-08-20 this rendered for glue slides only, so every timing
+               note on a ref slide was invisible in the player — which is every
+               note on an <activity> or an <instructor> block, since neither can
+               carry a <slide>'s <note>. Day 11x had four of them, all written to
+               make its clock auditable, and none of them reached the wall. */
+            if (notesOn && slide.presenterNote) {
+              var jsonNote = document.createElement('div')
+              jsonNote.className = 'deck-slide-note'
+              jsonNote.textContent = slide.presenterNote
+              refBody.appendChild(jsonNote)
             }
 
             // Last, once every piece of text is in place: typeset V_BE, h_FE,
@@ -2123,6 +2293,346 @@
             console.log('[deck] authoring enabled: alt-click opens source, ' +
                         'alt-shift-click edits. Local only.')
           }).catch(function () { /* edit-server not running: stay inert */ })
+        })()
+
+        /* --- slide review comments (authoring only) ------------------------
+           Circle part of a slide, type a comment, and it lands in
+           reviews/slide-comments.jsonl via scripts/review-server.py (:8928,
+           started by ./preview-slides.sh) — where a Claude session picks it
+           up ("watch my slide comments", see CLAUDE.md). The feedback loop
+           for slide production: point at the problem instead of describing
+           it in chat.
+
+           Same self-effacing rules as the edit layer: localhost only, and
+           the ◎ Review button appears only when the review server answers,
+           so none of this exists for students or on the deployed deck.
+           Everything below builds its own DOM/CSS — the only shared state
+           it touches is read-only (deck, currentIndex, rect, sizeCanvas).
+
+           Distinct from pen annotation on purpose: a review lasso is
+           TRANSIENT (never saved as ink, cleared on send/cancel/slide
+           change), and while review mode is on, an overlay swallows pointer
+           input so nothing draws or navigates by accident. R toggles. */
+        ;(function () {
+          if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return
+          var REVIEW_SERVER = 'http://127.0.0.1:8928'
+
+          var css = document.createElement('style')
+          css.textContent =
+            '#review-overlay { position: absolute; inset: 0; z-index: 5; display: none; cursor: crosshair; }' +
+            '#review-overlay.on { display: block; }' +
+            '#review-overlay canvas { position: absolute; inset: 0; width: 100%; height: 100%; }' +
+            '#review-box { position: absolute; z-index: 6; width: 24em; max-width: 44%; background: #fff;' +
+            '  border: 1px solid #d98324; border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.25);' +
+            '  padding: .6em; display: none; font-size: 14px; }' +
+            '#review-box.on { display: block; }' +
+            '#review-box textarea { width: 100%; height: 5em; box-sizing: border-box; resize: vertical;' +
+            '  font: inherit; border: 1px solid #ccc9c0; border-radius: 5px; padding: .45em .55em; }' +
+            '#review-box .rv-row { display: flex; gap: .5em; align-items: center; margin-top: .5em; }' +
+            '#review-box .rv-hint { flex: 1; color: #86847c; font-size: .85em; }' +
+            '#review-box button { font: inherit; border-radius: 5px; padding: .3em .9em; cursor: pointer; border: 1px solid #ccc9c0; background: #f4f2ee; }' +
+            '#review-box button.rv-send { background: #d98324; border-color: #d98324; color: #fff; font-weight: 600; }' +
+            '#review-toast { position: absolute; z-index: 7; left: 50%; transform: translateX(-50%); bottom: 46px;' +
+            '  background: rgba(20,20,19,.92); color: #f2f2f2; padding: .5em 1em; border-radius: 6px;' +
+            '  font-size: 13px; display: none; max-width: 80%; }' +
+            '#review-toast.err { background: #8e2a20; }' +
+            '#review-pins { position: absolute; inset: 0; z-index: 4; pointer-events: none; }' +
+            '.review-pin { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;' +
+            '  border-radius: 50%; background: #d98324; color: #fff; font: 700 12px system-ui, sans-serif;' +
+            '  display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.4);' +
+            '  pointer-events: auto; cursor: help; }'
+          document.head.appendChild(css)
+
+          var overlay = document.createElement('div')
+          overlay.id = 'review-overlay'
+          var lassoCanvas = document.createElement('canvas')
+          overlay.appendChild(lassoCanvas)
+          var lassoCtx = lassoCanvas.getContext('2d')
+          var box = document.createElement('div')
+          box.id = 'review-box'
+          box.innerHTML =
+            '<textarea placeholder="What should change here?"></textarea>' +
+            '<div class="rv-row"><span class="rv-hint">⌘⏎ sends · Esc cancels</span>' +
+            '<button type="button" class="rv-cancel">Cancel</button>' +
+            '<button type="button" class="rv-send">Send</button></div>'
+          var toastEl = document.createElement('div')
+          toastEl.id = 'review-toast'
+          // Persistent markers for comments still waiting in the queue for
+          // THIS slide — so a comment that's been sent (and thus cleared from
+          // the lasso) doesn't disappear from view entirely. A marker vanishes
+          // on its own once "check my review comments" archives the line.
+          var pinsEl = document.createElement('div')
+          pinsEl.id = 'review-pins'
+          // Under #bar in the DOM so the bar still wins hit-testing at z 6.
+          var barEl = document.getElementById('bar')
+          stage.insertBefore(pinsEl, barEl)
+          stage.insertBefore(overlay, barEl)
+          stage.insertBefore(box, barEl)
+          stage.appendChild(toastEl)
+          var field = box.querySelector('textarea')
+
+          var reviewBtn = document.createElement('button')
+          reviewBtn.id = 'review-btn'
+          reviewBtn.type = 'button'
+          reviewBtn.title = 'Review mode — circle something and comment; goes straight to Claude (R)'
+          reviewBtn.innerHTML = '<span style="color:#d98324">◎</span> Review'
+          reviewBtn.style.display = 'none'
+          barEl.insertBefore(reviewBtn, document.getElementById('pos'))
+
+          var reviewOn = false
+          var lasso = null          // stroke in progress (normalized pts)
+          var pending = null        // finished lasso waiting for its comment
+
+          var toastTimer = null
+          function toast(message, isErr) {
+            toastEl.textContent = message
+            toastEl.className = isErr ? 'err' : ''
+            toastEl.style.display = 'block'
+            clearTimeout(toastTimer)
+            toastTimer = setTimeout(function () { toastEl.style.display = 'none' }, isErr ? 6000 : 3200)
+          }
+
+          function clearLasso() {
+            lasso = null
+            pending = null
+            box.classList.remove('on')
+            var r = rect()
+            lassoCtx.clearRect(0, 0, r.width, r.height)
+          }
+
+          function setReview(on) {
+            reviewOn = on
+            overlay.classList.toggle('on', on)
+            reviewBtn.classList.toggle('active', on)
+            if (!on) clearLasso()
+            else toast('Review mode — circle something, then type. R or Esc leaves.')
+          }
+          reviewBtn.addEventListener('click', function () { setReview(!reviewOn) })
+
+          // Pins are independent of review mode — they show whether or not
+          // you're actively circling, so a walk through the deck surfaces
+          // what's still outstanding on each slide.
+          var pinComments = []
+          function renderPins() {
+            pinsEl.innerHTML = ''
+            var r = rect()
+            pinComments.forEach(function (c, i) {
+              if (!c.bbox) return
+              var pin = document.createElement('div')
+              pin.className = 'review-pin'
+              pin.style.left = (c.bbox.x * r.width) + 'px'
+              pin.style.top = (c.bbox.y * r.height) + 'px'
+              pin.textContent = String(i + 1)
+              pin.title = c.text
+              pin.addEventListener('click', function (e) {
+                e.stopPropagation()
+                toast((i + 1) + ': ' + c.text)
+              })
+              pinsEl.appendChild(pin)
+            })
+          }
+          function refreshPins() {
+            fetch(REVIEW_SERVER + '/slide-comments').then(function (res) { return res.json() }).then(function (all) {
+              var n = currentIndex()
+              pinComments = all.filter(function (c) { return c.deck === deckId && c.slide === n && !c.kind })
+              renderPins()
+            }).catch(function () {})
+          }
+
+          function drawLasso() {
+            sizeCanvas(lassoCanvas, lassoCtx)
+            var r = rect()
+            lassoCtx.clearRect(0, 0, r.width, r.height)
+            var pts = (lasso || pending || {}).pts
+            if (!pts || pts.length < 2) return
+            lassoCtx.strokeStyle = '#d98324'
+            lassoCtx.lineWidth = 2.5
+            lassoCtx.setLineDash([7, 5])
+            lassoCtx.beginPath()
+            lassoCtx.moveTo(pts[0][0] * r.width, pts[0][1] * r.height)
+            for (var i = 1; i < pts.length; i++) lassoCtx.lineTo(pts[i][0] * r.width, pts[i][1] * r.height)
+            lassoCtx.stroke()
+            lassoCtx.setLineDash([])
+          }
+
+          // The overlay swallows pointer input so the annotation and laser
+          // handlers on #stage (a parent, reached by bubbling) never see it.
+          overlay.addEventListener('pointerdown', function (e) {
+            e.stopPropagation(); e.preventDefault()
+            if (box.classList.contains('on')) return   // finish the open comment first
+            try { overlay.setPointerCapture(e.pointerId) } catch (err) {}
+            lasso = { pts: [point(e)] }
+          })
+          overlay.addEventListener('pointermove', function (e) {
+            e.stopPropagation()
+            if (!lasso) return
+            e.preventDefault()
+            var p = point(e)
+            if (farEnough(p, lasso.pts[lasso.pts.length - 1])) {
+              if (lasso.pts.length < 400) lasso.pts.push(p)
+              drawLasso()
+            }
+          })
+          overlay.addEventListener('pointerup', function (e) {
+            e.stopPropagation()
+            if (!lasso) return
+            if (lasso.pts.length < 3) { clearLasso(); drawLasso(); return }  // a stray click
+            pending = lasso
+            lasso = null
+            openBox(e)
+          })
+          overlay.addEventListener('touchmove', function (e) { e.preventDefault() }, { passive: false })
+
+          function openBox(e) {
+            var r = rect()
+            box.classList.add('on')
+            // Beside the pointer, clamped so it never leaves the stage or
+            // covers the bar.
+            var bw = box.offsetWidth, bh = box.offsetHeight
+            var x = Math.min(Math.max(8, e.clientX - r.left + 14), r.width - bw - 8)
+            var y = Math.min(Math.max(8, e.clientY - r.top - bh / 2), r.height - bh - 44)
+            box.style.left = x + 'px'
+            box.style.top = y + 'px'
+            field.value = ''
+            field.focus()
+          }
+
+          function bbox(pts) {
+            var xs = pts.map(function (p) { return p[0] }), ys = pts.map(function (p) { return p[1] })
+            var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys)
+            return { x: r4(x0), y: r4(y0), w: r4(Math.max.apply(null, xs) - x0), h: r4(Math.max.apply(null, ys) - y0) }
+          }
+
+          function send() {
+            var text = field.value.trim()
+            if (!text || !pending) return
+            var slide = deck && deck.slides[currentIndex() - 1]
+            var payload = {
+              ts: new Date().toISOString(),
+              deck: deckId,
+              deckTitle: (deck && deck.title) || deckId,
+              slide: currentIndex(),
+              jsonIndex: slide ? slide._ink : null,
+              title: document.getElementById('title').textContent,
+              type: slide ? (slide.type || 'ref') : null,
+              student: studentView,
+              url: location.href,
+              bbox: bbox(pending.pts),
+              stroke: pending.pts,
+              text: text,
+            }
+            // No Content-Type header: keeps this a "simple" CORS request, so
+            // there is no preflight to fail if the server is slow to start.
+            post(payload)
+              .then(function (queued) {
+                clearLasso(); drawLasso()
+                refreshPins()
+                toast('✓ queued for Claude — ' + queued + ' waiting')
+              })
+              .catch(function () {
+                // The server is down — reviewing is batch work, so Petra may
+                // well be circling slides while the whole preview stack is
+                // stopped for corrections. Buffer the comment in THIS
+                // browser and keep going; the outbox flushes the moment the
+                // server answers again (retry below, or a reload).
+                try {
+                  var out = outbox()
+                  out.push(payload)
+                  localStorage.setItem(OUTBOX_KEY, JSON.stringify(out))
+                  clearLasso(); drawLasso()
+                  toast('⏳ saved in this browser (' + out.length + ') — sends itself when the review server is back')
+                  scheduleFlush()
+                } catch (err) {
+                  // Storage refused too: keep the box so the text survives.
+                  toast('Could not send or save — start the slides authoring preview (Launchpad) or: python3 scripts/review-server.py', true)
+                }
+              })
+          }
+
+          function post(payload) {
+            return fetch(REVIEW_SERVER + '/slide-comment', { method: 'POST', body: JSON.stringify(payload) })
+              .then(function (res) { return res.json() })
+              .then(function (body) {
+                if (!body.ok) throw new Error(body.error || 'refused')
+                return body.queued
+              })
+          }
+
+          /* The outbox: comments made while the review server was down.
+             Flushed in order, oldest first; each success is removed from
+             storage immediately, so a flush interrupted halfway loses
+             nothing and re-sends nothing. */
+          var OUTBOX_KEY = 'deck:review:outbox'
+          function outbox() {
+            try {
+              var raw = localStorage.getItem(OUTBOX_KEY)
+              var p = raw ? JSON.parse(raw) : []
+              return Array.isArray(p) ? p : []
+            } catch (err) { return [] }
+          }
+          var flushTimer = null
+          function scheduleFlush() {
+            clearTimeout(flushTimer)
+            flushTimer = setTimeout(flushOutbox, 15000)
+          }
+          function flushOutbox() {
+            clearTimeout(flushTimer)
+            var out = outbox()
+            if (!out.length) return
+            post(out[0])
+              .then(function (queued) {
+                var rest = outbox()
+                // Remove the sent comment by identity (ts), not position —
+                // a new comment may have been buffered mid-flight.
+                rest = rest.filter(function (c) { return c.ts !== out[0].ts })
+                localStorage.setItem(OUTBOX_KEY, JSON.stringify(rest))
+                if (rest.length) flushOutbox()
+                else { refreshPins(); toast('✓ saved comments sent — ' + queued + ' waiting for Claude') }
+              })
+              .catch(function () { scheduleFlush() })   // still down; try again
+          }
+          box.querySelector('.rv-send').addEventListener('click', send)
+          box.querySelector('.rv-cancel').addEventListener('click', function () { clearLasso(); drawLasso() })
+          field.addEventListener('keydown', function (e) {
+            e.stopPropagation()   // typing must not page the deck or toggle modes
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send() }
+            else if (e.key === 'Escape') { clearLasso(); drawLasso() }
+          })
+
+          document.addEventListener('keydown', function (e) {
+            if (e.metaKey || e.ctrlKey || e.altKey) return
+            var t = e.target
+            if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable)) return
+            if (e.key === 'r' || e.key === 'R') setReview(!reviewOn)
+            else if (e.key === 'Escape' && reviewOn) setReview(false)
+          })
+
+          // A lasso's coordinates mean nothing on another slide; pins do, so
+          // refetch them for whatever slide this now is.
+          window.addEventListener('hashchange', function () {
+            if (reviewOn) { clearLasso(); drawLasso() }
+            refreshPins()
+          })
+          window.addEventListener('resize', function () { if (reviewOn) drawLasso(); renderPins() })
+          // Reasserting focus (e.g. coming back from a Claude session that
+          // just archived a comment) is the cheapest moment to notice a pin
+          // should now be gone.
+          window.addEventListener('focus', refreshPins)
+
+          // The button appears only when the review server answers — the same
+          // self-effacement as the edit layer, so a rehearsal or the deployed
+          // deck never shows it. ?review opens the mode directly. Either way,
+          // a non-empty outbox keeps trying: comments buffered while the
+          // stack was down must reach the queue file without being asked.
+          fetch(REVIEW_SERVER + '/health').then(function (res) { return res.json() }).then(function (body) {
+            if (!body.ok) return
+            reviewBtn.style.display = ''
+            if (params.has('review')) setReview(true)
+            flushOutbox()
+            refreshPins()
+          }).catch(function () {
+            if (outbox().length) scheduleFlush()   // review server not running: UI stays inert, outbox keeps trying
+          })
         })()
       })()
     </script>

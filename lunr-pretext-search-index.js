@@ -250,7 +250,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "1.2.3",
   "title": "Part 3: Inside blinky.c",
-  "body": " Part 3: Inside blinky.c  To make an LED blink, the program must do four things in order:   Turn on the clock to GPIO Port A (the peripheral is off by default).  Set PA5 to output mode so we can drive it HIGH or LOW.  Set bit 5 HIGH to turn the LED on.  Clear bit 5 LOW to turn the LED off — then repeat.   Each step is one or two lines of C. Here is the complete blinky.c source.  #include \"stm32c0xx.h\" \/\/ all register definitions live here \/\/ Bit 0 of RCC->IOPENR enables the clock for GPIOA #define GPIOAEN (1U << 0) \/\/ 0b...0001 (unsigned 32-bit) \/\/ Bit 5 of GPIOA is wired to the on-board LED #define LED_PIN (1U << 5) \/\/ 0b...0010 0000 int main(void) { RCC->IOPENR |= GPIOAEN; \/\/ Step 1: enable GPIOA clock GPIOA->MODER |= (1U << 10); \/\/ Step 2a: set bit 10 of MODER GPIOA->MODER &= ~(1U << 11);\/\/ Step 2b: clear bit 11 of MODER \/\/ → PA5 is now an output while (1) { GPIOA->ODR |= LED_PIN; \/\/ Step 3: set bit 5 → LED on for (int i = 0; i < 100000; i++); GPIOA->ODR &= ~LED_PIN; \/\/ Step 4: clear bit 5 → LED off for (int i = 0; i < 100000; i++); } return 0; \/\/ never reached }  Notice that Steps 3 and 4 sit inside while (1) — an infinite loop that never terminates. In most programming courses you are told never to write an infinite loop. Embedded programming is the exception. An MCU is not a general-purpose computer running an operating system; there is no desktop to return to, no shell to hand control back to. From the moment power is applied, the processor must keep executing. The return 0 at the end of main() is unreachable — it is there only because the C standard requires it. Any real embedded program has exactly this shape: one-time setup code before  while (1) , then the work the device does forever inside it.  Before stepping through each line, here are the three C operators used throughout blinky.c.   Left shift: 1U << n . Writing 1U << n shifts the value 1 left by n bit positions, placing a single 1 at position n and zeros everywhere else. The U suffix makes it an unsigned 32-bit integer — required to avoid undefined behavior when shifting near bit 31.  1U = 0b 0000 0000 0000 0000 0000 0000 0000 0001 (bit 0 is 1) 1U << 5 = 0b 0000 0000 0000 0000 0000 0000 0010 0000 (bit 5 is 1) 1U << 10 = 0b 0000 0000 0000 0000 0000 0100 0000 0000 (bit 10 is 1)  This single- 1 pattern is called a bit mask . Giving it a name with #define makes the code self-documenting: LED_PIN instead of an unexplained (1U << 5) .   Setting a bit: OR-assign ( |= ). The bitwise OR truth table shows what happens to each bit pair:    A (register bit)  B (mask bit)  A | B   0 0 0  0 1 1  1 0 1  1 1 1   When the mask bit is 1 , the result is always 1 — the register bit is forced high regardless of its current value. When the mask bit is 0 , the result equals the register bit — it is left unchanged. So register |= mask sets exactly the bits that are 1 in the mask, leaving all other bits untouched. A plain assignment would overwrite every other bit to zero, potentially disabling things that were already configured. Always use |= to set bits in peripheral registers.   Clearing a bit: AND-assign ( &= ) and bitwise NOT ( ~ ).  register &= value is shorthand for register = register & value — it AND-assigns any value you give it, exactly like |= is shorthand for OR-assign. The ~ operator is separate: it flips every bit of its operand. In blinky.c these two operators appear together because clearing a bit requires exactly that combination, but they can each be used on their own.    A (register bit)  B (mask bit)  A & B   0 0 0  0 1 0  1 0 0  1 1 1   When the mask bit is 0 , the result is always 0 — the register bit is forced low regardless of its current value. When the mask bit is 1 , the result equals the register bit — it is left unchanged. To force a single bit to 0 , start with a mask that has a 1 in that position, then apply ~ to invert it — producing 0 at that position and 1 s everywhere else:  LED_PIN = 0b 0000 0000 0000 0000 0000 0000 0010 0000 (bit 5 is 1) ~LED_PIN = 0b 1111 1111 1111 1111 1111 1111 1101 1111 (bit 5 is 0, rest are 1s)  AND-ing ( & ) any bit with 0 forces it to 0 ; AND with 1 leaves it unchanged. So register &= ~mask clears exactly the bits that were 1 in the mask, leaving all others untouched.  With those three operators in hand, each step of blinky.c is straightforward to read.   Step 1: Enable the GPIOA clock. By default, the clock to each GPIO port is disabled to save power. You cannot read from or write to any GPIO register until its clock is enabled. The first line of main() — RCC->IOPENR |= GPIOAEN — enables the clock to Port A; it must appear before any access to GPIOA->MODER or GPIOA->ODR .   Step 2: Configure PA5 as an output. The register that controls this is GPIOA->MODER , the Mode Register for Port A. MODER is a 32-bit register that stores the mode of every pin in Port A. Each pin can be in one of four modes: input, output, alternate function (for peripherals like UART), or analog. Because there are four possibilities, two bits are needed to encode the mode of each pin — a single bit could only represent two states. With 16 pins per port and two bits per pin, MODER is exactly 32 bits wide. The four possible two-bit encodings are:   MODER bit-pair encoding    Bits [2n+1 : 2n] Pin mode   00 Input  01 General-purpose output  10 Alternate function  11 Analog    For pin , MODER uses bits (lower) and (upper). For PA5, that is bits 10 and 11. Output mode is encoded as 01 — bit 10 set to 1 , bit 11 cleared to 0 . That is why Step 2 takes two lines: one to set bit 10, one to clear bit 11.   Why two lines?  If you only set bit 10 and bit 11 happened to be 1 already, the two-bit pattern would be 11 (analog mode) rather than 01 (output). And on this chip bit 11 is  1 at reset — most pins power up in analog mode, not input. Always explicitly clear the upper bit to guarantee the correct mode regardless of the reset state.    Steps 3 and 4: Drive PA5 high and low.  GPIOA->ODR |= LED_PIN sets bit 5 to 1 , pulling PA5 to 3.3 V and turning the LED on. GPIOA->ODR &= ~LED_PIN clears bit 5 to 0 , pulling PA5 to 0 V and turning the LED off. Inside while(1) , these two operations alternate forever — producing the blink.                    Bit Manipulation Practice   Apply the three operators from the walkthrough. Work through each task before moving to the next.     Write out the 32-bit binary value of 1U << 10 . Which bit position is the 1 ? What is the value in hexadecimal?      Based on what you just read about |= and ~ : what does GPIOA->MODER &= ~(1U << 11) do to bit 11? Explain in one sentence.      Compute 0b00001111 | 0b10100000 by hand (8-bit example). Write the result in binary. Which bits are 1 in the result, and why?      Starting from 0b11111111 , apply & 0b11110111 . What is the result? Which bit changed, and in which direction?     "
+  "body": " Part 3: Inside blinky.c  To make an LED blink, the program must do four things in order:   Turn on the clock to GPIO Port A (the peripheral is off by default).  Set PA5 to output mode so we can drive it HIGH or LOW.  Set bit 5 HIGH to turn the LED on.  Clear bit 5 LOW to turn the LED off — then repeat.   Each step is one or two lines of C. Here is the complete blinky.c source.  #include \"stm32c0xx.h\" \/\/ all register definitions live here \/\/ Bit 0 of RCC->IOPENR enables the clock for GPIOA #define GPIOAEN (1U << 0) \/\/ 0b...0001 (unsigned 32-bit) \/\/ Bit 5 of GPIOA is wired to the on-board LED #define LED_PIN (1U << 5) \/\/ 0b...0010 0000 int main(void) { RCC->IOPENR |= GPIOAEN; \/\/ Step 1: enable GPIOA clock GPIOA->MODER |= (1U << 10); \/\/ Step 2a: set bit 10 of MODER GPIOA->MODER &= ~(1U << 11);\/\/ Step 2b: clear bit 11 of MODER \/\/ → PA5 is now an output while (1) { GPIOA->ODR |= LED_PIN; \/\/ Step 3: set bit 5 → LED on for (int i = 0; i < 100000; i++); GPIOA->ODR &= ~LED_PIN; \/\/ Step 4: clear bit 5 → LED off for (int i = 0; i < 100000; i++); } return 0; \/\/ never reached }  Notice that Steps 3 and 4 sit inside while (1) — an infinite loop that never terminates. In most programming courses you are told never to write an infinite loop. Embedded programming is the exception. An MCU is not a general-purpose computer running an operating system; there is no desktop to return to, no shell to hand control back to. From the moment power is applied, the processor must keep executing. The return 0 at the end of main() is unreachable — it is there only because the C standard requires it. Any real embedded program has exactly this shape: one-time setup code before  while (1) , then the work the device does forever inside it.  Before stepping through each line, here are the three C operators used throughout blinky.c.   Left shift: 1U << n . Writing 1U << n shifts the value 1 left by n bit positions, placing a single 1 at position n and zeros everywhere else. The U suffix makes it an unsigned 32-bit integer — required to avoid undefined behavior when shifting near bit 31.  1U = 0b 0000 0000 0000 0000 0000 0000 0000 0001 (bit 0 is 1) 1U << 5 = 0b 0000 0000 0000 0000 0000 0000 0010 0000 (bit 5 is 1) 1U << 10 = 0b 0000 0000 0000 0000 0000 0100 0000 0000 (bit 10 is 1)  This single- 1 pattern is called a bit mask . Giving it a name with #define makes the code self-documenting: LED_PIN instead of an unexplained (1U << 5) .   Setting a bit: OR-assign ( |= ). The bitwise OR truth table shows what happens to each bit pair:    A (register bit)  B (mask bit)  A | B   0 0 0  0 1 1  1 0 1  1 1 1   When the mask bit is 1 , the result is always 1 — the register bit is forced high regardless of its current value. When the mask bit is 0 , the result equals the register bit — it is left unchanged. So register |= mask sets exactly the bits that are 1 in the mask, leaving all other bits untouched. A plain assignment would overwrite every other bit to zero, potentially disabling things that were already configured. Always use |= to set bits in peripheral registers.   Clearing a bit: AND-assign ( &= ) and bitwise NOT ( ~ ).  register &= value is shorthand for register = register & value — it AND-assigns any value you give it, exactly like |= is shorthand for OR-assign. The ~ operator is separate: it flips every bit of its operand. In blinky.c these two operators appear together because clearing a bit requires exactly that combination, but they can each be used on their own.    A (register bit)  B (mask bit)  A & B   0 0 0  0 1 0  1 0 0  1 1 1   When the mask bit is 0 , the result is always 0 — the register bit is forced low regardless of its current value. When the mask bit is 1 , the result equals the register bit — it is left unchanged. To force a single bit to 0 , start with a mask that has a 1 in that position, then apply ~ to invert it — producing 0 at that position and 1 s everywhere else:  LED_PIN = 0b 0000 0000 0000 0000 0000 0000 0010 0000 (bit 5 is 1) ~LED_PIN = 0b 1111 1111 1111 1111 1111 1111 1101 1111 (bit 5 is 0, rest are 1s)  AND-ing ( & ) any bit with 0 forces it to 0 ; AND with 1 leaves it unchanged. So register &= ~mask clears exactly the bits that were 1 in the mask, leaving all others untouched.  With those three operators in hand, each step of blinky.c is straightforward to read.   Step 1: Enable the GPIOA clock. By default, the clock to each GPIO port is disabled to save power. You cannot read from or write to any GPIO register until its clock is enabled. The first line of main() — RCC->IOPENR |= GPIOAEN — enables the clock to Port A; it must appear before any access to GPIOA->MODER or GPIOA->ODR .   Step 2: Configure PA5 as an output. The register that controls this is GPIOA->MODER , the Mode Register for Port A. MODER is a 32-bit register that stores the mode of every pin in Port A. Each pin can be in one of four modes: input, output, alternate function (for peripherals like UART), or analog. Because there are four possibilities, two bits are needed to encode the mode of each pin — a single bit could only represent two states. With 16 pins per port and two bits per pin, MODER is exactly 32 bits wide. The four possible two-bit encodings are:   MODER bit-pair encoding    Bits [2n+1 : 2n] Pin mode   00 Input  01 General-purpose output  10 Alternate function  11 Analog    For pin , MODER uses bits (lower) and (upper). For PA5, that is bits 10 and 11. Output mode is encoded as 01 — bit 10 set to 1 , bit 11 cleared to 0 . That is why Step 2 takes two lines: one to set bit 10, one to clear bit 11.   Why two lines?  If you only set bit 10 and bit 11 happened to be 1 already, the two-bit pattern would be 11 (analog mode) rather than 01 (output). And on this chip bit 11 is  1 at reset — most pins power up in analog mode, not input. Always explicitly clear the upper bit to guarantee the correct mode regardless of the reset state.    Steps 3 and 4: Drive PA5 high and low.  GPIOA->ODR |= LED_PIN sets bit 5 to 1 , pulling PA5 to 3.3 V and turning the LED on. GPIOA->ODR &= ~LED_PIN clears bit 5 to 0 , pulling PA5 to 0 V and turning the LED off. Inside while(1) , these two operations alternate forever — producing the blink.                    Bit Manipulation Practice   Apply the three operators from the walkthrough. Work through each task before moving to the next.     Write out the 32-bit binary value of 1U << 10 . Which bit position is the 1 ? What is the value in hexadecimal?      Based on what you just read about |= and ~ : what does GPIOA->MODER &= ~(1U << 11) do to bit 11? Explain in one sentence.      Compute 0b00001111 | 0b10100000 by hand (8-bit example). Write the result in binary. Which bits are 1 in the result, and why?      Starting from 0b11111111 , apply & 0b11110111 . What is the result? Which bit changed, and in which direction?      "
 },
 {
   "id": "subsec-day1-blinky-walkthrough-8",
@@ -403,7 +403,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "1.3.2",
   "title": "Part 2: Port blinkySlowToFast to the Nucleo",
-  "body": " Part 2: Port blinkySlowToFast to the Nucleo    Review, Port, and Verify   Review a partner's design first, then move your own code onto the real board.     Show a neighbor your simulator design and walk through theirs. For their approach, answer the following — then share your feedback:   What variable controls the blink rate, and how does it change from one cycle to the next?  What is the reset condition — how does the program know it has reached fast and should return to slow ?  Will the approach produce a smooth ramp, or will there be a jump? Is there an edge case where the reset might not trigger correctly?  Is there anything you would change or question?       Copy your working simulator code into blinkySlowToFast.c in STM32CubeIDE — the file you set up in Part 1. Build, flash, and confirm the LED ramps on the real board.      Did the board behave exactly like the simulator? Note any difference you see — timing, brightness, anything — and jot down why the real hardware might not match the simulation.     "
+  "body": " Part 2: Port blinkySlowToFast to the Nucleo    Review, Port, and Verify   Review a partner's design first, then move your own code onto the real board.     Show a neighbor your simulator design and walk through theirs. For their approach, answer the following — then share your feedback:   What variable controls the blink rate, and how does it change from one cycle to the next?  What is the reset condition — how does the program know it has reached fast and should return to slow ?  Will the approach produce a smooth ramp, or will there be a jump? Is there an edge case where the reset might not trigger correctly?  Is there anything you would change or question?       Copy your working simulator code into blinkySlowToFast.c in STM32CubeIDE — the file you set up in Part 1. Build, flash, and confirm the LED ramps on the real board.      Did the board behave exactly like the simulator? Note any difference you see — timing, brightness, anything — and jot down why the real hardware might not match the simulation.      "
 },
 {
   "id": "act-blinky-slow-to-fast",
@@ -1105,7 +1105,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "2.2.4",
   "title": "Part 4: Button Exercises",
-  "body": " Part 4: Button Exercises  These exercises are a head start on Lab 2. You may not finish them in class — that is fine.   Button Exercises   Modify blinkyCNT.c so that pressing the button pauses the counter and releasing resumes it.     Homework (due Thursday): Write toggleLED.c so the on-board LED toggles each time the button is pressed and released: first press turns LED on, second press turns it off, and so on. You will likely observe erratic behavior ( glitches ) — bring your observations to class tomorrow.    "
+  "body": " Part 4: Button Exercises  These exercises are a head start on Lab 2. You may not finish them in class — that is fine.   Button Exercises   Modify blinkyCNT.c so that pressing the button pauses the counter and releasing resumes it.     Homework (due Thursday): Write toggleLED.c so the on-board LED toggles each time the button is pressed and released: first press turns LED on, second press turns it off, and so on. You will likely observe erratic behavior ( glitches ) — bring your observations to class tomorrow.     "
 },
 {
   "id": "act-day3-button-exercises",
@@ -1357,7 +1357,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "2.7.3",
   "title": "Part 3: Designing State Machines",
-  "body": " Part 3: Designing State Machines  A finite state machine (FSM) captures behavior as a set of states , events that cause transitions between them, and actions taken on each transition. The key advantage over a simple flag variable: the pattern scales cleanly when you add more states or more events.   Drawing a State Diagram   Before writing any code, draw the state diagram on paper or your table's whiteboard. Label each state (box), each transition arrow with its triggering event, and each action taken on the transition.    Draw the state diagram for a 3-state LED cycling FSM: each button press advances to the next LED pattern (pattern A → B → C → A → …). You choose the patterns. How many states do you need? What are the events? What action happens on each transition?    Draw the state diagram for the Lab 2 pause\/resume counter: the counter blinks normally until a button press pauses it; a second press resumes. How is this different from the 3-state cycling FSM?    "
+  "body": " Part 3: Designing State Machines  A finite state machine (FSM) captures behavior as a set of states , events that cause transitions between them, and actions taken on each transition. The key advantage over a simple flag variable: the pattern scales cleanly when you add more states or more events.   Drawing a State Diagram   Before writing any code, draw the state diagram on paper or your table's whiteboard. Label each state (box), each transition arrow with its triggering event, and each action taken on the transition.    Draw the state diagram for a 3-state LED cycling FSM: each button press advances to the next LED pattern (pattern A → B → C → A → …). You choose the patterns. How many states do you need? What are the events? What action happens on each transition?    Draw the state diagram for the Lab 2 pause\/resume counter: the counter blinks normally until a button press pauses it; a second press resumes. How is this different from the 3-state cycling FSM?     "
 },
 {
   "id": "subsec-day4-fsm-design-2",
@@ -1384,7 +1384,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "2.7.4",
   "title": "Part 4: Implementing a State Machine in C",
-  "body": " Part 4: Implementing a State Machine in C  Translate one of your diagrams from Part 3 into working code using the typedef enum \/ switch pattern from the mini-lecture above.   Implementing Your FSM   Start from your toggleLED.c or blinkyCNT.c project. Replace any blocking logic or bare flag variables with a proper FSM.    Implement the pause\/resume counter FSM. The counter should blink the LEDs in binary (as in blinkyCNT.c ) and a button press should pause or resume counting. Test it: does a single physical press always produce exactly one state change?    If you finish early, implement the 3-state LED cycling FSM from your diagram. Or: add a second button that resets the counter to zero from either state. How does the state diagram change?    Verify on the oscilloscope that the LED transitions are clean (no multiple toggles per press) both with and without the debounce capacitor.    "
+  "body": " Part 4: Implementing a State Machine in C  Translate one of your diagrams from Part 3 into working code using the typedef enum \/ switch pattern from the mini-lecture above.   Implementing Your FSM   Start from your toggleLED.c or blinkyCNT.c project. Replace any blocking logic or bare flag variables with a proper FSM.    Implement the pause\/resume counter FSM. The counter should blink the LEDs in binary (as in blinkyCNT.c ) and a button press should pause or resume counting. Test it: does a single physical press always produce exactly one state change?    If you finish early, implement the 3-state LED cycling FSM from your diagram. Or: add a second button that resets the counter to zero from either state. How does the state diagram change?    Verify on the oscilloscope that the LED transitions are clean (no multiple toggles per press) both with and without the debounce capacitor.     "
 },
 {
   "id": "act-day4-fsm-implement",
@@ -1996,7 +1996,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "4.1.2",
   "title": "Datasheet Scavenger Hunt",
-  "body": " Datasheet Scavenger Hunt  Your table will be assigned one component. Open its datasheet from Canvas, display it on your table's monitor, and complete the Datasheet Worksheet below. Each table will share their answers with the class at the end.  Possible components (one per table): TMP235 (analog temperature sensor), CdS photocell (light-dependent resistor), LSM303AGR (I²C accelerometer and magnetometer), HT16K33 (I²C LED matrix driver), and others as assigned.   The Datasheet Worksheet   Work through Parts A–D, then build your group slide in Part E. Some questions have two versions depending on whether your component is analog or digital — answer the one that applies. If you finish early, sketch a circuit on the board showing how you would connect your component to the STM32 Nucleo.    Part A — What Is It?  These answers are on the first page.    Read the Description (not the Features list). In one sentence, what does this component do?    Find the Recommended Operating Conditions . What supply voltage range (VDD or VCC) does the part accept? Is 3.3 V within that range? (For passive components with no supply pin, find the maximum rated operating voltage and power dissipation instead.)    Find the Absolute Maximum Ratings table. What is the maximum voltage the part can survive? Are there any other limits listed that a careless user might accidentally exceed?      Part B — How Does It Communicate?  These answers are in the Pinout and Application sections.    What interface does this component use? Check one (or more if it supports multiple): Passive (variable resistance) , Analog voltage output , I²C , SPI , UART\/serial , PWM input , Other .    List every pin needed for a minimal hookup. For each pin, write its name and what it connects to (VDD, GND, a specific STM32 pin, etc.).      Part C — What Does It Output or Require?  These answers are in the Electrical Characteristics table.     If your component is a passive sensor (variable resistance): What is the resistance at the minimum and maximum of its measurement range? Is the relationship between resistance and the measured quantity linear, or does the datasheet give a curve or formula?   If your component has an analog voltage output: What is the output voltage at the minimum and maximum of its measurement range? Is the relationship linear? Write the transfer function — the equation that converts output voltage to a physical value (temperature, light level, etc.).   If your component uses I²C: What address(es) can the part use? Many parts have a fixed base address with one or two address pins (A0, A1) that let you set the last bits, so multiple copies of the same chip can share a bus. List the possible addresses.   If your component uses SPI: What SPI mode does it require (clock polarity CPOL and clock phase CPHA)? What is the maximum clock frequency it supports?       Part C, continued — Current and Power  Also in the Electrical Characteristics table.    What is the maximum current the part draws from its supply? Does that rule out powering it from a GPIO pin (max 25 mA)? (For passive components with no supply pin, find the maximum power dissipation rating instead.)      Part D — Making It Work  These answers are in the Application Information section.    Find the example schematic or application circuit. Sketch the minimal hookup on the board at your table — just power, ground, and signal lines, labeled with pin names.    Name one thing you would need to configure or calculate in code before you could read data from this component. (Examples: set the I²C address, choose a gain setting, apply a conversion formula to the raw ADC reading.)    What was the most confusing or surprising thing you found in the datasheet?      Part E — Group Slide  Add one slide for your component to the shared class deck (link on Canvas). Include your answers to all of Parts A–D — everything except the board sketch. Keep it concise: use short phrases, not paragraphs. Other groups will use this as a reference during the share-out.     "
+  "body": " Datasheet Scavenger Hunt  Your table will be assigned one component. Open its datasheet from Canvas, display it on your table's monitor, and complete the Datasheet Worksheet below. Each table will share their answers with the class at the end.   The components, one per table: the TMP235 (analog temperature sensor), the DRV5053 (analog Hall-effect magnetic sensor), the DS3231 (I2C real-time clock), the LIS3DH (I2C or SPI three-axis accelerometer), and the Si7021 (I2C humidity and temperature sensor).   The Datasheet Worksheet   Work through Parts A–D, then build your group slide in Part E. Some questions have two versions depending on whether your component is analog or digital — answer the one that applies. If you finish early, sketch a circuit on the board showing how you would connect your component to the STM32 Nucleo.    Part A — What Is It?  These answers are on the first page.    Read the Description (not the Features list). In one sentence, what does this component do?    Find the Recommended Operating Conditions . What supply voltage range (VDD or VCC) does the part accept? Is 3.3 V within that range? (For passive components with no supply pin, find the maximum rated operating voltage and power dissipation instead.)    Find the Absolute Maximum Ratings table. What is the maximum voltage the part can survive? Are there any other limits listed that a careless user might accidentally exceed?      Part B — How Does It Communicate?  These answers are in the Pinout and Application sections.    What interface does this component use? Check one (or more if it supports multiple): Passive (variable resistance) , Analog voltage output , I²C , SPI , UART\/serial , PWM input , Other .    List every pin needed for a minimal hookup. For each pin, write its name and what it connects to (VDD, GND, a specific STM32 pin, etc.).      Part C — What Does It Output or Require?  These answers are in the Electrical Characteristics table.     If your component is a passive sensor (variable resistance): What is the resistance at the minimum and maximum of its measurement range? Is the relationship between resistance and the measured quantity linear, or does the datasheet give a curve or formula?   If your component has an analog voltage output: What is the output voltage at the minimum and maximum of its measurement range? Is the relationship linear? Write the transfer function — the equation that converts output voltage to a physical value (temperature, light level, etc.).   If your component uses I²C: What address(es) can the part use? Many parts have a fixed base address with one or two address pins (A0, A1) that let you set the last bits, so multiple copies of the same chip can share a bus. List the possible addresses.   If your component uses SPI: What SPI mode does it require (clock polarity CPOL and clock phase CPHA)? What is the maximum clock frequency it supports?       Part C, continued — Current and Power  Also in the Electrical Characteristics table.    What is the maximum current the part draws from its supply? Does that rule out powering it from a GPIO pin (max 25 mA)? (For passive components with no supply pin, find the maximum power dissipation rating instead.)      Part D — Making It Work  These answers are in the Application Information section.    Find the example schematic or application circuit. Sketch the minimal hookup on the board at your table — just power, ground, and signal lines, labeled with pin names.    Name one thing you would need to configure or calculate in code before you could read data from this component. (Examples: set the I²C address, choose a gain setting, apply a conversion formula to the raw ADC reading.)    What was the most confusing or surprising thing you found in the datasheet?      Part E — Group Slide  Add one slide for your component to the shared class deck (link on Canvas). Include your answers to all of Parts A–D — everything except the board sketch. Keep it concise: use short phrases, not paragraphs. Other groups will use this as a reference during the share-out.       "
 },
 {
   "id": "act-datasheet-passport",
@@ -2311,7 +2311,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "5.2.6",
   "title": "Part 5: Reading Transistor Datasheets",
-  "body": " Part 5: Reading Transistor Datasheets  When you open a transistor datasheet you will often see three columns for a single parameter: Min , Typ , and Max . This is not sloppiness — it reflects real manufacturing variation. No two BJTs or MOSFETs coming off the same production line are identical; a parameter like ( ) can vary by a factor of three or more across a single batch. Manufacturers characterize this spread statistically: Min and Max mark the 3 boundaries of the distribution (only about 0.15% of parts fall outside on either end), and Typ is the mean — the value you are most likely to see in any individual part.  Which column should you use? It depends on what question you are asking.   Will my circuit function at all? Use the worst-case minimum. If you design for , the transistor will saturate even if you happen to pull the weakest part from the box. Designing for instead means your circuit fails for the vast majority of real parts.   Will my circuit break or overheat? Use the worst-case maximum. To check whether you stay inside a power or voltage limit you must assume the highest plausible value — the part that runs hottest, conducts most, or swings highest.  The general rule: ask does a higher or lower value make it harder for my design to succeed? and use that value. Keep in mind that none of these numbers are fixed — , , and all shift with temperature, so for critical designs you would also check the datasheet graphs to see how the Min or Max moves when the circuit gets hot or cold.  Use the datasheets linked on Canvas to fill in the tables below.    BJT Datasheets  Record the type (NPN or PNP), the DC current gain , and the maximum continuous collector current for each device. When a range of values is listed, record the minimum — that is what governs a worst-case design.        Part Number  Type (NPN or PNP)  (minimum)  Max collector current   KSC2073  TIP42  2N3906  2N3904     MOSFET Datasheets  Record the type (NFET or PFET), the threshold voltage , and the maximum continuous drain current. Pay attention to the sign of for PFET devices.        Part Number  Type (NFET or PFET)  Threshold voltage  Max drain current   IRF9Z24  BS250P  IRFZ24  BS107P    "
+  "body": " Part 5: Reading Transistor Datasheets  When you open a transistor datasheet you will often see three columns for a single parameter: Min , Typ , and Max . This is not sloppiness — it reflects real manufacturing variation. No two BJTs or MOSFETs coming off the same production line are identical; a parameter like ( ) can vary by a factor of three or more across a single batch. Manufacturers characterize this spread statistically: Min and Max mark the 3 boundaries of the distribution (only about 0.15% of parts fall outside on either end), and Typ is the mean — the value you are most likely to see in any individual part.  Which column should you use? It depends on what question you are asking.   Will my circuit function at all? Use the worst-case minimum. If you design for , the transistor will saturate even if you happen to pull the weakest part from the box. Designing for instead means your circuit fails for the vast majority of real parts.   Will my circuit break or overheat? Use the worst-case maximum. To check whether you stay inside a power or voltage limit you must assume the highest plausible value — the part that runs hottest, conducts most, or swings highest.  The general rule: ask does a higher or lower value make it harder for my design to succeed? and use that value. Keep in mind that none of these numbers are fixed — , , and all shift with temperature, so for critical designs you would also check the datasheet graphs to see how the Min or Max moves when the circuit gets hot or cold.  Use the datasheets linked on Canvas to fill in the tables below.    BJT Datasheets  Record the type (NPN or PNP), the DC current gain , and the maximum continuous collector current for each device. When a range of values is listed, record the minimum — that is what governs a worst-case design.        Part Number  Type (NPN or PNP)  (minimum)  Max collector current   KSC2073  TIP42  2N3906  2N3904      MOSFET Datasheets  Record the type (NFET or PFET), the threshold voltage , and the maximum continuous drain current. Pay attention to the sign of for PFET devices.        Part Number  Type (NFET or PFET)  Threshold voltage  Max drain current   IRF9Z24N  BS250P  IRFZ24N  BS107P     "
 },
 {
   "id": "act-bjt-datasheets",
@@ -2329,7 +2329,7 @@ var ptx_lunr_docs = [
   "type": "Activity",
   "number": "5.2.4",
   "title": "MOSFET Datasheets.",
-  "body": " MOSFET Datasheets  Record the type (NFET or PFET), the threshold voltage , and the maximum continuous drain current. Pay attention to the sign of for PFET devices.        Part Number  Type (NFET or PFET)  Threshold voltage  Max drain current   IRF9Z24  BS250P  IRFZ24  BS107P   "
+  "body": " MOSFET Datasheets  Record the type (NFET or PFET), the threshold voltage , and the maximum continuous drain current. Pay attention to the sign of for PFET devices.        Part Number  Type (NFET or PFET)  Threshold voltage  Max drain current   IRF9Z24N  BS250P  IRFZ24N  BS107P   "
 },
 {
   "id": "subsec-adc-signal-chain",
@@ -4903,7 +4903,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "10.3.4",
   "title": "Part 4: Reading the Command Table",
-  "body": " Part 4: Reading the Command Table  Now we'll read the HT16K33's own command table and build the three command bytes we have been sending to the chip at the start of our program helloDisplay.c . Most I2C devices have registers inside them that control their behavior, and you program them through commands the datasheet defines and which you send via I2C. The HT16K33's commands are one byte each, sent as the data of an ordinary write — exactly what the three given lines at the top of helloDisplay.c were doing, except that this time the byte will mean something.  The command table is on pages 24–25 of the HT16K33 datasheet. Its layout takes a moment to read: the eight columns D15 down to D8 are the bits of the command byte, most significant first. A column with a fixed 0 or 1 is part of the command's identity; a column with a name in it — S , D , B1 , P3 — is an option you fill in; and a column marked X is a don't-care, which we write as 0. For now we mostly care about the rows named System setup , Display setup and Dimming set ( ).   The rows of the HT16K33 command table we need, from pages 24–25 of its datasheet. The eight middle columns are the bits of the command byte, D15 down to D8, and the magenta line divides them: to its left the fixed bits that are the command itself, to its right the options you fill in. A name there — S , D , B1 , P3 — is an option you supply, and an X is a don't-care that we write as 0. System setup is 0 0 1 0 X X X S, where S is the internal oscillator: 0 leaves it off, 1 turns it on. Display setup is 1 0 0 0 X B1 B0 D, where D turns the display on and B1 B0 choose the blink rate — 00 for steady, then 2 Hz, 1 Hz and 0.5 Hz. Dimming set is 1 1 1 0 P3 P2 P1 P0, the duty cycle — the fraction of each digit's turn in the sweep for which its segments are actually driven, which the datasheet calls the pulse width of ROW — in sixteenths, where 0000 is 1\/16 and 1111 is 16\/16. The Def. column on the right is each command with its options at their default. Below, separated because we do not need it until , is the display data address pointer , which says where a block of display data starts. The chip has more commands than these, but they belong to its other job, scanning a keypad, and we will not be sending any of them.     Build the Three Startup Bytes   Work these out as binary and then write them as hex. All three are in .    System setup is 0b0010 X X X S . What byte turns the oscillator on?    Display setup is 0b1000 X B1 B0 D . What byte turns the display on and not blinking? What byte would turn it on and blinking at 1 Hz?    Dimming set is 0b1110 P3 P2 P1 P0 . What byte gives full brightness? Half?    All three are one-byte writes to the device. Which I2C library function sends one, and what are its two arguments?    The answers are 0x21 , 0x81 and 0xEF : 0b00100001 is system setup with the oscillator bit set, 0b10000001 is display setup with D set and both blink bits clear, and 0b11101111 is dimming set with all four duty bits set. Blinking at 1 Hz is 0b10000101 , 0x85 , because 1 Hz is B1 B0 = 1 0. Half brightness needs the encoding read carefully, because it counts from one rather than zero — 0000 is 1\/16 and 1111 is 16\/16 — so eight sixteenths is P3–P0 = 0111 and the byte is 0xE7 . Note that 0xE7 is the byte we have been sending in helloDisplay.c and so the display you have been watching has been running at half brightness the whole time. Each command is sent to the backpack chip via i2c1_byteWrite(HT16K33_ADDR, ...) — one function call per command, one transaction on the wire per call ( ).  Rather than writing those three numbers into your code, the header file you are given for the seven segment driver names their pieces: HT16K33_SYSTEM_CMD and HT16K33_OSC_ON for the first, HT16K33_DISPLAY_CMD , HT16K33_DISPLAY_ON , HT16K33_BLINK_OFF and HT16K33_BLINK_1HZ for the second, HT16K33_BRIGHT_CMD for the third. Each name is one field of the table, so a line of driver code reads the way the datasheet row does: the command, OR'ed with its options. That is the structure to copy the next time you write one of these — the datasheet's own layout becomes the header file's layout.  Sending the three command bytes is the first function of your seven segment driver. It has to run before the display will show anything at all, and it is three calls long. You write it in .      "
+  "body": " Part 4: Reading the Command Table  Now we'll read the HT16K33's own command table and build the three command bytes we have been sending to the chip at the start of our program helloDisplay.c . Most I2C devices have registers inside them that control their behavior, and you program them through commands the datasheet defines and which you send via I2C. The HT16K33's commands are one byte each, sent as the data of an ordinary write — exactly what the three given lines at the top of helloDisplay.c were doing, except that this time the byte will mean something.  The command table is on pages 24–25 of the HT16K33 datasheet. Its layout takes a moment to read: the eight columns D15 down to D8 are the bits of the command byte, most significant first. A column with a fixed 0 or 1 is part of the command's identity; a column with a name in it — S , D , B1 , P3 — is an option you fill in; and a column marked X is a don't-care, which we write as 0. For now we mostly care about the rows named System setup , Display setup and Dimming set ( ).   The rows of the HT16K33 command table we need, from pages 24–25 of its datasheet. The eight middle columns are the bits of the command byte, D15 down to D8, and the magenta line divides them: to its left the fixed bits that are the command itself, to its right the options you fill in. A name there — S , D , B1 , P3 — is an option you supply, and an X is a don't-care that we write as 0. System setup is 0 0 1 0 X X X S, where S is the internal oscillator: 0 leaves it off, 1 turns it on. Display setup is 1 0 0 0 X B1 B0 D, where D turns the display on and B1 B0 choose the blink rate — 00 for steady, then 2 Hz, 1 Hz and 0.5 Hz. Dimming set is 1 1 1 0 P3 P2 P1 P0, the duty cycle — the fraction of each digit's turn in the sweep for which its segments are actually driven, which the datasheet calls the pulse width of ROW — in sixteenths, where 0000 is 1\/16 and 1111 is 16\/16. The Def. column on the right is each command with its options at their default. Below, separated because we do not need it until , is the display data address pointer , which says where a block of display data starts. The chip has more commands than these, but they belong to its other job, scanning a keypad, and we will not be sending any of them.     Build the Three Startup Bytes   Work these out as binary and then write them as hex. All three are in .    System setup is 0b0010 X X X S . What byte turns the oscillator on?    Display setup is 0b1000 X B1 B0 D . What byte turns the display on and not blinking? What byte would turn it on and blinking at 1 Hz?    Dimming set is 0b1110 P3 P2 P1 P0 . What byte gives full brightness? Half?    All three are one-byte writes to the device. Which I2C library function sends one, and what are its two arguments?    Take the first one all the way through, because the other two go the same way. The System setup row is 0 0 1 0 X X X S. The four bits to the left of the magenta line are the command itself and never change; the four to the right are the options, and the only one that means anything here is S, the oscillator. Write each half as its own byte and OR them together. You do not have to invent names for the two halves: SevenSegPartial.h , the header that comes with the driver, already has a #define for every field of that table.  the HT16K33 command table, datasheet pp. 24-25: system setup 0 0 1 0 | X X X S the row, and its magenta line command | options SevenSegPartial.h, the header you are given: #define HT16K33_SYSTEM_CMD 0x20 \/\/ System setup #define HT16K33_OSC_ON 0x01 \/\/ S = 1, oscillator on the command 0b0010 0000 = 0x20 HT16K33_SYSTEM_CMD the option, S = 1 0b0000 0001 = 0x01 HT16K33_OSC_ON OR ------------------- 0b0010 0001 = 0x21 i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);  That last line is the point of the whole part. The | in it is the magenta line on the table: the command name supplies the top bits, the option name supplies the bottom bits, and OR merges them into the single byte that goes on the wire. You never write 0x21 anywhere.  The other two are built the same way. Display setup is HT16K33_DISPLAY_CMD ( 0x80 ) ORed with HT16K33_DISPLAY_ON ( 0x01 ) and HT16K33_BLINK_OFF ( 0x00 ), which is 0b10000001 , 0x81 . Dimming set is HT16K33_BRIGHT_CMD ( 0xE0 ) ORed with the four duty bits, and full brightness is all four set: 0b11101111 , 0xEF .  Change an option and only the bottom bits move. Blinking at 1 Hz is 0b10000101 , 0x85 , because 1 Hz is B1 B0 = 1 0 — that is HT16K33_BLINK_1HZ in place of HT16K33_BLINK_OFF , and nothing else in the byte changes. Half brightness needs the encoding read carefully, because it counts from one rather than zero — 0000 is 1\/16 and 1111 is 16\/16 — so eight sixteenths is P3–P0 = 0111 and the byte is 0xE7 . Note that 0xE7 is the byte we have been sending in helloDisplay.c and so the display you have been watching has been running at half brightness the whole time. Each command is sent to the backpack chip via i2c1_byteWrite(HT16K33_ADDR, ...) — one function call per command, one transaction on the wire per call ( ).  Every name used above is a #define in SevenSegPartial.h , and every one of them is one field of the command table — which is why a line of driver code reads the way the datasheet row does: the command, OR'ed with its options. That is the structure to copy the next time you write one of these — the datasheet's own layout becomes the header file's layout.  Sending the three command bytes is the first function of your seven segment driver. It has to run before the display will show anything at all, and it is three calls long. You write it in .       "
 },
 {
   "id": "fig-ht16k33-cmd-table",
@@ -4930,7 +4930,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "10.3.5",
   "title": "Part 5: The Display RAM, and the Byte That Is Always Zero",
-  "body": " Part 5: The Display RAM, and the Byte That Is Always Zero  Commands configure the chip. Getting a pattern onto the display means writing its display RAM , and we'll read that RAM's layout off the datasheet slowly, because everything in the rest of the session is built on it ( ). Before that, is the piece that connects the display we took apart in the last part to the bytes we are about to send: which of the chip's outputs each digit and each segment is wired to.  One warning about the names first, because it is genuinely confusing. The datasheet calls the chip's outputs COM0 – COM7 and ROW0 – ROW15 , and it uses those names because the HT16K33 is built to drive a rectangular LED matrix, where the ROW lines really are the rows of a grid. On a seven-segment display they are nothing of the kind: ROW0 through ROW7 are the segments a through g and the decimal point, arranged around a figure eight and not in a row of anything. The name describes the chip, not our display. It will keep coming back — in the RAM map below, and in the dimming command, which sets what the datasheet calls the pulse width of ROW — so whenever you read ROW on this chip, read segment .   How the display's fourteen pins reach the HT16K33, and what that means for the buffer you fill in. Every LED sits where one COM line crosses one ROW line: the COM line is which digit, and the ROW line is which segment. Our display uses COM0 through COM4 — digit 1, digit 2, the colon, digit 3, digit 4 — and ROW0 through ROW7, which are a through g and the decimal point. So bit of the byte at display RAM address is the LED where COM crosses ROW . The colon is the one row that is not a full digit: its two dots share a single anode, which the breakout board ties to ROW1, the same line the b segments use.     The HT16K33's display RAM, from its datasheet: sixteen bytes, two per common line. The left column names the common line — the chip drives eight of them, COM0 to COM7, of which our display uses the first five: COM0 for the first digit, COM1 for the second digit, COM2 for the colon, COM3 for the third and COM4 for the fourth digit. The two hexadecimal addresses beside each COM entry hold that line's sixteen possible LEDs, ROW0 to ROW7 in the first byte and ROW8 to ROW15 in the second. The lower table gives the bit order within a byte: the upper row is the even address, D7 down to D0 mapping to ROW7 down to ROW0, and the lower one is the odd address, mapping to ROW15 down to ROW8. The arrows mark which COM line is which position on the display, and the box around COM0's pair is digit 1's two bytes. A seven-segment digit uses only the first eight rows, so for us the second byte of every pair is always 0 — and so only the even addresses 0x00, 0x02, 0x04, 0x06 and 0x08 are the five that carry anything. The segment map on the left is the same one you used yesterday, with g highlighted to match the boxed 6 in the bit-order table: bit 6 of a digit's byte is segment g .    Two bytes per digit, then, and the second one is always zero for us — the HT16K33 can drive sixteen LEDs per common line and our digits use eight. The first byte is the segments, in the same order you used yesterday — 0b DP g f e d c b a , most significant bit first. For example, to light a 0 you'd put 0b00111111 in the D7-D0 byte.  Five pairs, at addresses 0, 2, 4, 6 and 8: digit 1, digit 2, the colon, digit 3, digit 4. The colon sits in the middle because that is where it sits on the display.   Make a Pattern   Start on paper, not by writing code. The buffer is ten bytes, display_buffer[0] through display_buffer[9] .    Fill in all ten bytes to light every segment and every decimal point of all four digits, as drawn in . Write each byte in binary.    Now fill in all ten to display 0 1 2 3 .    Which byte would you change to add a decimal point after the second digit, and what would you change it to?    Every segment of every digit is 0b11111111 in bytes 0, 2, 6 and 8; every other byte, including the colon's pair at 4 and 5, is 0. To produce 0 1 2 3 on the display you put 0b00111111 , 0b00000110 , 0b01011011 , 0b01001111 in the same four places — worth deriving once by hand, after which you will use the numbertable[] array in the header, which holds the sixteen patterns for 0 through F. A decimal point after the second digit means setting bit 7 of display_buffer[2] .  That leaves two questions. The first is what lights the colon? We know it is the pair at address 4, because that is COM2, but which bit within that byte is not on the datasheet pages we have. It is worth two minutes of experiment, and tonight's clock needs the answer.   Find the Colon Bit   Work on a copy of your own helloDisplay.c . Its display_buffer already has the colon's pair in it, the two entries at index 4 and 5, both currently 0.    Before you flash anything: the colon has two dots and they always light together, so the display brings them out on one anode pin. That pin has to be tied to one of the eight the backpack drives. Which of a through DP would you bet on, and why?    Now find it. Set display_buffer[4] to 0b00000001 , flash, and look; then 0b00000010 , then 0b00000100 , and so on up. Which bit lights the colon? Is there a more efficient way to go about this experiment (remember bisection?)    Write down the number you would put in display_buffer[4] to show the colon, and save it — you'll need it when displaying a clock MM:SS .     The second question is why send the zeros at all, if the second byte of every pair does nothing?  The answer to the second question lies in the structure of the display RAM of the HT16K33 and how it is addressed. To write to the display RAM you use a pointer that holds the address of the RAM to which you'd like to write. When we write the entire display, we set the pointer to the start of the display RAM, and each write operation that is part of the same I2C transaction automatically advances the pointer to the next byte . This is what the datasheet means by the display data address pointer, and it is why writing ten bytes from address 0 fills addresses 0 through 9. The zeros are not decoration; they are what moves the pointer past the odd addresses so that the next real byte lands on the next digit. Leave them out and the second digit's pattern goes to address 1, which is the top (unused) half of digit 1.  All ten bytes go in one transaction ( ), and they have to: a STOP ends the transaction, and after a STOP the next write starts over with a new address. The library call for address the device, say where inside it, and send this many bytes is i2c1_memWrite() — the multi-byte function you have already called without knowing what it did, and this is what it was for.   Writing the whole display in one transaction — the HT16K33 datasheet calls this a page write, on page 22. After the START and the address comes one command byte, and because the display data address pointer command is 0 0 0 0 A3 A2 A1 A0, a command byte of 0x00 means start at display RAM address 0 . Every data byte after it is stored where the pointer is and moves the pointer on by one, so ten data bytes fill addresses 0 through 9. Each byte is acknowledged, and one STOP ends the whole transaction. It is the same transaction as the single command in , annotated the same way, with the data bytes added after the command byte.          "
+  "body": " Part 5: The Display RAM, and the Byte That Is Always Zero  Commands configure the chip. Getting a pattern onto the display means writing its display RAM , and we'll read that RAM's layout off the datasheet slowly, because everything in the rest of the session is built on it ( ). Before that, is the piece that connects the display we took apart in the last part to the bytes we are about to send: which of the chip's outputs each digit and each segment is wired to.  One warning about the names first, because it is genuinely confusing. The datasheet calls the chip's outputs COM0 – COM7 and ROW0 – ROW15 , and it uses those names because the HT16K33 is built to drive a rectangular LED matrix, where the ROW lines really are the rows of a grid. On a seven-segment display they are nothing of the kind: ROW0 through ROW7 are the segments a through g and the decimal point, arranged around a figure eight and not in a row of anything. The name describes the chip, not our display. It will keep coming back — in the RAM map below, and in the dimming command, which sets what the datasheet calls the pulse width of ROW — so whenever you read ROW on this chip, read segment .   How the display's fourteen pins reach the HT16K33, and what that means for the buffer you fill in. Every LED sits where one COM line crosses one ROW line: the COM line is which digit, and the ROW line is which segment. Our display uses COM0 through COM4 — digit 1, digit 2, the colon, digit 3, digit 4 — and ROW0 through ROW7, which are a through g and the decimal point. So bit of the byte at display RAM address is the LED where COM crosses ROW . The colon is the one line that is not a full digit: its two dots always light together, so they share a single anode, and that anode is tied to one of the eight ROW lines the backpack drives. Which one is not in the datasheet, and finding it is the experiment in — so the eight crossings on that line are all drawn the same here.     The HT16K33's display RAM, from its datasheet: sixteen bytes, two per common line. The left column names the common line — the chip drives eight of them, COM0 to COM7, of which our display uses the first five: COM0 for the first digit, COM1 for the second digit, COM2 for the colon, COM3 for the third and COM4 for the fourth digit. The two hexadecimal addresses beside each COM entry hold that line's sixteen possible LEDs, ROW0 to ROW7 in the first byte and ROW8 to ROW15 in the second. The lower table gives the bit order within a byte: the upper row is the even address, D7 down to D0 mapping to ROW7 down to ROW0, and the lower one is the odd address, mapping to ROW15 down to ROW8. The arrows mark which COM line is which position on the display, and the box around COM0's pair is digit 1's two bytes. A seven-segment digit uses only the first eight rows, so for us the second byte of every pair is always 0 — and so only the even addresses 0x00, 0x02, 0x04, 0x06 and 0x08 are the five that carry anything. The segment map on the left is the same one you used yesterday, with g highlighted to match the boxed 6 in the bit-order table: bit 6 of a digit's byte is segment g .    Two bytes per digit, then, and the second one is always zero for us — the HT16K33 can drive sixteen LEDs per common line and our digits use eight. The first byte is the segments, in the same order you used yesterday — 0b DP g f e d c b a , most significant bit first. For example, to light a 0 you'd put 0b00111111 in the D7-D0 byte.  Five pairs, at addresses 0, 2, 4, 6 and 8: digit 1, digit 2, the colon, digit 3, digit 4. The colon sits in the middle because that is where it sits on the display.   Make a Pattern   Start on paper, not by writing code. The buffer is ten bytes, display_buffer[0] through display_buffer[9] .    Fill in all ten bytes to light every segment and every decimal point of all four digits, as drawn in . Write each byte in binary.    Now fill in all ten to display 0 1 2 3 .    Which byte would you change to add a decimal point after the second digit, and what would you change it to?    Every segment of every digit is 0b11111111 in bytes 0, 2, 6 and 8; every other byte, including the colon's pair at 4 and 5, is 0. To produce 0 1 2 3 on the display you put 0b00111111 , 0b00000110 , 0b01011011 , 0b01001111 in the same four places — worth deriving once by hand, after which you will use the numbertable[] array in the header, which holds the sixteen patterns for 0 through F. A decimal point after the second digit means setting bit 7 of display_buffer[2] .  That leaves two questions. The first is what lights the colon? We know it is the pair at address 4, because that is COM2, but which bit within that byte is not on the datasheet pages we have. It is worth two minutes of experiment, and tonight's clock needs the answer.   Find the Colon Bit   Work on a copy of your own helloDisplay.c . Its display_buffer already has the colon's pair in it, the two entries at index 4 and 5, both currently 0.    Before you flash anything: the colon has two dots and they always light together, so the display brings them out on one anode pin. That pin has to be tied to one of the eight the backpack drives. Which of a through DP would you bet on, and why?    Now find it. Set display_buffer[4] to 0b00000001 , flash, and look; then 0b00000010 , then 0b00000100 , and so on up. Which bit lights the colon? Is there a more efficient way to go about this experiment (remember bisection?)    Write down the number you would put in display_buffer[4] to show the colon, and save it — you'll need it when displaying a clock MM:SS .     The second question is why send the zeros at all, if the second byte of every pair does nothing?  The answer to the second question lies in the structure of the display RAM of the HT16K33 and how it is addressed. To write to the display RAM you use a pointer that holds the address of the RAM to which you'd like to write. When we write the entire display, we set the pointer to the start of the display RAM, and each write operation that is part of the same I2C transaction automatically advances the pointer to the next byte . This is what the datasheet means by the display data address pointer, and it is why writing ten bytes from address 0 fills addresses 0 through 9. The zeros are not decoration; they are what moves the pointer past the odd addresses so that the next real byte lands on the next digit. Leave them out and the second digit's pattern goes to address 1, which is the top (unused) half of digit 1.  All ten bytes go in one transaction ( ), and they have to: a STOP ends the transaction, and after a STOP the next write starts over with a new address. The library call for address the device, say where inside it, and send this many bytes is i2c1_memWrite() — the multi-byte function you have already called without knowing what it did, and this is what it was for.   Writing the whole display in one transaction — the HT16K33 datasheet calls this a page write, on page 22. After the START and the address comes one command byte, and because the display data address pointer command is 0 0 0 0 A3 A2 A1 A0, a command byte of 0x00 means start at display RAM address 0 . Every data byte after it is stored where the pointer is and moves the pointer on by one, so ten data bytes fill addresses 0 through 9. Each byte is acknowledged, and one STOP ends the whole transaction. It is the same transaction as the single command in , annotated the same way, with the data bytes added after the command byte.          "
 },
 {
   "id": "subsec-day10-ram-2",
@@ -4948,7 +4948,7 @@ var ptx_lunr_docs = [
   "type": "Figure",
   "number": "10.3.12",
   "title": "",
-  "body": " How the display's fourteen pins reach the HT16K33, and what that means for the buffer you fill in. Every LED sits where one COM line crosses one ROW line: the COM line is which digit, and the ROW line is which segment. Our display uses COM0 through COM4 — digit 1, digit 2, the colon, digit 3, digit 4 — and ROW0 through ROW7, which are a through g and the decimal point. So bit of the byte at display RAM address is the LED where COM crosses ROW . The colon is the one row that is not a full digit: its two dots share a single anode, which the breakout board ties to ROW1, the same line the b segments use.   "
+  "body": " How the display's fourteen pins reach the HT16K33, and what that means for the buffer you fill in. Every LED sits where one COM line crosses one ROW line: the COM line is which digit, and the ROW line is which segment. Our display uses COM0 through COM4 — digit 1, digit 2, the colon, digit 3, digit 4 — and ROW0 through ROW7, which are a through g and the decimal point. So bit of the byte at display RAM address is the LED where COM crosses ROW . The colon is the one line that is not a full digit: its two dots always light together, so they share a single anode, and that anode is tied to one of the eight ROW lines the backpack drives. Which one is not in the datasheet, and finding it is the experiment in — so the eight crossings on that line are all drawn the same here.   "
 },
 {
   "id": "fig-display-ram-map",
@@ -5524,7 +5524,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "10.4.11",
   "title": "The Register Read\/Write Pattern",
-  "body": " The Register Read\/Write Pattern  The HT16K33 is unusual in being almost stateless: you send it a command or a block of display data and it acts. Most I2C parts are organized as a set of numbered registers instead, and their datasheets describe access to those registers in the four shapes of . It is worth reading now, because it is the pattern behind i2c1_memWrite() and i2c1_memRead() , and because every I2C sensor you meet later is documented this way.   The four register-access transfers, as an I2C sensor's datasheet draws them, with the sequence written out underneath the two single-byte cases. ST is the START and SP the STOP; SAD is the device address; SUB is the sub-address, meaning the register number inside the device; SAK is the target's acknowledge; SR is a repeated START; and MAK and NMAK are the controller's own acknowledge and final not-acknowledge when it is the one receiving. A write is device address, register number, then data bytes — and the register number advances by itself for each further byte, which is exactly what the HT16K33's display data pointer does. A read needs both directions in one transaction: address and register number going out, then a repeated START to turn the bus around without releasing it, then the device address again with the read bit, and the data coming back.    The repeated START in the read case is the reason AUTOEND exists as a choice rather than always being on. A STOP between the two halves would free the bus, and on a bus with a second controller on it the register pointer you just set could be changed by somebody else before you read from it.  "
+  "body": " The Register Read\/Write Pattern  The HT16K33 is unusual in being almost stateless: you send it a command or a block of display data and it acts. Most I2C parts are organized as a set of numbered registers instead, and their datasheets describe access to those registers in the four shapes of . It is worth reading now, because it is the pattern behind i2c1_memWrite() and i2c1_memRead() , and because every I2C sensor you meet later is documented this way.   The four register-access transfers, as the LSM303AGR's datasheet draws them (§6.1.1) — the accelerometer you meet in — with the sequence written out underneath the two single-byte cases. ST is the START and SP the STOP; SAD is the device address; SUB is the sub-address, meaning the register number inside the device; SAK is the target's acknowledge; SR is a repeated START; and MAK and NMAK are the controller's own acknowledge and final not-acknowledge when it is the one receiving. A write is device address, register number, then data bytes — and the register number advances by itself for each further byte, which is exactly what the HT16K33's display data pointer does. A read needs both directions in one transaction: address and register number going out, then a repeated START to turn the bus around without releasing it, then the device address again with the read bit, and the data coming back.    The repeated START in the read case is the reason AUTOEND exists as a choice rather than always being on. A STOP between the two halves would free the bus, and on a bus with a second controller on it the register pointer you just set could be changed by somebody else before you read from it.  "
 },
 {
   "id": "fig-i2c-transfer-pattern",
@@ -5533,7 +5533,7 @@ var ptx_lunr_docs = [
   "type": "Figure",
   "number": "10.4.4",
   "title": "",
-  "body": " The four register-access transfers, as an I2C sensor's datasheet draws them, with the sequence written out underneath the two single-byte cases. ST is the START and SP the STOP; SAD is the device address; SUB is the sub-address, meaning the register number inside the device; SAK is the target's acknowledge; SR is a repeated START; and MAK and NMAK are the controller's own acknowledge and final not-acknowledge when it is the one receiving. A write is device address, register number, then data bytes — and the register number advances by itself for each further byte, which is exactly what the HT16K33's display data pointer does. A read needs both directions in one transaction: address and register number going out, then a repeated START to turn the bus around without releasing it, then the device address again with the read bit, and the data coming back.   "
+  "body": " The four register-access transfers, as the LSM303AGR's datasheet draws them (§6.1.1) — the accelerometer you meet in — with the sequence written out underneath the two single-byte cases. ST is the START and SP the STOP; SAD is the device address; SUB is the sub-address, meaning the register number inside the device; SAK is the target's acknowledge; SR is a repeated START; and MAK and NMAK are the controller's own acknowledge and final not-acknowledge when it is the one receiving. A write is device address, register number, then data bytes — and the register number advances by itself for each further byte, which is exactly what the HT16K33's display data pointer does. A read needs both directions in one transaction: address and register number going out, then a repeated START to turn the bus around without releasing it, then the device address again with the read bit, and the data coming back.   "
 },
 {
   "id": "subsec-i2c-ref-ht16k33",
@@ -5560,7 +5560,7 @@ var ptx_lunr_docs = [
   "type": "Subsection",
   "number": "11.1.1",
   "title": "How a DC Motor Works",
-  "body": " How a DC Motor Works   How a DC motor works. Watch this short video before reading the explanation below — the animation makes the relationship between current, magnetic field, and rotation much easier to follow.    Inside a DC permanent-magnet motor, electrical current flows through coils wound around a rotating armature. The current creates a magnetic field that interacts with the permanent magnets in the motor's housing, producing a force — and therefore torque — on the armature. The armature rotates, and a mechanical commutator (or electronic equivalent) continuously switches the current direction in the coils to keep the torque acting in the same rotational direction.  Two relationships govern DC motor behavior. First, torque is proportional to current: more current means more force on the armature. Second, at steady state, speed is approximately proportional to the voltage applied across the motor terminals. A higher voltage drives more current through the coil resistance, producing more torque, which accelerates the motor until a back-EMF (a voltage generated by the spinning motor itself, opposing the supply) limits further acceleration. At that equilibrium, speed is roughly proportional to supply voltage.  Direction is controlled by polarity: reverse the voltage across the motor terminals and the current through the armature reverses, the magnetic force reverses, and the motor spins the other way. This means that to control a DC motor from a microcontroller we need two things: a way to switch the polarity of the voltage, and a way to vary the magnitude of the average voltage to set speed.  "
+  "body": " How a DC Motor Works   A short animation of how a brushed DC motor works. Watch it before reading on — the moving picture makes the link between the current, the magnetic field, and the rotation much easier to follow than words alone.    Inside a DC permanent-magnet motor, current flows through coils wound around a rotating armature. That current sets up a magnetic field, and the permanent magnets in the motor's housing push against it. The push is a force on the armature, so the armature turns. A commutator keeps switching the direction of the current in the coils as the shaft rotates, so the push always drives the rotation the same way.  Two relationships describe how the motor behaves. The first is that the torque — the turning force — is proportional to the current through the coils: the more current we push through, the harder the motor turns. The second is that a spinning motor also generates a voltage. A coil moving through a magnetic field generates a voltage of its own, and a spinning motor is exactly that: it acts as a small generator, producing a voltage that opposes the supply and is proportional to speed. We call this the back-EMF (back electromotive force). At steady speed the supply voltage, the back-EMF, and the resistance of the coils balance out, and so the steady speed is roughly proportional to the voltage across the motor's terminals.  Direction is set by polarity. Reverse the voltage across the terminals and the current reverses, the force reverses, and the motor turns the other way. So to control a motor from the STM32C031C6 we have two things to arrange: a way to reverse the polarity of the motor's voltage, which sets its direction, and a way to vary the average value of that voltage, which sets its speed. The rest of this reading is about why neither one is something a GPIO pin can do on its own.  "
 },
 {
   "id": "fig-dc-motor-video",
@@ -5569,7 +5569,16 @@ var ptx_lunr_docs = [
   "type": "Figure",
   "number": "11.1.1",
   "title": "",
-  "body": " How a DC motor works. Watch this short video before reading the explanation below — the animation makes the relationship between current, magnetic field, and rotation much easier to follow.   "
+  "body": " A short animation of how a brushed DC motor works. Watch it before reading on — the moving picture makes the link between the current, the magnetic field, and the rotation much easier to follow than words alone.   "
+},
+{
+  "id": "subsec-dc-motor-physics-4",
+  "level": "2",
+  "url": "subsec-dc-motor-physics.html#subsec-dc-motor-physics-4",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "back-EMF "
 },
 {
   "id": "subsec-hbridge-concept",
@@ -5577,8 +5586,8 @@ var ptx_lunr_docs = [
   "url": "subsec-hbridge-concept.html",
   "type": "Subsection",
   "number": "11.1.2",
-  "title": "The H-Bridge: Switching Direction",
-  "body": " The H-Bridge: Switching Direction   H-bridge circuit. Four MOSFETs are arranged in an H around the motor (M), with the motor forming the crossbar. The two top transistors connect to the motor supply voltage (Motor VCC); the two bottom transistors connect to ground. Closing one diagonal pair (top-left and bottom-right, or top-right and bottom-left) directs current through the motor in one direction or the other.    A GPIO pin can source or sink only a few milliamps, and it can only drive to ground or 3.3 V — it cannot reverse polarity or supply the hundreds of milliamps a motor typically needs. A motor driver IC solves both problems. At its heart is an H-bridge : a circuit of four switches arranged in an H shape around the motor.  Each switch in the H-bridge is a transistor (the same concept as in the transistors chapter). By closing two specific switches and opening the other two, current is directed through the motor in one direction. Swapping which pair is closed reverses the current and therefore reverses the motor direction. A third configuration — connecting both motor terminals to the same voltage rail — brakes the motor by short-circuiting the back-EMF.  In this course we use the TB6612FNG motor driver IC, which integrates an H-bridge capable of supplying up to 1.2 A continuous. The MCU controls it through two logic-level input pins (IN1 and IN2) that determine direction and brake mode, plus a PWM input that controls speed. The motor is powered from a separate supply (up to 15 V), keeping the high-current motor path entirely separate from the 3.3 V MCU circuitry.  "
+  "title": "Reversing Direction: The H-Bridge",
+  "body": " Reversing Direction: The H-Bridge   An H-bridge. Four switches surround the motor (M), which forms the crossbar of the H. The two upper switches connect to the motor's supply and the two lower ones to ground, so closing one diagonal pair of switches sends current through the motor one way, and closing the other diagonal pair sends it the other way. (The sketch labels the supply rail Motor VCC ; the rest of this chapter calls that rail VM, the motor supply, to keep it distinct from the driver's 3.3 V logic supply, VCC.)    We saw above that reversing a motor's direction means reversing the polarity of the voltage across it, and that a motor draws far more current than a small signal does. A GPIO pin can do neither: it drives its pin only to ground or to 3.3 V, never the reverse of that, and it can source or sink only a few milliamps where a motor wants hundreds. Both problems are solved by a motor driver IC , and at its heart is an H-bridge — a circuit of four switches arranged in an H around the motor.  Each of those four switches is a transistor — the same N-channel and P-channel switches we met on Day 6. Closing one diagonal pair of them sends current through the motor in one direction; closing the other diagonal pair reverses the current, and with it the direction of rotation. There is also a useful third setting that brakes the motor. We will work out in class exactly which switches to close for each of these, and why braking works.  The driver IC we use in this course is the TB6612FNG . The STM32C031C6 controls it with a few logic-level signals — two inputs that choose the direction (or braking), and a PWM input that sets the speed — while the motor itself runs from its own power supply. That separation is the point of the driver: our 3.3 V logic decides what the motor should do, and the driver switches the motor's larger voltage and current to make it happen.  "
 },
 {
   "id": "fig-hbridge-concept",
@@ -5587,7 +5596,7 @@ var ptx_lunr_docs = [
   "type": "Figure",
   "number": "11.1.2",
   "title": "",
-  "body": " H-bridge circuit. Four MOSFETs are arranged in an H around the motor (M), with the motor forming the crossbar. The two top transistors connect to the motor supply voltage (Motor VCC); the two bottom transistors connect to ground. Closing one diagonal pair (top-left and bottom-right, or top-right and bottom-left) directs current through the motor in one direction or the other.   "
+  "body": " An H-bridge. Four switches surround the motor (M), which forms the crossbar of the H. The two upper switches connect to the motor's supply and the two lower ones to ground, so closing one diagonal pair of switches sends current through the motor one way, and closing the other diagonal pair sends it the other way. (The sketch labels the supply rail Motor VCC ; the rest of this chapter calls that rail VM, the motor supply, to keep it distinct from the driver's 3.3 V logic supply, VCC.)   "
 },
 {
   "id": "subsec-hbridge-concept-3",
@@ -5613,26 +5622,17 @@ var ptx_lunr_docs = [
   "url": "subsec-pwm-concept.html",
   "type": "Subsection",
   "number": "11.1.3",
-  "title": "PWM: Controlling Speed with Switching",
-  "body": " PWM: Controlling Speed with Switching  Setting motor speed requires varying the average voltage delivered to the motor — but a digital output can only be fully HIGH or fully LOW. The solution is Pulse-Width Modulation (PWM): the output switches rapidly between HIGH and LOW at a fixed frequency, and the fraction of each period spent HIGH — the duty cycle — determines the average voltage.  A 100% duty cycle delivers the full supply voltage continuously. A 50% duty cycle switches between HIGH and LOW for equal intervals, so the average voltage is half the supply. A 0% duty cycle keeps the output LOW and delivers zero average voltage. As long as the switching frequency is high enough (typically several kilohertz), the motor's mechanical inertia averages out the switching and the motor behaves as if it were driven by a steady voltage equal to the average.  PWM is generated by the same hardware timers we used in the previous chapter — no CPU involvement needed during normal operation. The timer is configured to compare its counter against a capture\/compare register (CCR): when the counter is below the CCR value, the output is HIGH; when it reaches the CCR, the output goes LOW until the counter resets. Changing the CCR value at any time changes the duty cycle, and therefore the motor speed, instantly.  "
+  "title": "Setting Speed: Pulse-Width Modulation",
+  "body": " Setting Speed: Pulse-Width Modulation  The other half of the problem is speed, and a motor's steady speed follows the average voltage across it. Here too a GPIO pin looks unpromising: its output is either fully HIGH (3.3 V) or fully LOW (0 V), with nothing in between, so it cannot hold an average of, say, a third of the supply. What it can do is switch between HIGH and LOW very quickly, and that turns out to be enough.   Pulse-Width Modulation (PWM) switches the output between HIGH and LOW at a fixed frequency and varies the fraction of each period it spends HIGH. That fraction is the duty cycle , and it sets the average voltage: a 100% duty cycle holds the full supply continuously, a 50% duty cycle spends equal time HIGH and LOW and averages half the supply, and a 0% duty cycle holds LOW and averages nothing. As long as the switching is fast enough, the motor's own mechanical inertia smooths the pulses out, and the motor turns as though it were driven by that steady average. This is the same trick we used to dim the seven-segment display on Day 10 — there it was your eye, rather than a spinning mass, that did the averaging.  One thing makes PWM practical to use: the hardware timers we met on Day 8 can produce the switching waveform entirely on their own. Once the timer is set up and given a duty cycle, it generates the PWM signal without any further attention from the CPU, which is then free to do other work. We will look at how to set the timer up for this in class; for now the idea to hold onto is that the duty cycle sets the average voltage, and the average voltage sets the speed.  "
 },
 {
-  "id": "subsec-pwm-concept-2",
+  "id": "subsec-pwm-concept-3",
   "level": "2",
-  "url": "subsec-pwm-concept.html#subsec-pwm-concept-2",
+  "url": "subsec-pwm-concept.html#subsec-pwm-concept-3",
   "type": "Paragraph (with a defined term)",
   "number": "",
   "title": "",
   "body": "Pulse-Width Modulation duty cycle "
-},
-{
-  "id": "subsec-pwm-concept-4",
-  "level": "2",
-  "url": "subsec-pwm-concept.html#subsec-pwm-concept-4",
-  "type": "Paragraph (with a defined term)",
-  "number": "",
-  "title": "",
-  "body": "capture\/compare register "
 },
 {
   "id": "rq-motors-concepts",
@@ -5641,7 +5641,7 @@ var ptx_lunr_docs = [
   "type": "Check Your Understanding",
   "number": "11.1.4",
   "title": "Check Your Understanding",
-  "body": "  A DC motor is spinning clockwise. What change to the electrical circuit would make it spin counter-clockwise?    Reverse the polarity of the voltage across the motor terminals so current flows through the armature in the opposite direction.  Correct. Reversing current direction reverses the magnetic force on the armature, reversing the torque and therefore the direction of rotation. This is what the H-bridge does when you swap which switch pair is closed.    Increase the supply voltage so the motor overspeeds and the commutator reverses automatically.  Increasing voltage increases speed but does not reverse direction. There is no automatic commutator reversal from overspeed.    Reduce the duty cycle to 0% so the motor decelerates and then spins backwards.  A 0% duty cycle removes power and the motor coasts to a stop, but does not cause it to spin backwards. Reversing direction requires reversing current, not just reducing it.    Connect both motor terminals to the same voltage rail.  Connecting both terminals to the same rail (brake mode) stops the motor by short-circuiting the back-EMF. It does not reverse the direction.      A PWM signal switches between 0 V and 5 V at 10 kHz. The duty cycle is set to 30%. What average voltage does the motor see?    1.5 V — 30% of 5 V.  Correct. Average voltage = duty cycle × supply voltage = 0.30 × 5 V = 1.5 V. The motor's mechanical inertia averages the rapid switching and the shaft speed corresponds to this average voltage.    5 V — the motor always sees the full supply voltage when PWM is used.  PWM delivers the full supply voltage only during the HIGH phase, which is 30% of each cycle. The effective average is 1.5 V.    3.5 V — the motor sees the supply minus the duty cycle percentage.  Average voltage = duty cycle × supply, not supply minus duty cycle. 30% duty at 5 V gives 1.5 V, not 3.5 V.    0 V — at 30% duty cycle the motor receives less than 50% and cannot spin.  There is no 50% threshold. The motor receives an average of 1.5 V at 30% duty cycle and will spin at a reduced speed proportional to that average voltage.      To change motor speed, you update the capture\/compare register (CCR) of TIM14 in the main loop. Does the CPU need to keep doing anything to maintain the new speed once CCR is updated?    No — the timer hardware generates the PWM signal autonomously. The CPU writes the new CCR value once and the timer immediately applies the new duty cycle until told otherwise.  Correct. This is the same autonomy that makes timers useful for delays and interrupts. The PWM waveform is generated entirely in hardware; the CPU is free to do other work.    Yes — the CPU must toggle a GPIO pin at the correct frequency to maintain the PWM signal.  Bit-banging PWM in software (manually toggling a GPIO pin) is possible but wastes CPU time. Hardware PWM via the timer generates the signal without any CPU involvement after setup.    Yes — the CPU must write the CCR value on every timer period to keep the duty cycle stable.  The timer uses the CCR value continuously until it is changed. Writing it once sets the duty cycle indefinitely.    No — but only if the PWM frequency is below 1 kHz; at higher frequencies the CPU must assist the timer.  Hardware PWM operates at any frequency within the timer's capability without CPU assistance. Frequency does not change this.     "
+  "body": "  A DC motor is spinning clockwise. What change to the electrical circuit would make it spin counter-clockwise?    Reverse the polarity of the voltage across the motor terminals so current flows through the armature in the opposite direction.  Correct. Reversing current direction reverses the magnetic force on the armature, reversing the torque and therefore the direction of rotation. This is what the H-bridge does when you swap which switch pair is closed.    Increase the supply voltage so the motor overspeeds and the commutator reverses automatically.  Increasing voltage increases speed but does not reverse direction. There is no automatic commutator reversal from overspeed.    Reduce the duty cycle to 0% so the motor decelerates and then spins backwards.  A 0% duty cycle removes power and the motor coasts to a stop, but does not cause it to spin backwards. Reversing direction requires reversing current, not just reducing it.    Connect both motor terminals to the same voltage rail.  Connecting both terminals to the same rail (brake mode) stops the motor by short-circuiting the back-EMF. It does not reverse the direction.      A PWM signal switches between 0 V and 5 V at 10 kHz. The duty cycle is set to 30%. What average voltage does the motor see?    1.5 V — 30% of 5 V.  Correct. Average voltage = duty cycle × supply voltage = 0.30 × 5 V = 1.5 V. The motor's mechanical inertia averages the rapid switching and the shaft speed corresponds to this average voltage.    5 V — the motor always sees the full supply voltage when PWM is used.  PWM delivers the full supply voltage only during the HIGH phase, which is 30% of each cycle. The effective average is 1.5 V.    3.5 V — the motor sees the supply minus the duty cycle percentage.  Average voltage = duty cycle × supply, not supply minus duty cycle. 30% duty at 5 V gives 1.5 V, not 3.5 V.    0 V — at 30% duty cycle the motor receives less than 50% and cannot spin.  There is no 50% threshold. The motor receives an average of 1.5 V at 30% duty cycle and will spin at a reduced speed proportional to that average voltage.      You set the PWM duty cycle once in your program to choose a motor speed. Does the CPU have to keep doing anything to hold that speed, or does the timer maintain the PWM signal on its own?    No — the timer hardware generates the PWM signal on its own. The CPU sets the duty cycle once, and the timer applies it and holds it until told otherwise.  Correct. This is the same autonomy that makes timers useful for delays and interrupts. The PWM waveform is generated entirely in hardware; the CPU is free to do other work.    Yes — the CPU must toggle a GPIO pin at the correct frequency to maintain the PWM signal.  Bit-banging PWM in software (manually toggling a GPIO pin) is possible but wastes CPU time. Hardware PWM via the timer generates the signal without any CPU involvement after setup.    Yes — the CPU must re-send the duty cycle to the timer on every period to keep it stable.  The timer holds the duty cycle continuously until it is changed. Setting it once fixes the speed indefinitely.    No — but only if the PWM frequency is below 1 kHz; at higher frequencies the CPU must assist the timer.  Hardware PWM operates at any frequency within the timer's capability without CPU assistance. Frequency does not change this.     "
 },
 {
   "id": "rq-motor-direction",
@@ -5668,291 +5668,1497 @@ var ptx_lunr_docs = [
   "type": "Reading Question",
   "number": "11.1.4.3",
   "title": "",
-  "body": " To change motor speed, you update the capture\/compare register (CCR) of TIM14 in the main loop. Does the CPU need to keep doing anything to maintain the new speed once CCR is updated?    No — the timer hardware generates the PWM signal autonomously. The CPU writes the new CCR value once and the timer immediately applies the new duty cycle until told otherwise.  Correct. This is the same autonomy that makes timers useful for delays and interrupts. The PWM waveform is generated entirely in hardware; the CPU is free to do other work.    Yes — the CPU must toggle a GPIO pin at the correct frequency to maintain the PWM signal.  Bit-banging PWM in software (manually toggling a GPIO pin) is possible but wastes CPU time. Hardware PWM via the timer generates the signal without any CPU involvement after setup.    Yes — the CPU must write the CCR value on every timer period to keep the duty cycle stable.  The timer uses the CCR value continuously until it is changed. Writing it once sets the duty cycle indefinitely.    No — but only if the PWM frequency is below 1 kHz; at higher frequencies the CPU must assist the timer.  Hardware PWM operates at any frequency within the timer's capability without CPU assistance. Frequency does not change this.    "
+  "body": " You set the PWM duty cycle once in your program to choose a motor speed. Does the CPU have to keep doing anything to hold that speed, or does the timer maintain the PWM signal on its own?    No — the timer hardware generates the PWM signal on its own. The CPU sets the duty cycle once, and the timer applies it and holds it until told otherwise.  Correct. This is the same autonomy that makes timers useful for delays and interrupts. The PWM waveform is generated entirely in hardware; the CPU is free to do other work.    Yes — the CPU must toggle a GPIO pin at the correct frequency to maintain the PWM signal.  Bit-banging PWM in software (manually toggling a GPIO pin) is possible but wastes CPU time. Hardware PWM via the timer generates the signal without any CPU involvement after setup.    Yes — the CPU must re-send the duty cycle to the timer on every period to keep it stable.  The timer holds the duty cycle continuously until it is changed. Setting it once fixes the speed indefinitely.    No — but only if the PWM frequency is below 1 kHz; at higher frequencies the CPU must assist the timer.  Hardware PWM operates at any frequency within the timer's capability without CPU assistance. Frequency does not change this.    "
 },
 {
-  "id": "sec-motor-basics",
+  "id": "subsec-day11-actuator-chain",
   "level": "1",
-  "url": "sec-motor-basics.html",
-  "type": "Section",
-  "number": "11.2",
-  "title": "DC Motor Fundamentals",
-  "body": " DC Motor Fundamentals   Actuator signal chain. The MCU computes an integer command; a DAC or PWM converts it to an analog voltage; a driver IC amplifies current; the motor produces mechanical motion. Each stage is necessary because the MCU cannot directly supply the power the motor needs.    In a DC permanent-magnet motor, current through the armature coils creates a magnetic field that repels the permanent magnets in the stator, producing torque. Torque is proportional to current; current is determined by the applied voltage and back-EMF. At steady state the motor speed is approximately proportional to the applied voltage. To reverse direction, reverse the polarity of the voltage across the motor terminals.  "
+  "url": "subsec-day11-actuator-chain.html",
+  "type": "Subsection",
+  "number": "11.2.1",
+  "title": "Part 1: The Actuator Chain, and What Sets the Speed",
+  "body": " Part 1: The Actuator Chain, and What Sets the Speed  In the ADC Chapter we drew the sensor signal chain ( ): a physical quantity enters from the world, a sensor turns it into a voltage, an analog front end conditions it, the ADC turns it into an integer, and the MCU computes with that integer. Driving an actuator runs the same chain in reverse. A number leaves the MCU, a converter turns it into a voltage, a driver raises that to the larger voltage and current the actuator needs, and the actuator turns it into a physical quantity — here, the rotation of a motor.   The actuator signal chain, the mirror of the sensor chain from the ADC chapter. The MCU produces an integer command; a converter turns it into a voltage; a driver raises that to the voltage and current the actuator needs; and the actuator turns it into motion. Because the STM32C031C6 has no true digital-to-analog converter, a PWM signal stands in for the converter — which is why this chapter builds both the driver and the PWM.    Two stages of that chain are new, and they are what this chapter is about: the driver , in our case we'll use the TB6612 motor driver IC, and the converter, which on our chip is a PWM signal rather than a true DAC (digital-to-analog converter, the counterpart of the ADC from Day 7). In the reading you learned: a motor's direction is set by the polarity of its voltage, and its speed by the average value of that voltage.   The motor drawn as a circuit. The supply voltage drives a current through the armature's resistance , and the spinning motor itself acts as a generator producing the back-EMF , which opposes the supply.    The reading said that a motor's steady speed follows the voltage across its terminals. That is worth deriving, because the relationships behind it also tell us what else sets the speed. Writing for the torque, for the current through the armature, for the rotational speed, for the back-EMF and for the voltage at the terminals, four relationships describe the motor:   The torque is proportional to the current, with a constant that the motor's construction fixes: .  At a steady speed the motor is no longer accelerating, so the torque is just overcoming friction: , where describes the friction.  The back-EMF is proportional to the speed, with its own constant : .  The armature coils have a resistance , and the voltage left over after the back-EMF is what drives the current through it: .    The four relationships together, in the symbols used above.    Combining those four equations to eliminate and yields a relationship that only has and in it: this is the speed the motor settles at:   The speed a DC motor settles at for a given terminal voltage. Everything in the denominator is a constant of the motor and its load, so the steady speed is proportional to .    Every symbol in the denominator is a constant of the motor and its load, so the speed is proportional to the terminal voltage — the fact the reading asked you to take on trust, and the reason that varying the average voltage is how we vary the speed. Note what the equation does not cover: it balances a torque against friction at a steady speed, so it says nothing about what happens in the moment you switch a stopped motor on. You will learn to model that in ENGS 22 or ENGS 26.      What else changes the speed?   Work through both parts with this equation in front of you:      Fill in the right-hand column of the table. For each row, decide first from physical intuition whether increasing that quantity should make the motor turn faster or slower, and then check your answer against the equation.      Increase this quantity  Does increase or decrease?    Friction,    Armature resistance,    Generator constant, , where    Torque constant, , where       Now the case the equation does not cover. At the instant you connect a stopped motor to a voltage , the shaft is not yet turning. What is the back-EMF at that instant, and what current flows through the armature? Compare that current with the current the same motor draws once it has come up to speed. Which is larger, and why?     "
 },
 {
-  "id": "fig-embedded-actuator-chain",
+  "id": "subsec-day11-actuator-chain-2",
   "level": "2",
-  "url": "sec-motor-basics.html#fig-embedded-actuator-chain",
+  "url": "subsec-day11-actuator-chain.html#subsec-day11-actuator-chain-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "sensor signal chain "
+},
+{
+  "id": "fig-actuator-chain",
+  "level": "2",
+  "url": "subsec-day11-actuator-chain.html#fig-actuator-chain",
   "type": "Figure",
   "number": "11.2.1",
   "title": "",
-  "body": " Actuator signal chain. The MCU computes an integer command; a DAC or PWM converts it to an analog voltage; a driver IC amplifies current; the motor produces mechanical motion. Each stage is necessary because the MCU cannot directly supply the power the motor needs.   "
+  "body": " The actuator signal chain, the mirror of the sensor chain from the ADC chapter. The MCU produces an integer command; a converter turns it into a voltage; a driver raises that to the voltage and current the actuator needs; and the actuator turns it into motion. Because the STM32C031C6 has no true digital-to-analog converter, a PWM signal stands in for the converter — which is why this chapter builds both the driver and the PWM.   "
 },
 {
-  "id": "sec-h-bridge",
-  "level": "1",
-  "url": "sec-h-bridge.html",
-  "type": "Section",
-  "number": "11.3",
-  "title": "H-Bridge Direction Control",
-  "body": " H-Bridge Direction Control  An H-bridge is a circuit of four switches arranged in an H shape around the motor. By opening and closing different pairs of switches, the controller can apply voltage in either polarity (forward or reverse) or connect both motor terminals to the same rail (brake).   H-bridge in clockwise mode (IN1=HIGH, IN2=LOW, left) and counter-clockwise mode (IN1=LOW, IN2=HIGH, right). Current flows through the motor in opposite directions, reversing the electromagnetic torque and therefore the rotation direction.      H-bridge in brake mode (IN1=HIGH, IN2=HIGH). Both motor terminals are connected to the same rail; the motor acts as a generator dumping kinetic energy to ground, producing rapid deceleration.     TB6612FNG truth table summarizing all operating modes. IN1 and IN2 control direction; PWM controls speed. The STBY pin enables the driver (HIGH = active); it is pulled up through the breakout board.     TB6612FNG internal block diagram. The IC contains two full H-bridge circuits, each controlled by IN1, IN2, and PWM signals. Internal logic prevents shoot-through (both upper and lower switches on simultaneously) by enforcing a dead-time between transitions.     TB6612FNG breakout board wiring for the first exercise. VM (motor power) connects to the external power supply (6–12 V); VCC (logic power) connects to the Nucleo's 3.3 V rail. AIN1, AIN2, and PWMA connect to GPIO output pins. The motor connects to AO1 and AO2.     Shoot-through and dead-time  If the upper and lower switches of one H-bridge leg turn on simultaneously, they create a short circuit from the power supply to ground — called shoot-through . The TB6612FNG's internal logic prevents this by inserting a brief dead-time between switching events. This is why you should not drive IN1 and IN2 directly with complementary GPIO signals without the motor driver IC in between.   "
-},
-{
-  "id": "sec-h-bridge-2",
+  "id": "subsec-day11-actuator-chain-4",
   "level": "2",
-  "url": "sec-h-bridge.html#sec-h-bridge-2",
+  "url": "subsec-day11-actuator-chain.html#subsec-day11-actuator-chain-4",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "driver DAC "
+},
+{
+  "id": "fig-motor-circuit",
+  "level": "2",
+  "url": "subsec-day11-actuator-chain.html#fig-motor-circuit",
+  "type": "Figure",
+  "number": "11.2.2",
+  "title": "",
+  "body": " The motor drawn as a circuit. The supply voltage drives a current through the armature's resistance , and the spinning motor itself acts as a generator producing the back-EMF , which opposes the supply.   "
+},
+{
+  "id": "fig-motor-relations",
+  "level": "2",
+  "url": "subsec-day11-actuator-chain.html#fig-motor-relations",
+  "type": "Figure",
+  "number": "11.2.3",
+  "title": "",
+  "body": " The four relationships together, in the symbols used above.   "
+},
+{
+  "id": "fig-equilibrium-speed",
+  "level": "2",
+  "url": "subsec-day11-actuator-chain.html#fig-equilibrium-speed",
+  "type": "Figure",
+  "number": "11.2.4",
+  "title": "",
+  "body": " The speed a DC motor settles at for a given terminal voltage. Everything in the denominator is a constant of the motor and its load, so the steady speed is proportional to .   "
+},
+{
+  "id": "act-day11-speed-params",
+  "level": "2",
+  "url": "subsec-day11-actuator-chain.html#act-day11-speed-params",
+  "type": "Activity",
+  "number": "11.2.1",
+  "title": "What else changes the speed?",
+  "body": " What else changes the speed?   Work through both parts with this equation in front of you:      Fill in the right-hand column of the table. For each row, decide first from physical intuition whether increasing that quantity should make the motor turn faster or slower, and then check your answer against the equation.      Increase this quantity  Does increase or decrease?    Friction,    Armature resistance,    Generator constant, , where    Torque constant, , where       Now the case the equation does not cover. At the instant you connect a stopped motor to a voltage , the shaft is not yet turning. What is the back-EMF at that instant, and what current flows through the armature? Compare that current with the current the same motor draws once it has come up to speed. Which is larger, and why?   "
+},
+{
+  "id": "subsec-day11-hbridge",
+  "level": "1",
+  "url": "subsec-day11-hbridge.html",
+  "type": "Subsection",
+  "number": "11.2.2",
+  "title": "Part 2: The H-Bridge Reverses the Motor",
+  "body": " Part 2: The H-Bridge Reverses the Motor  Reversing a motor means reversing the polarity of the voltage across it, and in an embedded system there is no hand to swap the two wires. The H-bridge does it electronically. As we saw in the reading ( ), it is four transistor switches around the motor: two upper switches to the motor supply and two lower switches to ground. The upper two transistors are P-channel switches, which are on when their gate is LOW, and the lower two are N-channel switches, which are on when their gate is HIGH.    The four switches are power MOSFETs, and they are not all the same kind. The upper two are P-channel devices, which conduct when their gate is driven LOW; the lower two are N-channel devices, which conduct when their gate is driven HIGH. The gate of each is marked g . That opposition is what the next page turns into a single control line per side.     Closing one switch on the upper rail and the opposite switch on the lower rail connects one motor terminal to the supply and the other to ground, so current runs through the motor. Closing the other diagonal pair connects the terminals the other way round, and the current — and the rotation — reverses.  That leaves a question the four switches do not answer on their own: what drives their gates? The bridge is not built with four independent controls. Each side is driven from a single control line — one we will call IN1 for the left pair and IN2 for the right pair — and the trick is that the two transistors on a side respond to that one line in opposite ways. A P-channel switch on top turns on when its gate goes LOW, and an N-channel switch beneath it turns on when its gate goes HIGH, so whichever way the control line goes, exactly one of the pair conducts and the other is off. One wire per side therefore chooses whether that terminal is tied up to the supply or down to ground, and two wires cover every state the motor can be put in.   How two control lines drive four switches. On each side of the bridge the upper and lower gates are driven from the same line — IN1 on the left, IN2 on the right — and because the upper switch turns on when its gate is LOW while the lower turns on when its gate is HIGH, one control line puts exactly one of its pair into conduction. Each terminal is therefore pulled either up to the supply or down to ground, never both. This is the simplified picture; the TB6612 puts decoding logic between its input pins and these gates, which is what lets it also turn all four switches off.      Four settings, four things the motor can do   The two control lines give four combinations, and each does something different to the motor. Call the motor's terminals OUT1 (left) and OUT2 (right), and recall that a control line (IN1 or IN2) HIGH pulls its terminal down to ground and LOW pulls it up to the supply.    Two of the four combinations of (IN1, IN2) send current through the motor. Which two, and which switches conduct in each? For one of them, trace the path from the supply, through the motor, to ground. In which way does the current cross the motor?    The other two combinations set both terminals to the same place — both down to ground, or both up to the supply. In each case, how much voltage is across the motor, and so how much current does the supply push through it?    Take the case where both terminals are tied to ground, and suppose the shaft is still spinning when you do it. The motor is then a generator with its two terminals wired together. Using the back-EMF from the motor equations, what current flows, and what does it do to the rotation? Does it matter whether you tie both terminals to ground or both to the supply?       The two driving diagonals. On the left, the upper-left and lower-right switches conduct, so current flows from the supply through OUT1, through the motor, and back through OUT2 to ground — one direction of rotation. On the right, the other diagonal conducts, and the current, and the rotation, are reversed.       The braking case and the case where the motor is simply let go are worth separating, because they look the same on a truth table and feel completely different on the bench.    Braking, on the left, against stopping, on the right. To brake, the two lower switches conduct, so both motor terminals are tied together at ground and the spinning motor's own back-EMF drives a current through that short, which opposes the rotation and brings the shaft quickly to rest. That loop is drawn dashed and without an arrow on purpose: which way the current runs depends on which way the shaft happened to be turning, and either way it is driven to ground through the lower switches and opposes the rotation. To stop, all four switches are off, so both terminals are left floating: no current can flow in or out, nothing opposes the rotation, and the shaft coasts down under friction alone. This all-off state is one the driver's control logic produces; it is not something the two direction lines could ask for by themselves, which is why the modes are read from the datasheet's table rather than from the bridge drawing.       So there are two different ways to stop a motor, and which one we choose is a design decision. Braking dissipates the shaft's kinetic energy in the motor's own windings and stops it in a fraction of the time. Stopping — the datasheet calls it stop , and it is what the bridge does when all four switches are off — leaves the shaft free and lets it coast. A wheel that must hold position wants the brake; a flywheel that should spin down gently wants the coast.   Shoot-through  One combination is dangerous: the upper and lower switch on the same side conducting at once, which the two control lines cannot ask for. That connects the supply straight to ground through the two switches, with only their own resistance to limit the current — a near short called shoot-through , which can destroy them. The control lines make it impossible to command, because one line drives both gates of a side in opposite senses. It happens in the transitions instead: a real transistor takes time to turn off, so if one begins conducting before its partner has finished turning off, both are briefly on together. Reversing the motor is exactly when that is most likely, because both sides switch at once.  The TB6612 contains logic that staggers its switching so every transition passes through a brief state with one side fully off — one reason we drive a motor through a driver IC instead of wiring the H-bridge by hand.     Shoot-through. The upper and lower switch on the right-hand side are conducting at the same time, so current runs straight from the motor supply VM to ground without passing through the motor at all. Nothing in that path limits the current except the resistance of the two transistors, which is why the state destroys them.    "
+},
+{
+  "id": "subsec-day11-hbridge-2",
+  "level": "2",
+  "url": "subsec-day11-hbridge.html#subsec-day11-hbridge-2",
   "type": "Paragraph (with a defined term)",
   "number": "",
   "title": "",
   "body": "H-bridge "
 },
 {
-  "id": "fig-h-bridge-cw-ccw",
+  "id": "fig-hbridge-pmos-nmos",
   "level": "2",
-  "url": "sec-h-bridge.html#fig-h-bridge-cw-ccw",
+  "url": "subsec-day11-hbridge.html#fig-hbridge-pmos-nmos",
   "type": "Figure",
-  "number": "11.3.1",
+  "number": "11.2.8",
   "title": "",
-  "body": " H-bridge in clockwise mode (IN1=HIGH, IN2=LOW, left) and counter-clockwise mode (IN1=LOW, IN2=HIGH, right). Current flows through the motor in opposite directions, reversing the electromagnetic torque and therefore the rotation direction.    "
+  "body": " The four switches are power MOSFETs, and they are not all the same kind. The upper two are P-channel devices, which conduct when their gate is driven LOW; the lower two are N-channel devices, which conduct when their gate is driven HIGH. The gate of each is marked g . That opposition is what the next page turns into a single control line per side.   "
 },
 {
-  "id": "fig-h-bridge-brake",
+  "id": "fig-hbridge-in1-in2",
   "level": "2",
-  "url": "sec-h-bridge.html#fig-h-bridge-brake",
+  "url": "subsec-day11-hbridge.html#fig-hbridge-in1-in2",
   "type": "Figure",
-  "number": "11.3.2",
+  "number": "11.2.10",
   "title": "",
-  "body": " H-bridge in brake mode (IN1=HIGH, IN2=HIGH). Both motor terminals are connected to the same rail; the motor acts as a generator dumping kinetic energy to ground, producing rapid deceleration.   "
+  "body": " How two control lines drive four switches. On each side of the bridge the upper and lower gates are driven from the same line — IN1 on the left, IN2 on the right — and because the upper switch turns on when its gate is LOW while the lower turns on when its gate is HIGH, one control line puts exactly one of its pair into conduction. Each terminal is therefore pulled either up to the supply or down to ground, never both. This is the simplified picture; the TB6612 puts decoding logic between its input pins and these gates, which is what lets it also turn all four switches off.   "
 },
 {
-  "id": "fig-tb6612-truth-table",
+  "id": "act-day11-diagonal",
   "level": "2",
-  "url": "sec-h-bridge.html#fig-tb6612-truth-table",
+  "url": "subsec-day11-hbridge.html#act-day11-diagonal",
+  "type": "Activity",
+  "number": "11.2.2",
+  "title": "Four settings, four things the motor can do.",
+  "body": " Four settings, four things the motor can do   The two control lines give four combinations, and each does something different to the motor. Call the motor's terminals OUT1 (left) and OUT2 (right), and recall that a control line (IN1 or IN2) HIGH pulls its terminal down to ground and LOW pulls it up to the supply.    Two of the four combinations of (IN1, IN2) send current through the motor. Which two, and which switches conduct in each? For one of them, trace the path from the supply, through the motor, to ground. In which way does the current cross the motor?    The other two combinations set both terminals to the same place — both down to ground, or both up to the supply. In each case, how much voltage is across the motor, and so how much current does the supply push through it?    Take the case where both terminals are tied to ground, and suppose the shaft is still spinning when you do it. The motor is then a generator with its two terminals wired together. Using the back-EMF from the motor equations, what current flows, and what does it do to the rotation? Does it matter whether you tie both terminals to ground or both to the supply?   "
+},
+{
+  "id": "fig-hbridge-cw-ccw",
+  "level": "2",
+  "url": "subsec-day11-hbridge.html#fig-hbridge-cw-ccw",
   "type": "Figure",
-  "number": "11.3.3",
+  "number": "11.2.12",
   "title": "",
-  "body": " TB6612FNG truth table summarizing all operating modes. IN1 and IN2 control direction; PWM controls speed. The STBY pin enables the driver (HIGH = active); it is pulled up through the breakout board.   "
+  "body": " The two driving diagonals. On the left, the upper-left and lower-right switches conduct, so current flows from the supply through OUT1, through the motor, and back through OUT2 to ground — one direction of rotation. On the right, the other diagonal conducts, and the current, and the rotation, are reversed.      "
+},
+{
+  "id": "fig-hbridge-brake-vs-stop",
+  "level": "2",
+  "url": "subsec-day11-hbridge.html#fig-hbridge-brake-vs-stop",
+  "type": "Figure",
+  "number": "11.2.14",
+  "title": "",
+  "body": " Braking, on the left, against stopping, on the right. To brake, the two lower switches conduct, so both motor terminals are tied together at ground and the spinning motor's own back-EMF drives a current through that short, which opposes the rotation and brings the shaft quickly to rest. That loop is drawn dashed and without an arrow on purpose: which way the current runs depends on which way the shaft happened to be turning, and either way it is driven to ground through the lower switches and opposes the rotation. To stop, all four switches are off, so both terminals are left floating: no current can flow in or out, nothing opposes the rotation, and the shaft coasts down under friction alone. This all-off state is one the driver's control logic produces; it is not something the two direction lines could ask for by themselves, which is why the modes are read from the datasheet's table rather than from the bridge drawing.      "
+},
+{
+  "id": "subsec-day11-hbridge-18",
+  "level": "2",
+  "url": "subsec-day11-hbridge.html#subsec-day11-hbridge-18",
+  "type": "Insight",
+  "number": "11.2.15",
+  "title": "Shoot-through.",
+  "body": " Shoot-through  One combination is dangerous: the upper and lower switch on the same side conducting at once, which the two control lines cannot ask for. That connects the supply straight to ground through the two switches, with only their own resistance to limit the current — a near short called shoot-through , which can destroy them. The control lines make it impossible to command, because one line drives both gates of a side in opposite senses. It happens in the transitions instead: a real transistor takes time to turn off, so if one begins conducting before its partner has finished turning off, both are briefly on together. Reversing the motor is exactly when that is most likely, because both sides switch at once.  The TB6612 contains logic that staggers its switching so every transition passes through a brief state with one side fully off — one reason we drive a motor through a driver IC instead of wiring the H-bridge by hand.  "
+},
+{
+  "id": "fig-hbridge-shoot-through",
+  "level": "2",
+  "url": "subsec-day11-hbridge.html#fig-hbridge-shoot-through",
+  "type": "Figure",
+  "number": "11.2.16",
+  "title": "",
+  "body": " Shoot-through. The upper and lower switch on the right-hand side are conducting at the same time, so current runs straight from the motor supply VM to ground without passing through the motor at all. Nothing in that path limits the current except the resistance of the two transistors, which is why the state destroys them.   "
+},
+{
+  "id": "subsec-day11-tb6612",
+  "level": "1",
+  "url": "subsec-day11-tb6612.html",
+  "type": "Subsection",
+  "number": "11.2.3",
+  "title": "Part 3: The TB6612 Driver and Its Truth Table",
+  "body": " Part 3: The TB6612 Driver and Its Truth Table  The TB6612 packages two complete H-bridges — the switches themselves and the logic that prevents shoot-through — onto one small breakout board , a circuit board with the chip already soldered down and its pins brought out to header pins we can wire by hand. It exposes each bridge through a few logic-level pins, driven at the ordinary 0 V and 3.3 V logic levels which we will drive via the STM32C031C6.  The motor's own power does not come through those pins, and this is the whole reason the driver exists. The chip has a separate set of terminals for it: an input pin VM, which we connect to an external supply, and the two output pins that go to the motor. The motor equations give the reason we cannot skip this. A stopped motor draws at the instant it is switched on, which for our motor is hundreds of milliamps, where a GPIO pin can source a few — so the current the motor needs is fetched from the external supply through the driver's switches, and the microcontroller only ever tells those switches what to do. Each bridge can pass roughly 1.2 A to its motor; draw much more than that and the chip protects itself by shutting down until it cools.   Inside the TB6612 — the full chip, which holds two independent motor channels, A and B. We will only use channel A, but if you wanted to control several motors independently you could use both channels for this purpose. Channel A's three logic inputs are labeled AIN1, AIN2, and PWMA on the breakout (also referred to as IN1, IN2, and PWM below). These pass through the control logic that drives the four switch gates, and the switches connect channel A's two outputs (AO1, AO2) to the motor supply VM or to ground. The motor's large current flows only in the output half; the input side is ordinary 3.3 V logic.     The two inputs, IN1 and IN2, choose what the bridge does, which yields the motor direction, and a third, PWM, controls the average voltage at the motor terminals by rapidly switching it on and off for speed control, which we come to next. A fourth pin, STBY (standby), must be HIGH for the driver to do anything at all; on our breakout it is pulled up already. How the inputs map to the four modes — clockwise, counter-clockwise, brake, and stop — can be found in the TB6612FNG datasheet , in the table named H-SW Control Function on page 4.    The TB6612 H-SW Control Function table, from page 4 of the TB6612FNG datasheet . IN1, IN2, and PWM set the outputs OUT1 and OUT2, and so the mode. H\/L in a cell means the value in that position does not matter for that row.      What the table says that the mode names do not   Work from the H-SW Control Function table ( ), with STBY HIGH throughout, and compare it against what you worked out about the bridge.    Select a direction — say IN1 HIGH and IN2 LOW — and then read the row that with PWM HIGH. What are OUT1 and OUT2 and what mode does the table name it? How does that compare to your earlier prediction?    The table shows both a short brake mode and a stop mode. Find the input combination for each, and read off OUT1 and OUT2. One of them describes the outputs as OFF (High impedance) — explain what that phrase means about the four switches, and match the two rows to the two pictures of braking and stopping.     "
+},
+{
+  "id": "subsec-day11-tb6612-2",
+  "level": "2",
+  "url": "subsec-day11-tb6612.html#subsec-day11-tb6612-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "TB6612 breakout board "
 },
 {
   "id": "fig-tb6612-internal",
   "level": "2",
-  "url": "sec-h-bridge.html#fig-tb6612-internal",
+  "url": "subsec-day11-tb6612.html#fig-tb6612-internal",
   "type": "Figure",
-  "number": "11.3.4",
+  "number": "11.2.17",
   "title": "",
-  "body": " TB6612FNG internal block diagram. The IC contains two full H-bridge circuits, each controlled by IN1, IN2, and PWM signals. Internal logic prevents shoot-through (both upper and lower switches on simultaneously) by enforcing a dead-time between transitions.   "
+  "body": " Inside the TB6612 — the full chip, which holds two independent motor channels, A and B. We will only use channel A, but if you wanted to control several motors independently you could use both channels for this purpose. Channel A's three logic inputs are labeled AIN1, AIN2, and PWMA on the breakout (also referred to as IN1, IN2, and PWM below). These pass through the control logic that drives the four switch gates, and the switches connect channel A's two outputs (AO1, AO2) to the motor supply VM or to ground. The motor's large current flows only in the output half; the input side is ordinary 3.3 V logic.   "
+},
+{
+  "id": "fig-tb6612-truth-table",
+  "level": "2",
+  "url": "subsec-day11-tb6612.html#fig-tb6612-truth-table",
+  "type": "Figure",
+  "number": "11.2.20",
+  "title": "",
+  "body": " The TB6612 H-SW Control Function table, from page 4 of the TB6612FNG datasheet . IN1, IN2, and PWM set the outputs OUT1 and OUT2, and so the mode. H\/L in a cell means the value in that position does not matter for that row.   "
+},
+{
+  "id": "act-day11-truth-table",
+  "level": "2",
+  "url": "subsec-day11-tb6612.html#act-day11-truth-table",
+  "type": "Activity",
+  "number": "11.2.3",
+  "title": "What the table says that the mode names do not.",
+  "body": " What the table says that the mode names do not   Work from the H-SW Control Function table ( ), with STBY HIGH throughout, and compare it against what you worked out about the bridge.    Select a direction — say IN1 HIGH and IN2 LOW — and then read the row that with PWM HIGH. What are OUT1 and OUT2 and what mode does the table name it? How does that compare to your earlier prediction?    The table shows both a short brake mode and a stop mode. Find the input combination for each, and read off OUT1 and OUT2. One of them describes the outputs as OFF (High impedance) — explain what that phrase means about the four switches, and match the two rows to the two pictures of braking and stopping.   "
+},
+{
+  "id": "subsec-day11-direction",
+  "level": "1",
+  "url": "subsec-day11-direction.html",
+  "type": "Subsection",
+  "number": "11.2.4",
+  "title": "Part 4: First Exercise — Direction by Hand",
+  "body": " Part 4: First Exercise — Direction by Hand  Now we wire the driver and a motor and drive it directly, with no program yet, so that the modes in the truth table become things you have seen the motor do. The motor needs its own current path and more than the 3.3 V logic can give, so it runs from a separate supply. A 6–12 V wall adapter plugs into the barrel connector of a small regulator board; on that board a regulator brings the input down to a steady 5 V and brings it out on a header, and we feed that 5 V to the driver's VM pin. The driver's logic side, VCC, runs from the Nucleo's 3.3 V.   The regulator board that supplies the motor, seen close up. The barrel connector at the bottom takes the 6–12 V wall adapter; the regulator is the black component in the middle, with a capacitor either side of it; and each of the two headers at the top brings out three pins, labeled 5V, GND and Vin. Take the motor supply from the 5V pin. The Vin pin is the raw, unregulated input from the adapter, and wiring it to VM would drive the motor at up to 12 V rather than its rated 3–6 V.     The 5 V motor supply and the 3.3 V logic supply share a common ground — one wire joins the regulator board's GND to the Nucleo's ground — but are otherwise separate. That separation is crucial to get right: the motor is supplied from the 5V output of the voltage regulator, the logic pins from the Nucleo. All 5 V wires need to stay on the motor side and never touch the 3.3 V rail. That way a mistake on the motor side stays on the motor side and does not reach the 3.3 V parts of the board.   The circuit for the first exercise. The TB6612 breakout takes the regulated 5 V at VM, the Nucleo's 3.3 V at VCC, and a ground shared with the Nucleo; the motor connects to the two channel-A outputs. The 0.22 µF capacitor across the breakout's logic supply is a smoothing capacitor: it sits between VCC and ground and holds that rail steady when the motor's switching disturbs it. For this exercise the PWM pin is held HIGH and the two direction wires, AIN1 and AIN2, are left unconnected, so that you can move them by hand between the power and ground rails.     The truth table again, to work from while you wire and test.    Drive the motor's direction by hand   Build the circuit with the power off, have your wiring checked by an instructor before you apply power, and then work through the settings by hand. Keep the H-SW Control Function table in front of you.    With everything unpowered, wire it up as in the image above, paying special attention to the regulator's 5 V only going to the motor driver's VM pin whereas the motor driver's VCC is supplied by the Nucleo's 3.3 V. The regulator and the Nucleo share a common ground. Connect the motor to the two channel-A outputs of the motor driver. Tie the PWM pin HIGH, to the 3.3 V rail, and leave the AIN1 and AIN2 wires dangling free for now.    You will move AIN1 and AIN2 between the 3.3 V rail (call it + ) and ground ( − ). Using the truth table, predict for each of the four settings of (AIN1, AIN2) — (+, +), (+, −), (−, +) and (−, −) — both what the motor will do and what voltages you would measure at the two motor terminals. Write all four predictions down before applying power.    Once your wiring has been checked, power the circuit — plug the wall adapter into the regulator board for the motor's 5 V, and connect the Nucleo to your computer over USB for the 3.3 V logic — then move the AIN1 and AIN2 wires through all four settings. Does the motor do what you predicted each time? If the motor does nothing in any of the four settings, check that the regulator's 5 V actually reaches VM before checking the individual wires; if a single setting is wrong, check that one wire against the truth table.      If you finish early: measure what the table promised   These two measurements are worth doing once the motor turns on command.    Confirm the other half of your prediction. Put the oscilloscope on each of the two motor terminals in turn and measure them for the two turning settings, for (+, +) and for (−, −). Do the measurements match the OUT1 and OUT2 columns of the truth table? One of the four settings behaves differently from the others when you measure it — which, and can you say from your measurement what OFF (High impedance) looks like on a scope?    Two of the settings stop a spinning motor, and we reasoned that they stop it in very different ways. Get the motor up to speed in one direction, then switch to (+, +) and watch how long the shaft takes to come to rest; get it up to speed again and switch to (−, −) instead. Which stops it faster, and does that match what you predicted about braking against coasting?     One caution about the direction names. The truth table calls its two turning modes CW and CCW, but the chip has no way of knowing which way round you connected the motor's two wires, so the direction you actually see may be the opposite of the one the table names. That is not a fault, and if it bothers you, swapping the motor's two wires swaps which mode turns it which way.  "
+},
+{
+  "id": "fig-tb6612-regulator",
+  "level": "2",
+  "url": "subsec-day11-direction.html#fig-tb6612-regulator",
+  "type": "Figure",
+  "number": "11.2.21",
+  "title": "",
+  "body": " The regulator board that supplies the motor, seen close up. The barrel connector at the bottom takes the 6–12 V wall adapter; the regulator is the black component in the middle, with a capacitor either side of it; and each of the two headers at the top brings out three pins, labeled 5V, GND and Vin. Take the motor supply from the 5V pin. The Vin pin is the raw, unregulated input from the adapter, and wiring it to VM would drive the motor at up to 12 V rather than its rated 3–6 V.   "
 },
 {
   "id": "fig-tb6612-wiring",
   "level": "2",
-  "url": "sec-h-bridge.html#fig-tb6612-wiring",
+  "url": "subsec-day11-direction.html#fig-tb6612-wiring",
   "type": "Figure",
-  "number": "11.3.5",
+  "number": "11.2.22",
   "title": "",
-  "body": " TB6612FNG breakout board wiring for the first exercise. VM (motor power) connects to the external power supply (6–12 V); VCC (logic power) connects to the Nucleo's 3.3 V rail. AIN1, AIN2, and PWMA connect to GPIO output pins. The motor connects to AO1 and AO2.   "
+  "body": " The circuit for the first exercise. The TB6612 breakout takes the regulated 5 V at VM, the Nucleo's 3.3 V at VCC, and a ground shared with the Nucleo; the motor connects to the two channel-A outputs. The 0.22 µF capacitor across the breakout's logic supply is a smoothing capacitor: it sits between VCC and ground and holds that rail steady when the motor's switching disturbs it. For this exercise the PWM pin is held HIGH and the two direction wires, AIN1 and AIN2, are left unconnected, so that you can move them by hand between the power and ground rails.   "
 },
 {
-  "id": "sec-h-bridge-8",
+  "id": "act-day11-direction",
   "level": "2",
-  "url": "sec-h-bridge.html#sec-h-bridge-8",
-  "type": "Insight",
-  "number": "11.3.6",
-  "title": "Shoot-through and dead-time.",
-  "body": " Shoot-through and dead-time  If the upper and lower switches of one H-bridge leg turn on simultaneously, they create a short circuit from the power supply to ground — called shoot-through . The TB6612FNG's internal logic prevents this by inserting a brief dead-time between switching events. This is why you should not drive IN1 and IN2 directly with complementary GPIO signals without the motor driver IC in between.  "
+  "url": "subsec-day11-direction.html#act-day11-direction",
+  "type": "Activity",
+  "number": "11.2.4",
+  "title": "Drive the motor’s direction by hand.",
+  "body": " Drive the motor's direction by hand   Build the circuit with the power off, have your wiring checked by an instructor before you apply power, and then work through the settings by hand. Keep the H-SW Control Function table in front of you.    With everything unpowered, wire it up as in the image above, paying special attention to the regulator's 5 V only going to the motor driver's VM pin whereas the motor driver's VCC is supplied by the Nucleo's 3.3 V. The regulator and the Nucleo share a common ground. Connect the motor to the two channel-A outputs of the motor driver. Tie the PWM pin HIGH, to the 3.3 V rail, and leave the AIN1 and AIN2 wires dangling free for now.    You will move AIN1 and AIN2 between the 3.3 V rail (call it + ) and ground ( − ). Using the truth table, predict for each of the four settings of (AIN1, AIN2) — (+, +), (+, −), (−, +) and (−, −) — both what the motor will do and what voltages you would measure at the two motor terminals. Write all four predictions down before applying power.    Once your wiring has been checked, power the circuit — plug the wall adapter into the regulator board for the motor's 5 V, and connect the Nucleo to your computer over USB for the 3.3 V logic — then move the AIN1 and AIN2 wires through all four settings. Does the motor do what you predicted each time? If the motor does nothing in any of the four settings, check that the regulator's 5 V actually reaches VM before checking the individual wires; if a single setting is wrong, check that one wire against the truth table.   "
 },
 {
-  "id": "subsec-pwm-waveform",
+  "id": "act-day11-direction-more",
+  "level": "2",
+  "url": "subsec-day11-direction.html#act-day11-direction-more",
+  "type": "Activity",
+  "number": "11.2.5",
+  "title": "If you finish early: measure what the table promised.",
+  "body": " If you finish early: measure what the table promised   These two measurements are worth doing once the motor turns on command.    Confirm the other half of your prediction. Put the oscilloscope on each of the two motor terminals in turn and measure them for the two turning settings, for (+, +) and for (−, −). Do the measurements match the OUT1 and OUT2 columns of the truth table? One of the four settings behaves differently from the others when you measure it — which, and can you say from your measurement what OFF (High impedance) looks like on a scope?    Two of the settings stop a spinning motor, and we reasoned that they stop it in very different ways. Get the motor up to speed in one direction, then switch to (+, +) and watch how long the shaft takes to come to rest; get it up to speed again and switch to (−, −) instead. Which stops it faster, and does that match what you predicted about braking against coasting?   "
+},
+{
+  "id": "subsec-day11-pwm",
   "level": "1",
-  "url": "subsec-pwm-waveform.html",
+  "url": "subsec-day11-pwm.html",
   "type": "Subsection",
-  "number": "11.4.1",
-  "title": "PWM Waveform",
-  "body": " PWM Waveform   PWM waveform with 25%, 50%, and 75% duty cycles. The average voltage (dashed line) is proportional to the duty cycle. Increasing the duty cycle increases average voltage and therefore motor speed. The PWM frequency must be high enough that the motor's inductance smooths the current pulses into near-steady current.     Hardware PWM using a counter and compare register. When the counter is below the compare value (CCR1), the PWM output is HIGH; when the counter reaches or exceeds CCR1, the output goes LOW. At the auto-reload value (ARR) the counter resets and the cycle repeats.    "
+  "number": "11.2.5",
+  "title": "Part 5: PWM Sets the Speed",
+  "body": " Part 5: PWM Sets the Speed  The H-bridge sets the motor's direction. In this part we turn to its speed, which we set with pulse-width modulation (PWM). We have done this once already: the SevenSeg_dim() function we wrote on Day 10 pulsed the display's LEDs, and a wider pulse gave a brighter digit. The same idea sets a motor's speed. The reading showed the difficulty: a GPIO pin is either fully HIGH or fully LOW, with nothing in between, so it cannot hold an in-between voltage. Nor does the STM32C031C6 have a true DAC to do it for us — the DAC we met on Day 7 lived inside the ADC, making test voltages the program never sees, not a pin we can drive to an analog level. So rather than hold the motor at some steady in-between voltage, we switch the full supply on and off quickly and let the duty cycle — the fraction of each period spent HIGH — set the average. The motor's inertia smooths the pulses, and it turns as though driven by that average voltage.    PWM at three duty cycles, drawn for a 5 V supply. The output is a fixed-frequency square wave; the wider the HIGH pulse, the higher the average voltage (dashed line) and the faster the motor. Here a 75% duty cycle averages 3.75 V, a 50% duty cycle averages 2.5 V, and a 25% duty cycle averages 1.25 V.     The waveform is produced with almost no work. We use a counter that counts up from zero and resets when it reaches a fixed top value, over and over. A second number, the compare value, is checked against the counter: while the counter is below the compare value the output is HIGH, and once it reaches the compare value the output goes LOW until the counter resets. A larger compare value keeps the output HIGH for more of each period — a larger duty cycle. The entire process runs in the timer hardware, so once it is set up the CPU does nothing to keep it going. The output is directed to one of the microcontroller pins from where it can direct the motor speed.   How the timer makes the waveform. A counter counts up and resets at its top value, over and over (the blue ramp). A compare value (the dashed line) is checked against it: while the counter is below the compare value the output is HIGH, and above it the output is LOW. Raising the compare value keeps the ramp below the line for more of each period, which widens the HIGH pulse and so raises the duty cycle.     We'll use timer TIM14 for this — the same timer we set up for periodic interrupts on Day 8 — and route its output onto a pin. Not every pin can carry a given timer's output; the datasheet's pin table lists which can.    Getting ready to program the timer   We will drive the PWM from pin PA7 (Arduino header D11).    In the STM32C031C6 datasheet — not the TB6612 one — find Table 12, Pin assignment and description , on page 30. Look up PA7 and read off which timer channel it can output, and which of the pin's alternate functions it is.    A pin only carries a timer's output once it has been switched away from being an ordinary GPIO output and handed to that peripheral, which is the same alternate-function machinery we used to give pins to the UART and the ADC. Write the register operations that put PA7 into alternate-function mode and select the alternate function you found above. Name the registers and the bit positions; you do not need the timer's own registers for this.    Now the timer's numbers. Recall that our system clock runs at 12 MHz. We want to create a PWM signal at a switching frequency of about 1.6 kHz. Furthermore, each period should be divided into 1250 steps of duty cycle. What must the prescaler divide the clock by, and what value does the counter have to count to? Remember from our earlier work with timers what actually gets written into the prescaler and auto-reload registers, as opposed to the number you have in mind.     "
+},
+{
+  "id": "subsec-day11-pwm-2",
+  "level": "2",
+  "url": "subsec-day11-pwm.html#subsec-day11-pwm-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "pulse-width modulation duty cycle "
 },
 {
   "id": "fig-pwm-waveform",
   "level": "2",
-  "url": "subsec-pwm-waveform.html#fig-pwm-waveform",
+  "url": "subsec-day11-pwm.html#fig-pwm-waveform",
+  "type": "Figure",
+  "number": "11.2.24",
+  "title": "",
+  "body": " PWM at three duty cycles, drawn for a 5 V supply. The output is a fixed-frequency square wave; the wider the HIGH pulse, the higher the average voltage (dashed line) and the faster the motor. Here a 75% duty cycle averages 3.75 V, a 50% duty cycle averages 2.5 V, and a 25% duty cycle averages 1.25 V.   "
+},
+{
+  "id": "fig-pwm-counter-compare",
+  "level": "2",
+  "url": "subsec-day11-pwm.html#fig-pwm-counter-compare",
+  "type": "Figure",
+  "number": "11.2.25",
+  "title": "",
+  "body": " How the timer makes the waveform. A counter counts up and resets at its top value, over and over (the blue ramp). A compare value (the dashed line) is checked against it: while the counter is below the compare value the output is HIGH, and above it the output is LOW. Raising the compare value keeps the ramp below the line for more of each period, which widens the HIGH pulse and so raises the duty cycle.   "
+},
+{
+  "id": "act-day11-pwm",
+  "level": "2",
+  "url": "subsec-day11-pwm.html#act-day11-pwm",
+  "type": "Activity",
+  "number": "11.2.6",
+  "title": "Getting ready to program the timer.",
+  "body": " Getting ready to program the timer   We will drive the PWM from pin PA7 (Arduino header D11).    In the STM32C031C6 datasheet — not the TB6612 one — find Table 12, Pin assignment and description , on page 30. Look up PA7 and read off which timer channel it can output, and which of the pin's alternate functions it is.    A pin only carries a timer's output once it has been switched away from being an ordinary GPIO output and handed to that peripheral, which is the same alternate-function machinery we used to give pins to the UART and the ADC. Write the register operations that put PA7 into alternate-function mode and select the alternate function you found above. Name the registers and the bit positions; you do not need the timer's own registers for this.    Now the timer's numbers. Recall that our system clock runs at 12 MHz. We want to create a PWM signal at a switching frequency of about 1.6 kHz. Furthermore, each period should be divided into 1250 steps of duty cycle. What must the prescaler divide the clock by, and what value does the counter have to count to? Remember from our earlier work with timers what actually gets written into the prescaler and auto-reload registers, as opposed to the number you have in mind.   "
+},
+{
+  "id": "subsec-day11-demo",
+  "level": "1",
+  "url": "subsec-day11-demo.html",
+  "type": "Subsection",
+  "number": "11.2.6",
+  "title": "Part 6: Second Exercise — Ramping the Motor with PWM",
+  "body": " Part 6: Second Exercise — Ramping the Motor with PWM  For the last exercise we hand the driver's inputs over to the Nucleo and run a program that ramps the motor's speed up and down and reverses it. The wiring continues from the first exercise: leave the power, the motor, and the breakout as they are, and move three wires. The PWM pin, which you tied HIGH by hand, now goes to PA7 (D11); the AIN1 and AIN2 wires, which you moved by hand, now go to PA5 (D13) and PA6 (D12), so the program controls all three.   Wiring for the second exercise, changed from the first only at the driver's three logic inputs: PWM to PA7 (D11), AIN1 to PA5 (D13), AIN2 to PA6 (D12). The motor and its 5 V supply are unchanged.     Make a copy of TemplateProject , rename it DCmotor , and add the demonstration program TTmotor_ramp.c to its Src folder. Compile and run it. The program sets up TIM14 for PWM on PA7, drives AIN1 and AIN2 for direction, and repeatedly ramps the duty cycle up and back down, reversing the motor at the ends of the ramp. You will run it today; we will go through how it programs TIM14 in the next class.    Measure the PWM, and account for what the motor does   With the program running and the motor turning, put the oscilloscope on the PWM signal: channel 1 (the orange lead) on PA7, and its ground lead to a ground on the board. If the motor does not move when the program runs, confirm the build succeeded and that the three wires reached PA5, PA6, and PA7.    Measure the period of the waveform, and from it the PWM frequency. The timer's counter is fed a 2 MHz clock — the 12 MHz system clock divided by 6 — and counts to 1250 before resetting. Work out the frequency those two numbers predict, and compare it with what you measured.    Freeze the trace at a moment when the motor is running at a middling speed and measure the width of the HIGH pulse as well as the period. Give the duty cycle as a percentage, and then convert it into the compare value out of 1250 that the program must have written to produce it.    Watch what happens at the end of a ramp, where the motor reverses. The program does not simply swap the direction inputs: it brakes the motor first, then applies the opposite direction. Give two independent reasons why this is worth doing — one about the switches inside the driver, and one about the current through the motor. What you would expect to go wrong if the program reversed the direction inputs at full speed instead?      The PWM signal from TTmotor_ramp.c on the oscilloscope, while the ramp runs. The window is narrow enough to hold only a few periods of the 1.6 kHz waveform, so what you are watching is one pulse train changing shape: the width of the HIGH portion grows and shrinks as the motor speeds up and slows down, while the spacing from one rising edge to the next — the period — does not move at all. That is duty cycle changing while frequency stays fixed, which is the whole of how this program sets the speed.      Going further   These two questions go further than the measurements above, and are optional.    The counter resets at 1250, so the duty cycle can only take 1250 distinct values. Work out the smallest change in average motor voltage the program can ask for. If we had instead let the counter reset at 100, what would the PWM frequency have become, and what would the smallest voltage step have been? What are the trade-offs between the two choices?    In Lab 6 there is an optional experiment: running the same motor with a 50 Hz PWM instead of 1.6 kHz. Work out the period of each, and then think about what the motor does between one HIGH pulse and the next: recall from the truth table that during the LOW part of a cycle the driver is braking the motor rather than letting it coast. Predict what changes about the motor's behavior at 50 Hz — both what gets worse and what might get better — before you ever try it.     For next class, work through TTmotor_ramp.c with the reference manual open — RM0490, General-purpose timers (TIM14) , section 17.3.8 ( PWM mode ) and section 17.4 ( TIM14 registers ) — and see how the program sets the timer's registers to produce the PWM you watched today.  "
+},
+{
+  "id": "fig-tb6612-wiring-2",
+  "level": "2",
+  "url": "subsec-day11-demo.html#fig-tb6612-wiring-2",
+  "type": "Figure",
+  "number": "11.2.28",
+  "title": "",
+  "body": " Wiring for the second exercise, changed from the first only at the driver's three logic inputs: PWM to PA7 (D11), AIN1 to PA5 (D13), AIN2 to PA6 (D12). The motor and its 5 V supply are unchanged.   "
+},
+{
+  "id": "act-day11-demo",
+  "level": "2",
+  "url": "subsec-day11-demo.html#act-day11-demo",
+  "type": "Activity",
+  "number": "11.2.7",
+  "title": "Measure the PWM, and account for what the motor does.",
+  "body": " Measure the PWM, and account for what the motor does   With the program running and the motor turning, put the oscilloscope on the PWM signal: channel 1 (the orange lead) on PA7, and its ground lead to a ground on the board. If the motor does not move when the program runs, confirm the build succeeded and that the three wires reached PA5, PA6, and PA7.    Measure the period of the waveform, and from it the PWM frequency. The timer's counter is fed a 2 MHz clock — the 12 MHz system clock divided by 6 — and counts to 1250 before resetting. Work out the frequency those two numbers predict, and compare it with what you measured.    Freeze the trace at a moment when the motor is running at a middling speed and measure the width of the HIGH pulse as well as the period. Give the duty cycle as a percentage, and then convert it into the compare value out of 1250 that the program must have written to produce it.    Watch what happens at the end of a ramp, where the motor reverses. The program does not simply swap the direction inputs: it brakes the motor first, then applies the opposite direction. Give two independent reasons why this is worth doing — one about the switches inside the driver, and one about the current through the motor. What you would expect to go wrong if the program reversed the direction inputs at full speed instead?   "
+},
+{
+  "id": "fig-pwm-scope",
+  "level": "2",
+  "url": "subsec-day11-demo.html#fig-pwm-scope",
+  "type": "Figure",
+  "number": "11.2.29",
+  "title": "",
+  "body": " The PWM signal from TTmotor_ramp.c on the oscilloscope, while the ramp runs. The window is narrow enough to hold only a few periods of the 1.6 kHz waveform, so what you are watching is one pulse train changing shape: the width of the HIGH portion grows and shrinks as the motor speeds up and slows down, while the spacing from one rising edge to the next — the period — does not move at all. That is duty cycle changing while frequency stays fixed, which is the whole of how this program sets the speed.   "
+},
+{
+  "id": "act-day11-stretch",
+  "level": "2",
+  "url": "subsec-day11-demo.html#act-day11-stretch",
+  "type": "Activity",
+  "number": "11.2.8",
+  "title": "Going further.",
+  "body": " Going further   These two questions go further than the measurements above, and are optional.    The counter resets at 1250, so the duty cycle can only take 1250 distinct values. Work out the smallest change in average motor voltage the program can ask for. If we had instead let the counter reset at 100, what would the PWM frequency have become, and what would the smallest voltage step have been? What are the trade-offs between the two choices?    In Lab 6 there is an optional experiment: running the same motor with a 50 Hz PWM instead of 1.6 kHz. Work out the period of each, and then think about what the motor does between one HIGH pulse and the next: recall from the truth table that during the LOW part of a cycle the driver is braking the motor rather than letting it coast. Predict what changes about the motor's behavior at 50 Hz — both what gets worse and what might get better — before you ever try it.   "
+},
+{
+  "id": "subsec-day11x-timer-peripheral",
+  "level": "1",
+  "url": "subsec-day11x-timer-peripheral.html",
+  "type": "Subsection",
+  "number": "11.3.1",
+  "title": "Part 1: The Timer That Makes the Waveform",
+  "body": " Part 1: The Timer That Makes the Waveform  The hardware we built on Tuesday controls both a motor's direction of rotation and its speed of rotation. The H-bridge inside the TB6612 chooses which way current crosses the motor, which is what sets the direction; pulse-width modulation of the switches in that bridge sets what fraction of each period the supply is connected at all, which sets the average voltage across the terminals and so the speed. The wiring that does both is the circuit you built for the second exercise ( ): motor power from the regulator, logic power from the Nucleo's 3.3 V, and three signal wires from PA5 (D13), PA6 (D12) and PA7 (D11).  The PWM signal itself comes out of a peripheral we have already studied. TIM14 is the same timer we set up on Day 8 to interrupt once a millisecond, and there we looked only at its timing core — the prescaler that divides the system clock down, the counter CNT that counts the divided pulses, and the auto-reload register that sets how far the counter runs before it starts again ( ). PWM is built into that same timer, in the machinery around that core that we left aside on Day 8.   is the whole of TIM14 as the reference manual, RM0490, prints it in Figure 165. The core we already know runs across the middle. What is new is the block located just below the counter — the capture\/compare register, CCR1 — and the path leading from it out to the pin marked TIMx_CH1, which for us is PA7. CCR1 holds the compare value we introduced on Tuesday: the counter is compared against it on the way up, so CCR1 sets how long the output stays HIGH in each period, while the auto-reload register sets how long the whole period is. Today we'll learn about the registers that are needed to configure the timer so that the result of the comparison reaches the pin.    TIM14 in full, as RM0490 Figure 165 prints it. On Day 8 we looked only at this timer's core — the prescaler, the counter, and the auto-reload value it counts up to ( ) — and said the capture\/compare machinery around it would come back in the motor chapters. This is it: now we introduce a new timer mode that allows us to use the timer to produce a PWM signal on a pin. The clock still enters at the left and the counter CNT still runs up to the auto-reload register, but now the capture\/compare register below it is compared against the counter on the way up, and the result leaves through the output control block at the right, on the pin marked TIMx_CH1 — which for us is PA7.     "
+},
+{
+  "id": "fig-tim14-block-full",
+  "level": "2",
+  "url": "subsec-day11x-timer-peripheral.html#fig-tim14-block-full",
+  "type": "Figure",
+  "number": "11.3.1",
+  "title": "",
+  "body": " TIM14 in full, as RM0490 Figure 165 prints it. On Day 8 we looked only at this timer's core — the prescaler, the counter, and the auto-reload value it counts up to ( ) — and said the capture\/compare machinery around it would come back in the motor chapters. This is it: now we introduce a new timer mode that allows us to use the timer to produce a PWM signal on a pin. The clock still enters at the left and the counter CNT still runs up to the auto-reload register, but now the capture\/compare register below it is compared against the counter on the way up, and the result leaves through the output control block at the right, on the pin marked TIMx_CH1 — which for us is PA7.   "
+},
+{
+  "id": "subsec-day11x-registers",
+  "level": "1",
+  "url": "subsec-day11x-registers.html",
+  "type": "Subsection",
+  "number": "11.3.2",
+  "title": "Part 2: Which Register Does Each Job",
+  "body": " Part 2: Which Register Does Each Job    TTmotor_ramp.c , which we ran on Tuesday, drives exactly one pin: PA7, which you found on Day 11 is where TIM14's channel 1 comes out. Getting that pin to carry a PWM waveform takes twelve steps of setup, and most of them write registers we have written before — some on Day 8, when we first used this timer, and some on Day 11, when we configured the pin. So before we go looking for what is new, here is what we already know how to do.   Setting up PA7 as a PWM output: what we have already done, and where    To do this  we write  and we have done it before    Give the pin's port a clock  RCC_IOPENR  Day 11    Hand the pin to the timer  GPIOA_MODER , GPIOA_AFR[0]  Day 11 — you wrote these yourself    Give TIM14 a clock  RCC_APBENR2  Day 8    Set the counting rate  TIM14_PSC  Day 8    Set the value the counter runs up to  TIM14_ARR  Day 8    Start the counter  TIM14_CR1  Day 8    Set the value the counter is compared against  TIM14_CCR1  Day 11      That leaves three things the table does not cover, and they are what we'll look up next. Two of them are registers we have never written: one puts the channel into PWM mode, and one lets the channel's output reach the pin at all. The third is not a missing register so much as a line whose reason is not obvious — the program writes one more register just before it starts the counter, and the interesting part is why that write has to happen before rather than after starting the counter. All three are in section 17.4 of the reference manual, and that is where we'll find them.   Which register does each job   Open the STM32C031 reference manual and navigate to Section 17.4, TIM14 registers , on page 482 — section 17 is the one titled General-purpose timers (TIM14) . Section 17.3.8, PWM mode , on page 479, is a few pages earlier and you will want it for the first question.    Section 17.3.8 says PWM mode is selected by writing 0110 or 0111 into a field called OC1M, and section 17.4 tells you which register that field lives in. Find the register. Then read what the two values do, and work out which of them holds the pin HIGH from the start of each period until the counter reaches the compare value, and then drops it. If we had picked the other one, what would the trace on the oscilloscope have looked like?    Find the bit named CC1E, and the register it lives in. How does the manual describe what it does? Our program sets it in one line. If you deleted that one line and changed nothing else — the pin still in alternate-function mode, the counter still running, the compare value still being written every two seconds — what would you see on PA7?    The program writes one more register that does not list and neither of the questions above asks about. Find it in section 17.4. It is written near the end of the setup, just before the counter is started. What is it, what does the bit our program sets do, and why would you want to do that before starting the counter rather than after?    If your group has answered all three of the above questions, work this out: our program calls tim14_pwm_set(625) . Given that the counter runs up to 1249, what fraction of each period is the pin HIGH, and what average voltage does the motor see from a 5 V supply?       "
+},
+{
+  "id": "table-day11x-recall",
+  "level": "2",
+  "url": "subsec-day11x-registers.html#table-day11x-recall",
+  "type": "Table",
+  "number": "11.3.3",
+  "title": "Setting up PA7 as a PWM output: what we have already done, and where",
+  "body": " Setting up PA7 as a PWM output: what we have already done, and where    To do this  we write  and we have done it before    Give the pin's port a clock  RCC_IOPENR  Day 11    Hand the pin to the timer  GPIOA_MODER , GPIOA_AFR[0]  Day 11 — you wrote these yourself    Give TIM14 a clock  RCC_APBENR2  Day 8    Set the counting rate  TIM14_PSC  Day 8    Set the value the counter runs up to  TIM14_ARR  Day 8    Start the counter  TIM14_CR1  Day 8    Set the value the counter is compared against  TIM14_CCR1  Day 11    "
+},
+{
+  "id": "act-day11x-registers",
+  "level": "2",
+  "url": "subsec-day11x-registers.html#act-day11x-registers",
+  "type": "Activity",
+  "number": "11.3.1",
+  "title": "Which register does each job.",
+  "body": " Which register does each job   Open the STM32C031 reference manual and navigate to Section 17.4, TIM14 registers , on page 482 — section 17 is the one titled General-purpose timers (TIM14) . Section 17.3.8, PWM mode , on page 479, is a few pages earlier and you will want it for the first question.    Section 17.3.8 says PWM mode is selected by writing 0110 or 0111 into a field called OC1M, and section 17.4 tells you which register that field lives in. Find the register. Then read what the two values do, and work out which of them holds the pin HIGH from the start of each period until the counter reaches the compare value, and then drops it. If we had picked the other one, what would the trace on the oscilloscope have looked like?    Find the bit named CC1E, and the register it lives in. How does the manual describe what it does? Our program sets it in one line. If you deleted that one line and changed nothing else — the pin still in alternate-function mode, the counter still running, the compare value still being written every two seconds — what would you see on PA7?    The program writes one more register that does not list and neither of the questions above asks about. Find it in section 17.4. It is written near the end of the setup, just before the counter is started. What is it, what does the bit our program sets do, and why would you want to do that before starting the counter rather than after?    If your group has answered all three of the above questions, work this out: our program calls tim14_pwm_set(625) . Given that the counter runs up to 1249, what fraction of each period is the pin HIGH, and what average voltage does the motor see from a 5 V supply?   "
+},
+{
+  "id": "subsec-day11x-hardware",
+  "level": "1",
+  "url": "subsec-day11x-hardware.html",
+  "type": "Subsection",
+  "number": "11.3.3",
+  "title": "Part 3: Where Those Registers Are Located in the Hardware",
+  "body": " Part 3: Where Those Registers Are Located in the Hardware    One frozen moment of the trace you watched on Day 11 ( ). The window is about two milliseconds wide, so it holds roughly three periods of the 1.6 kHz waveform and the duty cycle barely changes across the screen.     The width of the HIGH part changed as the motor sped up and slowed down, while the period did not. So which of the two numbers we set up — the value the counter runs to, or the value it is compared against — is the program rewriting every two seconds?  The answer is the compare value. The program writes a new one every two seconds as the ramp climbs and falls, and it never touches the auto-reload register after the initialization, which is why the width of the HIGH portion moves while the period stays exactly where it is. A program that rewrote the auto-reload value instead would change the frequency of the waveform rather than its duty cycle, and the motor would not speed up at all. is where both of those numbers are.   Where the two numbers actually are (RM0490, Figure 176). The counter runs along the bottom and the compare value is shown above it, and the comparator to the right of them is what flips the output partway up each period — which is why TIM14_CCR1 sets how long the pin stays HIGH and TIM14_ARR , the value the counter runs up to, sets how long the period is. The manual calls the working copy of the compare value a shadow register ; it is the same buffered arrangement we saw for the prescaler in the timers chapter ( ).     We already worked out what CC1E does (it lets the channel's output reach the pin). What the figures have not shown yet is the output stage the comparator's result travels through on its way to PA7 — the enable bit is the last thing it passes through.   How the signal gets out to the pin (RM0490, Figure 177). The waveform produced by the comparator in arrives at the left and reaches the pin at the right only if the output enable circuit lets it through, which is what the CC1E bit does. One difference from the printed manual worth knowing: RM0490 labels these boxes TIM1_CCER , which is a slip carried over from the chapter on TIM1 — the figure is in the TIM14 chapter and the register our code writes is TIM14's. We have put it back to TIMx_CCER , the manual's own way of writing whichever timer you are using , which is how the same figure already labels TIMx_CCMR1 at the lower left, under the OC1M box.     We'll look at those registers once more as section 17.4 actually prints them, because that is the form you'll be reading in the lab and in the rest of this chapter: a row of numbered bits with a name written across the ones that belong to each field.   The timer's four registers as rows of bits, the way section 17.4 prints them: the counter itself, and the three numbers we set around it. The prescaler sets the rate the counter counts at, the auto-reload register sets the period, and the capture\/compare register sets the HIGH time.     "
+},
+{
+  "id": "fig-pwm-scope-still",
+  "level": "2",
+  "url": "subsec-day11x-hardware.html#fig-pwm-scope-still",
+  "type": "Figure",
+  "number": "11.3.6",
+  "title": "",
+  "body": " One frozen moment of the trace you watched on Day 11 ( ). The window is about two milliseconds wide, so it holds roughly three periods of the 1.6 kHz waveform and the duty cycle barely changes across the screen.   "
+},
+{
+  "id": "fig-tim14-main-circuit",
+  "level": "2",
+  "url": "subsec-day11x-hardware.html#fig-tim14-main-circuit",
+  "type": "Figure",
+  "number": "11.3.8",
+  "title": "",
+  "body": " Where the two numbers actually are (RM0490, Figure 176). The counter runs along the bottom and the compare value is shown above it, and the comparator to the right of them is what flips the output partway up each period — which is why TIM14_CCR1 sets how long the pin stays HIGH and TIM14_ARR , the value the counter runs up to, sets how long the period is. The manual calls the working copy of the compare value a shadow register ; it is the same buffered arrangement we saw for the prescaler in the timers chapter ( ).   "
+},
+{
+  "id": "fig-tim14-output-stage",
+  "level": "2",
+  "url": "subsec-day11x-hardware.html#fig-tim14-output-stage",
+  "type": "Figure",
+  "number": "11.3.10",
+  "title": "",
+  "body": " How the signal gets out to the pin (RM0490, Figure 177). The waveform produced by the comparator in arrives at the left and reaches the pin at the right only if the output enable circuit lets it through, which is what the CC1E bit does. One difference from the printed manual worth knowing: RM0490 labels these boxes TIM1_CCER , which is a slip carried over from the chapter on TIM1 — the figure is in the TIM14 chapter and the register our code writes is TIM14's. We have put it back to TIMx_CCER , the manual's own way of writing whichever timer you are using , which is how the same figure already labels TIMx_CCMR1 at the lower left, under the OC1M box.   "
+},
+{
+  "id": "fig-tim14-register-map",
+  "level": "2",
+  "url": "subsec-day11x-hardware.html#fig-tim14-register-map",
+  "type": "Figure",
+  "number": "11.3.12",
+  "title": "",
+  "body": " The timer's four registers as rows of bits, the way section 17.4 prints them: the counter itself, and the three numbers we set around it. The prescaler sets the rate the counter counts at, the auto-reload register sets the period, and the capture\/compare register sets the HIGH time.   "
+},
+{
+  "id": "subsec-day11x-driver",
+  "level": "1",
+  "url": "subsec-day11x-driver.html",
+  "type": "Subsection",
+  "number": "11.3.4",
+  "title": "Part 4: Reading the Driver",
+  "body": " Part 4: Reading the Driver  Now we'll work out what value goes into each of those registers. Section 17.4 gives every register as a row of bits, and the value our program needs is assembled from the position of a field and the pattern that goes in it. Three of the registers we need are the easy case, because the thing we set is a single bit; TIM14_CCMR1 is the harder case, because there is more than one bitfield we need to set in it, one of which consists of four bits not all of which are adjacent to each other.    The capture\/compare enable register, TIM14_CCER , bit by bit. CC1E is bit 0.     The event generation register, TIM14_EGR . UG is bit 0, and it is write-only — the hardware clears it again as soon as it has acted on it.     Control register 1, TIM14_CR1 . CEN is bit 0, and it is the switch that starts the counter.     From a register name to a register value   Here are four lines from TTmotor_ramp.c . ES28.h defines TIM_OC1_PWM1 as 6 and TIM_CC1_OUTPUT as 0, and every _Pos name is the bit position of the field it names. Work each one out on paper before we walk through the file.    TIM14->CCMR1 |= TIM_OC1_PWM1 << TIM_CCMR1_OC1M_Pos; — write 6 in binary, and deduce which bits of CCMR1 this sets. Does that put the PWM mode the Reference Manual (Section 17.3.8) asked for into the OC1M field? The line above it is TIM14->CCMR1 &= ~TIM_CCMR1_OC1M_Msk; — what could go wrong if we left that line out?    TIM14->CCER |= TIM_CCER_CC1E; — find TIM14_CCER , the capture\/compare enable register, in Section 17.4 of the Reference Manual, and read which bit CC1E is. What is the numeric value of TIM_CCER_CC1E ? Why is this line written with |= and no clearing line before it, when the OC1M line above needed one?    TIM14->CR1 |= TIM_CR1_CEN; — find TIM14_CR1 , control register 1, in the same section, and read which bit CEN is. What value is that, and what happens on the pin the instant this line runs?    TIM14->CCMR1 |= TIM_CC1_OUTPUT << TIM_CCMR1_CC1S_Pos; — the same register as the first question, and a second field of it. Which bits is CC1S, and what does 00 select? The comment in TTmotor_ramp.c calls it the default value — so why write it at all?      TIM14_CCMR1 , the capture\/compare mode register, is different, because neither of the things we set in it is a single bit. OC1M, which chooses what the channel does, is four bits wide and split across the register — three of them together and a fourth up at bit 16. CC1S, which decides whether the channel is an output or an input, is two bits at the bottom. A field several bits wide cannot be reliably set by OR-ing a value into it, because OR can only turn bits on: if the field already holds a 1 where the new pattern wants a 0, that bit stays set, and the result is the two patterns mixed together. That is why each of these two gets a clearing line before its setting line, and why the three single-bit registers do not.   TIM14_CCMR1 laid out bit by bit, with the first of our two fields marked. OC1M selects what the channel does, and it is four bits wide and not in one piece: three of them at 6:4, and the fourth up at bit 16. Four bits is what makes it different from CC1E, CEN and UG, which are one bit each.     The same register, with our other field marked. CC1S is two bits at 1:0, and it decides whether the channel is an output or an input. Two fields in one register is why the initialization writes CCMR1 twice.      Everything our program does to TIM14_CCMR1 , in one place: the bit map at the top, then section 17.4's description of each field with the value we write boxed, and beside it the line that writes it. In blue, OC1M gets 0110 — PWM mode 1, which the manual defines as channel 1 being active as long as the counter is below the compare value. In magenta, CC1S gets 00 , which is what keeps the channel an output. Two fields, one register, which is why the initialization writes CCMR1 twice.      That is every register the initialization touches, so we can now read it straight through. The function runs in three stretches: it sets up the GPIO pin in the mode the timer needs, it sets the timer's own numbers, and it puts the channel into PWM mode and starts it. Nothing in it is new at this point, which is the whole idea — by the time you reach the last line every register in it should be one you have already looked up.  The pin first. These are the same three operations we used on Day 11 — give the port a clock, put the pin in alternate-function mode, and select which alternate function.  void tim14_pa7_pwm_init(void) { \/\/ Enable clock access to GPIOA RCC->IOPENR |= RCC_IOPENR_GPIOAEN; \/\/ Set PA7 in alternate function mode (10) GPIOA->MODER &= ~GPIO_MODER_MODE7_Msk; GPIOA->MODER |= GPIO_ALTERNATE << GPIO_MODER_MODE7_Pos; \/\/ Set PA7 alternate function type (AF4, 0100) GPIOA->AFR[0] &= ~GPIO_AFRL_AFSEL7_Msk; GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;  Then come the timer's own numbers. PSC_FACTOR and PWM_TIMER_MAX are the two constants at the top of the file, 6 and 1250, and both are written one less than the value we have in mind because the counter starts at zero. The last of these four lines is the only one in the function that is there for safety rather than for configuration: TIM14->CCR1 = 0; sets the starting speed to zero, so the motor cannot jump the moment the counter starts.  \/\/ Enable clock access to Timer 14 RCC->APBENR2 |= RCC_APBENR2_TIM14EN; \/\/ Set prescaler TIM14->PSC = PSC_FACTOR-1; \/\/ Set autoreload value TIM14->ARR = PWM_TIMER_MAX-1; \/\/ Set the compare register value - start with a speed of 0 TIM14->CCR1 = 0;  This is the part that makes it a PWM channel. The two CCMR1 pairs are the read-modify-write we decoded above; CC1E lets the channel reach the pin; UG forces the update event that loads the buffered values; and CEN starts the counter.  \/\/ Set pwm mode 1 (0110): pin is high up to capture value, then goes low TIM14->CCMR1 &= ~TIM_CCMR1_OC1M_Msk; TIM14->CCMR1 |= TIM_OC1_PWM1 << TIM_CCMR1_OC1M_Pos; \/\/ Make sure timer is in output mode; this is default value TIM14->CCMR1 &= ~TIM_CCMR1_CC1S_Msk; TIM14->CCMR1 |= TIM_CC1_OUTPUT << TIM_CCMR1_CC1S_Pos; \/\/ Enable TIM14_CH1 in output mode TIM14->CCER |= TIM_CCER_CC1E; \/\/ Generate an update event - this clears counter, prescaler counter, updates registers TIM14->EGR |= TIM_EGR_UG; \/\/ Enable timer TIM14->CR1 |= TIM_CR1_CEN; }  Here is the function that controls the motor speed while it is running: the clamp keeps the value inside the range the counter can represent, and then one assignment sets the speed. The value < 0 test is technically not necessary here since a uint16_t value will never be less than zero, but it will help ensure you never set the compare register to a value outside the correct range by accident: when you write motor_speed() for Lab 6, taking a signed parameter is the natural choice, and then that line is all that stands between a negative speed and a compare value of sixty-five thousand.  void tim14_pwm_set(uint16_t value) { \/\/ Safety first: Allow no pulse values outside the (0, PWM_TIMER_MAX-1 range! if (value>PWM_TIMER_MAX-1) value = PWM_TIMER_MAX-1; else if (value < 0) value = 0; TIM14->CCR1 = value; }       Once that function has run, the motor's speed is changed by writing one register and nothing else. tim14_pwm_set() limits the value it is given to the range the counter can represent and then assigns it to CCR1 ; the prescaler, the auto-reload value, the mode bits and the output enable are all left exactly as the initialization set them, and the timer keeps producing the waveform without any further involvement from the CPU.   Name the register   On your own, without looking back. Each step of the initialization does one of these jobs. Write in the register it modifies.      The line does this  so it writes this register   Give the pin's port a clock  Put PA7 in alternate-function mode  Select which alternate function  Give the timer a clock  Set the counting rate  Set the value the counter runs up to  Set the starting speed  Select PWM mode  Keep the channel an output  Let the channel reach the pin  Force an update event  Start the counter   Twelve steps, but not twelve different registers. Which one is written twice, and why?      In Lab 6 you are asked to turn this into a device driver of your own, with an initialization function, a mode-select function and a speed-select function in a file called tb6612.c . Two of the three are almost in front of you already: tim14_pa7_pwm_init() becomes the initialization once you fold in the two lines that make PA5 and PA6 outputs, and tim14_pwm_set() becomes the speed-select nearly unchanged.    Going further   These are optional, for when you have finished the rest.    Write the body of motor_mode() . The signature is given in Lab 6 — void motor_mode(uint8_t mode); , with the four modes FWD, REV, BRAKE and STOP — and the TB6612 truth table from Day 11, on page 4 of the driver's datasheet, gives you IN1 and IN2 for each. Note that TTmotor_ramp.c only ever produces three of the four: it never puts the driver in stop. What do IN1 and IN2 have to be for that fourth case, and how is what the motor does then different from brake?    On Day 11 you predicted what would change if this motor ran at 50 Hz instead of 1.6 kHz. Now work out the numbers: from a 12 MHz clock, what does the prescaler have to divide by, and what does the counter have to run up to, to give a 50 Hz PWM with 2000 steps of duty cycle? The two commented-out #define lines just below the active ones in TTmotor_ramp.c are that setting — check them against your answer, then try them and listen to the difference.     "
+},
+{
+  "id": "fig-ccer-cc1e",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#fig-ccer-cc1e",
+  "type": "Figure",
+  "number": "11.3.14",
+  "title": "",
+  "body": " The capture\/compare enable register, TIM14_CCER , bit by bit. CC1E is bit 0.   "
+},
+{
+  "id": "fig-egr-ug",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#fig-egr-ug",
+  "type": "Figure",
+  "number": "11.3.15",
+  "title": "",
+  "body": " The event generation register, TIM14_EGR . UG is bit 0, and it is write-only — the hardware clears it again as soon as it has acted on it.   "
+},
+{
+  "id": "fig-cr1-cen",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#fig-cr1-cen",
+  "type": "Figure",
+  "number": "11.3.16",
+  "title": "",
+  "body": " Control register 1, TIM14_CR1 . CEN is bit 0, and it is the switch that starts the counter.   "
+},
+{
+  "id": "act-day11x-bitfields",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#act-day11x-bitfields",
+  "type": "Activity",
+  "number": "11.3.2",
+  "title": "From a register name to a register value.",
+  "body": " From a register name to a register value   Here are four lines from TTmotor_ramp.c . ES28.h defines TIM_OC1_PWM1 as 6 and TIM_CC1_OUTPUT as 0, and every _Pos name is the bit position of the field it names. Work each one out on paper before we walk through the file.    TIM14->CCMR1 |= TIM_OC1_PWM1 << TIM_CCMR1_OC1M_Pos; — write 6 in binary, and deduce which bits of CCMR1 this sets. Does that put the PWM mode the Reference Manual (Section 17.3.8) asked for into the OC1M field? The line above it is TIM14->CCMR1 &= ~TIM_CCMR1_OC1M_Msk; — what could go wrong if we left that line out?    TIM14->CCER |= TIM_CCER_CC1E; — find TIM14_CCER , the capture\/compare enable register, in Section 17.4 of the Reference Manual, and read which bit CC1E is. What is the numeric value of TIM_CCER_CC1E ? Why is this line written with |= and no clearing line before it, when the OC1M line above needed one?    TIM14->CR1 |= TIM_CR1_CEN; — find TIM14_CR1 , control register 1, in the same section, and read which bit CEN is. What value is that, and what happens on the pin the instant this line runs?    TIM14->CCMR1 |= TIM_CC1_OUTPUT << TIM_CCMR1_CC1S_Pos; — the same register as the first question, and a second field of it. Which bits is CC1S, and what does 00 select? The comment in TTmotor_ramp.c calls it the default value — so why write it at all?   "
+},
+{
+  "id": "fig-ccmr1-oc1m-bits",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#fig-ccmr1-oc1m-bits",
+  "type": "Figure",
+  "number": "11.3.17",
+  "title": "",
+  "body": " TIM14_CCMR1 laid out bit by bit, with the first of our two fields marked. OC1M selects what the channel does, and it is four bits wide and not in one piece: three of them at 6:4, and the fourth up at bit 16. Four bits is what makes it different from CC1E, CEN and UG, which are one bit each.   "
+},
+{
+  "id": "fig-ccmr1-cc1s-bits",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#fig-ccmr1-cc1s-bits",
+  "type": "Figure",
+  "number": "11.3.18",
+  "title": "",
+  "body": " The same register, with our other field marked. CC1S is two bits at 1:0, and it decides whether the channel is an output or an input. Two fields in one register is why the initialization writes CCMR1 twice.   "
+},
+{
+  "id": "fig-ccmr1-oc1m",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#fig-ccmr1-oc1m",
+  "type": "Figure",
+  "number": "11.3.20",
+  "title": "",
+  "body": " Everything our program does to TIM14_CCMR1 , in one place: the bit map at the top, then section 17.4's description of each field with the value we write boxed, and beside it the line that writes it. In blue, OC1M gets 0110 — PWM mode 1, which the manual defines as channel 1 being active as long as the counter is below the compare value. In magenta, CC1S gets 00 , which is what keeps the channel an output. Two fields, one register, which is why the initialization writes CCMR1 twice.   "
+},
+{
+  "id": "act-day11x-checkpoint",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#act-day11x-checkpoint",
+  "type": "Activity",
+  "number": "11.3.3",
+  "title": "Name the register.",
+  "body": " Name the register   On your own, without looking back. Each step of the initialization does one of these jobs. Write in the register it modifies.      The line does this  so it writes this register   Give the pin's port a clock  Put PA7 in alternate-function mode  Select which alternate function  Give the timer a clock  Set the counting rate  Set the value the counter runs up to  Set the starting speed  Select PWM mode  Keep the channel an output  Let the channel reach the pin  Force an update event  Start the counter   Twelve steps, but not twelve different registers. Which one is written twice, and why?   "
+},
+{
+  "id": "act-day11x-stretch",
+  "level": "2",
+  "url": "subsec-day11x-driver.html#act-day11x-stretch",
+  "type": "Activity",
+  "number": "11.3.4",
+  "title": "Going further.",
+  "body": " Going further   These are optional, for when you have finished the rest.    Write the body of motor_mode() . The signature is given in Lab 6 — void motor_mode(uint8_t mode); , with the four modes FWD, REV, BRAKE and STOP — and the TB6612 truth table from Day 11, on page 4 of the driver's datasheet, gives you IN1 and IN2 for each. Note that TTmotor_ramp.c only ever produces three of the four: it never puts the driver in stop. What do IN1 and IN2 have to be for that fourth case, and how is what the motor does then different from brake?    On Day 11 you predicted what would change if this motor ran at 50 Hz instead of 1.6 kHz. Now work out the numbers: from a 12 MHz clock, what does the prescaler have to divide by, and what does the counter have to run up to, to give a 50 Hz PWM with 2000 steps of duty cycle? The two commented-out #define lines just below the active ones in TTmotor_ramp.c are that setting — check them against your answer, then try them and listen to the difference.   "
+},
+{
+  "id": "subsec-day11x-resolution",
+  "level": "1",
+  "url": "subsec-day11x-resolution.html",
+  "type": "Subsection",
+  "number": "11.3.5",
+  "title": "Part 5: Resolution, and What Comes Next",
+  "body": " Part 5: Resolution, and What Comes Next  One number matters that the program never states outright: the channel's resolution , the smallest change in pulse width we can ask for. The counter divides each period into a fixed number of steps and the compare register holds whole numbers, so the duty cycle moves in steps rather than continuously. Our period is 625 µs and the counter divides it into 1250 steps, so one step of CCR1 is 625 µs ÷ 1250 = 500 ns of pulse width, and 5 V ÷ 1250 = 4 mV of average voltage at the motor. That is what decides whether two speeds you ask for are actually different, and it is what your Lab 6 screenshot has to be able to show.   The narrowest pulse this program can ask for. The period is fixed by the value the counter runs up to, and one count of the compare register is one step of pulse width, — so the number of steps sets how finely the speed can be adjusted. That is the channel's resolution .     Now that we know how to control the motor's speed along with all of the registers needed to do so, we'll turn to measuring the motor's speed to find out whether the motor is actually turning as fast as we asked for (under load it may not). The hardware we'll use for measuring speed (a slotted wheel sensor) is already mounted on your motor.   Measuring motor speed with a slotted wheel on the shaft, and a photointerrupter that sees the light through it interrupted once per slot. Counting those pulses is how the display in the background knows the shaft is turning at 222 rpm. The wheel and the sensor are already part of the motor assembly in your kit.     The photointerrupter's output on the oscilloscope while the motor speeds up from about 30 rpm to about 180 rpm. The pulses are the beam being interrupted by each slot in turn, and as the shaft turns faster they crowd together — which is the whole idea behind measuring speed this way: the rate the pulses arrive at is proportional to the speed of the shaft.      "
+},
+{
+  "id": "subsec-day11x-resolution-2",
+  "level": "2",
+  "url": "subsec-day11x-resolution.html#subsec-day11x-resolution-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "resolution "
+},
+{
+  "id": "fig-pwm-resolution",
+  "level": "2",
+  "url": "subsec-day11x-resolution.html#fig-pwm-resolution",
+  "type": "Figure",
+  "number": "11.3.29",
+  "title": "",
+  "body": " The narrowest pulse this program can ask for. The period is fixed by the value the counter runs up to, and one count of the compare register is one step of pulse width, — so the number of steps sets how finely the speed can be adjusted. That is the channel's resolution .   "
+},
+{
+  "id": "fig-encoder-wheel",
+  "level": "2",
+  "url": "subsec-day11x-resolution.html#fig-encoder-wheel",
+  "type": "Figure",
+  "number": "11.3.31",
+  "title": "",
+  "body": " Measuring motor speed with a slotted wheel on the shaft, and a photointerrupter that sees the light through it interrupted once per slot. Counting those pulses is how the display in the background knows the shaft is turning at 222 rpm. The wheel and the sensor are already part of the motor assembly in your kit.   "
+},
+{
+  "id": "fig-photointerrupter-video",
+  "level": "2",
+  "url": "subsec-day11x-resolution.html#fig-photointerrupter-video",
+  "type": "Figure",
+  "number": "11.3.32",
+  "title": "",
+  "body": " The photointerrupter's output on the oscilloscope while the motor speeds up from about 30 rpm to about 180 rpm. The pulses are the beam being interrupted by each slot in turn, and as the shaft turns faster they crowd together — which is the whole idea behind measuring speed this way: the rate the pulses arrive at is proportional to the speed of the shaft.   "
+},
+{
+  "id": "subsec-speed-sensor",
+  "level": "1",
+  "url": "subsec-speed-sensor.html",
+  "type": "Subsection",
+  "number": "11.4.1",
+  "title": "How the Photointerrupter Turns Rotation Into Pulses",
+  "body": " How the Photointerrupter Turns Rotation Into Pulses  The optical incremental sensor we saw at the end of Wednesday's class has two parts. The first is the slotted wheel, which is fixed to the motor's shaft and turns with it. The second is the photointerrupter, the U-shaped part wrapped around the rim of that wheel. There is an LED (light-emitting diode) on one side of the U and a phototransistor on the other. A phototransistor is a transistor that is switched by light falling on it rather than by a current we supply. The LED shines steadily across the gap between the two sides, and the rim of the wheel passes through that gap ( ).  Every time a slot comes around, the light gets through to the phototransistor; every time a spoke — the solid part of the rim between two slots — comes around, the light is blocked. So the sensor's output switches back and forth once for every slot that goes past, and a wheel that is turning steadily produces a steady square wave. The number of pulses tells us how far the shaft has turned, and the rate at which they arrive tells us how fast.   The two parts, as they come. On the left the photointerrupter, with EE-SX672 printed on its side and the gap the wheel's rim passes through; on the right two slotted wheels, which push onto the motor's shaft. Yours are already assembled.        The two parts of the optical incremental sensor, and the pulse train they produce. The slotted wheel turns on the motor's shaft, and its rim passes through the gap in the photointerrupter, where an LED on one side shines across to a phototransistor on the other. A slot lets the light through and a spoke blocks it, so the sensor's output completes one cycle — two edges — for every slot that goes past.    The photointerrupter has three connections: power, ground, and an output. The output needs a pull-up resistor — about 10 kΩ between the output and 3.3 V, or the pin's own internal one, which is the choice Lab 6 gives you. Why it is needed is what we work out in class, with the oscilloscope on that output.  "
+},
+{
+  "id": "subsec-speed-sensor-2",
+  "level": "2",
+  "url": "subsec-speed-sensor.html#subsec-speed-sensor-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "phototransistor "
+},
+{
+  "id": "subsec-speed-sensor-3",
+  "level": "2",
+  "url": "subsec-speed-sensor.html#subsec-speed-sensor-3",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "spoke "
+},
+{
+  "id": "fig-day12-sensor-parts",
+  "level": "2",
+  "url": "subsec-speed-sensor.html#fig-day12-sensor-parts",
   "type": "Figure",
   "number": "11.4.1",
   "title": "",
-  "body": " PWM waveform with 25%, 50%, and 75% duty cycles. The average voltage (dashed line) is proportional to the duty cycle. Increasing the duty cycle increases average voltage and therefore motor speed. The PWM frequency must be high enough that the motor's inductance smooths the current pulses into near-steady current.   "
+  "body": " The two parts, as they come. On the left the photointerrupter, with EE-SX672 printed on its side and the gap the wheel's rim passes through; on the right two slotted wheels, which push onto the motor's shaft. Yours are already assembled.      "
 },
 {
-  "id": "fig-pwm-hardware",
+  "id": "fig-photointerrupter-beam",
   "level": "2",
-  "url": "subsec-pwm-waveform.html#fig-pwm-hardware",
+  "url": "subsec-speed-sensor.html#fig-photointerrupter-beam",
   "type": "Figure",
   "number": "11.4.2",
   "title": "",
-  "body": " Hardware PWM using a counter and compare register. When the counter is below the compare value (CCR1), the PWM output is HIGH; when the counter reaches or exceeds CCR1, the output goes LOW. At the auto-reload value (ARR) the counter resets and the cycle repeats.   "
+  "body": " The two parts of the optical incremental sensor, and the pulse train they produce. The slotted wheel turns on the motor's shaft, and its rim passes through the gap in the photointerrupter, where an LED on one side shines across to a phototransistor on the other. A slot lets the light through and a spoke blocks it, so the sensor's output completes one cycle — two edges — for every slot that goes past.   "
 },
 {
-  "id": "subsec-pwm-timer",
+  "id": "subsec-speed-sensor-6",
+  "level": "2",
+  "url": "subsec-speed-sensor.html#subsec-speed-sensor-6",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "pull-up resistor "
+},
+{
+  "id": "subsec-speed-rpm",
   "level": "1",
-  "url": "subsec-pwm-timer.html",
+  "url": "subsec-speed-rpm.html",
   "type": "Subsection",
   "number": "11.4.2",
-  "title": "TIM14 PWM Configuration",
-  "body": " TIM14 PWM Configuration  TIM14 channel 1 can drive a PWM output on PA4, PA7, or PB1. In addition to the PSC and ARR registers used for timing, PWM requires configuring the Capture\/Compare Mode Register (CCMR1), the Capture\/Compare Enable Register (CCER), and the Capture\/Compare Register 1 (CCR1) that sets the duty cycle.   TIM14 in PWM mode. CCR1 sets the duty cycle: when CNT < CCR1 the output is HIGH; otherwise LOW. ARR sets the period. Setting CCR1 to half of ARR gives 50% duty cycle.     Nucleo pins with TIM14 PWM capability. PA4, PA7, and PB1 can be driven by TIM14 channel 1 (AF4). In Lab 6 we use PA7 as the PWM output to the TB6612FNG PWMA pin.     Breadboard wiring for the motor PWM exercise. The TB6612FNG receives IN1 and IN2 for direction, PWMA for speed, and STBY pulled HIGH. The oscilloscope channel 1 monitors the PWM signal on PWMA.     TIM14 Capture\/Compare Mode Register 1 (CCMR1) in output compare mode. OC1M bits [6:4] = 0b110 select PWM mode 1 (output HIGH while CNT < CCR1).     TIM14 CCR1, ARR, and PSC registers for PWM. CCR1 = duty × ARR sets the on-time. ARR sets the period. PSC divides the clock to set the PWM frequency: .    #define PWM_TIMER_MAX 100 \/\/ ARR value: 100 steps of duty cycle #define PSC_VALUE 11 \/\/ 12 MHz \/ 12 = 1 MHz counter -> 10 kHz PWM void pwm_tim14_init(void) { RCC->APBENR2 |= RCC_APBENR2_TIM14EN; RCC->IOPENR |= RCC_IOPENR_GPIOAEN; \/\/ PA7 = TIM14 CH1, AF4 GPIOA->MODER &= ~(3U << 14); GPIOA->MODER |= (2U << 14); \/\/ AF GPIOA->AFR[0] &= ~(0xFU << 28); GPIOA->AFR[0] |= (4U << 28); \/\/ AF4 TIM14->PSC = PSC_VALUE; TIM14->ARR = PWM_TIMER_MAX - 1; TIM14->CCR1 = 0; \/\/ 0% duty cycle initially TIM14->CCMR1 = (6U << TIM_CCMR1_OC1M_Pos); \/\/ PWM mode 1 TIM14->CCER |= TIM_CCER_CC1E; \/\/ enable CH1 output TIM14->EGR |= TIM_EGR_UG; \/\/ update registers TIM14->CR1 |= TIM_CR1_CEN; \/\/ start counter } void pwm_set_duty(uint8_t duty) { \/\/ duty: 0–100 TIM14->CCR1 = duty; }   Oscilloscope trace of the PWM ramp signal from TTmotor_ramp.c . The duty cycle increases from 0 to 100% over one ramp period, then reverses direction and ramps again. The motor speed increases as the duty cycle rises.    "
+  "title": "From Pulses per Second to Revolutions per Minute",
+  "body": " From Pulses per Second to Revolutions per Minute  The slotted wheel has some number of slots cut around its rim, and we'll write that number . One full turn of the shaft carries all of them past the photointerrupter, so one revolution produces pulses. Everything else is a matter of units.  Suppose we count the pulses for exactly one second and call that count PPS , for pulses per second. Dividing by turns pulses into revolutions, so the shaft turned times during that second. A minute is sixty seconds, and at a steady speed the shaft turns sixty times as far in a minute as it does in a second, which gives us its speed in revolutions per minute:   The speed of the shaft in revolutions per minute, from a count of pulses taken over one second. is the number of pulses counted in that second and is the number of slots in the wheel. Dividing by converts pulses into revolutions, and multiplying by 60 converts a rate per second into a rate per minute.    For the wheel in your kit is 20, which is the number the expression in Lab 6 uses, and that makes the multiplier a round number: . So a count of 60 pulses in one second means the shaft is turning at 180 rpm. In class we'll count the slots on our own wheels and check that 20 is right, because the number in the denominator is the one thing in this expression that comes from the hardware rather than from the arithmetic.  Every pulse looks like every other pulse: the phototransistor is either seeing the LED or it is not, and one slot is the same as the next. So does anything about this signal change if the shaft turns the other way? In Lab 6 you are asked to display a negative rpm when the motor is running in reverse, so we'll answer it in class.  "
 },
 {
-  "id": "fig-pwm-tim14-block",
+  "id": "subsec-speed-rpm-3",
   "level": "2",
-  "url": "subsec-pwm-timer.html#fig-pwm-tim14-block",
+  "url": "subsec-speed-rpm.html#subsec-speed-rpm-3",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "PPS "
+},
+{
+  "id": "fig-rpm-formula",
+  "level": "2",
+  "url": "subsec-speed-rpm.html#fig-rpm-formula",
   "type": "Figure",
   "number": "11.4.3",
   "title": "",
-  "body": " TIM14 in PWM mode. CCR1 sets the duty cycle: when CNT < CCR1 the output is HIGH; otherwise LOW. ARR sets the period. Setting CCR1 to half of ARR gives 50% duty cycle.   "
+  "body": " The speed of the shaft in revolutions per minute, from a count of pulses taken over one second. is the number of pulses counted in that second and is the number of slots in the wheel. Dividing by converts pulses into revolutions, and multiplying by 60 converts a rate per second into a rate per minute.   "
 },
 {
-  "id": "fig-pwm-nucleo-pins",
-  "level": "2",
-  "url": "subsec-pwm-timer.html#fig-pwm-nucleo-pins",
-  "type": "Figure",
-  "number": "11.4.4",
-  "title": "",
-  "body": " Nucleo pins with TIM14 PWM capability. PA4, PA7, and PB1 can be driven by TIM14 channel 1 (AF4). In Lab 6 we use PA7 as the PWM output to the TB6612FNG PWMA pin.   "
-},
-{
-  "id": "fig-pwm-wiring-lab",
-  "level": "2",
-  "url": "subsec-pwm-timer.html#fig-pwm-wiring-lab",
-  "type": "Figure",
-  "number": "11.4.5",
-  "title": "",
-  "body": " Breadboard wiring for the motor PWM exercise. The TB6612FNG receives IN1 and IN2 for direction, PWMA for speed, and STBY pulled HIGH. The oscilloscope channel 1 monitors the PWM signal on PWMA.   "
-},
-{
-  "id": "fig-tim14-ccmr1",
-  "level": "2",
-  "url": "subsec-pwm-timer.html#fig-tim14-ccmr1",
-  "type": "Figure",
-  "number": "11.4.6",
-  "title": "",
-  "body": " TIM14 Capture\/Compare Mode Register 1 (CCMR1) in output compare mode. OC1M bits [6:4] = 0b110 select PWM mode 1 (output HIGH while CNT < CCR1).   "
-},
-{
-  "id": "fig-tim14-pwm-registers",
-  "level": "2",
-  "url": "subsec-pwm-timer.html#fig-tim14-pwm-registers",
-  "type": "Figure",
-  "number": "11.4.7",
-  "title": "",
-  "body": " TIM14 CCR1, ARR, and PSC registers for PWM. CCR1 = duty × ARR sets the on-time. ARR sets the period. PSC divides the clock to set the PWM frequency: .   "
-},
-{
-  "id": "fig-pwm-oscilloscope",
-  "level": "2",
-  "url": "subsec-pwm-timer.html#fig-pwm-oscilloscope",
-  "type": "Figure",
-  "number": "11.4.8",
-  "title": "",
-  "body": " Oscilloscope trace of the PWM ramp signal from TTmotor_ramp.c . The duty cycle increases from 0 to 100% over one ramp period, then reverses direction and ramps again. The motor speed increases as the duty cycle rises.   "
-},
-{
-  "id": "sec-motor-speed",
+  "id": "rq-speed-sensing",
   "level": "1",
-  "url": "sec-motor-speed.html",
-  "type": "Section",
-  "number": "11.5",
-  "title": "Motor Speed Sensing",
-  "body": " Motor Speed Sensing  To close a feedback loop (control actual speed, not just PWM duty cycle), we need to measure how fast the motor shaft is turning. An optical photointerrupter mounted on the motor shaft produces one pulse per slot as the encoder wheel rotates. By counting pulses per unit time or measuring the time between pulses, we compute RPM.   Optical incremental encoder and photointerrupter assembly. A slotted wheel attached to the motor shaft passes through the gap of the photointerrupter. When a slot aligns with the light beam the output goes HIGH; when the web blocks the beam the output goes LOW. Counting transitions gives shaft position and speed.       Oscilloscope capture of the photointerrupter output as motor speed increases from 30 RPM to 180 RPM. The pulse period decreases as speed increases. The period can be measured with the AD2 cursor tool to compute RPM.     Complete Lab 6 breadboard setup: potentiometer on PA0 (ADC), TB6612 motor driver on digital outputs, PWM on PA7, and photointerrupter on a digital input (with GPIO interrupt). The ADC reading sets the target speed; the photointerrupter measures actual speed.    "
+  "url": "rq-speed-sensing.html",
+  "type": "Check Your Understanding",
+  "number": "11.4.3",
+  "title": "Check Your Understanding",
+  "body": "  The slotted wheel on your motor has 20 slots. You count 40 pulses from the photointerrupter in one second. How fast is the shaft turning?    120 rpm.  Correct. Forty pulses at 20 slots per revolution is two revolutions in that second, and two revolutions per second is 120 per minute — which is .    2400 rpm.  This is , which converts the pulse rate from per-second to per-minute but never converts pulses into revolutions. Twenty of those pulses make one revolution, so the count has to be divided by 20 as well.    800 rpm.  This multiplies by the slot count instead of dividing by it. More slots on the wheel means more pulses for the same rotation, so a larger slot count makes the speed that a given pulse rate corresponds to smaller .    40 rpm.  Forty is the pulse count, not a speed. It has to be converted twice: pulses into revolutions by dividing by the slot count, and seconds into minutes by multiplying by 60.      You have the photointerrupter's output on the oscilloscope while the motor speeds up. Which feature of the trace is telling you that the speed has changed?    The rate at which the pulses arrive — they crowd together as the shaft speeds up.  Correct. The slots go past the sensor faster, so the pulses arrive faster. That rate is the only thing on the trace that follows the shaft's speed, and it is what the conversion to rpm is built on.    The height of the pulses — they get taller.  The height of a pulse is set by the circuit the sensor's output is connected to, not by how fast the wheel is turning. A wheel turning slowly and a wheel turning fast produce pulses of the same height.    The total number of pulses since the motor started.  That total tells you how far the shaft has turned altogether, which is a useful thing to know but is not a speed. Speed is a count taken over a known interval of time.    How sharp the edges of the pulses are.  How quickly the output switches is set by the sensor and by the resistor on its output, not by the shaft. It is the same whether the wheel is turning fast or slowly.      Two motors are turning at exactly the same speed. One has a wheel with 20 slots and the other has a wheel with 12. Which one produces more pulses per second?    The 20-slot wheel.  Correct. Both shafts complete the same number of revolutions each second, and each revolution of the 20-slot wheel carries 20 slots past the sensor against the other wheel's 12. This is why the slot count has to appear in the conversion: the same pulse rate means different speeds on different wheels.    The 12-slot wheel.  Fewer slots means fewer interruptions of the beam per revolution, so at the same shaft speed the 12-slot wheel produces fewer pulses per second, not more.    They produce the same number, because the shafts are turning at the same speed.  The pulse rate depends on two things, not one: how fast the shaft turns and how many slots each revolution carries past the sensor. Holding the first fixed and changing the second changes the pulse rate.    It cannot be worked out without knowing the supply voltage of each motor.  The supply voltage is what sets a motor's speed in the first place, but here we are told the speeds are already equal. From that point on the pulse rate follows from the shaft speed and the slot count alone.     "
 },
 {
-  "id": "sec-motor-speed-2",
+  "id": "rq-speed-derivation",
   "level": "2",
-  "url": "sec-motor-speed.html#sec-motor-speed-2",
-  "type": "Paragraph (with a defined term)",
-  "number": "",
+  "url": "rq-speed-sensing.html#rq-speed-derivation",
+  "type": "Reading Question",
+  "number": "11.4.3.1",
   "title": "",
-  "body": "photointerrupter "
+  "body": " The slotted wheel on your motor has 20 slots. You count 40 pulses from the photointerrupter in one second. How fast is the shaft turning?    120 rpm.  Correct. Forty pulses at 20 slots per revolution is two revolutions in that second, and two revolutions per second is 120 per minute — which is .    2400 rpm.  This is , which converts the pulse rate from per-second to per-minute but never converts pulses into revolutions. Twenty of those pulses make one revolution, so the count has to be divided by 20 as well.    800 rpm.  This multiplies by the slot count instead of dividing by it. More slots on the wheel means more pulses for the same rotation, so a larger slot count makes the speed that a given pulse rate corresponds to smaller .    40 rpm.  Forty is the pulse count, not a speed. It has to be converted twice: pulses into revolutions by dividing by the slot count, and seconds into minutes by multiplying by 60.    "
 },
 {
-  "id": "fig-photointerrupter",
+  "id": "rq-speed-what-carries-it",
   "level": "2",
-  "url": "sec-motor-speed.html#fig-photointerrupter",
-  "type": "Figure",
+  "url": "rq-speed-sensing.html#rq-speed-what-carries-it",
+  "type": "Reading Question",
+  "number": "11.4.3.2",
+  "title": "",
+  "body": " You have the photointerrupter's output on the oscilloscope while the motor speeds up. Which feature of the trace is telling you that the speed has changed?    The rate at which the pulses arrive — they crowd together as the shaft speeds up.  Correct. The slots go past the sensor faster, so the pulses arrive faster. That rate is the only thing on the trace that follows the shaft's speed, and it is what the conversion to rpm is built on.    The height of the pulses — they get taller.  The height of a pulse is set by the circuit the sensor's output is connected to, not by how fast the wheel is turning. A wheel turning slowly and a wheel turning fast produce pulses of the same height.    The total number of pulses since the motor started.  That total tells you how far the shaft has turned altogether, which is a useful thing to know but is not a speed. Speed is a count taken over a known interval of time.    How sharp the edges of the pulses are.  How quickly the output switches is set by the sensor and by the resistor on its output, not by the shaft. It is the same whether the wheel is turning fast or slowly.    "
+},
+{
+  "id": "rq-speed-slot-count",
+  "level": "2",
+  "url": "rq-speed-sensing.html#rq-speed-slot-count",
+  "type": "Reading Question",
+  "number": "11.4.3.3",
+  "title": "",
+  "body": " Two motors are turning at exactly the same speed. One has a wheel with 20 slots and the other has a wheel with 12. Which one produces more pulses per second?    The 20-slot wheel.  Correct. Both shafts complete the same number of revolutions each second, and each revolution of the 20-slot wheel carries 20 slots past the sensor against the other wheel's 12. This is why the slot count has to appear in the conversion: the same pulse rate means different speeds on different wheels.    The 12-slot wheel.  Fewer slots means fewer interruptions of the beam per revolution, so at the same shaft speed the 12-slot wheel produces fewer pulses per second, not more.    They produce the same number, because the shafts are turning at the same speed.  The pulse rate depends on two things, not one: how fast the shaft turns and how many slots each revolution carries past the sensor. Holding the first fixed and changing the second changes the pulse rate.    It cannot be worked out without knowing the supply voltage of each motor.  The supply voltage is what sets a motor's speed in the first place, but here we are told the speeds are already equal. From that point on the pulse rate follows from the shaft speed and the slot count alone.    "
+},
+{
+  "id": "subsec-day12-driver-questions",
+  "level": "1",
+  "url": "subsec-day12-driver-questions.html",
+  "type": "Subsection",
   "number": "11.5.1",
-  "title": "",
-  "body": " Optical incremental encoder and photointerrupter assembly. A slotted wheel attached to the motor shaft passes through the gap of the photointerrupter. When a slot aligns with the light beam the output goes HIGH; when the web blocks the beam the output goes LOW. Counting transitions gives shaft position and speed.     "
+  "title": "Part 1: Questions About TTmotor_ramp.c",
+  "body": " Part 1: Questions About TTmotor_ramp.c   Everything we do today is built on top of TTmotor_ramp.c : the program you write for Lab 6 keeps much of that driver and adds a measurement to it. So we'll start with whatever is still unclear in that file.   What is still unclear about TTmotor_ramp.c   Work on your own first, then compare with your table group.    Write down one line of TTmotor_ramp.c that you can now explain, and one line that you cannot.    With your table group, work through how the program runs: what happens in main() , and which register each line of the setup configures. Collect any lines that nobody at the table could explain.    "
 },
 {
-  "id": "fig-photointerrupter-scope",
+  "id": "act-day12-driver-questions",
   "level": "2",
-  "url": "sec-motor-speed.html#fig-photointerrupter-scope",
+  "url": "subsec-day12-driver-questions.html#act-day12-driver-questions",
+  "type": "Activity",
+  "number": "11.5.1",
+  "title": "What is still unclear about TTmotor_ramp.c.",
+  "body": " What is still unclear about TTmotor_ramp.c   Work on your own first, then compare with your table group.    Write down one line of TTmotor_ramp.c that you can now explain, and one line that you cannot.    With your table group, work through how the program runs: what happens in main() , and which register each line of the setup configures. Collect any lines that nobody at the table could explain.   "
+},
+{
+  "id": "subsec-day12-wire-and-scope",
+  "level": "1",
+  "url": "subsec-day12-wire-and-scope.html",
+  "type": "Subsection",
+  "number": "11.5.2",
+  "title": "Part 2: Wire the Sensor and Look at Its Output",
+  "body": " Part 2: Wire the Sensor and Look at Its Output   We'll wire the photointerrupter from the reading and put its signal wire on the oscilloscope before reading it with a pin. Before we wire anything, make a prediction.    Predict the trace   You are about to wire the photointerrupter as in : power, ground, its signal wire to a row of its own on the breadboard, and a 10 kΩ resistor from that row up to 3.3 V. Now suppose we leave the resistor out. The sensor is powered, the oscilloscope is on its signal wire, and nothing else is connected to that wire at all. The motor is running, so slots are going past the beam. What would the trace look like, and why?       The photointerrupter has three connections, and all three are in . Its ground goes to the breadboard's ground rail. Its power is 5 V, taken from the regulator — the same node that already feeds the motor driver's VM pin — because the datasheet gives the part's supply voltage as 5 to 24 V DC. Its signal wire goes to a row of its own on the breadboard, and a 10 kΩ resistor goes from that row up to 3.3 V. So the sensor runs from 5 V and the resistor is tied to 3.3 V. We'll see below why those are two different rails.   The circuit for today's measurement: Wednesday's circuit with the photointerrupter and one resistor added. The sensor's power goes to the regulator's 5 V, the same node that feeds the driver's VM pin. Its signal wire goes to a row of its own, with the 10 kΩ pull-up from that row to 3.3 V.     Not every kit has the same part. Some have the sensor on a small board with its three connections marked on it, and some have it on a length of four-core cable, where the wires are told apart by color instead ( ). Either way, put the oscilloscope on the sensor's row with its minus lead on the shared ground, and turn the wheel slowly by hand before you start the motor. If what you see ever goes above 3.3 V, stop there. Five volts on a Nucleo pin damages it, which is why we check this signal on the oscilloscope before plugging the wire into the header.   The photointerrupter as some kits have it, on a length of four-core cable rather than on a small board. Brown is power, blue is ground, and black is the output. The pink wire is the sensor's L terminal ; leave it unconnected ( ).      Wire the sensor, and watch it while the motor ramps   Wire the photointerrupter's power and ground. Its power is 5 V, taken from the regulator, just as the motor's is. Run its signal wire to a row of its own on the breadboard, and put the 10 kΩ resistor between that same row and 3.3 V.    Put the oscilloscope on that row with Waveforms, and turn the wheel slowly by hand. You are looking for a trace that toggles between 0 V and 3.3 V once for every slot that goes past. If it goes above 3.3 V, stop and check your wiring: 5 V will damage your Nucleo.    Run TTmotor_ramp.c and watch the trace as the motor speeds up and slows down again.    At the fastest motor speed, measure how many pulses arrive per second. Write the number down.    The square wave you are looking at runs between 0 V and 3.3 V, and that 3.3 V does not come from the sensor at all: the sensor runs on 5 V. The phototransistor inside the part is a switch to ground and nothing else. In one of the two states it conducts and pulls the signal wire down to 0 V; in the other it stops conducting and lets go of the line, at which point the wire is pulled up through the 10 kΩ resistor to 3.3 V. So the rail the resistor is tied to is what sets the HIGH level, and we tied it to 3.3 V because 3.3 V is what the STM32C031C6's pins expect. draws both states.  Which state is which is worth reading off your own screen. This sensor can be wired to switch on light or on dark, so turn the wheel by hand and watch which way the trace moves as a slot comes into the gap. Nothing in the rpm arithmetic depends on the answer, because either way there is one pulse for every slot, but it matters when you come to choose which edge to count.   Why the sensor's output needs a pull-up resistor. In the left panel the beam reaches the phototransistor and it conducts, pulling OUT down; in the right panel a spoke blocks the beam, the transistor stops conducting, and the 10 kΩ resistor is the only thing left holding the line up. Whatever that resistor is connected to is what sets the HIGH level — here 3.3 V, which is what the STM32C031C6's pins expect.     That also answers the prediction. With the resistor left out there is nothing to bring the line back up, so between pulses the row is connected to nothing at all: the trace is neither a square wave nor a flat line, but a wandering one, because a floating node picks up whatever is nearby. It can even look as though it is responding to the motor.  You have seen this behavior before under a different name. On Day 10 the two I2C pins were configured as open-drain outputs ( ), which can pull a line down and cannot drive it up, and the bus needed pull-up resistors for exactly the reason above. The photointerrupter's output does the same job with a different kind of transistor — its datasheet calls it an open collector — and the one difference that matters to you is that there is no OTYPER bit to set here. The behavior is built into the part and cannot be configured away, so the resistor is not optional. The resistor's value is a trade-off with a wide middle, and 10 kΩ is comfortably inside it; works both ends of that trade-off out, and gives the internal-pull-up alternative Lab 6 allows.  If the trace on your screen is not the one described above, work the circuit in the same order every time: power first, then ground, then the signal path. is that order applied to this circuit.   Four traces, and their potential causes      What you see  Where to look    Noise wandering around somewhere between the rails  Check that the pull-up resistor is fitted, and that the end of it really reaches 3.3 V.    A flat line that never moves, at either 0 V or 3.3 V  Nothing is changing the beam, so check first that the wheel's rim really passes through the gap. If it does, the sensor is not switching: check its power and ground, and check that they are not swapped.    A clean square wave whose frequency does not change when the motor speeds up  The probe is still on Wednesday's PWM node, which runs at a fixed 1.6 kHz whatever the motor does. Move it to the row the sensor's signal wire lands in.        "
+},
+{
+  "id": "act-day12-predict-trace",
+  "level": "2",
+  "url": "subsec-day12-wire-and-scope.html#act-day12-predict-trace",
+  "type": "Activity",
+  "number": "11.5.2",
+  "title": "Predict the trace.",
+  "body": " Predict the trace   You are about to wire the photointerrupter as in : power, ground, its signal wire to a row of its own on the breadboard, and a 10 kΩ resistor from that row up to 3.3 V. Now suppose we leave the resistor out. The sensor is powered, the oscilloscope is on its signal wire, and nothing else is connected to that wire at all. The motor is running, so slots are going past the beam. What would the trace look like, and why?   "
+},
+{
+  "id": "fig-day12-wiring",
+  "level": "2",
+  "url": "subsec-day12-wire-and-scope.html#fig-day12-wiring",
   "type": "Figure",
   "number": "11.5.2",
   "title": "",
-  "body": " Oscilloscope capture of the photointerrupter output as motor speed increases from 30 RPM to 180 RPM. The pulse period decreases as speed increases. The period can be measured with the AD2 cursor tool to compute RPM.   "
+  "body": " The circuit for today's measurement: Wednesday's circuit with the photointerrupter and one resistor added. The sensor's power goes to the regulator's 5 V, the same node that feeds the driver's VM pin. Its signal wire goes to a row of its own, with the 10 kΩ pull-up from that row to 3.3 V.   "
 },
 {
-  "id": "fig-lab6-complete",
+  "id": "fig-day12-cabled-sensor",
   "level": "2",
-  "url": "sec-motor-speed.html#fig-lab6-complete",
+  "url": "subsec-day12-wire-and-scope.html#fig-day12-cabled-sensor",
   "type": "Figure",
-  "number": "11.5.3",
+  "number": "11.5.4",
   "title": "",
-  "body": " Complete Lab 6 breadboard setup: potentiometer on PA0 (ADC), TB6612 motor driver on digital outputs, PWM on PA7, and photointerrupter on a digital input (with GPIO interrupt). The ADC reading sets the target speed; the photointerrupter measures actual speed.   "
+  "body": " The photointerrupter as some kits have it, on a length of four-core cable rather than on a small board. Brown is power, blue is ground, and black is the output. The pink wire is the sensor's L terminal ; leave it unconnected ( ).   "
 },
 {
-  "id": "subsec-proper-acceleration",
+  "id": "act-day12-wire-and-scope",
+  "level": "2",
+  "url": "subsec-day12-wire-and-scope.html#act-day12-wire-and-scope",
+  "type": "Activity",
+  "number": "11.5.3",
+  "title": "Wire the sensor, and watch it while the motor ramps.",
+  "body": " Wire the sensor, and watch it while the motor ramps   Wire the photointerrupter's power and ground. Its power is 5 V, taken from the regulator, just as the motor's is. Run its signal wire to a row of its own on the breadboard, and put the 10 kΩ resistor between that same row and 3.3 V.    Put the oscilloscope on that row with Waveforms, and turn the wheel slowly by hand. You are looking for a trace that toggles between 0 V and 3.3 V once for every slot that goes past. If it goes above 3.3 V, stop and check your wiring: 5 V will damage your Nucleo.    Run TTmotor_ramp.c and watch the trace as the motor speeds up and slows down again.    At the fastest motor speed, measure how many pulses arrive per second. Write the number down.   "
+},
+{
+  "id": "fig-photointerrupter-states",
+  "level": "2",
+  "url": "subsec-day12-wire-and-scope.html#fig-photointerrupter-states",
+  "type": "Figure",
+  "number": "11.5.6",
+  "title": "",
+  "body": " Why the sensor's output needs a pull-up resistor. In the left panel the beam reaches the phototransistor and it conducts, pulling OUT down; in the right panel a spoke blocks the beam, the transistor stops conducting, and the 10 kΩ resistor is the only thing left holding the line up. Whatever that resistor is connected to is what sets the HIGH level — here 3.3 V, which is what the STM32C031C6's pins expect.   "
+},
+{
+  "id": "subsec-day12-wire-and-scope-17",
+  "level": "2",
+  "url": "subsec-day12-wire-and-scope.html#subsec-day12-wire-and-scope-17",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "open-drain open collector "
+},
+{
+  "id": "table-day12-diagnostics",
+  "level": "2",
+  "url": "subsec-day12-wire-and-scope.html#table-day12-diagnostics",
+  "type": "Table",
+  "number": "11.5.8",
+  "title": "Four traces, and their potential causes",
+  "body": " Four traces, and their potential causes      What you see  Where to look    Noise wandering around somewhere between the rails  Check that the pull-up resistor is fitted, and that the end of it really reaches 3.3 V.    A flat line that never moves, at either 0 V or 3.3 V  Nothing is changing the beam, so check first that the wheel's rim really passes through the gap. If it does, the sensor is not switching: check its power and ground, and check that they are not swapped.    A clean square wave whose frequency does not change when the motor speeds up  The probe is still on Wednesday's PWM node, which runs at a fixed 1.6 kHz whatever the motor does. Move it to the row the sensor's signal wire lands in.    "
+},
+{
+  "id": "subsec-day12-pulses-to-rpm",
   "level": "1",
-  "url": "subsec-proper-acceleration.html",
+  "url": "subsec-day12-pulses-to-rpm.html",
+  "type": "Subsection",
+  "number": "11.5.3",
+  "title": "Part 3: From a Pulse Train to a Number",
+  "body": " Part 3: From a Pulse Train to a Number   You now have a pulse train on the screen and a number for how many pulses arrive in a second. To convert this to a speed we need to know how many slots are cut in the slotted wheel on your motor.    Turning the pulses into a speed   Work on paper, with your table group.    Count the slots on your own wheel. How many pulses does one full revolution of the shaft produce?    How do you detect the pulses on the STM32C031C6? Describe every way you can think of.    How do you count the pulses? The rpm comes from a count taken over a known stretch of time: what starts and ends that stretch?    Take the pulse rate you measured at the fastest motor speed and convert it to revolutions per minute, using your own slot count. Is the answer plausible for the motor you just watched?    Can you tell which way the shaft is turning from this signal alone? If you can, say how; if you cannot, say what would have to be different about the sensor.    Whatever the technology behind it — mechanical, optical or magnetic — a sensor like this one gives us a pulse train, and we have to turn that pulse train into a position or a velocity. The expression is the one from the reading, , and both numbers going into it are now yours.   is the count of pulses in one second, the number of slots you counted. Divide by for revolutions, multiply by 60 for a rate per minute.  Count one edge per slot — rising or falling, not both. Counting both doubles the count, and the expression then needs in place of .  Nothing on the screen would tell you that had happened. The number would simply be twice the real speed, and it would look plausible.     The same count answers a second question, and which answer you get depends only on what you divide by.   Each pulse is one slot going past, so each pulse is radians of shaft rotation, or degrees, or of a revolution.  So is how far the shaft has turned since you started counting — its position, relative to wherever it was then, because nothing here records where that was.  Divide that by the time you counted over and you have its speed instead. Note the word average : this says nothing about what the shaft did inside the interval, and a shorter interval buys detail at the cost of resolution.    One thing this signal does not carry at all is direction. Every slot looks like every other slot, and it looks the same whichever way the wheel is turning, so the sign on the rpm your program displays in Lab 6 cannot come from the measurement — it has to come from the mode your program most recently commanded. That sign is therefore only right if the motor is doing what it was told: a motor that has stalled, or one that a hand is turning backwards, would still be shown with the sign the program asked for. Getting direction out of the measurement itself takes a second sensor a quarter of a cycle away from the first, which is a quadrature encoder ( ).    "
+},
+{
+  "id": "act-day12-pulses-to-rpm",
+  "level": "2",
+  "url": "subsec-day12-pulses-to-rpm.html#act-day12-pulses-to-rpm",
+  "type": "Activity",
+  "number": "11.5.4",
+  "title": "Turning the pulses into a speed.",
+  "body": " Turning the pulses into a speed   Work on paper, with your table group.    Count the slots on your own wheel. How many pulses does one full revolution of the shaft produce?    How do you detect the pulses on the STM32C031C6? Describe every way you can think of.    How do you count the pulses? The rpm comes from a count taken over a known stretch of time: what starts and ends that stretch?    Take the pulse rate you measured at the fastest motor speed and convert it to revolutions per minute, using your own slot count. Is the answer plausible for the motor you just watched?    Can you tell which way the shaft is turning from this signal alone? If you can, say how; if you cannot, say what would have to be different about the sensor.   "
+},
+{
+  "id": "subsec-day12-pulses-to-rpm-11",
+  "level": "2",
+  "url": "subsec-day12-pulses-to-rpm.html#subsec-day12-pulses-to-rpm-11",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "quadrature encoder "
+},
+{
+  "id": "subsec-day12-main-loop",
+  "level": "1",
+  "url": "subsec-day12-main-loop.html",
+  "type": "Subsection",
+  "number": "11.5.4",
+  "title": "Part 4: A Loop That Does Three Things at Three Rates",
+  "body": " Part 4: A Loop That Does Three Things at Three Rates   By the end of Lab 6 your program has three jobs to do, and they run at three different rates: sample the potentiometer a hundred times a second, notice every pulse from the sensor as it arrives, and put a new number on the display once a second. Before any of that, though, the sensor's signal wire has to reach a pin, and we have to find out which pin that is.   Which pin is behind D7   The Nucleo's headers are labeled with Arduino names, and the reference manual and the datasheet are not. The user manual for the board is what translates between them: UM2953, Table 11, ARDUINO connector pinout , on page 20.    We'll plug the sensor's output into the header pin labeled D7 on the Nucleo (an Arduino name). Find the row for D7 in that table and write down which STM32C031C6 pin it is.    Table 12 of the same manual lists the board's I\/O assignment the other way round, by port pin. Find your answer there as well, and check that the two tables agree.     Now that we know D7 is PA15 , look at the three rates together. draws them over one second. Two of the three jobs are on a schedule the program itself sets: it decides when 10 ms have passed and when a second has passed. The pulses are on no schedule at all — one arrives when the shaft brings a slot around, which lines up with none of the three rates — so the loop has to be free to notice one at any moment. That is what rules out delay_ms() : it can serve exactly one of the three jobs, because while it is counting out its milliseconds the program is doing nothing else whatsoever — the same problem we watched a polled button counter have on Day 9. In Lab 6 you are asked not to use delay_ms() for timing at all, and to use milliseconds() instead.   The three rates the Lab 6 program has to keep, drawn over one second: the loop asks the time on every pass, the potentiometer is read every 10 ms, and the count becomes an rpm once a second. The pulses along the bottom arrive when the shaft brings a slot around, which lines up with none of the three. The tick marks are schematic.      milliseconds() is a function you have actually had all term, in sysinit.c , and we just have never opened it. SysTick is a counter built into the processor core itself rather than a peripheral like TIM14, and it is what delay_ms() uses to produce a (blocking) delay. SysTick itself is interrupt based, and its handler, which is called every time one millisecond has passed, simply increases the currentMilliseconds count by one. All milliseconds() does is return that count to you.   static uint32_t currentMilliseconds = 0; void SysTick_Handler(void) { currentMilliseconds++; } inline uint32_t milliseconds(void) { return currentMilliseconds; }  void SysTickInit(void) { \/\/ Assumes 12MHz clock...could be better SysTick->LOAD = 12000 - 1; SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk; \/\/ Select the processor clock SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk; \/\/ Enable the interrupt SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk; \/\/ Turn it on. }  SysTick is another timer, with its own registers — Day 8's was TIM14 — but it has the same shape as Day 8's: a counter, an interrupt when it reaches the end, and a handler that runs each time. SysTick->LOAD gets 12000 − 1 because the clock is 12 MHz, and 12 MHz divided by 12000 is 1 kHz, which is one interrupt every millisecond. SystemInit() calls SysTickInit() before main() starts, so the count is already running before your first line of code does. And milliseconds() does not wait for anything: it returns a number immediately, so asking what time it is costs one memory read, and you can afford to ask on every pass.      So the loop asks the time on every pass; when 10 ms have gone by it samples the potentiometer and commands the motor, and when a second has gone by it converts the pulse count and sends it to the display. What is left to place is the read of the sensor's pin, and the obvious place — inside the 10 ms step, where everything else already happens — does not work. Reading a pin tells you only what that pin is doing at the instant you read it, so a pulse that arrives and leaves between two reads is never seen at all. As shows, the pulses line up with none of the loop's three rates, so the count comes out low by a different amount each time, not by a fixed fraction you could divide back out. Polling fast enough is a condition on the pulse's HIGH and LOW times rather than on its rate; see .   Poll or interrupt   In the program you are about to write for Lab 6, will you read the sensor's pin in the main loop, or use an interrupt? Explain your answer.    Both answers can work. Reading the pin on every pass. Move the read out of the 10 ms beat so that the loop looks at the pin as fast as it can go, and use milliseconds() only to decide when to sample the potentiometer and when to close the one-second counting window. At the rates this motor produces, this works. What it costs is a constraint on everything you add later: nothing in that loop may block, ever.   Taking a falling-edge interrupt on PA15. You have set one up before, on Day 9, for the button on PB4.  We'll use the interrupt. Whether polling is fast enough depends on the pulse's HIGH and LOW times rather than on the pulse rate you measured, and those times depend on how wide the slots are compared with the spokes between them — which nobody has measured, and which changes if you swap a wheel. The interrupt does not depend on any of that: the pulse is counted whatever else the loop is doing, at any speed this motor reaches.     "
+},
+{
+  "id": "act-day12-find-the-pin",
+  "level": "2",
+  "url": "subsec-day12-main-loop.html#act-day12-find-the-pin",
+  "type": "Activity",
+  "number": "11.5.5",
+  "title": "Which pin is behind D7.",
+  "body": " Which pin is behind D7   The Nucleo's headers are labeled with Arduino names, and the reference manual and the datasheet are not. The user manual for the board is what translates between them: UM2953, Table 11, ARDUINO connector pinout , on page 20.    We'll plug the sensor's output into the header pin labeled D7 on the Nucleo (an Arduino name). Find the row for D7 in that table and write down which STM32C031C6 pin it is.    Table 12 of the same manual lists the board's I\/O assignment the other way round, by port pin. Find your answer there as well, and check that the two tables agree.   "
+},
+{
+  "id": "fig-three-rates",
+  "level": "2",
+  "url": "subsec-day12-main-loop.html#fig-three-rates",
+  "type": "Figure",
+  "number": "11.5.14",
+  "title": "",
+  "body": " The three rates the Lab 6 program has to keep, drawn over one second: the loop asks the time on every pass, the potentiometer is read every 10 ms, and the count becomes an rpm once a second. The pulses along the bottom arrive when the shaft brings a slot around, which lines up with none of the three. The tick marks are schematic.   "
+},
+{
+  "id": "act-day12-poll-or-interrupt",
+  "level": "2",
+  "url": "subsec-day12-main-loop.html#act-day12-poll-or-interrupt",
+  "type": "Activity",
+  "number": "11.5.6",
+  "title": "Poll or interrupt.",
+  "body": " Poll or interrupt   In the program you are about to write for Lab 6, will you read the sensor's pin in the main loop, or use an interrupt? Explain your answer.   "
+},
+{
+  "id": "subsec-day12-main-loop-16",
+  "level": "2",
+  "url": "subsec-day12-main-loop.html#subsec-day12-main-loop-16",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "Reading the pin on every pass. "
+},
+{
+  "id": "subsec-day12-main-loop-17",
+  "level": "2",
+  "url": "subsec-day12-main-loop.html#subsec-day12-main-loop-17",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "Taking a falling-edge interrupt on PA15. "
+},
+{
+  "id": "subsec-day12-whole-build",
+  "level": "1",
+  "url": "subsec-day12-whole-build.html",
+  "type": "Subsection",
+  "number": "11.5.5",
+  "title": "Part 5: The Whole Build",
+  "body": " Part 5: The Whole Build   Every piece of the Lab 6 system is something you have wired before or written before. What is new is that all of it is on the board at once, sharing one supply, one ground and one set of pins — and, most importantly, controlled from one program.   The complete Lab 6 system. Working from the left: the seven-segment display on the I2C bus, the potentiometer feeding A0, the TB6612 with the motor on its A channel, and the photointerrupter at the bottom left with its output going to D7. The regulator on the right supplies 5 V to the motor and the sensor, the Nucleo supplies 3.3 V for the logic, and every part on the board shares one ground. Here the pull-up is the pin's own internal one ( ).     The same is true of the code. The driver itself — motor_init() , motor_mode() and motor_speed() — is what you are asked to write in Lab 6, and Wednesday's TTmotor_ramp.c is where its register writes come from: build them out of tim14_pa7_pwm_init() and tim14_pwm_set() . start_conversion() and adc_read() you already have, from Day 7 and ADCPot.c . SevenSeg_number() is from Day 10, and is the HT16K33 reference to have open while you use it. The signed counter that puts a minus sign in front of a negative reading is Day 10's too, from .   The order to build in, and how you know each stage works      Stage  It is working when    The tb6612.c driver alone, with no motor connected — PA5 (D13), PA6 (D12) and PA7 (D11)  Waveforms shows a 1.6 kHz pulse train on PA7 whose duty cycle follows the speed you asked for, and IN1 and IN2 follow the mode    The potentiometer on A0 (PA0)  The value you read from the ADC sweeps from one end of its range to the other as you turn the knob    The regulator board, with nothing else connected to it  9 V on its Vin pin and 5 V on its 5V pin — multimeter on DC volts, black probe on the shared ground. Measure at the pins, not at the barrel connector    The motor, through the TB6612  The knob drives it both ways and stops it in the middle    The photointerrupter on PA15 (D7)  The trace toggles once per slot, as it did earlier today    The rpm, printed to your screen  The number tracks the motor and is plausible for what you can see the shaft doing    The rpm on the seven-segment display  The same number appears there, with a minus sign when the motor is running in reverse. The signed counter and its minus sign are the ones you wrote for Day 10     When a stage does not pass its test, work it the way we worked the trace on the oscilloscope earlier today: power first, then ground, then the signal path.    The potentiometer's full travel, as the ADC sees it. Turned fully counter-clockwise the wiper is at 0 V and the ADC reads 0; turned fully clockwise it is at 3.3 V and the ADC reads 4095; centered it is at 1.65 V, which is a count of about 2048. The band drawn around the middle is the dead band : a range of counts either side of center where the motor is held stopped, so that a hand resting on the knob does not flip the direction back and forth.      The potentiometer, mapped to a mode and a speed        Knob  Voltage on A0  ADC count, of 4095  What the motor does    Fully counter-clockwise  0 V  0  Full speed counter-clockwise    Centered  1.65 V  about 2048  Stopped, and stopped for a band of counts either side of 2048 rather than at one count    Fully clockwise  3.3 V  4095  Full speed clockwise     One design decision in Lab 6 is genuinely yours. The potentiometer runs the motor at full speed one way at one end of its travel and at full speed the other way at the other end, and somewhere in the middle it has to stop the motor — not at a single count, but across a band of counts, so that a hand resting on the knob does not flip the direction back and forth. Too narrow a band and the motor jitters between directions; too wide and you have eaten the useful travel of the knob. The arithmetic you need is that 12 bits gives 4096 counts across 3.3 V, so one count is a little under a millivolt and the center of the travel is a count of about 2048. gives the three positions Lab 6 names.    Four things about this circuit damage hardware rather than simply not working. The potentiometer's two outer legs go to 3.3 V and ground , never to the 5 V rail: its wiper feeds A0 (PA0), which is an analog input on a 3.3 V part. The regulator's 5 V output goes to the TB6612's motor supply and to the sensor's VCC, and to no rail: the Nucleo's 3.3 V is on one of those rails. The regulator and the Nucleo share one ground, and so does every other part on the board. And the regulator gets hot with the motor running: if something smells hot or is hot to the touch, disconnect the power and check the wiring before anything else.   "
+},
+{
+  "id": "fig-day12-lab6-build",
+  "level": "2",
+  "url": "subsec-day12-whole-build.html#fig-day12-lab6-build",
+  "type": "Figure",
+  "number": "11.5.19",
+  "title": "",
+  "body": " The complete Lab 6 system. Working from the left: the seven-segment display on the I2C bus, the potentiometer feeding A0, the TB6612 with the motor on its A channel, and the photointerrupter at the bottom left with its output going to D7. The regulator on the right supplies 5 V to the motor and the sensor, the Nucleo supplies 3.3 V for the logic, and every part on the board shares one ground. Here the pull-up is the pin's own internal one ( ).   "
+},
+{
+  "id": "table-day12-build-order",
+  "level": "2",
+  "url": "subsec-day12-whole-build.html#table-day12-build-order",
+  "type": "Table",
+  "number": "11.5.21",
+  "title": "The order to build in, and how you know each stage works",
+  "body": " The order to build in, and how you know each stage works      Stage  It is working when    The tb6612.c driver alone, with no motor connected — PA5 (D13), PA6 (D12) and PA7 (D11)  Waveforms shows a 1.6 kHz pulse train on PA7 whose duty cycle follows the speed you asked for, and IN1 and IN2 follow the mode    The potentiometer on A0 (PA0)  The value you read from the ADC sweeps from one end of its range to the other as you turn the knob    The regulator board, with nothing else connected to it  9 V on its Vin pin and 5 V on its 5V pin — multimeter on DC volts, black probe on the shared ground. Measure at the pins, not at the barrel connector    The motor, through the TB6612  The knob drives it both ways and stops it in the middle    The photointerrupter on PA15 (D7)  The trace toggles once per slot, as it did earlier today    The rpm, printed to your screen  The number tracks the motor and is plausible for what you can see the shaft doing    The rpm on the seven-segment display  The same number appears there, with a minus sign when the motor is running in reverse. The signed counter and its minus sign are the ones you wrote for Day 10    "
+},
+{
+  "id": "fig-deadband",
+  "level": "2",
+  "url": "subsec-day12-whole-build.html#fig-deadband",
+  "type": "Figure",
+  "number": "11.5.23",
+  "title": "",
+  "body": " The potentiometer's full travel, as the ADC sees it. Turned fully counter-clockwise the wiper is at 0 V and the ADC reads 0; turned fully clockwise it is at 3.3 V and the ADC reads 4095; centered it is at 1.65 V, which is a count of about 2048. The band drawn around the middle is the dead band : a range of counts either side of center where the motor is held stopped, so that a hand resting on the knob does not flip the direction back and forth.   "
+},
+{
+  "id": "table-day12-deadband",
+  "level": "2",
+  "url": "subsec-day12-whole-build.html#table-day12-deadband",
+  "type": "Table",
+  "number": "11.5.25",
+  "title": "The potentiometer, mapped to a mode and a speed",
+  "body": " The potentiometer, mapped to a mode and a speed        Knob  Voltage on A0  ADC count, of 4095  What the motor does    Fully counter-clockwise  0 V  0  Full speed counter-clockwise    Centered  1.65 V  about 2048  Stopped, and stopped for a band of counts either side of 2048 rather than at one count    Fully clockwise  3.3 V  4095  Full speed clockwise    "
+},
+{
+  "id": "subsec-day12-whole-build-14",
+  "level": "2",
+  "url": "subsec-day12-whole-build.html#subsec-day12-whole-build-14",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "3.3 V and ground "
+},
+{
+  "id": "subsec-day12-build",
+  "level": "1",
+  "url": "subsec-day12-build.html",
+  "type": "Subsection",
+  "number": "11.5.6",
+  "title": "Part 6: Build",
+  "body": " Part 6: Build   The rest of the class is yours to build in. Start on paper: the loop you are about to write has three rates in it and one counter shared between an interrupt handler and main() , and both are easier to get right on paper than in the editor. Then work down the build order, and test each stage before you add the next one.   Plan the main loop before you write it   Start on paper. Your program has to do three things at three different rates. The interrupt that counts the pulses is a falling-edge interrupt on PA15 (D7), and it is the same one you wrote on Day 9 for the button on PB4: start from counterResetButtonInt.c and adapt it.    Write down what the loop does on every pass, what it does every 10 ms, and what it does once a second. Put beside each one what decides that it is time.    The rpm comes from counting pulses over one second. Where in your pseudocode does the count get read, and where does it get set back to zero? What happens to a pulse that arrives between those two moments?    If the count is incremented in an interrupt handler and read in the main loop, what does its declaration need that an ordinary variable does not, and why?       Going further   These are optional, once you are able to display the rpm.    The sign on the displayed rpm comes from what your program commanded, not from what it measured. Describe a situation in which the motor is not doing what it was told, and say what the display would show. What would have to change for the measurement itself to carry the sign?    A quadrature encoder puts a second sensor a quarter of a cycle away from the first. Sketch the two output waveforms for a wheel turning clockwise, then for the same wheel turning counter-clockwise, and say precisely what a program would have to look at to tell them apart.    Counting whole pulses in a one-second window quantizes the answer: work out how many rpm one pulse of miscount is worth on your wheel, and what fraction of the reading that is at a slow speed. Then take three ways of doing better — count for longer, count both edges, or time the interval between two pulses instead of counting — and say what each one costs and where each one wins.     "
+},
+{
+  "id": "act-day12-main-loop-sketch",
+  "level": "2",
+  "url": "subsec-day12-build.html#act-day12-main-loop-sketch",
+  "type": "Activity",
+  "number": "11.5.7",
+  "title": "Plan the main loop before you write it.",
+  "body": " Plan the main loop before you write it   Start on paper. Your program has to do three things at three different rates. The interrupt that counts the pulses is a falling-edge interrupt on PA15 (D7), and it is the same one you wrote on Day 9 for the button on PB4: start from counterResetButtonInt.c and adapt it.    Write down what the loop does on every pass, what it does every 10 ms, and what it does once a second. Put beside each one what decides that it is time.    The rpm comes from counting pulses over one second. Where in your pseudocode does the count get read, and where does it get set back to zero? What happens to a pulse that arrives between those two moments?    If the count is incremented in an interrupt handler and read in the main loop, what does its declaration need that an ordinary variable does not, and why?   "
+},
+{
+  "id": "act-day12-stretch",
+  "level": "2",
+  "url": "subsec-day12-build.html#act-day12-stretch",
+  "type": "Activity",
+  "number": "11.5.8",
+  "title": "Going further.",
+  "body": " Going further   These are optional, once you are able to display the rpm.    The sign on the displayed rpm comes from what your program commanded, not from what it measured. Describe a situation in which the motor is not doing what it was told, and say what the display would show. What would have to change for the measurement itself to carry the sign?    A quadrature encoder puts a second sensor a quarter of a cycle away from the first. Sketch the two output waveforms for a wheel turning clockwise, then for the same wheel turning counter-clockwise, and say precisely what a program would have to look at to tell them apart.    Counting whole pulses in a one-second window quantizes the answer: work out how many rpm one pulse of miscount is worth on your wheel, and what fraction of the reading that is at a slow speed. Then take three ways of doing better — count for longer, count both edges, or time the interval between two pulses instead of counting — and say what each one costs and where each one wins.   "
+},
+{
+  "id": "subsec-motors-ref-tim14",
+  "level": "1",
+  "url": "subsec-motors-ref-tim14.html",
+  "type": "Subsection",
+  "number": "11.6.1",
+  "title": "Register Summary: TIM14 in PWM Mode",
+  "body": " Register Summary: TIM14 in PWM Mode  The table below gives the registers tim14_pa7_pwm_init() writes. Offsets are from each peripheral's own base address, and the section numbers are RM0490's.   The registers TIM14 PWM output uses    Register Offset Field  Purpose RM0490    RCC_IOPENR 0x34 GPIOAEN  Clock to GPIOA §5.4.11    GPIOA_MODER 0x00 MODE7  PA7 to alternate-function mode ( 10 ) §6.4.1    GPIOA_AFR[0] 0x20 AFSEL7  Which alternate function: TIM14_CH1 on PA7 §6.4.9    RCC_APBENR2 0x40 TIM14EN  Clock to TIM14 §5.4.14    TIM14_PSC 0x28 —  Prescaler; the counter is clocked at the timer clock divided by PSC +1 §17.4.9    TIM14_ARR 0x2C —  The value the counter runs up to, which sets the period §17.4.10    TIM14_CCMR1 0x18 OC1M  PWM mode: 0110 holds the pin HIGH until the counter reaches the compare value §17.4.6    TIM14_CCMR1 0x18 CC1S  Channel 1 as an output ( 00 ) rather than an input §17.4.6    TIM14_CCER 0x20 CC1E  Let the channel's waveform reach the pin. Leave it out and the counter runs with nothing on PA7 §17.4.7    TIM14_EGR 0x14 UG  Force an update event, so the buffered PSC and ARR reach their working copies before the first period. Write-only, so the driver's |= reads back zero and is harmless §17.4.4    TIM14_CR1 0x00 CEN  Start the counter §17.4.1    TIM14_CCR1 0x34 —  The compare value: how much of each period the pin is HIGH. The only one that changes while the motor turns §17.4.11      TIM14_CCMR1 is the register written twice, because OC1M and CC1S are two fields in it. OC1M is a multi-bit field, so it is cleared and then set rather than OR'd into: OR alone would leave whatever was there and mix the two patterns together. CC1E and CEN are single bits, which is why |= on its own is safe for them. The full register layouts are in .  "
+},
+{
+  "id": "table-motors-tim14-registers",
+  "level": "2",
+  "url": "subsec-motors-ref-tim14.html#table-motors-tim14-registers",
+  "type": "Table",
+  "number": "11.6.1",
+  "title": "The registers TIM14 PWM output uses",
+  "body": " The registers TIM14 PWM output uses    Register Offset Field  Purpose RM0490    RCC_IOPENR 0x34 GPIOAEN  Clock to GPIOA §5.4.11    GPIOA_MODER 0x00 MODE7  PA7 to alternate-function mode ( 10 ) §6.4.1    GPIOA_AFR[0] 0x20 AFSEL7  Which alternate function: TIM14_CH1 on PA7 §6.4.9    RCC_APBENR2 0x40 TIM14EN  Clock to TIM14 §5.4.14    TIM14_PSC 0x28 —  Prescaler; the counter is clocked at the timer clock divided by PSC +1 §17.4.9    TIM14_ARR 0x2C —  The value the counter runs up to, which sets the period §17.4.10    TIM14_CCMR1 0x18 OC1M  PWM mode: 0110 holds the pin HIGH until the counter reaches the compare value §17.4.6    TIM14_CCMR1 0x18 CC1S  Channel 1 as an output ( 00 ) rather than an input §17.4.6    TIM14_CCER 0x20 CC1E  Let the channel's waveform reach the pin. Leave it out and the counter runs with nothing on PA7 §17.4.7    TIM14_EGR 0x14 UG  Force an update event, so the buffered PSC and ARR reach their working copies before the first period. Write-only, so the driver's |= reads back zero and is harmless §17.4.4    TIM14_CR1 0x00 CEN  Start the counter §17.4.1    TIM14_CCR1 0x34 —  The compare value: how much of each period the pin is HIGH. The only one that changes while the motor turns §17.4.11    "
+},
+{
+  "id": "subsec-motors-ref-timing",
+  "level": "1",
+  "url": "subsec-motors-ref-timing.html",
+  "type": "Subsection",
+  "number": "11.6.2",
+  "title": "The PWM Arithmetic",
+  "body": " The PWM Arithmetic  The counter is clocked at the timer clock divided by the prescaler, and it resets after a fixed number of counts. With the 12 MHz default clock, a prescaler factor and a top value , the switching frequency is .   TTmotor_ramp.c uses and , so the counter is clocked at 2 MHz and the waveform is at Hz — a period of 625 µs. The registers are set with one less than each: TIM14_PSC gets 5 and TIM14_ARR gets 1249, because both count from zero.   Resolution. A period divided into steps gives distinct duty cycles, so one count of TIM14_CCR1 is of the period and of average voltage. At on the 5 V motor supply that is 500 ns of pulse width and 4 mV of average voltage. Resetting at 100 instead would make one step 50 mV, which is coarse enough to hear as steps in the motor.   The 50 Hz alternative. At 50 Hz the period is 20 ms rather than 625 µs, long enough for the motor to accelerate and decelerate within each period rather than averaging across it. That torque ripple is a cost at speed and can help starting torque at very low speed, which is what Lab 6's optional section asks you to try.  "
+},
+{
+  "id": "subsec-motors-ref-timing-4",
+  "level": "2",
+  "url": "subsec-motors-ref-timing.html#subsec-motors-ref-timing-4",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "Resolution. "
+},
+{
+  "id": "subsec-motors-ref-timing-5",
+  "level": "2",
+  "url": "subsec-motors-ref-timing.html#subsec-motors-ref-timing-5",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "The 50 Hz alternative. "
+},
+{
+  "id": "subsec-motors-ref-tb6612",
+  "level": "1",
+  "url": "subsec-motors-ref-tb6612.html",
+  "type": "Subsection",
+  "number": "11.6.3",
+  "title": "The TB6612 as a Lookup",
+  "body": " The TB6612 as a Lookup  The driver has three logic inputs per channel, and a fourth pin for the whole chip. On the breakout the channel-A inputs are marked AIN1 , AIN2 and PWMA ; the datasheet's table calls the same three IN1 , IN2 and PWM . STBY must be HIGH for the driver to do anything at all, and on our breakout it is pulled up already.   Channel A: the pins    Breakout pin Datasheet name Nucleo pin   AIN1 IN1 PA5 (D13)  AIN2 IN2 PA6 (D12)  PWMA PWM PA7 (D11) — TIM14_CH1     Channel A: the four modes, with STBY HIGH        IN1 IN2 PWM  What the motor does    H L PWM  Turns one way, at the duty cycle on PWM    L H PWM  Turns the other way    H H either  Short brake : both motor terminals driven LOW, so the back-EMF drives a current that opposes the rotation    L L H  Stop : both outputs go high-impedance, so the motor coasts     Brake and stop are not the same thing. Brake shorts the two terminals together and the motor resists being turned; stop disconnects them and the motor spins down on its own. Use the brake for a wheel that must hold its position, and the coast for a flywheel that should spin down gently. The full table is , on page 4 of the TB6612FNG datasheet .   The supply split.  VM , the motor supply, comes from the regulator board at 5 V. VCC , the logic supply, comes from the Nucleo at 3.3 V, which is what makes the driver's inputs safe to drive straight from a GPIO pin. Both share the board's one ground.  "
+},
+{
+  "id": "table-motors-tb6612-pins",
+  "level": "2",
+  "url": "subsec-motors-ref-tb6612.html#table-motors-tb6612-pins",
+  "type": "Table",
+  "number": "11.6.2",
+  "title": "Channel A: the pins",
+  "body": " Channel A: the pins    Breakout pin Datasheet name Nucleo pin   AIN1 IN1 PA5 (D13)  AIN2 IN2 PA6 (D12)  PWMA PWM PA7 (D11) — TIM14_CH1   "
+},
+{
+  "id": "table-motors-tb6612-modes",
+  "level": "2",
+  "url": "subsec-motors-ref-tb6612.html#table-motors-tb6612-modes",
+  "type": "Table",
+  "number": "11.6.3",
+  "title": "Channel A: the four modes, with <code class=\"code-inline tex2jax_ignore\">STBY<\/code> HIGH",
+  "body": " Channel A: the four modes, with STBY HIGH        IN1 IN2 PWM  What the motor does    H L PWM  Turns one way, at the duty cycle on PWM    L H PWM  Turns the other way    H H either  Short brake : both motor terminals driven LOW, so the back-EMF drives a current that opposes the rotation    L L H  Stop : both outputs go high-impedance, so the motor coasts    "
+},
+{
+  "id": "subsec-motors-ref-tb6612-6",
+  "level": "2",
+  "url": "subsec-motors-ref-tb6612.html#subsec-motors-ref-tb6612-6",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "The supply split. "
+},
+{
+  "id": "subsec-motors-ref-speed",
+  "level": "1",
+  "url": "subsec-motors-ref-speed.html",
+  "type": "Subsection",
+  "number": "11.6.4",
+  "title": "Counting Pulses: the Arithmetic",
+  "body": " Counting Pulses: the Arithmetic   The conversion. For a wheel of slots and a count of pulses taken over one second, , and for the 20-slot wheel in the kit that is . The expression holds only if the program counts one edge per slot . Counting both edges doubles the count, and the denominator then has to become or the answer comes out at twice the true speed.   The same count as an angle. Each pulse is one slot going past, so each pulse is radians, or degrees, or of a revolution. The pulse count times is how far the shaft has turned since counting started — a position, and one relative to wherever the shaft happened to be at that moment.   The measurement's own resolution. Counting whole pulses in a one-second window quantizes the answer: one pulse of miscount is rpm, which on a 20-slot wheel is 3 rpm. At 180 rpm the window holds 60 pulses and one pulse is under 2 % of the reading; at 30 rpm it holds 10 and one pulse is 10 %. Three ways to do better, and what each costs: a two-second window halves the quantization and doubles how long the display takes to notice a change; counting both edges halves it too, and needs in the denominator; and timing the interval between two pulses instead of counting them inverts the trade entirely. At 3 rpm the interval is about a second and a 1 ms tick resolves it to about a tenth of a percent, where counting sees a single pulse in its whole window; at 180 rpm the interval is about 17 ms and the same tick gives about 6 %, which is worse than counting. Counting wins at speed, interval-timing wins at rest, and a real instrument does both and crosses over.  "
+},
+{
+  "id": "subsec-motors-ref-speed-2",
+  "level": "2",
+  "url": "subsec-motors-ref-speed.html#subsec-motors-ref-speed-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "The conversion. "
+},
+{
+  "id": "subsec-motors-ref-speed-3",
+  "level": "2",
+  "url": "subsec-motors-ref-speed.html#subsec-motors-ref-speed-3",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "The same count as an angle. "
+},
+{
+  "id": "subsec-motors-ref-speed-4",
+  "level": "2",
+  "url": "subsec-motors-ref-speed.html#subsec-motors-ref-speed-4",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "The measurement's own resolution. "
+},
+{
+  "id": "subsec-motors-ref-direction",
+  "level": "1",
+  "url": "subsec-motors-ref-direction.html",
+  "type": "Subsection",
+  "number": "11.6.5",
+  "title": "Direction, and Quadrature",
+  "body": " Direction, and Quadrature  One sensor and identical slots give a signal that is the same in both directions, so a program that only counts pulses cannot know which way the shaft turned. A quadrature encoder puts a second sensor a quarter of a cycle away from the first, so its two pulse trains are a quarter of a cycle apart and which one leads says which way the shaft is turning. What a program looks at is the state of one channel at the moment the other changes: on a rising edge of A, channel B is LOW in one direction and HIGH in the other. That is a two-bit state machine, and it also multiplies the resolution, because there are now four distinguishable edges per slot instead of one. Some parts do the whole decode in hardware and make the finished count available over a bus.  "
+},
+{
+  "id": "subsec-motors-ref-direction-2",
+  "level": "2",
+  "url": "subsec-motors-ref-direction.html#subsec-motors-ref-direction-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "quadrature encoder "
+},
+{
+  "id": "subsec-motors-ref-sensor",
+  "level": "1",
+  "url": "subsec-motors-ref-sensor.html",
+  "type": "Subsection",
+  "number": "11.6.6",
+  "title": "The Photointerrupter, and Its Pull-Up",
+  "body": " The Photointerrupter, and Its Pull-Up   The sensor. The phototransistor inside the part can only pull the output down to ground when it conducts; when it stops conducting it lets go of the line entirely, and only the pull-up resistor brings the voltage back up, which is why the resistor's rail is what sets the HIGH level ( ). The part in the kit is an Omron EE-SX672, and its datasheet ( EE-SX67 series , Ratings and Specifications ) gives that behavior its name: the control output is an NPN open collector . The same table gives the supply voltage as 5 to 24 V DC, which is why the sensor's supply and its HIGH level have to be two different rails, and the response frequency as 1 kHz minimum — at the ramp's fastest, 20 slots at 180 rpm is 60 pulses a second, comfortably under that, so the sensor never limits the measurement. The fourth wire on the cabled version is the part's L terminal , which selects whether the output switches on light ( light-ON ) or on dark ( dark-ON ). Leave it unconnected, and keep it clear of anything else on the board: an unconnected L wire picks up noise.   The pull-up value. Choosing it is a trade-off rather than a calculation. A much smaller resistor wastes current and makes the transistor work harder to pull the line down, because every moment the line is LOW that resistor carries 3.3 V divided by its own resistance straight to ground: at 10 kΩ that is 0.33 mA, and at 1 kΩ it would be ten times that. A much larger one takes too long to bring the line back up against the stray capacitance of the wiring, and picks up more noise while it is doing it. Between those two ends is a wide middle where nothing goes wrong, and 10 kΩ is comfortably inside it, which is why 10 kΩ is a common default. The rail is not a trade-off: whatever the resistor is tied to is the voltage the wire presents to the pin, so it is 3.3 V. In Lab 6 you can keep the external resistor or leave it out and enable the pin's own internal pull-up with PUPDR , the way you did on Day 3 — that one is about 40 kΩ, four times the external resistor. The external one is what Day 12 uses, because there is a scope probe on that node; draws the finished build with the internal one instead, once that probe is gone.  "
+},
+{
+  "id": "subsec-motors-ref-sensor-2",
+  "level": "2",
+  "url": "subsec-motors-ref-sensor.html#subsec-motors-ref-sensor-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "The sensor. L terminal light-ON dark-ON "
+},
+{
+  "id": "subsec-motors-ref-sensor-3",
+  "level": "2",
+  "url": "subsec-motors-ref-sensor.html#subsec-motors-ref-sensor-3",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "The pull-up value. "
+},
+{
+  "id": "subsec-motors-ref-counting",
+  "level": "1",
+  "url": "subsec-motors-ref-counting.html",
+  "type": "Subsection",
+  "number": "11.6.7",
+  "title": "Polling or an Interrupt",
+  "body": " Polling or an Interrupt   When polling is fast enough. Noticing a pulse takes two reads, not one: a read that catches the line HIGH and a later read that catches it LOW, so the loop can see that it changed. So a polled read catches every pulse only if the gap between reads is shorter than the shorter of the pulse's HIGH time and its LOW time. If either one is shorter than the gap, it can fall entirely between two reads and the change is never seen. Those two times are set by how wide the slots are compared with the spokes between them, and by the shaft speed — on a wheel whose slots and spokes are about equally wide, a pulse rate of gives a HIGH time of about , so 60 pulses a second means about 8 ms HIGH and 8 ms LOW and a loop reading every 10 ms will miss changes. The short version, that a 100 Hz loop cannot see a 60 Hz signal, is not quite true and points at the wrong quantity.   The interrupt. Counting the pulses on a GPIO interrupt is Day 9's five writes with the line number changed. On the STM32C031C6 the port selection for line 15 is in EXTI_EXTICR4 — EXTI is the extended interrupts and events controller — whose offset is for , so 0x06C ; the field is EXTI15[7:0] , in bits 31:24, and 0x00 there selects PA15 . The table below calls that same register EXTI->EXTICR[3] , because the CMSIS array is indexed from zero. RM0490 §12.5.6 is the register; §12.5.9 is only the map. The counter the handler increments must be declared volatile .   The five writes, on Day 9's line and on Day 12's       What it does  Day 9, the button on PB4  Day 12, the sensor on PA15    Choose which port drives the line  EXTI->EXTICR[1] , EXTI_PB  EXTI->EXTICR[3] , EXTI_PA    Trigger on the falling edge  EXTI_FTSR1 , bit 4  EXTI_FTSR1 , bit 15    Unmask the line  EXTI_IMR1 , bit 4  EXTI_IMR1 , bit 15    Clear the pending bit, in the handler  EXTI_FPR1 , bit 4  EXTI_FPR1 , bit 15    Enable it in the NVIC  EXTI4_15_IRQn  EXTI4_15_IRQn — unchanged    The handler's name  EXTI4_15_IRQHandler  EXTI4_15_IRQHandler — unchanged     The last two rows are the ones to be careful with. One vector covers lines 4 through 15 together, so the 4 in EXTI4_15_IRQn and in EXTI4_15_IRQHandler is part of a name and stays a 4. Every other 4 — the ones that identify the line — becomes a 15.  "
+},
+{
+  "id": "subsec-motors-ref-counting-2",
+  "level": "2",
+  "url": "subsec-motors-ref-counting.html#subsec-motors-ref-counting-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "When polling is fast enough. "
+},
+{
+  "id": "subsec-motors-ref-counting-3",
+  "level": "2",
+  "url": "subsec-motors-ref-counting.html#subsec-motors-ref-counting-3",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "The interrupt. "
+},
+{
+  "id": "table-day12-exti-lines",
+  "level": "2",
+  "url": "subsec-motors-ref-counting.html#table-day12-exti-lines",
+  "type": "Table",
+  "number": "11.6.4",
+  "title": "The five writes, on Day 9’s line and on Day 12’s",
+  "body": " The five writes, on Day 9's line and on Day 12's       What it does  Day 9, the button on PB4  Day 12, the sensor on PA15    Choose which port drives the line  EXTI->EXTICR[1] , EXTI_PB  EXTI->EXTICR[3] , EXTI_PA    Trigger on the falling edge  EXTI_FTSR1 , bit 4  EXTI_FTSR1 , bit 15    Unmask the line  EXTI_IMR1 , bit 4  EXTI_IMR1 , bit 15    Clear the pending bit, in the handler  EXTI_FPR1 , bit 4  EXTI_FPR1 , bit 15    Enable it in the NVIC  EXTI4_15_IRQn  EXTI4_15_IRQn — unchanged    The handler's name  EXTI4_15_IRQHandler  EXTI4_15_IRQHandler — unchanged    "
+},
+{
+  "id": "subsec-motors-ref-lookups",
+  "level": "1",
+  "url": "subsec-motors-ref-lookups.html",
+  "type": "Subsection",
+  "number": "11.6.8",
+  "title": "Where to Look Things Up",
+  "body": " Where to Look Things Up   The documents this chapter sends you to       What you want Which document Where    What PWM mode is, and which OC1M pattern to write  RM0490  §17.3.8, PWM mode    Any TIM14 register, bit by bit  RM0490  §17.4, TIM14 registers    Which EXTI register does what, and the line-15 fields  RM0490  §12.5.6 for EXTICRx ; §12.5.9 Table 47 for the map    The driver's four modes  TB6612FNG datasheet  Page 4, H-SW Control Function    Which STM32C031C6 pin is behind an Arduino header label  UM2953  Table 11, ARDUINO connector pinout , page 20; Table 12 is the same fact by port pin    The photointerrupter's output type, supply range and response frequency  EE-SX67 series datasheet  Ratings and Specifications     "
+},
+{
+  "id": "table-motors-lookups",
+  "level": "2",
+  "url": "subsec-motors-ref-lookups.html#table-motors-lookups",
+  "type": "Table",
+  "number": "11.6.5",
+  "title": "The documents this chapter sends you to",
+  "body": " The documents this chapter sends you to       What you want Which document Where    What PWM mode is, and which OC1M pattern to write  RM0490  §17.3.8, PWM mode    Any TIM14 register, bit by bit  RM0490  §17.4, TIM14 registers    Which EXTI register does what, and the line-15 fields  RM0490  §12.5.6 for EXTICRx ; §12.5.9 Table 47 for the map    The driver's four modes  TB6612FNG datasheet  Page 4, H-SW Control Function    Which STM32C031C6 pin is behind an Arduino header label  UM2953  Table 11, ARDUINO connector pinout , page 20; Table 12 is the same fact by port pin    The photointerrupter's output type, supply range and response frequency  EE-SX67 series datasheet  Ratings and Specifications    "
+},
+{
+  "id": "subsec-accel-i2c-recall",
+  "level": "1",
+  "url": "subsec-accel-i2c-recall.html",
   "type": "Subsection",
   "number": "12.1.1",
-  "title": "What an Accelerometer Actually Measures",
-  "body": " What an Accelerometer Actually Measures  An accelerometer does not directly measure coordinate acceleration — the rate of change of velocity you compute in a physics class. It measures proper acceleration : the force per unit mass acting on a test mass inside the device, relative to free fall.  This leads to a result that surprises most students at first: an accelerometer sitting perfectly still on a table, not moving at all, reads approximately on its vertical axis. The reason is that the table is pushing up on the device with a normal force equal to gravity. From the sensor's perspective, it is being accelerated upward at — exactly as if it were in a rocket with no gravity. An accelerometer in true free fall (like a dropped phone, for a brief moment) reads zero on all axes.  For embedded applications, this is actually useful. Because gravity always pulls downward at , a stationary accelerometer always sees a vector pointing straight up relative to the device. If the device tilts, that gravity vector tilts with it — and by reading all three axes you can compute the tilt angle precisely.  "
+  "title": "The Bus You Already Have",
+  "body": " The Bus You Already Have  The I2C bus we built in has two wires: SDA (serial data) and SCL (serial clock), both held HIGH by pull-up resistors unless a device is pulling one LOW. One device is in charge of the bus — the controller , which for us is the STM32C031C6 — and every other device on the bus is a target . Each target has its own 7-bit address, and every transaction begins with the controller sending the address of the device it wants to talk to. All the targets hear that address; the one that recognizes it as its own acknowledges and takes part in the rest of the transaction, and the other devices on the bus don't respond. If you'd like to review more than this paragraph covers, go to , which has the protocol in full — START and STOP, the ACK handover, and the byte-by-byte framing.  The STM32C031C6's I2C peripheral produces the bit-level traffic in hardware, and the I2C library we handed you is what initializes the hardware and interfaces with it. It is the same library the seven-segment display driver you wrote is built on, and it is all we need for the accelerometer too. If you'd like a refresher see . We'll build a similar device driver for the accelerometer.  "
 },
 {
-  "id": "subsec-proper-acceleration-2",
+  "id": "subsec-accel-i2c-recall-2",
   "level": "2",
-  "url": "subsec-proper-acceleration.html#subsec-proper-acceleration-2",
+  "url": "subsec-accel-i2c-recall.html#subsec-accel-i2c-recall-2",
   "type": "Paragraph (with a defined term)",
   "number": "",
   "title": "",
-  "body": "proper acceleration "
+  "body": "controller target "
 },
 {
-  "id": "subsec-proof-mass",
+  "id": "subsec-accel-meet-lsm303agr",
   "level": "1",
-  "url": "subsec-proof-mass.html",
+  "url": "subsec-accel-meet-lsm303agr.html",
   "type": "Subsection",
   "number": "12.1.2",
-  "title": "The Proof Mass: Turning Acceleration into a Signal",
-  "body": " The Proof Mass: Turning Acceleration into a Signal  Inside every accelerometer is a small proof mass — a tiny mass suspended by springs from the sensor's housing. When the housing accelerates, the proof mass tends to stay behind (inertia), so it displaces relative to the housing. The spring pulls it back, and at equilibrium the spring force equals the inertial force: where is the spring constant and is the displacement. Measuring the displacement of the proof mass gives you the acceleration.   Proof mass and spring model. The proof mass (suspended by a spring attached to the package) stays behind when the case accelerates. Its displacement relative to the case is proportional to acceleration: . In a MEMS device, the mass and spring are etched from silicon.    The proof-mass principle is common to most accelerometer types, but the way displacement is converted to an electrical signal varies. Piezoelectric accelerometers (common in industrial vibration sensing) squeeze a crystal as the proof mass displaces, generating a charge. Piezoresistive types measure how displacement changes the resistance of strain gauges. The type most common in consumer electronics — smartphones, fitness trackers, and the sensor we use in this course — is the capacitive MEMS accelerometer.  In a capacitive MEMS (Micro-Electro-Mechanical Systems) accelerometer, the proof mass and springs are etched from a thin silicon wafer using the same photolithographic processes used to make microchips. The whole mechanical structure is just a few hundred micrometers across — smaller than a grain of sand — and it is integrated onto the same die as the readout electronics. The proof mass forms one plate of a capacitor, and fixed plates on either side form the other plates. As the mass displaces, the capacitance to one fixed plate increases and to the other decreases. Measuring this differential capacitance gives a voltage proportional to displacement, and therefore to acceleration.   MEMS capacitive accelerometer cross-section. The proof mass is a movable plate suspended between two fixed plates. When the mass displaces, the capacitance to one fixed plate increases and to the other decreases. Measuring the differential capacitance gives displacement and therefore acceleration.    "
+  "title": "The LSM303AGR and Its Breakout Board",
+  "body": " The LSM303AGR and Its Breakout Board  The new device is the LSM303AGR, a sensor chip made by STMicroelectronics that measures acceleration along three perpendicular axes. The chip also contains a magnetometer, but we'll only use the accelerometer in this class. We interact with it via I2C. (The chip can also use SPI, a different serial bus we don't use in this course; the breakout is wired for I2C.)  The chip itself is a couple of millimeters across, far too small to handle directly. It comes to us on a breakout board — a small board that carries the chip and the extra parts it needs, in this case the bus's pull-up resistors and a voltage regulator. The breakout connects by a STEMMA QT cable, a 4-wire plug that only goes in one way, so the connector end cannot be miswired. We'll do the wiring together in class.  "
 },
 {
-  "id": "subsec-proof-mass-2",
+  "id": "subsec-accel-meet-lsm303agr-3",
   "level": "2",
-  "url": "subsec-proof-mass.html#subsec-proof-mass-2",
+  "url": "subsec-accel-meet-lsm303agr.html#subsec-accel-meet-lsm303agr-3",
   "type": "Paragraph (with a defined term)",
   "number": "",
   "title": "",
-  "body": "proof mass "
+  "body": "breakout board "
+},
+{
+  "id": "subsec-accel-whoami",
+  "level": "1",
+  "url": "subsec-accel-whoami.html",
+  "type": "Subsection",
+  "number": "12.1.3",
+  "title": "The WHO_AM_I Register",
+  "body": " The WHO_AM_I Register  Whereas the HT16K33 on the display's backpack took one-byte commands ( ), the accelerometer is operated entirely through its internal registers: each register has an address inside the device, we configure the sensor by writing to some of them, and we get measurements out by reading others. Which registers exist, and what each bit in them means, comes from the device's datasheet — for this chapter, the LSM303AGR datasheet .  One of those registers exists purely so that you can check the connection: the accelerometer's WHO_AM_I register always contains the value 0x33. It is read-only, and its contents are fixed when the chip is manufactured (Datasheet §8.4, register WHO_AM_I_A, address 0x0F — the default value 00110011 is 0x33). If you read the WHO_AM_I register and get the right result, you can be confident in your I2C setup: the wiring, the device address, and your whole read path all had to work for that 0x33 to arrive.  Many I2C sensors have a register like this, because a value that is known in advance gives you something to check against before you rely on any of the sensor's measurements. Device drivers use it the same way: a driver's initialization function typically reads WHO_AM_I first, and reports failure if the expected value does not come back. In class we'll run a short test program that does exactly this check once your sensor is wired up.  "
+},
+{
+  "id": "rq-accel-day13",
+  "level": "1",
+  "url": "rq-accel-day13.html",
+  "type": "Check Your Understanding",
+  "number": "12.1.4",
+  "title": "Check Your Understanding",
+  "body": "  The I2C bus has only two wires, shared by every device on it. When the controller starts a transaction, how does the right device know the transaction is meant for it?    Every transaction begins with a device address — seven address bits plus a read\/write bit. All the targets hear it, and only the device that recognizes the address as its own acknowledges and takes part.  Correct. Addressing is what lets many devices share the same two wires — each target answers only to its own address.    Each device is wired to the controller through its own pair of SDA and SCL lines.  Separate wires per device is exactly what I2C avoids — that was UART's limitation. All I2C devices share one SDA and one SCL, and the address at the start of each transaction says who is being spoken to.    The devices take turns in a fixed order, one transaction each.  There is no rotation schedule on the bus. The controller decides whom to address, whenever it wants, by sending that device's address first.    The controller raises SCL to a higher voltage for the device it wants.  SCL is the shared clock, and it only ever switches between LOW and 3.3 V. Selection happens with data — the 7-bit address sent at the start of every transaction — not with voltage levels.      To read the accelerometer's WHO_AM_I register, the program must tell the sensor which register it wants and then collect the byte stored there. Which I2C library function does that whole job?    i2c1_memRead() — it takes the device address and a register address, and reads one or more bytes from that location inside the target.  Correct. Reading a specific register is a two-step conversation — say which register, then read — and i2c1_memRead() carries out both steps.    i2c1_byteRead() — it reads one byte from a target device.  i2c1_byteRead() takes only a device address, no register address — there is no way to tell the sensor which of its many registers you mean. Reading a specific register needs i2c1_memRead() , which takes the register address too.    i2c1_memWrite() — it sends the register address to the device.  i2c1_memWrite() does send a register address, but what follows is data written into the device. To get the register's contents back out, the function is i2c1_memRead() .    i2c1_init() — it sets up the bus, which includes scanning the registers.  i2c1_init() configures the STM32C031C6's own I2C peripheral and pins. It sends nothing to any target device, and it does not read registers.      Your program reads the accelerometer's WHO_AM_I register and gets 0x33, the expected value. What does that tell you?    The I2C link works end to end: the wiring, the device address, and the read path all functioned, because the expected value arrived over them.  Correct. WHO_AM_I's value is fixed in advance, which is exactly what makes it useful for this check.    The accelerometer is configured and its measurements are ready to use.  WHO_AM_I says nothing about configuration — its value is fixed at manufacture and never changes. Setting the sensor's mode and range is separate work, done through other registers.    The sensor's I2C address is 0x33.  0x33 is the contents of the WHO_AM_I register, not the device's bus address. To read the register at all, the program already had to know the device's address and use it.    The sensor passed its power-on self-test of the measurement hardware.  Reading WHO_AM_I exercises none of the measurement hardware — the register is a fixed constant. What the successful read demonstrates is that the bus and your read path work.     "
+},
+{
+  "id": "rq-accel-addressing",
+  "level": "2",
+  "url": "rq-accel-day13.html#rq-accel-addressing",
+  "type": "Reading Question",
+  "number": "12.1.4.1",
+  "title": "",
+  "body": " The I2C bus has only two wires, shared by every device on it. When the controller starts a transaction, how does the right device know the transaction is meant for it?    Every transaction begins with a device address — seven address bits plus a read\/write bit. All the targets hear it, and only the device that recognizes the address as its own acknowledges and takes part.  Correct. Addressing is what lets many devices share the same two wires — each target answers only to its own address.    Each device is wired to the controller through its own pair of SDA and SCL lines.  Separate wires per device is exactly what I2C avoids — that was UART's limitation. All I2C devices share one SDA and one SCL, and the address at the start of each transaction says who is being spoken to.    The devices take turns in a fixed order, one transaction each.  There is no rotation schedule on the bus. The controller decides whom to address, whenever it wants, by sending that device's address first.    The controller raises SCL to a higher voltage for the device it wants.  SCL is the shared clock, and it only ever switches between LOW and 3.3 V. Selection happens with data — the 7-bit address sent at the start of every transaction — not with voltage levels.    "
+},
+{
+  "id": "rq-accel-memread",
+  "level": "2",
+  "url": "rq-accel-day13.html#rq-accel-memread",
+  "type": "Reading Question",
+  "number": "12.1.4.2",
+  "title": "",
+  "body": " To read the accelerometer's WHO_AM_I register, the program must tell the sensor which register it wants and then collect the byte stored there. Which I2C library function does that whole job?    i2c1_memRead() — it takes the device address and a register address, and reads one or more bytes from that location inside the target.  Correct. Reading a specific register is a two-step conversation — say which register, then read — and i2c1_memRead() carries out both steps.    i2c1_byteRead() — it reads one byte from a target device.  i2c1_byteRead() takes only a device address, no register address — there is no way to tell the sensor which of its many registers you mean. Reading a specific register needs i2c1_memRead() , which takes the register address too.    i2c1_memWrite() — it sends the register address to the device.  i2c1_memWrite() does send a register address, but what follows is data written into the device. To get the register's contents back out, the function is i2c1_memRead() .    i2c1_init() — it sets up the bus, which includes scanning the registers.  i2c1_init() configures the STM32C031C6's own I2C peripheral and pins. It sends nothing to any target device, and it does not read registers.    "
+},
+{
+  "id": "rq-accel-whoami-purpose",
+  "level": "2",
+  "url": "rq-accel-day13.html#rq-accel-whoami-purpose",
+  "type": "Reading Question",
+  "number": "12.1.4.3",
+  "title": "",
+  "body": " Your program reads the accelerometer's WHO_AM_I register and gets 0x33, the expected value. What does that tell you?    The I2C link works end to end: the wiring, the device address, and the read path all functioned, because the expected value arrived over them.  Correct. WHO_AM_I's value is fixed in advance, which is exactly what makes it useful for this check.    The accelerometer is configured and its measurements are ready to use.  WHO_AM_I says nothing about configuration — its value is fixed at manufacture and never changes. Setting the sensor's mode and range is separate work, done through other registers.    The sensor's I2C address is 0x33.  0x33 is the contents of the WHO_AM_I register, not the device's bus address. To read the register at all, the program already had to know the device's address and use it.    The sensor passed its power-on self-test of the measurement hardware.  Reading WHO_AM_I exercises none of the measurement hardware — the register is a fixed constant. What the successful read demonstrates is that the bus and your read path work.    "
+},
+{
+  "id": "subsec-day13-back-to-i2c",
+  "level": "1",
+  "url": "subsec-day13-back-to-i2c.html",
+  "type": "Subsection",
+  "number": "12.2.1",
+  "title": "Part 1: Back to I2C — a Second Device on the Bus",
+  "body": " Part 1: Back to I2C — a Second Device on the Bus   The LSM303AGR is an I2C device: it joins the same two-wire bus we have been using, speaks the same protocol, and is driven through the same I2C library — the five functions we have been calling since the display are all we need to talk to it. It also has a magnetometer, but we'll only use the accelerometer in this class.    Do I have to take the display down?   Suppose your seven-segment display is still connected to the I2C pins of your Nucleo, and today we are adding the accelerometer — a second I2C device. Do you need to take the display down first? What if you wanted to use both the accelerometer and the display in one project? Commit to an answer, and to a reason, before we discuss it.      No — the display stays: both devices share the same two wires, and each has its own address. Every transaction opens with the address of the device the controller wants to communicate with, so the display simply does not respond to transactions addressed to the accelerometer, and the other way around. Letting several devices share two wires is the reason the bus exists, and in Lab 7 you will run both devices on one bus — so leave the display wired.  "
+},
+{
+  "id": "act-day13-keep-display",
+  "level": "2",
+  "url": "subsec-day13-back-to-i2c.html#act-day13-keep-display",
+  "type": "Activity",
+  "number": "12.2.1",
+  "title": "Do I have to take the display down?",
+  "body": " Do I have to take the display down?   Suppose your seven-segment display is still connected to the I2C pins of your Nucleo, and today we are adding the accelerometer — a second I2C device. Do you need to take the display down first? What if you wanted to use both the accelerometer and the display in one project? Commit to an answer, and to a reason, before we discuss it.   "
+},
+{
+  "id": "subsec-day13-wire-and-prove",
+  "level": "1",
+  "url": "subsec-day13-wire-and-prove.html",
+  "type": "Subsection",
+  "number": "12.2.2",
+  "title": "Part 2: Wire It and Verify the Link",
+  "body": " Part 2: Wire It and Verify the Link   We'll wire the sensor to the bus with four leads, and then run a short test program to check that the STM32C031C6 can talk to it.   The LSM303AGR breakout and its STEMMA QT cable. Either socket on the breakout takes the cable's plug — it only fits one way. Its four wires go to the Nucleo: black to GND, red to 3.3 V, yellow to SCL (D15, PB8), and blue to SDA (D14, PB9) — the same SCL and SDA rows the display is already using. The pin the red wire feeds is VIN; the board accepts either 3.3 or 5 V logic — in this course we use 3.3 V.       The accelerometer joins the bus — yellow to the SCL row, blue to the SDA row, black to GND, and red to 3.3 V. The display, not drawn here, stays wired to the same two rows.      Wire the accelerometer and verify the link   The program we'll run, whoami_test.c , reads a certain register, called WHO_AM_I, once a second and prints whether it got the value it expected.    Plug the STEMMA QT cable into the breakout and wire its four leads against .    Make a copy of your TemplateProject and call the new project Accelerometer . Download whoami_test.c from Canvas and put it in the project's Src folder. Build and upload.    Open CoolTerm. A working setup prints Accelerometer initialized! once a second.    "
+},
+{
+  "id": "fig-accel-wiring",
+  "level": "2",
+  "url": "subsec-day13-wire-and-prove.html#fig-accel-wiring",
+  "type": "Figure",
+  "number": "12.2.2",
+  "title": "",
+  "body": " The LSM303AGR breakout and its STEMMA QT cable. Either socket on the breakout takes the cable's plug — it only fits one way. Its four wires go to the Nucleo: black to GND, red to 3.3 V, yellow to SCL (D15, PB8), and blue to SDA (D14, PB9) — the same SCL and SDA rows the display is already using. The pin the red wire feeds is VIN; the board accepts either 3.3 or 5 V logic — in this course we use 3.3 V.   "
+},
+{
+  "id": "fig-accel-bb",
+  "level": "2",
+  "url": "subsec-day13-wire-and-prove.html#fig-accel-bb",
+  "type": "Figure",
+  "number": "12.2.4",
+  "title": "",
+  "body": " The accelerometer joins the bus — yellow to the SCL row, blue to the SDA row, black to GND, and red to 3.3 V. The display, not drawn here, stays wired to the same two rows.   "
+},
+{
+  "id": "act-day13-whoami",
+  "level": "2",
+  "url": "subsec-day13-wire-and-prove.html#act-day13-whoami",
+  "type": "Activity",
+  "number": "12.2.2",
+  "title": "Wire the accelerometer and verify the link.",
+  "body": " Wire the accelerometer and verify the link   The program we'll run, whoami_test.c , reads a certain register, called WHO_AM_I, once a second and prints whether it got the value it expected.    Plug the STEMMA QT cable into the breakout and wire its four leads against .    Make a copy of your TemplateProject and call the new project Accelerometer . Download whoami_test.c from Canvas and put it in the project's Src folder. Build and upload.    Open CoolTerm. A working setup prints Accelerometer initialized! once a second.   "
+},
+{
+  "id": "subsec-day13-what-ran",
+  "level": "1",
+  "url": "subsec-day13-what-ran.html",
+  "type": "Subsection",
+  "number": "12.2.3",
+  "title": "Part 3: What Just Ran",
+  "body": " Part 3: What Just Ran   Here is the whole of whoami_test.c . Notice the first #define : the device address is written (0x32 >> 1) — a number shifted right by one rather than written out. >> moves every bit of a value one place toward the least significant end, dropping the bit that falls off the bottom and bringing in a 0 at the top; it is the mirror of the << we have used on register bits since the first GPIO write. What that does to 0x32 — we'll come back to that, and to why the address is written this way, once we have the logic analyzer on the bus.   #include <stdio.h> #include \"ES28.h\" #include \"uart.h\" #include \"i2c.h\" #define LSM303_ADDRESS_ACCEL (0x32 >> 1) \/\/ 7-bit address 0b0011001 #define LSM303_WHO_AM_I_A 0x0F \/\/ default value: 00110011 uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress); int main(void) { uint8_t who_am_i = 0; i2c1_init(); uart2_init(); printf(\"LSM303AGR initialization test \\n\\r\"); while(1) { who_am_i = lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A); if( who_am_i == 0x33 ) { printf(\"Accelerometer initialized! \\n\\r\"); } else { printf(\"Could not connect to accelerometer \\n\\r\"); } delay_ms(1000); } return 0; } \/* Read one byte from an accelerometer register (Datasheet, Table 22) *\/ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) { uint8_t data; i2c1_memRead(LSM303_ADDRESS_ACCEL, RegisterAddress, 1, &data); return data; }  The program has the same shape as the programs we have been writing all term: initialize the two peripherals, print a startup message, and then a loop that does one thing once a second — read WHO_AM_I, compare what came back to the number 0x33, and print one of two lines. The only function it defines besides main() , lsm303_AccelRegisterRead() , is a single call into the I2C library from — i2c1_memRead() , asked for one byte from one register. Receiving 0x33 back from the accelerometer as the contents of the WHO_AM_I register verifies the whole read path: the wiring, the device address, the protocol and the code all had to work for that value to arrive. If it prints Could not connect to accelerometer instead, that is data too — the analyzer we are about to put on the bus shows exactly what the wire is doing.      "
+},
+{
+  "id": "subsec-day13-analyzer",
+  "level": "1",
+  "url": "subsec-day13-analyzer.html",
+  "type": "Subsection",
+  "number": "12.2.4",
+  "title": "Part 4: Put the Analyzer on It",
+  "body": " Part 4: Put the Analyzer on It   The line CoolTerm prints tells us that the read worked, but it does not show us what happened on the two wires. To see the transactions themselves — the address going out, the register number, and the byte coming back — we'll put the AD2's logic analyzer on the bus, and we'll work from that trace for the rest of class.  We'll put the AD2's digital leads on the two wires with the same setup we used on Day 9x ( ), with one change: this read is two transactions and takes about 400 µs, so in Waveforms we'll set the time base to 50 µs per division rather than 20, and drag the view so that the first START is at the left edge.     The AD2's digital channels are the larger flying-lead bundle (left, plugged into the AD2), and the pinout sheet (right) says which lead is which: the digital leads are numbered 0–15, and the ground leads carry the ⏚ symbol. Three leads go onto the bus: DIO0 (pink, lead 0 on the sheet) to the SDA row, DIO1 (green, lead 1) to the SCL row, and a ground lead (black) to ground. The STEMMA leads and the display stay where they are. (The sheet is drawn for the AD2's sibling instrument; the digital numbering, colors and grounds are identical, only the trigger pins are named differently.)          Predict what the decoder will show   whoami_test.c is running: once a second, the loop calls lsm303_AccelRegisterRead() , which is one call to i2c1_memRead() . Before you capture anything, predict what the protocol decoder will show for one pass through the loop. How many transactions? What goes out in each one, and what comes back? Write your prediction down.      Capture the WHO_AM_I read   Put the AD2's digital leads on the bus as above, set up Waveforms and the decoder as on Day 9x — with the time base at 50 µs per division — and take a single sweep.    Read your decoded trace and find three things: the device address the decoder prints, the register address, and the value the accelerometer sent back. Compare them with the two #define s at the top of whoami_test.c , open in your own IDE, and with your prediction.     The WHO_AM_I read, captured and decoded. Two transactions cross the screen: h19 WR , its ACK, the register address h0F , its ACK, and a STOP — then h19 RD , its ACK, the returned h33 , a NACK, and the final STOP. SCL is DIO1 (green) and SDA is DIO0 (pink), as wired on Day 9x.       The same capture, close up: the write transaction (top — the device address and the register address going out), then the read transaction (bottom — the device address again, and the 0x33 coming back, ended by the controller's NACK).       "
+},
+{
+  "id": "fig-ad2-digital-wiring",
+  "level": "2",
+  "url": "subsec-day13-analyzer.html#fig-ad2-digital-wiring",
+  "type": "Figure",
+  "number": "12.2.9",
+  "title": "",
+  "body": " The AD2's digital channels are the larger flying-lead bundle (left, plugged into the AD2), and the pinout sheet (right) says which lead is which: the digital leads are numbered 0–15, and the ground leads carry the ⏚ symbol. Three leads go onto the bus: DIO0 (pink, lead 0 on the sheet) to the SDA row, DIO1 (green, lead 1) to the SCL row, and a ground lead (black) to ground. The STEMMA leads and the display stay where they are. (The sheet is drawn for the AD2's sibling instrument; the digital numbering, colors and grounds are identical, only the trigger pins are named differently.)      "
+},
+{
+  "id": "act-day13-predict-decoder",
+  "level": "2",
+  "url": "subsec-day13-analyzer.html#act-day13-predict-decoder",
+  "type": "Activity",
+  "number": "12.2.3",
+  "title": "Predict what the decoder will show.",
+  "body": " Predict what the decoder will show   whoami_test.c is running: once a second, the loop calls lsm303_AccelRegisterRead() , which is one call to i2c1_memRead() . Before you capture anything, predict what the protocol decoder will show for one pass through the loop. How many transactions? What goes out in each one, and what comes back? Write your prediction down.   "
+},
+{
+  "id": "act-day13-capture",
+  "level": "2",
+  "url": "subsec-day13-analyzer.html#act-day13-capture",
+  "type": "Activity",
+  "number": "12.2.4",
+  "title": "Capture the WHO_AM_I read.",
+  "body": " Capture the WHO_AM_I read   Put the AD2's digital leads on the bus as above, set up Waveforms and the decoder as on Day 9x — with the time base at 50 µs per division — and take a single sweep.    Read your decoded trace and find three things: the device address the decoder prints, the register address, and the value the accelerometer sent back. Compare them with the two #define s at the top of whoami_test.c , open in your own IDE, and with your prediction.   "
+},
+{
+  "id": "fig-whoami-capture",
+  "level": "2",
+  "url": "subsec-day13-analyzer.html#fig-whoami-capture",
+  "type": "Figure",
+  "number": "12.2.13",
+  "title": "",
+  "body": " The WHO_AM_I read, captured and decoded. Two transactions cross the screen: h19 WR , its ACK, the register address h0F , its ACK, and a STOP — then h19 RD , its ACK, the returned h33 , a NACK, and the final STOP. SCL is DIO1 (green) and SDA is DIO0 (pink), as wired on Day 9x.   "
+},
+{
+  "id": "fig-whoami-capture-closeup",
+  "level": "2",
+  "url": "subsec-day13-analyzer.html#fig-whoami-capture-closeup",
+  "type": "Figure",
+  "number": "12.2.15",
+  "title": "",
+  "body": " The same capture, close up: the write transaction (top — the device address and the register address going out), then the read transaction (bottom — the device address again, and the 0x33 coming back, ended by the controller's NACK).    "
+},
+{
+  "id": "subsec-day13-digging-deeper",
+  "level": "1",
+  "url": "subsec-day13-digging-deeper.html",
+  "type": "Subsection",
+  "number": "12.2.5",
+  "title": "Part 5: Digging Deeper",
+  "body": " Part 5: Digging Deeper   You now have a decoded trace on your screen. We'll work through the questions it raises, and we can answer every one of them from the trace itself.    Why 0x19?   The program writes the device address as (0x32 >> 1) . Where does the 0x32 come from, and why does the decoder print h19 ?     Digging deeper — against your own trace   Answer these from your own decoded trace.    On Day 10 we saw that our i2c1_memRead() sends the register address, lets that transaction end, and starts a second one. Confirm it on the trace in front of you: find where the first transaction ends and the second begins, and what the device address is doing there a second time.    Find every acknowledge bit on the trace in front of you — there is one after each byte. For each one: who sent it, and is it an ACK or a NACK?     Two different things on this bus are both called a NACK — a not-acknowledge. The NACK on your trace is the controller's , and it is part of a successful read: the controller asked for one byte, got it, and deliberately does not acknowledge, which tells the target to stop sending. The other kind is the one we saw on Day 9x and produced on Day 10: nothing pulls SDA LOW during the acknowledge bit, and the wire simply stays HIGH.     The transfer diagram in is the datasheet's own drawing of what you captured — §6.1.1, Tables 20–23, and Table 22 is the shape your trace has. Three more questions can be answered from its rows: who sends the address, where we tell the accelerometer which register to read from, and where the accelerometer puts the register's contents on the data line. Where our trace shows a STOP and a fresh START between the two halves of the read, the datasheet draws a repeated START; the register-level walk of i2c1_memRead() in shows exactly where our library makes that choice, and why it matters on a bus with two controllers. The NACK you found on your own trace is in neither half of that listing: the library describes the whole transaction in advance — how many bytes (NBYTES), and what to do at the end (AUTOEND) — and the I2C hardware puts the acknowledge bits and the STOP on the wire.    "
+},
+{
+  "id": "act-day13-why-19",
+  "level": "2",
+  "url": "subsec-day13-digging-deeper.html#act-day13-why-19",
+  "type": "Activity",
+  "number": "12.2.5",
+  "title": "Why 0x19?",
+  "body": " Why 0x19?   The program writes the device address as (0x32 >> 1) . Where does the 0x32 come from, and why does the decoder print h19 ?   "
+},
+{
+  "id": "act-day13-digging-deeper",
+  "level": "2",
+  "url": "subsec-day13-digging-deeper.html#act-day13-digging-deeper",
+  "type": "Activity",
+  "number": "12.2.6",
+  "title": "Digging deeper — against your own trace.",
+  "body": " Digging deeper — against your own trace   Answer these from your own decoded trace.    On Day 10 we saw that our i2c1_memRead() sends the register address, lets that transaction end, and starts a second one. Confirm it on the trace in front of you: find where the first transaction ends and the second begins, and what the device address is doing there a second time.    Find every acknowledge bit on the trace in front of you — there is one after each byte. For each one: who sent it, and is it an ACK or a NACK?   "
+},
+{
+  "id": "subsec-day13-break-it",
+  "level": "1",
+  "url": "subsec-day13-break-it.html",
+  "type": "Subsection",
+  "number": "12.2.6",
+  "title": "Part 6: Break It on Purpose",
+  "body": " Part 6: Break It on Purpose    Break it: a wrong device address   A NACK is easier to recognize the first time if you produce one on purpose, on a bus you know is properly configured.    Change the 0x32 in LSM303_ADDRESS_ACCEL to 0x30 . Before you run it, predict: what will CoolTerm show, and what will the logic analyzer show? Write both predictions down.    Rebuild and upload; then arm a single sweep on the analyzer (trigger on DIO0 falling) and press the board's reset button to catch the first transaction after startup. The trace stays blank until you press reset — that is the sweep waiting, not a fault. Read the decoded row: what happened after the address byte?    Change the address back to 0x32 , rebuild, and confirm the link works again before we move on.      The same read attempted at the wrong device address. One transaction: h18 WR goes out, no device answers, the acknowledge bit stays HIGH (the decoder prints N ), and a STOP ends the transaction.      If you finish early: a wrong register address   Restore the device address, and this time read a wrong register : call lsm303_AccelRegisterRead(0x20) instead of the WHO_AM_I address. Predict first — will the transactions complete this time? What value comes back? Then capture it, and check the value you got against the LSM303AGR datasheet, §8.6 (CTRL_REG1_A).    One more prediction: the display on your bus answers to address 0x70 (already the 7-bit address — no shift). If you sent 0x0F to it as a register address, the way this program does to the accelerometer, what would happen at the acknowledge bit after the address byte — and can the value that comes back verify the link the way 0x33 does?       The right device address, the wrong register address: reading register 0x20 instead of WHO_AM_I. Both transactions complete — every acknowledge the accelerometer owes is an ACK, and the read ends with the controller's own NACK, exactly as the WHO_AM_I read did — and the value that comes back is h07 : CTRL_REG1_A's power-on default, 0b00000111 (Datasheet §8.6).     The same wrong-register capture, close up: the write transaction delivering register address 0x20 (top), then the read transaction returning 0x07 (bottom).      "
+},
+{
+  "id": "act-day13-break-it",
+  "level": "2",
+  "url": "subsec-day13-break-it.html#act-day13-break-it",
+  "type": "Activity",
+  "number": "12.2.7",
+  "title": "Break it: a wrong device address.",
+  "body": " Break it: a wrong device address   A NACK is easier to recognize the first time if you produce one on purpose, on a bus you know is properly configured.    Change the 0x32 in LSM303_ADDRESS_ACCEL to 0x30 . Before you run it, predict: what will CoolTerm show, and what will the logic analyzer show? Write both predictions down.    Rebuild and upload; then arm a single sweep on the analyzer (trigger on DIO0 falling) and press the board's reset button to catch the first transaction after startup. The trace stays blank until you press reset — that is the sweep waiting, not a fault. Read the decoded row: what happened after the address byte?    Change the address back to 0x32 , rebuild, and confirm the link works again before we move on.   "
+},
+{
+  "id": "fig-whoami-capture-nack",
+  "level": "2",
+  "url": "subsec-day13-break-it.html#fig-whoami-capture-nack",
+  "type": "Figure",
+  "number": "12.2.22",
+  "title": "",
+  "body": " The same read attempted at the wrong device address. One transaction: h18 WR goes out, no device answers, the acknowledge bit stays HIGH (the decoder prints N ), and a STOP ends the transaction.   "
+},
+{
+  "id": "act-day13-break-stretch",
+  "level": "2",
+  "url": "subsec-day13-break-it.html#act-day13-break-stretch",
+  "type": "Activity",
+  "number": "12.2.8",
+  "title": "If you finish early: a wrong register address.",
+  "body": " If you finish early: a wrong register address   Restore the device address, and this time read a wrong register : call lsm303_AccelRegisterRead(0x20) instead of the WHO_AM_I address. Predict first — will the transactions complete this time? What value comes back? Then capture it, and check the value you got against the LSM303AGR datasheet, §8.6 (CTRL_REG1_A).    One more prediction: the display on your bus answers to address 0x70 (already the 7-bit address — no shift). If you sent 0x0F to it as a register address, the way this program does to the accelerometer, what would happen at the acknowledge bit after the address byte — and can the value that comes back verify the link the way 0x33 does?   "
+},
+{
+  "id": "fig-whoami-capture-wrong-register",
+  "level": "2",
+  "url": "subsec-day13-break-it.html#fig-whoami-capture-wrong-register",
+  "type": "Figure",
+  "number": "12.2.24",
+  "title": "",
+  "body": " The right device address, the wrong register address: reading register 0x20 instead of WHO_AM_I. Both transactions complete — every acknowledge the accelerometer owes is an ACK, and the read ends with the controller's own NACK, exactly as the WHO_AM_I read did — and the value that comes back is h07 : CTRL_REG1_A's power-on default, 0b00000111 (Datasheet §8.6).   "
+},
+{
+  "id": "fig-whoami-capture-wrong-register-closeup",
+  "level": "2",
+  "url": "subsec-day13-break-it.html#fig-whoami-capture-wrong-register-closeup",
+  "type": "Figure",
+  "number": "12.2.25",
+  "title": "",
+  "body": " The same wrong-register capture, close up: the write transaction delivering register address 0x20 (top), then the read transaction returning 0x07 (bottom).    "
+},
+{
+  "id": "subsec-day13-driver-begins",
+  "level": "1",
+  "url": "subsec-day13-driver-begins.html",
+  "type": "Subsection",
+  "number": "12.2.7",
+  "title": "Part 7: The Accelerometer’s Device Driver",
+  "body": " Part 7: The Accelerometer's Device Driver   Writing a device driver follows five steps — the same steps you followed for the display on Day 10. is the map: the driver reaches the device only through the I2C library, and the application reaches the device only through the driver.   From the datasheet, understand the basic I2C transfers for reading and writing for the device you want to talk to.  From the datasheet, #define the device's addresses and commands.  Define functions for the actions you need from the device.  Write those functions using the i2c.c library functions.  Devise unit tests to confirm the driver works.     Step 2 is already done, and here is where it came from. Open the LSM303AGR datasheet to §7, Table 26 ( Register address map , p. 43), and put lsm303agr.h beside it: the header is that table, transcribed into #define s. Here is the top of its register block:   \/\/ I2C address for the sensor #define LSM303_ADDRESS_ACCEL (0x32 >> 1) \/\/ 0011001x \/\/ ACCELEROMETER SECTION \/\/ Accelerometer registers \/\/ DEFAULT TYPE #define LSM303_WHO_AM_I_A 0x0F \/\/ 00110011 r #define LSM303_CTRL_REG1_A 0x20 \/\/ 00000111 rw #define LSM303_CTRL_REG2_A 0x21 \/\/ 00000000 rw #define LSM303_CTRL_REG3_A 0x22 \/\/ 00000000 rw #define LSM303_CTRL_REG4_A 0x23 \/\/ 00000000 rw #define LSM303_CTRL_REG5_A 0x24 \/\/ 00000000 rw #define LSM303_CTRL_REG6_A 0x25 \/\/ 00000000 rw #define LSM303_REFERENCE_A 0x26 \/\/ 00000000 rw #define LSM303_STATUS_REG_A 0x27 \/\/ 00000000 r #define LSM303_OUT_X_L_A 0x28 #define LSM303_OUT_X_H_A 0x29 #define LSM303_OUT_Y_L_A 0x2A #define LSM303_OUT_Y_H_A 0x2B #define LSM303_OUT_Z_L_A 0x2C #define LSM303_OUT_Z_H_A 0x2D  The real file keeps going — FIFO, interrupt, and click registers up to address 0x3D — and we leave all of those at their defaults. The _A in every name marks the accelerometer's half of the register map; the magnetometer has its own, which we don't touch. Notice the comment columns: for each control and status register, the header records the power-on default from the datasheet's table. You saw one of those defaults already if you did the wrong-register capture.    Check the header against the datasheet   Download lsm303agr.h from Canvas and put it in your mylib folder.    In the datasheet's Table 26 (p. 43), find the rows for WHO_AM_I_A and CTRL_REG1_A and check them against the header's #define s — the address and the default value of each.    Step 3 is also done: the header declares four functions, and they are the interface we'll build on for the rest of the week.  \/\/ The accelerometer has several gain and update rate settings. These are described \/\/ in the datasheet and are set up in the AccelInit function. uint8_t lsm303_AccelInit(); \/\/ The AccelRegisterWrite function should take a register address and a command byte \/\/ to be written into the register. void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data); \/\/ The AccelRegisterRead function should take a register address and return a data byte \/\/ read from the register. uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress); \/\/ Here is the higher-level function to read the acceleration vector. Output struct \/\/ contains raw (unscaled) acceleration values. void lsm303_AccelReadRaw(lsm303AccelData_s * const result);  One of the four is already running on your board — we used lsm303_AccelRegisterRead() to read the WHO_AM_I register. Writing lsm303_AccelRegisterWrite() is tonight's homework.   "
+},
+{
+  "id": "act-day13-header-tour",
+  "level": "2",
+  "url": "subsec-day13-driver-begins.html#act-day13-header-tour",
+  "type": "Activity",
+  "number": "12.2.9",
+  "title": "Check the header against the datasheet.",
+  "body": " Check the header against the datasheet   Download lsm303agr.h from Canvas and put it in your mylib folder.    In the datasheet's Table 26 (p. 43), find the rows for WHO_AM_I_A and CTRL_REG1_A and check them against the header's #define s — the address and the default value of each.   "
+},
+{
+  "id": "subsec-day13-homework",
+  "level": "1",
+  "url": "subsec-day13-homework.html",
+  "type": "Subsection",
+  "number": "12.2.8",
+  "title": "Part 8: Homework for Thursday",
+  "body": " Part 8: Homework for Thursday  Here are three things to do for Thursday, all on paper — there is nothing to submit. This will help you prepare for Lab 7.   Do the pre-class reading for Thursday ( ) — it is a guided walk through the datasheet.  On paper, write lsm303_AccelRegisterWrite() . Mimic the read function — you do not have to test it.  From the datasheet, work out what settings belong in CTRL_REG1_A and CTRL_REG4_A, and take notes on paper.   Tomorrow we'll look at how the sensor works inside; on Thursday we'll get acceleration data out of it and use it in Lab 7.   "
+},
+{
+  "id": "subsec-day13x-physics",
+  "level": "1",
+  "url": "subsec-day13x-physics.html",
+  "type": "Subsection",
+  "number": "12.3.1",
+  "title": "Part 1: The Physics of a Proof Mass",
+  "body": " Part 1: The Physics of a Proof Mass   An accelerometer has to turn a physical acceleration into something a circuit can measure. We'll follow that chain in three steps: acceleration to displacement, displacement to capacitance, and capacitance to a number the chip can send us.   What does the mass do?   Your phone actually has an accelerometer built into it: it is how the phone knows whether you are holding it upright or sideways, and turns the screen to match. Today we'll look at how it does that. Inside the sensor a small mass, the proof mass , is connected by a spring to the sensor's case.   Suppose the case accelerates to the right. Seen from inside the case, what does the mass do? Discuss at your table.       Because of its inertia, the mass resists the case's acceleration: seen from inside the case it is displaced backward, opposite the acceleration, until the spring's restoring force grows to match the force needed to carry it along. That displacement is what is measured, and we can turn that observation into a formula ( ). Two familiar facts are enough: acceleration results in force on the mass, and the spring counteracts with force , where is the spring constant and is the displacement of the mass. Measure the displacement when the forces balance, and we can calculate the acceleration. One spring measures acceleration along its own length only, so a 3-axis accelerometer replicates the system along three axes.   A proof mass connected by a spring (spring constant ) to the sensor's case. When the case accelerates, the mass is displaced by from its rest position; at balance the spring force equals the force that accelerates the mass with the case, so measuring gives the acceleration .     There are multiple ways of measuring a displacement: resistive, capacitive, and inductive techniques. Our sensor uses the capacitive one. One capacitor plate is attached to the mass and one to the case ( ): as the mass moves, the gap between the plates changes, the capacitance changes with it, and measuring the capacitance lets us compute the displacement.   Turning displacement into something we can measure electrically: one capacitor plate is attached to the mass and one to the case. As the mass moves, the gap between the plates changes, and the capacitance changes with it.     In a MEMS accelerometer, the proof mass, the springs, and the capacitor plates are all machined out of silicon, on the scale of µm ( ). MEMS stands for Micro-Electro-Mechanical System. A capacitance-to-voltage circuit on the same chip translates the changing capacitance into a voltage signal.   The whole mass-spring-capacitor system, machined out of silicon. Left: the mechanism, at rest and under acceleration. The moving plate is the proof mass, suspended on springs, and its fingers interleave with fixed fingers to form capacitors that change as it moves. In the accelerating panel, the case and its fixed plates accelerate to the right, and the moving plate (the mass) gets left behind, as we derived. Right: a micrograph of a real device's interleaved fingers, a few µm across (surface micromachined capacitors: Roger Howe, Stanford).        The whole chain we just built, animated: how a smartphone knows up from down. Worth five minutes if you'd like to see the proof mass and its capacitors in motion.      "
+},
+{
+  "id": "act-day13x-mass-commit",
+  "level": "2",
+  "url": "subsec-day13x-physics.html#act-day13x-mass-commit",
+  "type": "Activity",
+  "number": "12.3.1",
+  "title": "What does the mass do?",
+  "body": " What does the mass do?   Your phone actually has an accelerometer built into it: it is how the phone knows whether you are holding it upright or sideways, and turns the screen to match. Today we'll look at how it does that. Inside the sensor a small mass, the proof mass , is connected by a spring to the sensor's case.   Suppose the case accelerates to the right. Seen from inside the case, what does the mass do? Discuss at your table.   "
 },
 {
   "id": "fig-accel-proof-mass",
   "level": "2",
-  "url": "subsec-proof-mass.html#fig-accel-proof-mass",
+  "url": "subsec-day13x-physics.html#fig-accel-proof-mass",
   "type": "Figure",
-  "number": "12.1.1",
+  "number": "12.3.2",
   "title": "",
-  "body": " Proof mass and spring model. The proof mass (suspended by a spring attached to the package) stays behind when the case accelerates. Its displacement relative to the case is proportional to acceleration: . In a MEMS device, the mass and spring are etched from silicon.   "
+  "body": " A proof mass connected by a spring (spring constant ) to the sensor's case. When the case accelerates, the mass is displaced by from its rest position; at balance the spring force equals the force that accelerates the mass with the case, so measuring gives the acceleration .   "
 },
 {
-  "id": "subsec-proof-mass-4",
+  "id": "fig-accel-capacitive",
   "level": "2",
-  "url": "subsec-proof-mass.html#subsec-proof-mass-4",
-  "type": "Paragraph (with a defined term)",
-  "number": "",
+  "url": "subsec-day13x-physics.html#fig-accel-capacitive",
+  "type": "Figure",
+  "number": "12.3.4",
   "title": "",
-  "body": "capacitive MEMS "
+  "body": " Turning displacement into something we can measure electrically: one capacitor plate is attached to the mass and one to the case. As the mass moves, the gap between the plates changes, and the capacitance changes with it.   "
 },
 {
-  "id": "subsec-proof-mass-5",
+  "id": "subsec-day13x-physics-12",
   "level": "2",
-  "url": "subsec-proof-mass.html#subsec-proof-mass-5",
+  "url": "subsec-day13x-physics.html#subsec-day13x-physics-12",
   "type": "Paragraph (with a defined term)",
   "number": "",
   "title": "",
@@ -5961,173 +7167,191 @@ var ptx_lunr_docs = [
 {
   "id": "fig-accel-mems",
   "level": "2",
-  "url": "subsec-proof-mass.html#fig-accel-mems",
+  "url": "subsec-day13x-physics.html#fig-accel-mems",
   "type": "Figure",
-  "number": "12.1.2",
+  "number": "12.3.6",
   "title": "",
-  "body": " MEMS capacitive accelerometer cross-section. The proof mass is a movable plate suspended between two fixed plates. When the mass displaces, the capacitance to one fixed plate increases and to the other decreases. Measuring the differential capacitance gives displacement and therefore acceleration.   "
+  "body": " The whole mass-spring-capacitor system, machined out of silicon. Left: the mechanism, at rest and under acceleration. The moving plate is the proof mass, suspended on springs, and its fingers interleave with fixed fingers to form capacitors that change as it moves. In the accelerating panel, the case and its fixed plates accelerate to the right, and the moving plate (the mass) gets left behind, as we derived. Right: a micrograph of a real device's interleaved fingers, a few µm across (surface micromachined capacitors: Roger Howe, Stanford).      "
 },
 {
-  "id": "subsec-tilt-sensing",
+  "id": "fig-accel-phone-video",
+  "level": "2",
+  "url": "subsec-day13x-physics.html#fig-accel-phone-video",
+  "type": "Figure",
+  "number": "12.3.7",
+  "title": "",
+  "body": " The whole chain we just built, animated: how a smartphone knows up from down. Worth five minutes if you'd like to see the proof mass and its capacitors in motion.   "
+},
+{
+  "id": "subsec-day13x-applications",
   "level": "1",
-  "url": "subsec-tilt-sensing.html",
-  "type": "Subsection",
-  "number": "12.1.3",
-  "title": "Tilt Sensing from Three Axes",
-  "body": " Tilt Sensing from Three Axes  A three-axis accelerometer contains three proof masses oriented along the x, y, and z axes of the chip. Each axis independently reports the component of acceleration (including gravity) along that direction. When the device is stationary, the three readings together form a vector that points opposite to the direction of gravity.  If the chip is lying flat (z-axis pointing up), the z reading is and the x and y readings are near zero. Tilt the device 45° around the x-axis and the gravity vector projects equally onto z and y: both read approximately . The tilt angle can be recovered with an arctangent: This is how a phone knows to rotate its display, and how we will use the LSM303AGR in this course.  "
-},
-{
-  "id": "rq-accel-concepts",
-  "level": "1",
-  "url": "rq-accel-concepts.html",
-  "type": "Check Your Understanding",
-  "number": "12.1.4",
-  "title": "Check Your Understanding",
-  "body": "  An accelerometer is sitting motionless on a flat table. Its z-axis points straight up. What does it read on the z-axis, and why?    Approximately , because the table's normal force pushes the device upward and the accelerometer measures that contact force, not the absence of motion.  Correct. Proper acceleration is what you feel — the contact force from the table. A device in free fall feels nothing and reads zero.    Zero, because the device is not moving and acceleration is zero when velocity is constant.  This would be correct for coordinate acceleration (rate of change of velocity), but an accelerometer measures proper acceleration — the contact force from the table's surface. A stationary device on a table reads .    Approximately , because gravity pulls the device downward.  The sign depends on the axis convention of the sensor, but the key point is that the reading is non-zero. Gravity is pulling down, but the table pushes back up — the sensor measures that upward contact force as a positive acceleration on the upward-pointing axis.    Zero on all three axes, because gravity cancels the normal force.  Gravity and the normal force cancel in terms of net force on the device as a whole (which is why it does not move), but the accelerometer measures the internal reaction force on its proof mass — which reflects the upward push from the table, not the net force.      The proof mass in a MEMS accelerometer displaces when the device accelerates. What physical principle causes this displacement?    Inertia — the proof mass resists the change in motion, so it lags behind the accelerating housing and displaces relative to it.  Correct. The displacement is then proportional to acceleration ( ), and measuring it gives the acceleration.    Magnetic force — the proof mass is magnetic and responds to changes in the Earth's magnetic field.  MEMS accelerometers are mechanical, not magnetic. The proof mass responds to inertial forces, not magnetic fields (that would be a magnetometer).    Thermal expansion — the proof mass expands when the device heats up due to motion.  MEMS accelerometers respond to inertia, not heat. Thermal effects are a source of noise in these sensors, not the sensing mechanism.    Piezoelectricity — stress on the silicon generates a voltage proportional to acceleration.  Some accelerometers use piezoelectric sensing, but the capacitive MEMS type (used in the LSM303AGR and most consumer devices) works by measuring proof-mass displacement as a change in capacitance, not a piezoelectric voltage.      A three-axis accelerometer is tilted so that its x-axis points straight down. The device is otherwise stationary. What does it read?    Approximately on the x-axis and near zero on y and z — the full gravity vector projects onto the downward-pointing x-axis.  Correct. When one axis is aligned with gravity, that axis carries the full reading. The sign is negative because the axis points down while the contact force (which the sensor measures) pushes up, opposite to the axis direction.    Zero on all axes — tilting the device redistributes the forces so they cancel.  The gravity vector does not disappear when you tilt the device; it just projects differently onto the three axes. One axis will always carry the full when aligned with gravity.    Approximately on all three axes — tilting amplifies the reading.  The total magnitude of the gravity vector is always regardless of orientation. It cannot be more than on any axis when the device is stationary.    Approximately on the x-axis — tilting has no effect because the sensor measures total acceleration, not direction.  The sign matters: the x-axis is pointing down, and the contact force (what the sensor measures) pushes upward, which is the negative x direction. A three-axis sensor does measure direction, not just magnitude.     "
-},
-{
-  "id": "rq-accel-static",
-  "level": "2",
-  "url": "rq-accel-concepts.html#rq-accel-static",
-  "type": "Reading Question",
-  "number": "12.1.4.1",
-  "title": "",
-  "body": " An accelerometer is sitting motionless on a flat table. Its z-axis points straight up. What does it read on the z-axis, and why?    Approximately , because the table's normal force pushes the device upward and the accelerometer measures that contact force, not the absence of motion.  Correct. Proper acceleration is what you feel — the contact force from the table. A device in free fall feels nothing and reads zero.    Zero, because the device is not moving and acceleration is zero when velocity is constant.  This would be correct for coordinate acceleration (rate of change of velocity), but an accelerometer measures proper acceleration — the contact force from the table's surface. A stationary device on a table reads .    Approximately , because gravity pulls the device downward.  The sign depends on the axis convention of the sensor, but the key point is that the reading is non-zero. Gravity is pulling down, but the table pushes back up — the sensor measures that upward contact force as a positive acceleration on the upward-pointing axis.    Zero on all three axes, because gravity cancels the normal force.  Gravity and the normal force cancel in terms of net force on the device as a whole (which is why it does not move), but the accelerometer measures the internal reaction force on its proof mass — which reflects the upward push from the table, not the net force.    "
-},
-{
-  "id": "rq-accel-proof-mass",
-  "level": "2",
-  "url": "rq-accel-concepts.html#rq-accel-proof-mass",
-  "type": "Reading Question",
-  "number": "12.1.4.2",
-  "title": "",
-  "body": " The proof mass in a MEMS accelerometer displaces when the device accelerates. What physical principle causes this displacement?    Inertia — the proof mass resists the change in motion, so it lags behind the accelerating housing and displaces relative to it.  Correct. The displacement is then proportional to acceleration ( ), and measuring it gives the acceleration.    Magnetic force — the proof mass is magnetic and responds to changes in the Earth's magnetic field.  MEMS accelerometers are mechanical, not magnetic. The proof mass responds to inertial forces, not magnetic fields (that would be a magnetometer).    Thermal expansion — the proof mass expands when the device heats up due to motion.  MEMS accelerometers respond to inertia, not heat. Thermal effects are a source of noise in these sensors, not the sensing mechanism.    Piezoelectricity — stress on the silicon generates a voltage proportional to acceleration.  Some accelerometers use piezoelectric sensing, but the capacitive MEMS type (used in the LSM303AGR and most consumer devices) works by measuring proof-mass displacement as a change in capacitance, not a piezoelectric voltage.    "
-},
-{
-  "id": "rq-accel-tilt",
-  "level": "2",
-  "url": "rq-accel-concepts.html#rq-accel-tilt",
-  "type": "Reading Question",
-  "number": "12.1.4.3",
-  "title": "",
-  "body": " A three-axis accelerometer is tilted so that its x-axis points straight down. The device is otherwise stationary. What does it read?    Approximately on the x-axis and near zero on y and z — the full gravity vector projects onto the downward-pointing x-axis.  Correct. When one axis is aligned with gravity, that axis carries the full reading. The sign is negative because the axis points down while the contact force (which the sensor measures) pushes up, opposite to the axis direction.    Zero on all axes — tilting the device redistributes the forces so they cancel.  The gravity vector does not disappear when you tilt the device; it just projects differently onto the three axes. One axis will always carry the full when aligned with gravity.    Approximately on all three axes — tilting amplifies the reading.  The total magnitude of the gravity vector is always regardless of orientation. It cannot be more than on any axis when the device is stationary.    Approximately on the x-axis — tilting has no effect because the sensor measures total acceleration, not direction.  The sign matters: the x-axis is pointing down, and the contact force (what the sensor measures) pushes upward, which is the negative x direction. A three-axis sensor does measure direction, not just magnitude.    "
-},
-{
-  "id": "sec-lsm303agr",
-  "level": "1",
-  "url": "sec-lsm303agr.html",
-  "type": "Section",
-  "number": "12.2",
-  "title": "The LSM303AGR Accelerometer",
-  "body": " The LSM303AGR Accelerometer   STMicroelectronics LSM303AGR module mounted on an Adafruit breakout board with STEMMA QT connector. The chip combines a 3-axis accelerometer and a 3-axis magnetometer. In ENGS 28 we use only the accelerometer portion.     LSM303AGR accelerometer key specifications: selectable full-scale range (±2g, ±4g, ±8g, ±16g), selectable resolution (8, 10, or 12 bits depending on power mode), and I2C\/SPI interface. In ENGS 28 we use ±2g full-scale and 12-bit low-power mode.      Breakout board schematic (partial). The 6-pin STEMMA QT header provides 3.3 V power, GND, SCL, and SDA. Pull-up resistors for I2C are already on the breakout board, so no external resistors are needed. The chip is hardwired for I2C (SPI disabled by the board).     LSM303AGR breakout wiring to the Nucleo board. Red lead to 3.3 V, black to GND, yellow (SCL) to PB8, blue (SDA) to PB9. The same I2C1 bus used for the 7-segment display also supports the accelerometer.      Full test setup with the Nucleo, breadboard, LSM303AGR, and AD2 logic analyzer connected to SCL and SDA for I2C debugging.    "
-},
-{
-  "id": "fig-lsm303agr-chip",
-  "level": "2",
-  "url": "sec-lsm303agr.html#fig-lsm303agr-chip",
-  "type": "Figure",
-  "number": "12.2.1",
-  "title": "",
-  "body": " STMicroelectronics LSM303AGR module mounted on an Adafruit breakout board with STEMMA QT connector. The chip combines a 3-axis accelerometer and a 3-axis magnetometer. In ENGS 28 we use only the accelerometer portion.   "
-},
-{
-  "id": "fig-lsm303agr-specs",
-  "level": "2",
-  "url": "sec-lsm303agr.html#fig-lsm303agr-specs",
-  "type": "Figure",
-  "number": "12.2.2",
-  "title": "",
-  "body": " LSM303AGR accelerometer key specifications: selectable full-scale range (±2g, ±4g, ±8g, ±16g), selectable resolution (8, 10, or 12 bits depending on power mode), and I2C\/SPI interface. In ENGS 28 we use ±2g full-scale and 12-bit low-power mode.    "
-},
-{
-  "id": "fig-lsm303agr-breakout",
-  "level": "2",
-  "url": "sec-lsm303agr.html#fig-lsm303agr-breakout",
-  "type": "Figure",
-  "number": "12.2.3",
-  "title": "",
-  "body": " Breakout board schematic (partial). The 6-pin STEMMA QT header provides 3.3 V power, GND, SCL, and SDA. Pull-up resistors for I2C are already on the breakout board, so no external resistors are needed. The chip is hardwired for I2C (SPI disabled by the board).   "
-},
-{
-  "id": "fig-lsm303agr-wiring",
-  "level": "2",
-  "url": "sec-lsm303agr.html#fig-lsm303agr-wiring",
-  "type": "Figure",
-  "number": "12.2.4",
-  "title": "",
-  "body": " LSM303AGR breakout wiring to the Nucleo board. Red lead to 3.3 V, black to GND, yellow (SCL) to PB8, blue (SDA) to PB9. The same I2C1 bus used for the 7-segment display also supports the accelerometer.    "
-},
-{
-  "id": "fig-lsm303agr-test-wiring",
-  "level": "2",
-  "url": "sec-lsm303agr.html#fig-lsm303agr-test-wiring",
-  "type": "Figure",
-  "number": "12.2.5",
-  "title": "",
-  "body": " Full test setup with the Nucleo, breadboard, LSM303AGR, and AD2 logic analyzer connected to SCL and SDA for I2C debugging.   "
-},
-{
-  "id": "subsec-accel-i2c-pattern",
-  "level": "1",
-  "url": "subsec-accel-i2c-pattern.html",
-  "type": "Subsection",
-  "number": "12.3.1",
-  "title": "I2C Read\/Write Patterns",
-  "body": " I2C Read\/Write Patterns   I2C transfer patterns for the LSM303AGR. A register write: START, address+W, register address, data byte, STOP. A register read: START, address+W, register address, repeated START, address+R, data byte, NACK, STOP. The repeated START lets the controller switch from write to read without releasing the bus.    "
-},
-{
-  "id": "fig-accel-i2c-transfers",
-  "level": "2",
-  "url": "subsec-accel-i2c-pattern.html#fig-accel-i2c-transfers",
-  "type": "Figure",
-  "number": "12.3.1",
-  "title": "",
-  "body": " I2C transfer patterns for the LSM303AGR. A register write: START, address+W, register address, data byte, STOP. A register read: START, address+W, register address, repeated START, address+R, data byte, NACK, STOP. The repeated START lets the controller switch from write to read without releasing the bus.   "
-},
-{
-  "id": "subsec-accel-data-format",
-  "level": "1",
-  "url": "subsec-accel-data-format.html",
+  "url": "subsec-day13x-applications.html",
   "type": "Subsection",
   "number": "12.3.2",
-  "title": "Data Format and Unit Conversion",
-  "body": " Data Format and Unit Conversion  The accelerometer outputs a 16-bit, left-justified two's complement integer per axis. In 12-bit low-power mode, only bits [15:4] are valid; the lower 4 bits are 0. For a ±2g full-scale range:     The raw output of an accelerometer at rest with one axis pointing down is approximately ±1g (depending on orientation). A perfectly calibrated sensor shows exactly 1000 mg on the downward axis and 0 on the other two.  "
+  "title": "Part 2: Accelerometers Are Everywhere",
+  "body": " Part 2: Accelerometers Are Everywhere   Tilt is the case we started with: your phone measures gravity's pull along each axis to decide when to rotate its screen. An airbag sensor detects the sudden deceleration of a crash. Before solid-state drives, an accelerometer detected a falling laptop and pulled the disk heads off the spinning drive before it hit the floor. A step counter in a wearable picks up the impact of every footfall, and football helmets carry accelerometers to measure hits to the head. Accelerometers also monitor machinery: a change in a machine's vibration pattern can flag a failure building before anything else shows it. Paired with a gyroscope they form an IMU (inertial measurement unit), the motion sensor in vehicles and drones. Two local companies founded by Thayer alumni build on exactly this technology: SignalQuest (precision motion sensing) and Simbex (the helmet impact sensors).   The gyroscope is the accelerometer's partner in an IMU, and it is built with the same MEMS technology: a vibrating mass, and a capacitive pickoff for the tiny Coriolis displacement that rotation produces. This video shows how.      "
 },
 {
-  "id": "sec-tilt-sensing",
+  "id": "fig-accel-gyro-video",
+  "level": "2",
+  "url": "subsec-day13x-applications.html#fig-accel-gyro-video",
+  "type": "Figure",
+  "number": "12.3.10",
+  "title": "",
+  "body": " The gyroscope is the accelerometer's partner in an IMU, and it is built with the same MEMS technology: a vibrating mass, and a capacitive pickoff for the tiny Coriolis displacement that rotation produces. This video shows how.   "
+},
+{
+  "id": "subsec-day13x-datasheet",
   "level": "1",
-  "url": "sec-tilt-sensing.html",
+  "url": "subsec-day13x-datasheet.html",
+  "type": "Subsection",
+  "number": "12.3.3",
+  "title": "Part 3: The LSM303AGR, and Its Datasheet",
+  "body": " Part 3: The LSM303AGR, and Its Datasheet   Our device is the STMicro LSM303AGR, the chip whose WHO_AM_I register we read yesterday. It carries a 3-axis accelerometer, a 3-axis magnetometer, and a temperature sensor; we'll only use the accelerometer. Inside it ( ), the signal follows the path we just discussed: a pair of variable capacitors per axis, then, through a multiplexer, one charge amplifier (a capacitance-to-voltage circuit) and one analog-to-digital converter shared by all three axes, and control logic that puts the result on the I2C bus. You interact with the chip through its control and data registers, over I2C (SPI is the other option, and the breakout wires it for I2C by default), and through hardware interrupt pins we're not using.   The LSM303AGR's block diagram, from its datasheet. The accelerometer is the upper half, boxed in blue: six sense capacitors, a pair per axis (X±, Y±, Z±), feed a multiplexer, and the three axes share one charge amplifier and one analog-to-digital converter behind it, the same architecture as the STM32C031C6's ADC ( ), which likewise multiplexes several input channels through one shared converter. Control logic answers on the SCL and SDA pins, boxed in red (the datasheet prints them SCL\/SPC and SDA\/SDI\/SDO, because the same pins serve SPI). The lower half is a magnetometer, which we don't use; the chip also contains a temperature sensor.      The next number to take from the datasheet is the size of one step of the converter's output, and we can derive it before we read it off the table.   Derive the sensitivity   The datasheet's sensor-characteristics table ( LSM303AGR datasheet , §2.1, Table 3, pp. 13–14) says how acceleration at the input is turned into bits at the output. The sensor's A\/D converter turns a continuous signal into a digital one, and the datasheet lets us choose how many bits we get (8, 10, or 12) and the measurement range: ±2 g, ±4 g, ±8 g, or ±16 g, where 1 g is the acceleration of gravity, 9.8 m\/s², and one milli-g (mg) is a thousandth of that. We'll use ±2 g, and the sensor's normal resolution mode, which gives 10 valid bits per reading.  The sensitivity is the size of one step of the output: how much acceleration one least significant bit stands for. From the range and the bit count, compute it, in milli-g per step. This is the same calculation we did for the ADC ( ): the full range, divided into bins.       The sensor-characteristics table's sensitivity and zero-g offset rows (LSM303AGR datasheet §2.1, Table 3, pp. 13–14). Top: the full-scale range rows. Middle: one sensitivity row per range and resolution mode (high-resolution is 12 bits, normal 10, low-power 8). At ±2 g in normal mode the table prints 3.9 mg\/LSB, milli-g per least significant bit, the size of one step: the number we derived as 4 g \/ 2¹⁰ = 3.90625 mg (the ±2 g range spans 4 g, from −2 g to +2 g). Bottom: the zero-g offset row. A sensor lying perfectly flat reads typically ±40 mg away from the true value, and the table's Min and Max columns allow ±80.     The table in confirms the arithmetic. The three modes trade resolution against speed: fewer bits means bigger steps, and low-power mode runs at rates the other two cannot. The zero-g offset row is below it: lying perfectly flat, the sensor reads typically ±40 mg away from the true value, and the datasheet's Min and Max columns allow ±80. 40 mg would be ten of our steps, 80 mg would be twenty, and a significant amount of error.  The breakout board carries the parts the chip needs: the I2C pull-up resistors and a voltage regulator ( ).   The breakout board's schematic (partial). The board carries what the chip needs: pull-up resistors on SDA and SCL, and a regulator to supply the chip. The 6-pin header brings power, ground, SCL, SDA and the magnetometer interrupt out to the breadboard.     "
+},
+{
+  "id": "fig-lsm303agr-block",
+  "level": "2",
+  "url": "subsec-day13x-datasheet.html#fig-lsm303agr-block",
+  "type": "Figure",
+  "number": "12.3.13",
+  "title": "",
+  "body": " The LSM303AGR's block diagram, from its datasheet. The accelerometer is the upper half, boxed in blue: six sense capacitors, a pair per axis (X±, Y±, Z±), feed a multiplexer, and the three axes share one charge amplifier and one analog-to-digital converter behind it, the same architecture as the STM32C031C6's ADC ( ), which likewise multiplexes several input channels through one shared converter. Control logic answers on the SCL and SDA pins, boxed in red (the datasheet prints them SCL\/SPC and SDA\/SDI\/SDO, because the same pins serve SPI). The lower half is a magnetometer, which we don't use; the chip also contains a temperature sensor.   "
+},
+{
+  "id": "act-day13x-sensitivity",
+  "level": "2",
+  "url": "subsec-day13x-datasheet.html#act-day13x-sensitivity",
+  "type": "Activity",
+  "number": "12.3.2",
+  "title": "Derive the sensitivity.",
+  "body": " Derive the sensitivity   The datasheet's sensor-characteristics table ( LSM303AGR datasheet , §2.1, Table 3, pp. 13–14) says how acceleration at the input is turned into bits at the output. The sensor's A\/D converter turns a continuous signal into a digital one, and the datasheet lets us choose how many bits we get (8, 10, or 12) and the measurement range: ±2 g, ±4 g, ±8 g, or ±16 g, where 1 g is the acceleration of gravity, 9.8 m\/s², and one milli-g (mg) is a thousandth of that. We'll use ±2 g, and the sensor's normal resolution mode, which gives 10 valid bits per reading.  The sensitivity is the size of one step of the output: how much acceleration one least significant bit stands for. From the range and the bit count, compute it, in milli-g per step. This is the same calculation we did for the ADC ( ): the full range, divided into bins.   "
+},
+{
+  "id": "fig-accel-specs",
+  "level": "2",
+  "url": "subsec-day13x-datasheet.html#fig-accel-specs",
+  "type": "Figure",
+  "number": "12.3.17",
+  "title": "",
+  "body": " The sensor-characteristics table's sensitivity and zero-g offset rows (LSM303AGR datasheet §2.1, Table 3, pp. 13–14). Top: the full-scale range rows. Middle: one sensitivity row per range and resolution mode (high-resolution is 12 bits, normal 10, low-power 8). At ±2 g in normal mode the table prints 3.9 mg\/LSB, milli-g per least significant bit, the size of one step: the number we derived as 4 g \/ 2¹⁰ = 3.90625 mg (the ±2 g range spans 4 g, from −2 g to +2 g). Bottom: the zero-g offset row. A sensor lying perfectly flat reads typically ±40 mg away from the true value, and the table's Min and Max columns allow ±80.   "
+},
+{
+  "id": "fig-accel-breakout",
+  "level": "2",
+  "url": "subsec-day13x-datasheet.html#fig-accel-breakout",
+  "type": "Figure",
+  "number": "12.3.19",
+  "title": "",
+  "body": " The breakout board's schematic (partial). The board carries what the chip needs: pull-up resistors on SDA and SCL, and a regulator to supply the chip. The 6-pin header brings power, ground, SCL, SDA and the magnetometer interrupt out to the breadboard.   "
+},
+{
+  "id": "subsec-day13x-data-format",
+  "level": "1",
+  "url": "subsec-day13x-data-format.html",
+  "type": "Subsection",
+  "number": "12.3.4",
+  "title": "Part 4: The Data Format",
+  "body": " Part 4: The Data Format   The acceleration readings are put in the data registers of the accelerometer's memory, at a register address we can look up in the datasheet, which calls it a sub-address (SUB). Each axis's reading is 16 bits wide (two bytes), and by default the reading is stored in them left-justified : the valid bits are at the top of the 2-byte word, and zeros fill in below. In low-power mode, for example, there are 8 valid bits, so only the top byte actually carries relevant information. Suppose the two bytes contain the reading 0x4000 ( ): the top byte is 0x40 = 64. In low-power mode with a full-scale range of ±2 g, each step is 4 g \/ 2⁸ = 15.625 mg, so this reading corresponds to an acceleration of 64 × 15.625 mg = 1000 mg: one g.   The reading 0x4000 as it sits in the two data registers, all 16 bits. In low-power mode only the top byte carries valid bits (0x40 = 64), and the low byte is zeros: that is what left-justified means. At ±2 g in low-power mode each step is 15.625 mg, so 64 steps is 1000 mg, one g.     So far we read the data as unsigned, but acceleration has a direction, and the sensor's output is therefore given as a two's complement number. We have not needed this encoding until now, so here is a quick review: the top bit of a two's complement number is worth its usual amount made negative , and every other bit keeps its usual value. The idea is easier to see in 4 bits ( ): 0b0010 corresponds to a decimal value of 2 regardless of whether or not we are in two's complement (since the top bit is 0), whereas the number 0b1110 corresponds to −8 + 4 + 2 = −2, because the top bit is worth −8 and the rest are ordinary. A number with its top bit set is therefore negative: the top bit contributes its negative weight, and the remaining bits are read as usual and add to it: 0b1110 is −8 + 0b110 = −8 + 6 = −2. In our 16-bit readings the top bit is bit 15, worth −2¹⁵.   Two's complement, in 4 bits and in 16. Left: the number 0b1110, read with its bit weights: the top weight is −8 rather than +8, so the value is −8 + 4 + 2 = −2. Right: in the sensor's 16-bit readings the same rule makes bit 15 worth −2¹⁵, and every other bit keeps its usual value.     We'll work the whole conversion once, on the reading 0xC000, step by step. Assume we are in low-power mode at a full-scale range of ±2 g. In binary the reading is 0b1100 0000 0000 0000, and bit 15 is set, so the value is negative. The top byte carries the reading: 0xC0 = 0b1100 0000, whose top bit is worth −128 while the remaining bits are 0b100 0000 = 64, so the value is −128 + 64 = −64. Scaling by the step size gives −64 × 15.625 mg = −1000 mg: minus one g, comfortably inside the ±2000 mg the range allows.   The other two modes work the same way. shows all three writing their valid bits into the same 16-bit word, with one equation per mode. To convert a raw reading, shift the zero bits off the bottom, then multiply by that mode's step size. Every one of the three simplifies to the same thing: . This works because the valid bits always start at bit 15, so the shift and the step size always cancel to 2¹⁶. The same reading decoded this way gives the same answer: as a whole 16-bit word, 0xC000 is −32768 + 16384 = −16384, and 4 g × (−16384) \/ 2¹⁶ = −1000 mg, the number the top-byte route gave. When no mode is stated, this is the route to use: the whole 16-bit word, with the collapsed formula. Two things to keep in mind. The 4 g in this formula is the ±2 g range: choose a different full-scale range and the constant changes with it, so it is not always the same formula. And if we store the raw reading in a signed C data type such as int16_t (an integer, not an unsigned), then the whole two's complement interpretation is automatically taken care of.   The three resolution modes write their valid bits into the same 16-bit word, always starting at bit 15: low-power mode fills 8 bits, normal 10, high-resolution 12, with zeros below. Bit 15 is the sign, worth −2¹⁵, so one formula converts the raw word in every mode: , where FS is the full-scale range, 4 g here.     The units of the sensor's output are g (1 g = 9.8 m\/s²), so multiplying by 1000 gives milli-g, and for the ±2 g range the conversion is  a = (4 * ACCEL_raw * 1000) >> 16; \/\/ in mg \/\/ or, with names instead of magic numbers: #define ACC_FS 4 \/\/ full-scale range, in g #define ACC_REGISTERWIDTH 16 #define MILLI 1000 a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;  The shift right by 16 does the divide by 2¹⁶ (shifting a signed value has one subtlety, which spells out), and the #define names are the ones tomorrow's test program, accel_test.c , uses. Note that a here is a signed integer, not an unsigned type, so the sign survives the arithmetic.    Convert a reading   The sensor is in low-power mode on the ±2 g range, and the raw reading is 0xE000. On paper, convert it to milli-g: write out the binary, decide the sign, compute the value, and carry it to mg. Then check your answer for plausibility: is it inside the range?    If you finish early: the datasheet's zero-g offset row says a flat, motionless board typically reads ±40 mg off, and its Min and Max columns allow ±80. Suppose your board averages +1032 mg lying flat and −968 mg lying flipped. What is its offset, and how would you correct future readings?      The accelerations along the three axes arrive in six data registers at successive sub-addresses, OUT_X_L_A at 0x28 through OUT_Z_H_A at 0x2D, and you can read all six bytes in one transfer, starting at 0x28, if you set one bit in the register address first. The datasheet explains that bit in §6.1.1 (p. 38), where its slave is our target, and LSb and MSb are the least and most significant bits:   After the start condition (ST) a slave address is sent, once a slave acknowledge (SAK) has been returned, an 8-bit sub-address (SUB) is transmitted: the 7 LSb represent the actual register address while the MSB enables address auto increment. If the MSb of the SUB field is 1 , the SUB (register address) is automatically increased to allow multiple data read\/writes.   So if we want to read multiple registers successively in one transaction, starting at 0x28 (where the low byte of the x-acceleration is stored), we need to use 0x28 | (1<<7) for the register address from which to start reading. The accelerometer then advances to the next data register after every byte. This is Table 23 of , the multi-byte read: the controller acknowledges each data byte (MAK) so the target serves the next register, and a final not-acknowledge (NMAK) ends the transfer.     lsm303agr.h declares a structure that holds one three-axis reading, and a pointer to a variable of this type is what lsm303_AccelReadRaw() fills in:  typedef struct { int16_t x; int16_t y; int16_t z; } lsm303AccelData_s;   The six bytes come back low byte first : OUT_X_L_A at 0x28 holds the low byte of x and OUT_X_H_A at 0x29 the high byte. lsm303_AccelReadRaw() , which we'll hand you, makes the six-byte read and then assembles each pair into one signed 16-bit value:  void lsm303_AccelReadRaw(lsm303AccelData_s *result) { uint8_t data[6]; i2c1_memRead(LSM303_ADDRESS_ACCEL, LSM303_OUT_X_L_A | (1<<7), 6, &data[0]); result->x = ((int16_t) data[1] << 8) | ((int16_t) data[0]); result->y = ((int16_t) data[3] << 8) | ((int16_t) data[2]); result->z = ((int16_t) data[5] << 8) | ((int16_t) data[4]); }  The line result->x = ((int16_t) data[1] << 8) | ((int16_t) data[0]); widens each byte, moves the high byte up eight places, ORs them, and stores the result in an int16_t , which is where bit 15 becomes the sign. This is a different use of the shift and OR operators than we have seen so far: here they build a wider signed value out of two array elements, rather than setting a bit inside a register.   "
+},
+{
+  "id": "subsec-day13x-data-format-2",
+  "level": "2",
+  "url": "subsec-day13x-data-format.html#subsec-day13x-data-format-2",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "sub-address left-justified "
+},
+{
+  "id": "fig-accel-one-byte",
+  "level": "2",
+  "url": "subsec-day13x-data-format.html#fig-accel-one-byte",
+  "type": "Figure",
+  "number": "12.3.21",
+  "title": "",
+  "body": " The reading 0x4000 as it sits in the two data registers, all 16 bits. In low-power mode only the top byte carries valid bits (0x40 = 64), and the low byte is zeros: that is what left-justified means. At ±2 g in low-power mode each step is 15.625 mg, so 64 steps is 1000 mg, one g.   "
+},
+{
+  "id": "subsec-day13x-data-format-5",
+  "level": "2",
+  "url": "subsec-day13x-data-format.html#subsec-day13x-data-format-5",
+  "type": "Paragraph (with a defined term)",
+  "number": "",
+  "title": "",
+  "body": "two's complement "
+},
+{
+  "id": "fig-accel-sign",
+  "level": "2",
+  "url": "subsec-day13x-data-format.html#fig-accel-sign",
+  "type": "Figure",
+  "number": "12.3.23",
+  "title": "",
+  "body": " Two's complement, in 4 bits and in 16. Left: the number 0b1110, read with its bit weights: the top weight is −8 rather than +8, so the value is −8 + 4 + 2 = −2. Right: in the sensor's 16-bit readings the same rule makes bit 15 worth −2¹⁵, and every other bit keeps its usual value.   "
+},
+{
+  "id": "fig-accel-data-format",
+  "level": "2",
+  "url": "subsec-day13x-data-format.html#fig-accel-data-format",
+  "type": "Figure",
+  "number": "12.3.26",
+  "title": "",
+  "body": " The three resolution modes write their valid bits into the same 16-bit word, always starting at bit 15: low-power mode fills 8 bits, normal 10, high-resolution 12, with zeros below. Bit 15 is the sign, worth −2¹⁵, so one formula converts the raw word in every mode: , where FS is the full-scale range, 4 g here.   "
+},
+{
+  "id": "act-day13x-convert",
+  "level": "2",
+  "url": "subsec-day13x-data-format.html#act-day13x-convert",
+  "type": "Activity",
+  "number": "12.3.3",
+  "title": "Convert a reading.",
+  "body": " Convert a reading   The sensor is in low-power mode on the ±2 g range, and the raw reading is 0xE000. On paper, convert it to milli-g: write out the binary, decide the sign, compute the value, and carry it to mg. Then check your answer for plausibility: is it inside the range?    If you finish early: the datasheet's zero-g offset row says a flat, motionless board typically reads ±40 mg off, and its Min and Max columns allow ±80. Suppose your board averages +1032 mg lying flat and −968 mg lying flipped. What is its offset, and how would you correct future readings?   "
+},
+{
+  "id": "subsec-day13x-control-registers",
+  "level": "1",
+  "url": "subsec-day13x-control-registers.html",
+  "type": "Subsection",
+  "number": "12.3.5",
+  "title": "Part 5: Settings for Basic Accelerometer Operation",
+  "body": " Part 5: Settings for Basic Accelerometer Operation   We now know how to read the data out of the sensor. What we have not done yet is tell the sensor how to run. The accelerometer has six control registers, all reachable over I2C. Only two of them matter for us. The rest are about features we leave at their defaults.     Register What it governs  CTRL_REG1_A Data rate, power mode (the LPen bit, low-power enable), axis selection. Ours to set.  CTRL_REG2_A High-pass filter configuration (§8.7); bypassed by default.  CTRL_REG3_A Interrupt selection (none used; off by default).  CTRL_REG4_A Full-scale range (±2, ±4, ±8, ±16 g) and the HR bit (high resolution); together with LPen in CTRL_REG1_A it picks the resolution mode. Ours to set.  CTRL_REG5_A Interrupt configuration (unused; defaults).  CTRL_REG6_A Interrupt configuration (unused; defaults).    Everything we did today assumed the ±2 g range; the sensitivity derivation used normal mode, and the worked conversions used low-power. CTRL_REG1_A and CTRL_REG4_A are where both choices actually get made, and working out their settings from the datasheet is part of tonight's homework ( ).   "
+},
+{
+  "id": "subsec-day13x-homework",
+  "level": "1",
+  "url": "subsec-day13x-homework.html",
+  "type": "Subsection",
+  "number": "12.3.6",
+  "title": "Homework for Thursday",
+  "body": " Homework for Thursday   Here is the homework for Thursday once more: the same three items as yesterday, all on paper.   Do the pre-class reading for Thursday ( ); it is a guided walk through the datasheet.  On paper, write lsm303_AccelRegisterWrite() , if you have not already. Mimic the read function.  From the datasheet, work out what settings belong in CTRL_REG1_A and CTRL_REG4_A , and take notes on paper.   Tomorrow we'll put your settings into the sensor and print acceleration data.   "
+},
+{
+  "id": "sec-accel-day14-before",
+  "level": "1",
+  "url": "sec-accel-day14-before.html",
   "type": "Section",
   "number": "12.4",
-  "title": "Tilt Sensing",
-  "body": " Tilt Sensing   Tilt geometry. When the accelerometer is tilted by angle θ from horizontal, the x-axis reads and the z-axis reads . Inverting: . For small tilts, in radians.     Computing tilt requires sinf() or asinf() from math.h and floating-point arithmetic. On the Cortex-M0+, floating-point operations are performed in software (no FPU), so they are significantly slower than integer operations — but for a tilt display updating at 100 Hz, this is easily fast enough.   CoolTerm serial plotter showing real-time X, Y, and Z accelerations as the sensor is tilted. When the board is flat, Z reads approximately +1g (gravity); tilting rotates the gravity vector between axes. The plotter is enabled in CoolTerm under Connection → Serial Plotter.      The accelerometer is lying flat on the table with its Z axis pointing up. What does the Z-axis reading report at rest?   Approximately +1g (the table's normal force on the proof mass)  Correct. A stationary accelerometer measures the reaction to gravity, which equals +g on the upward-pointing axis.  Approximately 0g (the device is not accelerating)  An accelerometer in free fall reads 0g. At rest, gravity is felt as a +1g force on the upward axis.  Approximately –1g  –1g would appear if Z pointed downward. With Z pointing up the reading is +1g.  Undefined — it depends on the sensor orientation setting.  The sign depends on the axis convention but the magnitude is always 1g when stationary.     "
+  "title": "Before Class: The Datasheet Scavenger Hunt",
+  "body": " Before Class: The Datasheet Scavenger Hunt  This section is still being written.  "
 },
 {
-  "id": "fig-tilt-geometry",
-  "level": "2",
-  "url": "sec-tilt-sensing.html#fig-tilt-geometry",
-  "type": "Figure",
-  "number": "12.4.1",
-  "title": "",
-  "body": " Tilt geometry. When the accelerometer is tilted by angle θ from horizontal, the x-axis reads and the z-axis reads . Inverting: . For small tilts, in radians.    "
+  "id": "sec-accel-day14",
+  "level": "1",
+  "url": "sec-accel-day14.html",
+  "type": "Section",
+  "number": "12.5",
+  "title": "Day 14 In-Class: Finish the Driver, See the Data, Measure Tilt",
+  "body": " Day 14 In-Class: Finish the Driver, See the Data, Measure Tilt  This section is still being written.  "
 },
 {
-  "id": "fig-accel-plotter",
-  "level": "2",
-  "url": "sec-tilt-sensing.html#fig-accel-plotter",
-  "type": "Figure",
-  "number": "12.4.2",
-  "title": "",
-  "body": " CoolTerm serial plotter showing real-time X, Y, and Z accelerations as the sensor is tilted. When the board is flat, Z reads approximately +1g (gravity); tilting rotates the gravity vector between axes. The plotter is enabled in CoolTerm under Connection → Serial Plotter.   "
-},
-{
-  "id": "rq-accel-gravity",
-  "level": "2",
-  "url": "rq-accel.html#rq-accel-gravity",
-  "type": "Reading Question",
-  "number": "12.4.1",
-  "title": "",
-  "body": " The accelerometer is lying flat on the table with its Z axis pointing up. What does the Z-axis reading report at rest?   Approximately +1g (the table's normal force on the proof mass)  Correct. A stationary accelerometer measures the reaction to gravity, which equals +g on the upward-pointing axis.  Approximately 0g (the device is not accelerating)  An accelerometer in free fall reads 0g. At rest, gravity is felt as a +1g force on the upward axis.  Approximately –1g  –1g would appear if Z pointed downward. With Z pointing up the reading is +1g.  Undefined — it depends on the sensor orientation setting.  The sign depends on the axis convention but the magnitude is always 1g when stationary.   "
+  "id": "sec-accel-reference",
+  "level": "1",
+  "url": "sec-accel-reference.html",
+  "type": "Section",
+  "number": "12.6",
+  "title": "Reference: The LSM303AGR and Floating Point",
+  "body": " Reference: The LSM303AGR and Floating Point  This section is still being written.  "
 },
 {
   "id": "subsec-servo-vs-dc-motor",
