@@ -1,4 +1,49 @@
-# Week 7 handover — where things stand after session 3 (updated 2026-08-30)
+# Week 7 handover — where things stand after session 4 (updated 2026-08-31)
+
+## Session 4 (2026-08-31): her pass 3 applied — Day 13x awaiting her next look
+
+Her 22 pass-3 comments (7 slide, 15 book) are applied and archived, and the
+slide-side changes are carried into the book where she asked.  The
+substance: the worked 0xC000 example and the 0xE000 activity reveal now
+both name low-power mode at ±2 g up front and run the top-byte route first
+(the 16-bit route is the reveal's parenthetical check); the "Tomorrow we'll
+check this on real boards" beat is deleted from slide and book; the
+collapse gains her two cautions (the 4 g constant changes with the
+full-scale range; a signed C type such as int16_t makes the two's
+complement interpretation automatic) and the mg paragraph says `a` is a
+signed integer, not an unsigned; "the accelerations along the three axes
+arrive", "So if we want to read", "the different configurations in its
+datasheet", "a quick review", "the table in <xref/> confirms", the
+regardless-of-two's-complement clause on 0b0010, and the In-a-MEMS
+rewrite are all in, slide and book both where both exist; the two
+single-task activities (mass commit, sensitivity) are restructured as
+plain statements so no orphan "(a)" renders, and the mass commit now
+opens on `mass_spring_rest.svg` (her "initial picture").  The grey digits
+in `one_byte_example.svg` and `data_format_rows.svg` are black.
+
+**Her two new general rules are recorded and applied: no em dashes, and
+whole sentences.**  Every em dash in Day 13x's student-facing text — book
+prose, captions, slide bodies and table cells — is rewritten (commas,
+colons, parentheses, or a sentence split); presenter notes keep theirs
+(instructor-facing, never projected).  Earlier days were left as passed;
+sweeping them is a separate, mechanical pass to schedule with her.
+
+Her three deliveries this round are integrated: `lsm303agrBlockDiagram.png`
+is the new base of `lsm303agr_block.svg` (whole diagram kept, per her
+ruling — a clean accelerometer-only crop is impossible because the shared
+I2C/SPI block spans both halves), `lsm303agrBreakoutSchematic.png` is the
+new base of `breakout_schematic.svg` (five callouts re-laid, all landing
+on their targets; STEMMA block back in frame), and her go-ahead fixed
+`lsm303agr_partial.c` to "6 control registers (Datasheet, Sections
+8.6-8.11)" (check_starters still passes).  The MEMS accelerating panel is
+rebuilt per her condition for flipping the arrows: the old "← Acceleration"
+arrow is erased and the panel now carries a right-pointing arrow labeled
+"the case and its fixed plates accelerate" plus "the mass gets left
+behind" — caption and presenter note tell the same story.  Her two video
+links are in the book as figures: the smartphone up-from-down video
+(KZVgKu6v808) closes the physics subsection, and the MEMS gyroscope video
+(XsjvaYAFN1M) follows the applications paragraph.  Deck re-fit-swept at
+full stage size: all 35 slides fit.
 
 ## Session 3 (2026-08-30): Day 13x is built, through Gate 2′ — awaiting her pass 1
 
@@ -35,14 +80,10 @@ DELIVERY 2 markers name what each Part owes).
 
 ### Ask-Petra list from session 3
 
-1. **The breakout schematic composite is cropped and its callouts are
-   displaced** (`breakout_schematic.svg`): the source bitmap's STEMMA/I2C
-   Headers block is discarded by the clip, and every callout sits up-left
-   of its target (the regulator arrow runs through the part label).  The
-   false caption sentence is already fixed; the figure itself needs your
-   un-cropped slide-9 export, or the Adafruit schematic PDF (vector) —
-   it probably then becomes two zoomed panels.  We deliberately did not
-   patch the composite (the Day 9 lesson).
+1. ~~The breakout schematic composite~~ **RESOLVED — she delivered
+   `lsm303agrBreakoutSchematic.png` (2026-08-31); the composite is rebuilt
+   on it with all five callouts landing on their targets and the STEMMA
+   block in frame.**
 2. ~~`mems_mechanism.png`'s right panel~~ **RESOLVED by her pass 1
    (2026-08-31, comment 13: "You cropped out the second picture that
    shows the situation when the mass has moved") — both panels restored;
@@ -57,31 +98,33 @@ DELIVERY 2 markers name what each Part owes).
    want it at two, say so.
 5. **Q3 unchanged, at your pace** — nothing in Day 13x touches the
    wrong-address print.
-6. **(Gate 3′, A) `mems_mechanism.png`'s right panel, one arrow.**  Both
-   panels are back per your ruling — but in the accelerating panel the
-   plate, springs and finger arrows all move left beside a label reading
-   "← Acceleration", the opposite of what the room commits to four
-   slides earlier.  May we reverse that one outer arrow (a one-element
-   edit that makes the borrowed drawing agree with our convention)?  If
-   not, the caption and presenter note now carry a clause reading the
-   arrow as the mass's acceleration seen from inside the case — say if
-   that clause reads acceptably.
-7. **(Gate 3′, B) `lsm303agr_block.svg` at native resolution.**  Your
-   ruling keeps the whole diagram on the slide; at that size the labels
-   the caption asks students to find (MUX, CHARGE AMPLIFIER, A/D
-   CONVERTER, X±…) measure ~1.6 % of slide height against the 2 %
-   legibility floor, and growing the figure tops out at 1.8 %.  An
-   export of the accelerometer half at native resolution (drop path
-   `assets/images/Day13x-Accelerometer/lsm303agr_block_accel.png`; the
-   `<image source>` line is the only thing that changes) would fix it;
-   the book keeps the full diagram either way.
-8. **One more stale starter comment** (same class as the two you
-   approved): `lsm303agr_partial.c` says "there are 8 control registers
-   (Section 8.6)" — the hosted datasheet has six (§8.6–§8.11), and the
-   driver writes two of them.  One-word fix in your file, with your
-   go-ahead.
+6. ~~(Gate 3′, A) the MEMS accelerating panel's arrow~~ **RESOLVED —
+   her condition ("then we'll need to make it clear that the fixed plate
+   is accelerating, and the moving plate mass gets left behind",
+   2026-08-31) is implemented: the old arrow is erased and the panel now
+   labels the case/fixed-plate acceleration and the left-behind mass.**
+7. ~~(Gate 3′, B) `lsm303agr_block.svg` resolution~~ **RESOLVED — she
+   delivered `lsm303agrBlockDiagram.png` (2026-08-31) and ruled the whole
+   diagram stays (accelerometer and magnetometer are presented together in
+   the datasheet); a clean accelerometer-only crop is impossible anyway,
+   since the shared I2C/SPI block spans both halves.  The composite is
+   rebuilt on her export.**
+8. ~~The stale `lsm303agr_partial.c` comment~~ **RESOLVED — her
+   go-ahead ("happy to go with 6", 2026-08-31); the file now reads "6
+   control registers (Datasheet, Sections 8.6-8.11)".  Her note for the
+   record: the count depends on how you count (there is also a temperature
+   configuration register and the reference/data-capture one).**
 
-### Recorded so later passes do not undo them (session 3)
+### Recorded so later passes do not undo them (sessions 3–4)
+
+- **Her general rules (2026-08-31, now standing): no em dashes, whole
+  sentences.**  Applied throughout Day 13x's student-facing text; earlier
+  days not yet swept.  Presenter notes are exempt (instructor-facing).
+- The MEMS accelerating panel's labels ("the case and its fixed plates
+  accelerate" / "the mass gets left behind") are her required condition
+  for the arrow flip — do not simplify them away.
+- The block diagram ships whole (both halves) by her explicit ruling; do
+  not crop to the accelerometer half.
 
 - ~~The MEMS figure shows only the at-rest panel~~ superseded by her
   pass 1: both panels are back (comment 13).  If anyone asks about the

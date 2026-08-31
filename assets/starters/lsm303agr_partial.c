@@ -27,8 +27,8 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 
 /**************************************************************************
  * Initialize the sensor
- * There are 8 control registers (Datasheet, Section 8.6), but only need the
- * first one for basic operation.  May generally accept defaults on the others,
+ * There are 6 control registers (Datasheet, Sections 8.6-8.11), but only need
+ * the first one for basic operation.  May generally accept defaults on the others,
  * e.g., full-scale range is set in Register 4.
  */
 uint8_t lsm303_AccelInit() {
