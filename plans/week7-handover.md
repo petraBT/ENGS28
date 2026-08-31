@@ -57,6 +57,29 @@ DELIVERY 2 markers name what each Part owes).
    want it at two, say so.
 5. **Q3 unchanged, at your pace** — nothing in Day 13x touches the
    wrong-address print.
+6. **(Gate 3′, A) `mems_mechanism.png`'s right panel, one arrow.**  Both
+   panels are back per your ruling — but in the accelerating panel the
+   plate, springs and finger arrows all move left beside a label reading
+   "← Acceleration", the opposite of what the room commits to four
+   slides earlier.  May we reverse that one outer arrow (a one-element
+   edit that makes the borrowed drawing agree with our convention)?  If
+   not, the caption and presenter note now carry a clause reading the
+   arrow as the mass's acceleration seen from inside the case — say if
+   that clause reads acceptably.
+7. **(Gate 3′, B) `lsm303agr_block.svg` at native resolution.**  Your
+   ruling keeps the whole diagram on the slide; at that size the labels
+   the caption asks students to find (MUX, CHARGE AMPLIFIER, A/D
+   CONVERTER, X±…) measure ~1.6 % of slide height against the 2 %
+   legibility floor, and growing the figure tops out at 1.8 %.  An
+   export of the accelerometer half at native resolution (drop path
+   `assets/images/Day13x-Accelerometer/lsm303agr_block_accel.png`; the
+   `<image source>` line is the only thing that changes) would fix it;
+   the book keeps the full diagram either way.
+8. **One more stale starter comment** (same class as the two you
+   approved): `lsm303agr_partial.c` says "there are 8 control registers
+   (Section 8.6)" — the hosted datasheet has six (§8.6–§8.11), and the
+   driver writes two of them.  One-word fix in your file, with your
+   go-ahead.
 
 ### Recorded so later passes do not undo them (session 3)
 

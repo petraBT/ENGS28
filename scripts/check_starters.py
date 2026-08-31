@@ -85,6 +85,12 @@ FRAGMENTS = [
     ("assets/starters/i2c.c", "i2c1_memRead", "source/ch-accelerometers.ptx",
      ("// Ping target address for writing 1 byte (the register address)",
       "// Restart, with read request for n bytes")),
+    # Day 13x Part 4 prints lsm303_AccelReadRaw() in the book (and condenses
+    # it on sl-day13x-readraw); the code must keep matching her
+    # lsm303agr_partial.c.  The marker is the auto-increment read call.
+    ("assets/starters/lsm303agr_partial.c", "lsm303_AccelReadRaw",
+     "source/ch-accelerometers.ptx",
+     "i2c1_memRead(LSM303_ADDRESS_ACCEL, LSM303_OUT_X_L_A | (1<<7), 6, &data[0]);"),
 ]
 
 
