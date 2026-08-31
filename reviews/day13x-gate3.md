@@ -785,3 +785,222 @@ Every one of these I rendered in the player and saw uncropped at 1600×900; the 
 ---
 
 Files: `/Users/dz00762/repos/ENGS28/source/ch-accelerometers.ptx` (figures at lines 1381, 1412, 1439, 1545, 1640, 1684, 1758, 1816; slides at 1346, 1392, 1421, 1454, 1568, 1601, 1687, 1694, 1728, 1768, 1827, 1957), `/Users/dz00762/repos/ENGS28/assets/images/Day13x-Accelerometer/`, `/Users/dz00762/repos/ENGS28/assets/decks/day13x.json`. Renders kept at `/private/tmp/claude-503/-Users-dz00762-repos-ENGS28/0a850db4-a67e-47d2-af02-99edb9b26f68/scratchpad/figs/`.
+
+---
+
+# Synthesis — the change list
+
+## Verdict
+
+**Not ready for Petra — seven must-fix items, two of them correctness.** But the seven have one cause between them, and it is not seven problems. Every reviewer found a different symptom of the same defect: **teaching that exists only where the reading book cannot see it.** `<slide>`, `<instructor>` and `presenterNote` are all stripped from the reading book, and ten distinct pieces of Day 13x live only there — the inertia answer (text-first BLOCKER), the 16-bit reconciliation (novice BLOCKER), the cancellation mechanism (text-first MAJOR + voice #2), the `mg/LSB` gloss (voice #6), the 4 g span (text-first MINOR), the "In low-power mode" condition (voice #9), the left-justification picture (novice MAJOR + figure-claims), the `lsm303_AccelReadRaw()` body (voice #19 + novice), the multi-byte transfer shape (arc-fidelity), and the C1/C2 detail (arc-fidelity). Fix the cause once and five reviewers' blockers close together. The genuinely independent problems are small: one sentence in Part 5 that the chapter's own worked examples refute, one instructor clause the datasheet refutes, and one figure of hers whose arrow contradicts the day's central derivation — which is an ask, not an edit. Arc-fidelity's structural verdict (all 19 of her slides reach the room, budgets reconcile at 50, all five pass-2 additions landed) and technical-accuracy's arithmetic sweep (clean, every value recomputed) both hold; nothing below is a rebuild.
+
+**Budget rule enforced throughout (B-18):** voice measured 24 body paragraphs and found no padding, so **no item below adds a body paragraph.** Every addition is a sentence into an existing paragraph, a move of an asset that already exists, or a caption clause. Paragraph count after this list: 24.
+
+---
+
+## Must fix (blocks sign-off)
+
+**1. [B1/B3, S-13] `/Users/dz00762/repos/ENGS28/source/ch-accelerometers.ptx:2056-2062` and the slide note at `:2076` — a summary sentence the chapter's own Part 4 refutes.**
+"Everything today assumed the ±2 g range and normal mode" is false: `:1720` and the whole worked example at `:1778` are **low-power**; only the Part 3 derivation used normal mode. Replace both copies (the comment at `:2031-2034` already says they change together):
+
+> "Everything we did today assumed the ±2 g range; the sensitivity derivation used normal mode, and the worked conversions used low-power. `CTRL_REG1_A` and `CTRL_REG4_A` are where both choices actually get made, and working out their settings from the datasheet is part of tonight's homework (`<xref ref="sec-accel-day14-before"/>`)."
+
+Slide note (`:2076`), same claim, note register: "Everything we did today assumed ±2 g — the derivation used normal mode and the worked conversions low-power. `CTRL_REG1_A` and `CTRL_REG4_A` are where both choices get made."
+Raised by: checker-technical-accuracy (MAJOR, B1/B3), checker-voice (#17, the "we"). *Not negotiable; the voice fix rides along and weakens nothing (S-16 checked).*
+
+**2. [L-6] `.../ch-accelerometers.ptx:1632-1637` (`ins-day13x-sensitivity`) — a causal claim the datasheet refutes, spoken to the room.**
+"The lower the number of bits, the faster you can generate measurements" is true only of low-power mode: normal and high-resolution share an ODR list topping out at 1.344 kHz (lsm303agr.pdf §8.6 Table 35, p. 47); only low-power adds 1.620 and 5.376 kHz. Her deck's wording, so borrow the body prose's already-correct clause (`:1669`):
+
+> "Fewer bits means bigger steps, and low-power mode runs at output data rates the other two cannot (§8.6, Table 35) — notice in the table how the sensitivity gets better as you go to higher resolutions."
+
+Add a one-line source comment saying the datasheet, not the draft, corrected her note.
+Raised by: checker-technical-accuracy (MINOR, but a wrong reason under a right answer — Part B is not tradeable).
+
+**3. [B1/B3 + P-15] `.../ch-accelerometers.ptx:1440-1447` (`fig-accel-mems` caption) and `:1459` (`sl-day13x-mems` note) — interim clause for the MEMS panel. NO pixel edit, NO re-crop.**
+Petra's pass-1 comment restored both panels; that ruling stands and neither reviewer may touch the image. But four slides after the room commits to "the mass moves opposite the acceleration", the right-hand panel shows plate, springs and all six finger arrows moving **left** beside a label reading **"← Acceleration"**. Gate 2 (`reviews/day13x-gate2.md:392`) already prescribed the naming clause and it landed in neither place — this is the second round.
+
+Caption, appended to the "Left:" sentence:
+> "…capacitors that change as it moves; in its accelerating panel the arrow labelled *Acceleration* is the mass's acceleration **as seen from inside the case**, which points opposite the case's own — the mass still lags the case, as we derived."
+
+Slide note (`:1459`), appended: "Say this at the right-hand panel: the borrowed drawing's arrow is the acceleration seen from inside the case, opposite the case's acceleration. The mass still lags, as the reveal showed."
+Interim pending **Ask A** below; if she declines the arrow edit, promote the clause to a third bullet on `sl-day13x-mems` (104 px of stage free, per figure-claims).
+Raised by: checker-technical-accuracy (BLOCKER), checker-figure-claims (MAJOR) — convergent: one asks whether the picture shows what the text claims, the other whether it teaches. **DISPLACES:** nothing; the note clause replaces no content.
+
+**4. [P-1, P-2] `.../ch-accelerometers.ptx:1805-1814` — the crucial step's two routes never meet in the book, and the collapse has no mechanism.** One composed rewrite of the whole paragraph, covering three reviewers at one location:
+
+> "The other two modes work the same way. `<xref ref="fig-accel-data-format"/>` shows all three writing their valid bits into the same 16-bit word, with one equation per mode. To convert a raw reading, shift the zero bits off the bottom, then multiply by that mode's step size. Every one of the three simplifies to the same thing: `<m>a = 4g \cdot \mathrm{raw} / 2^{16}</m>`. This works because the valid bits always start at bit 15, so the shift and the step size always cancel to 2¹⁶. The same reading decoded this way gives the same answer: as a whole 16-bit word, 0xC000 is −32768 + 16384 = −16384, and 4 g × (−16384) / 2¹⁶ = −1000 mg — the number the top-byte route gave. When no mode is stated, this is the route to use: the whole 16-bit word, with the collapsed formula."
+
+**This does not violate her deletion, it completes it.** Her strike and her "WHAAAAATTTTT?????" were aimed at the *unsigned-minus-2^width phrasing* the deck-24 line carried; the sentence above uses only her approved route (top bit's negative weight plus the remaining bits read as usual), and the arithmetic is already scripted out loud in the notes of deck 24 and deck 25. Arc-fidelity is right that the **deck** side is settled — and nothing here goes back on a slide. This is a book-prose move of a presenter note, and it is what makes the activity at `:1876` (0xE000, no mode stated, answered at 16 bits) answerable by a reader who only ever saw the top-byte walk.
+Raised by: learner-firstgen-novice (BLOCKER, P-1/P-2), learner-text-first (MAJOR, B-7/P-4), checker-voice (#2, S-27/L-16 — its rewrite is the spine of the wording above).
+**DISPLACES:** the vague "exactly because…" clause; and `sl-day13x-worked`'s note (`:1802`) drops its now-duplicated parenthetical — deck 25's note keeps the spoken version. Zero new paragraphs.
+
+**5. [P-5, P-10 carve-out] `.../ch-accelerometers.ptx:1367-1370` — Part 1's answer reaches the room and not the reader.** *Why* the mass lags is inertia, and it exists only in `ins-day13x-mass-commit`, which is stripped. Per P-10's own carve-out, a jointly-discussed physical explanation is teaching, not a solution. Replace the paragraph's opening clause:
+
+> "Because of its inertia, the mass resists the case's acceleration: seen from inside the case it is displaced backward, opposite the acceleration, until the spring's restoring force grows to match the force needed to carry it along. That displacement is what is measured, and we can turn that observation into a formula (`<xref ref="fig-accel-proof-mass"/>`). Two familiar facts are enough: …"
+
+**Leave `ins-day13x-mass-commit` (`:1357-1365`) intact** — it is the reveal the room needs — and do **not** add the sentence to `sl-day13x-derivation`, or the room hears it twice one slide apart. Each artifact then carries it exactly once (B-8 holds).
+Raised by: learner-text-first (BLOCKER, P-5/P-10), learner-firstgen-novice (MINOR, P-6), checker-voice (#12, L-13 — its "we can turn that observation into a formula" is used verbatim above; a figure *is*, it does not *do*).
+**DISPLACES:** the replaced clause; net +1 sentence, no new paragraph.
+
+**6. [S-16, P-2] `.../ch-accelerometers.ptx:1713-1727` — a condition lost off the crucial step's first number.** As drafted, "the top byte is 0x40 = 64, and with a full-scale range of ±2 g each step is 4 g / 2⁸" reads as though 8 bits follows from ±2 g. 15.625 mg is the **low-power** step. Her passed slide repeats the condition onto the step-size sentence on purpose; take the slide's wording exactly:
+
+> draft: "Suppose the two bytes contain the reading 0x4000: the top byte is 0x40 = 64, and with a full-scale range of ±2 g each step is 4 g / 2⁸ = 15.625 mg, so this reading corresponds to an acceleration of 64 × 15.625 mg = 1000 mg — one g."
+> **hers:** "Suppose the two bytes contain the reading 0x4000: the top byte is 0x40 = 64. In low-power mode with a full-scale range of ±2 g, each step is 4 g / 2⁸ = 15.625 mg, so this reading corresponds to an acceleration of 64 × 15.625 mg = 1000 mg — one g."
+
+Raised by: checker-voice (#9). Filed as must-fix rather than voice because the missing condition is a wrong reason under a right answer, at the crucial step.
+
+**7. [B-7, B-9a, P-1] `fig-accel-specs` — one composed-SVG fix plus one paragraph, covering four findings at one location.**
+Four reviewers hit this figure; it is one job:
+
+- **The art.** Compose the strips into one coordinate system. (a) `assets/images/Day13x-Accelerometer/accel_specs_reveal.svg` → prepend the existing, currently-unused `accel_specs_header.png` strip (711×58), viewBox → 716×365, so the boxed **3.9** sits under a visible `Typ.` and the bullet's "Min and Max columns" name columns the image actually labels. (b) For the book, build `accel_specs_table.svg` = range rows + header + the twelve sensitivity rows + the LA_TyOff row on one geometry, and replace the **two** `<image>` elements at `.../ch-accelerometers.ptx:1651-1652` with that one image at 86% — this kills the +4/−3 px column jog at the seam. Then re-render slide 19 at 1600×900: it has only 30 px free and the image grows ~19% taller; if it crops, take the width from 74% to 68% and keep both bullets.
+- **The caption** (`:1641-1650`) — two clauses:
+  - voice #6, verbatim: "…the table prints 3.9 mg/LSB — milli-g per least significant bit, the size of one step — the number we derived as 4 g / 2¹⁰ = 3.90625 mg"
+  - and the 4 g justification, eight words at the end of that same clause: "…= 3.90625 mg (the ±2 g range spans 4 g, from −2 g to +2 g)". *This is the resolution of text-first's P-1 MINOR — see Dissent.*
+- **The paragraph** (`:1664-1674`), voice #1, hers verbatim — armature out, the lost number back in:
+
+> "The unmasked table (`<xref ref="fig-accel-specs"/>`) confirms the arithmetic. The three modes trade resolution against speed: fewer bits means bigger steps, and low-power mode runs at rates the other two cannot. The zero-g offset row is below it: lying perfectly flat, the sensor reads typically ±40 mg away from the true value, and the datasheet's Min and Max columns allow ±80. 40 mg would be ten of our steps — 80 mg would be twenty — and a significant amount of error."
+
+Raised by: checker-figure-claims (MAJOR, unlabeled columns; MINOR, the seam), checker-arc-fidelity ("adopt hers" — her slide 8 carries the header), checker-voice (#1 S-28/S-16, #6 acronym), learner-text-first (MINOR, P-1).
+**DISPLACES:** the count-armature "and it says two more things worth reading carefully"; two `<image>`s become one. Run `python3 scripts/image_ratios.py` and commit `assets/book.css` (the aspect ratio changes).
+
+---
+
+## Should fix
+
+**8. [B-6, B-13, P-1] `.../ch-accelerometers.ptx:1964-1997` + `/Users/dz00762/repos/ENGS28/scripts/check_starters.py` + `/Users/dz00762/repos/ENGS28/assets/starters/lsm303agr_partial.c` — put the function in the book, guard it, and fix the starter's own count.**
+Ruled against arc-fidelity's "acceptable": every other function this chapter discusses (`whoami_test.c`, `helloDisplay.c`, `i2c1_memRead()`) appears in the book, the paragraph's claim is load-bearing for Lab 7 D1, and no source comment records the omission as deliberate.
+- `:1966-1967`, voice #15 verbatim: "…and a pointer to a variable of this type is what `<c>lsm303_AccelReadRaw()</c>` fills in:"
+- Split the paragraph at `:1981` after "…assembles each pair into one signed 16-bit value:" and insert `sl-day13x-readraw`'s listing (`:2008-2016`) as a `<program>`; the remainder resumes "The line `result->x = ((int16_t) data[1] << 8) | ((int16_t) data[0]);` widens each byte, moves the high byte up eight places, ORs them, and stores the result in an `int16_t` — which is where bit 15 becomes the sign. This is a different use of the shift and OR operators than we have seen so far: …". Add the chapter's standing comment: two copies of one listing (book + `sl-day13x-readraw`), change them together.
+- Register the pair, in `FRAGMENTS` (not `FUNCTIONS`; precedent at `check_starters.py:85`): `("assets/starters/lsm303agr_partial.c", "lsm303_AccelReadRaw", "source/ch-accelerometers.ptx", "i2c1_memRead(LSM303_ADDRESS_ACCEL, LSM303_OUT_X_L_A | (1<<7), 6, &data[0]);")`.
+- `lsm303agr_partial.c:30-33`: "There are **8** control registers … but only need the first one" → six (§8.6-§8.11, Table 26), and the driver writes **two**. The book is right; the handout contradicts it and students read both.
+Raised by: checker-voice (#19, #15), learner-firstgen-novice (MAJOR — the half of it that survives), checker-technical-accuracy (MINOR ×2).
+**DISPLACES:** the paragraph's inline re-quotation of the assembly expression; a listing insertion, not a new body paragraph.
+
+**9. [P-4] `.../ch-accelerometers.ptx` after `:1727` — promote `one_byte_example.svg` into the book.** "Left-justified" is a spatial idea and the reading has no picture of it; the asset exists and reaches the wall only. Add `<figure xml:id="fig-accel-one-byte">` after the Part 4 opening paragraph, `<xref>`'d from it, B-7 caption:
+> "The reading 0x4000 as it sits in the two data registers, all 16 bits. In low-power mode only the top byte carries valid bits — 0x40 = 64 — and the low byte is zeros: that is what left-justified means. At ±2 g in low-power mode each step is 15.625 mg, so 64 steps is 1000 mg, one g."
+
+Same location, free legibility: `sl-day13x-one-byte`'s inline image (`:1735`) has 219 px of empty stage — take `width` from **58% → 80%**, which lifts the bit indices from 2.0% to ~2.7%. Keep it inline (do not convert the slide to a `ref`).
+Raised by: learner-firstgen-novice (MAJOR, P-4/P-7), checker-figure-claims (flagged wall-only; legibility MINOR). **DISPLACES:** nothing — an asset move plus a caption; no new paragraph. Re-run `image_ratios.py`.
+
+**10. [calibration, S-13] `.../ch-accelerometers.ptx:1479-1497` — the applications paragraph, hers, one sentence per case.** Seven passed bullets are folded into two 144-word periodic sentences; her passed slide is one plain declarative each. Her version also turns the second telling of the phone hook (first told at `:1333`, twelve paragraphs earlier) into a callback. Adopt verbatim — it restores the prose to 1:1 with the slide's seven bullets, in order:
+> "Tilt is the case we started with: your phone measures gravity's pull along each axis to decide when to rotate its screen. An airbag sensor detects the sudden deceleration of a crash. Before solid-state drives, an accelerometer detected a falling laptop and pulled the disk heads off the spinning drive before it hit the floor. A step counter in a wearable picks up the impact of every footfall, and football helmets carry accelerometers to measure hits to the head. Accelerometers also monitor machinery: a change in a machine's vibration pattern can flag a failure building before anything else shows it. Paired with a gyroscope they form an IMU (inertial measurement unit) — the motion sensor in vehicles and drones. Two local companies founded by Thayer alumni build on exactly this technology: SignalQuest (precision motion sensing) and Simbex (the helmet impact sensors)."
+
+Raised by: checker-voice (#5). Text-first and the novice did not flag it, which is expected — it reads fine; the failure is register, and register is voice's remit, not theirs. Length-neutral, no claim weakened (the vibration content survives in the machinery sentence).
+
+**11. [B-9a] Acronym expansions — four locations, both copies each, verbatim.**
+- `LSb` — book `:1919-1920` and slide `:1953`. Hers, book: "…where its `<q>slave</q>` is our target, and `<q>LSb</q>` and `<q>MSb</q>` are the least and most significant bits:"; slide (which currently carries no gloss at all, S-9): "But note the datasheet's own wording (§6.1.1) — where its `<q>slave</q>` is our target, and `<q>LSb</q>` and `<q>MSb</q>` are the least and most significant bits: `<q>an 8-bit sub-address…</q>`"
+- `LPen` / `HR` — book table `:2047`, `:2050` **and** slide table `:2069`, `:2072` (the note at `:2031` says change together). Hers: "Data rate, power mode (the `<c>LPen</c>` bit — low-power enable), axis selection — *ours to set*." and "Full-scale range (±2, ±4, ±8, ±16 g) and the `<c>HR</c>` bit — high resolution; together with `<c>LPen</c>` in `<c>CTRL_REG1_A</c>` it picks the resolution mode — *ours to set*."
+Raised by: checker-voice (#7, #8). (`mg/LSB` is item 7.)
+
+**12. [B-8a, S-12] `.../ch-accelerometers.ptx:1938-1940` and `:1960-1961` — the multi-byte transfer shape, and the tables' vocabulary.** `sl-day13x-autoincrement-tables` teaches MAK/NACK that no Day 13x paragraph carries, and the one clause behind it points at a figure in another chapter. Two edits at one location:
+- Replace "This is the read pattern of `<xref ref="fig-i2c-transfer-pattern"/>`, extended to multiple bytes." with: "This is Table 23 of `<xref ref="fig-i2c-transfer-pattern"/>`, the multi-byte read: the controller acknowledges each data byte (MAK) so the target serves the next register, and a final not-acknowledge (NMAK) ends the transfer."
+- Slide caption `:1960`, add figure-claims' parenthetical: "…(the tables' Master is our controller, their Slave our target)". **DISPLACES:** the conditional "If anyone asks…" clause in the note at `:1961` — it is now visible instead of contingent.
+Raised by: checker-arc-fidelity (MINOR), checker-technical-accuracy (MINOR, the tighter wording — the figure already contains Table 23, so "extended to" tells the reader to extend what they are looking at), checker-figure-claims (MINOR, Master/Slave). One sentence into an existing paragraph.
+
+**13. [L-5/L-6, P-1] `.../ch-accelerometers.ptx:1713-1715` and slide `:1731` — three names for one concept inside the crucial step.** The prose introduces `<term>subaddress</term>`, `ch-i2c.ptx:4324` already defines "SUB is the **sub-address**", the datasheet quote says "sub-address (SUB)", and Part 4 reverts to "register address" twice (`:1918`, `:1935`). Keep her term, weld it, match ch-i2c's hyphen — both copies:
+> "The acceleration readings are put in the data registers of the accelerometer's memory, at a register address — the datasheet calls it a `<term>sub-address</term>` (SUB) — which we can find in the datasheet."
+
+The later "register address" uses then stand correct as written. Raised by: expert-continuity-auditor (MAJOR). The slide changes with the prose: it is a hyphen and an apposition, not a claim.
+
+**14. [S-18, S-30, B-9] Titles: the agenda, Part 5, and the Part 5 opening.** One pass over four artifacts:
+- `/Users/dz00762/repos/ENGS28/assets/decks/day13x.json:14-18` — replace the five agenda items with the five section-slide titles as they now stand: "The physics of a proof mass" / "**Accelerometers are everywhere**" / "**The LSM303AGR, and its datasheet**" / "The data format" / "**Settings for basic accelerometer operation**". Her pass-2 comment was *"Just say Accelerometers are everywhere"*; the exact phrasing she struck still projects two slides before the retitled section slide, and the Part 3 drift has now survived two rounds.
+- `.../ch-accelerometers.ptx:2029` — subsection title → "Part 5: Settings for Basic Accelerometer Operation" (her slide 11's own words).
+- `day13x.json:67` — the content slide's title → "Six control registers — two of them are ours", so deck 32 and 33 stop reading as a stutter.
+- `.../ch-accelerometers.ptx:2035-2041`, voice #3, hers verbatim: "We now know how to read the data out of the sensor. What we have not done yet is tell the sensor how to run. The accelerometer has six control registers, all reachable over I2C. Only two of them matter for us — the rest are about features we leave at their defaults."
+Raised by: checker-arc-fidelity (two MINORs), checker-voice (#18, #3). **DISPLACES:** nothing — titles only; no slide added, no minute moved.
+
+**15. [B-9, B-11a, S-3, B-8a] `fig-lsm303agr-block` / slides 15-16 — three edits, one figure.**
+- Book caption `:1551`, text-first's wording verbatim: "…one analog-to-digital converter shared by all three axes — the same architecture as the STM32C031C6's ADC (`<xref ref="ch-adc"/>`), which likewise multiplexes several input channels through one shared converter." (Verified true against `ch-adc.ptx:591, 866`; the bare analogy as drafted can mislead, since V_ref is single-ended and a ±2 g span doubles to 4 g.) Free on the wall — the player hides the book caption.
+- Slide caption `:1569` → one instructive line (S-3): "The accelerometer is the boxed upper half: six sense capacitors — a pair per axis — into the multiplexer, and the one charge amplifier and A/D converter they share." The magnetometer sentence is already in the note verbatim. Then grow the figure to the maximum height that fits the freed space (~1.6% → 1.8% of stage). **This is an interim; see Ask B.**
+- `sl-day13x-block`'s note `:1565`, append her slide-10 speaker note, which currently has no home: "If you wanted to use one of the interrupt pins you'd wire it to a pin on your microcontroller, set up a pin-change interrupt, and write an ISR for it — the GPIO interrupts chapter." (Plain words, no `<xref>`: notes are copied into deck JSON.)
+Raised by: learner-text-first (MAJOR, B-9/B-11b), checker-figure-claims (MAJOR, legibility), checker-arc-fidelity (MINOR, the orphaned note).
+
+**16. [S-8] Budget: give `sl-day13x-readraw` its minute back, and make the three margin notes agree.**
+The plan budgets 2 minutes for byte assembly and says why (a shift-and-OR that builds a wider signed value from two array elements — an idiom unlike anything so far, load-bearing for Lab 7 D1); the deck gives it 1, as the last slide of the densest Part, and it now carries a listing (item 8). Fund it from Part 2's **row**, not from her bullets:
+- `sl-day13x-readraw` note (`:2019`) and `day13x.json:51` Part 4 breakdown → ≈2 min; Part 4 row 19 → **20**.
+- `day13x.json:34` Part 2 → **≈2 min**; the applications slide keeps all seven bullets.
+- Rows become 11 / 2 / 9 / 20 / 3; 2 + 1 + 11 + 2 + 9 + 20 + 3 + 2 = **50** ✓.
+- Reconcile the notes that disagree as instructions to someone watching a clock: `day13x.json:11` recap note names both remaining levers (Part 2 down to one example, −1; and the Part 3 commit's discussion minute) and drops "That is the whole margin"; `:40` Part 3 and `:66`/`:70` stay as they are.
+Raised by: checker-arc-fidelity (MINOR), checker-technical-accuracy (MINOR, the three-way note disagreement). I overruled arc-fidelity's specific lever — see Dissent.
+
+**17. [voice] The remaining rewrites — apply verbatim, six of them, three seconds each.** Each is her own passed wording where a tighter invention was written instead; none weakens a technical claim (checked, S-16).
+
+| line | draft | hers |
+|---|---|---|
+| `:1778` | "Here is the whole conversion once, on the reading 0xC000." | "**We'll work the whole conversion once, on the reading 0xC000, step by step.**" (rest unchanged; her slide says "We convert it step by step") |
+| `:1539` | "You interact with the chip through control and data registers, over I2C, and it has hardware interrupt pins we're not using." | "You interact with the chip through its control and data registers, over I2C — **SPI is the other option, and the breakout wires it for I2C by default** — and **through** hardware interrupt pins we're not using." |
+| `:1741` | "Nothing in the course has needed this encoding until now, so here is the whole of it:" | "**We have not needed** this encoding until now, so here is the whole of it:" (S-20 generalized) |
+| `:1676` | "The last thing between the chip and your breadboard is the breakout board: it carries the I2C pull-up resistors, a voltage regulator, and the pull-ups on the configuration pins that set the chip for I2C (`<xref/>`)." | "**The breakout board carries the parts the chip needs:** the I2C pull-up resistors, a voltage regulator, and pull-ups on the configuration pins that set the chip for I2C (`<xref/>`)." (verbatim her passed slide caption) |
+| `:1573` | "The first number to pull out of the datasheet is how *fine* this converter's steps are — and we can derive it before we read it off the table." | "**The next number to take from the datasheet is the size of one step of the converter's output, and** we can derive it before we read it off the table." |
+| `:1402` | "There are resistive, capacitive, and inductive ways of measuring a displacement; our sensor uses the capacitive one." | "There are **multiple ways of measuring a displacement: resistive, capacitive, and inductive techniques. Our sensor uses the capacitive one.**" (two sentences, as on the passed slide) |
+
+---
+
+## Consider
+
+- **`capacitive_pickoff.svg`** — slide 8's bullet says "measuring the capacitance lets us compute *x*"; the drawing never prints `x`. Label the two plate-motion arrows `x` (there is room at y≈70). Cheaper than rewording, and it makes slide 8 continuous with slide 7's `x`. — checker-figure-claims (MINOR).
+- **`fig-accel-mems` caption `:1446-1447`** — the micrograph is stamped "ADI – MPS 03 JAN 94", i.e. an Analog Devices part, while the inherited credit reads "Roger Howe, Stanford". Optional: "…(surface micromachined capacitors — Roger Howe, Stanford; the device is an Analog Devices part)". Her credit is inherited, not invented, so this is accuracy garnish, not a defect. — checker-technical-accuracy (MINOR).
+- **`accel_specs_masked.svg`** — 4 px stub of the next table row at the bottom edge; trim viewBox 332 → 328. Do it in the same sitting as item 7. — checker-figure-claims (MINOR).
+- **`mass_spring_rest.svg` vs `mass_spring.svg`** — the rest drawing has 5 coils with the last one compressed; the displaced drawing has 6 at uniform pitch, and the rest position differs (265 vs 280). A stretched spring keeps its coil count and opens its pitch. Slides 5 → 7 are consecutive. — checker-figure-claims (MINOR).
+- **Housekeeping** — after item 7, `accel_specs_header.png` is in use; `accel_specs_offset.png`, `accel_specs_sensitivity.svg` and `mems_mechanism_rest.png` are referenced nowhere and are easy to mistake for current assets. Also `lsm303agr.h` declares `(lsm303AccelData_s * const result)` while the `.c` defines `(lsm303AccelData_s *result)` — the book matches the `.c`, which is right; the header is the file out of step, and it ships to students tomorrow. — checker-arc-fidelity, checker-figure-claims, checker-technical-accuracy.
+
+---
+
+## Escalate to Petra
+
+**A — `fig-accel-mems`, the right-hand panel's arrow.** Her pass-1 comment restored both panels and `plans/week7-handover.md` records "do not re-crop", so neither a crop nor a silent arrow edit is available to us — but in that panel the plate, both springs and all six finger arrows point left beside a label reading "← Acceleration", which is the opposite of the answer the room commits to four slides earlier. Two questions, not one: (i) may the outer arrow alone be reversed, a one-element edit that makes the borrowed drawing agree with our convention; or (ii) if not, does the caption clause in Must-fix 3 read acceptably to her? **Recommendation:** ask for (i) — it is the only fix the wall can see, since a slide has no caption — and ship the clause meanwhile. Note this was offered at Gate 2 and has now gone two rounds unresolved.
+
+**B — `lsm303agr_block.svg`: her whole-diagram ruling and the 2% legibility bar cannot both be met on one slide.** She ruled at pass 1 that the block-diagram slide shows the whole diagram so the room can see the two halves sharing one I2C/SPI interface; the five labels the caption instructs students to read (MUX, CHARGE AMPLIFIER, A/D CONVERTER, X+…X−) measure 1.6% of stage height against a 2% bar, and the figure is height-limited — growing it to the maximum that fits reaches only 1.8%. **Recommendation:** ask her for an export of the **accelerometer half at native resolution** (drop path `assets/images/Day13x-Accelerometer/lsm303agr_block_accel.png`; the `<image source>` line would be the only change, and the book keeps the full diagram). I have **rejected** the committee's alternative — adding a second, cropped slide — because it adds a slide to an exactly-reconciled 50-minute deck and re-decides her ruling by routing around it; if she prefers that, it is hers to grant, not ours to take.
+
+---
+
+## Rejected
+
+- **checker-figure-claims' two-slide block-diagram fix** (keep 16 whole, add a cropped accelerometer-chain slide). It **dodges her ruling rather than honoring it**: her comment settles what the room sees when that point is made, and the reviewer's own escape hatch — "if a crop is not wanted at all, this needs Petra" — is the tell that this is an asset request. It also adds a 36th slide to a deck whose beats sum exactly to 50 and whose only spare minute is already spoken for by item 16. → Ask B, plus the interim in item 15.
+- **learner-firstgen-novice's "define `struct` on first use."** Factually wrong and I checked it myself: `/Users/dz00762/repos/ENGS28/source/ch-intro-blinky.ptx:2117-2136` prints `typedef struct { … } GPIO_TypeDef;` and then explains that "`GPIOA->ODR = value` is exactly equivalent to writing to address `0x5000 0014`" — and `GPIOA->ODR` has appeared in every program since Day 2. Defining `struct` again here violates B-8. Expert-continuity-auditor is right, and the persona is arguing outside its evidence. **The half of the finding that survives is real** — the `result->x = …` line exists only on a stripped slide — and item 8 fixes exactly that.
+- **learner-text-first's fix for the 4 g span** ("…±2 g, ±4 g, ±8 g, or ±16 g — a span of 4 g, 8 g, 16 g, or 32 g respectively…", stated *before* `act-day13x-sensitivity`). The doubling is the only non-mechanical step in that activity — the deck note names it as the classic slip — and pre-stating it leaves the activity as a division (P-17). The finding is right that the caption's "4 g / 2¹⁰" shows the 4 without justifying it, so the justification goes **after** the commit, in the caption, as the parenthetical in item 7. Scaffold the path, don't remove the rung.
+- **checker-arc-fidelity's funding lever** for the ReadRaw minute (fold the vibration bullet into the wearables bullet on `sl-day13x-applications`). That slide grew to seven bullets at her pass-2 request; deleting one to buy a minute is the silent-loss failure B-8a exists to prevent, and it would break the 1:1 that item 10 has just restored. Funded from the Part 2 **row** instead — same minute, no content lost.
+- **checker-voice's "A/D converter vs analog-to-digital converter — pick one"** (listed by the reviewer itself as cosmetic). The current pattern is already B-9a's prescribed one: expanded at first prose use (`:1538`) and again in the caption (`:1550`), abbreviated thereafter (`:1569`, `:1586`, `:1607`). No change.
+- **`ins-day13x-convert:1901`'s `/ 65536`** where prose and slides use 2¹⁶ (voice, "for Petra"). Instructor-facing, the arithmetic is verified correct, and the divisor written out is arguably clearer when spoken. Leave it.
+
+---
+
+## Deferred — `sec-accel-reference` (week 7, session 4)
+
+Three of this day's promises land only when Reference is written; the manifest at `:2168-2182` lists them but does not name what depends on them, which B-8a calls a drop with a note attached. Replace the manifest comment with a marker that names its dependents by id:
+
+```
+<!-- DELIVERY (week 7, session 4): sec-accel-reference prose.
+     Sibling shape is sec-i2c-reference ("nothing here is new" opener, then
+     lookup-form subsections).  OWES, by id — each is already asserted or
+     promised somewhere a reader can see:
+       - the signed-shift note (>> is an arithmetic floor shift) — the xref
+         at subsec-day13x-data-format :1855 sends the reader here for it
+       - the C1/C2 differential-capacitance detail — asserted by
+         sl-day13x-mems-differential (:1462), routed here by the Part 1
+         comment (:1317, "do not grow it back here"); until this is written
+         it reaches the room only, and no reader at all
+       - the zero-g offset calibration (flat + flipped, average) — worked in
+         ins-day13x-convert (:1903), which is stripped from the reading book
+       - the LSM303AGR register map / lsm303agr.h
+       - the data-format arithmetic in full, with the worked negative example
+       - IEEE 754 layout; precision vs range said precisely
+       - AN-1057 depth (three-angle orientation, quadrants) —
+         external/datasheets/an-1057.pdf is hosted (2026-08-27)
+     Until this section exists it must not be xref'd from any NEW location. -->
+```
+
+**Trigger, decided now so nobody has to ask:** if Reference has not been written when the book goes to Petra, add arc-fidelity's one pre-approved sentence to the MEMS paragraph at `:1429` — two capacitors, ΔC = C₁ − C₂, and with Q = CV the differential charge is ΔQ = (C₁ − C₂)·V_exc — and note in the source that it is a placeholder for the Reference entry. It is content she asked for twice. Otherwise leave Part 1 alone: the comment at `:1317` says do not grow it back, and that is a recorded decision, not an omission.
+
+---
+
+## Dissent worth recording
+
+- **learner-text-first wanted the 4 g span stated before the sensitivity activity, not after it.** I put it in the caption to protect the one thing that activity asks students to work out. If the room comes out of that commit having mostly written 2 g / 2¹⁰ and the reveal has to rescue them, text-first was right and the span belongs in the activity's introduction.
+- **checker-figure-claims wanted a second, cropped block-diagram slide.** If students in the room cannot follow the left-to-right chain walk on slide 16 at 1.8%, that judgment was correct and the answer is Ask B's native-resolution export, not more caption work — two rounds of patching one figure fixed nothing on Day 12 because the defect was the asset.
+- **checker-arc-fidelity ruled the current ReadRaw split (prose in the book, listing on the slide) acceptable.** I overruled it toward printing the listing. If Petra reads the Part 4 page and finds it code-heavy against a 50-minute x-hour, her call reverses mine cheaply — delete the `<program>`, keep the `check_starters.py` entry pointed at the slide copy, and record the omission as deliberate in the source comment, which is what voice asked for either way.
+- **checker-voice offered to leave the phone hook told twice** if the applications paragraph should stand alone. I took the callback ("Tilt is the case we started with"). If she ever moves Part 2 away from Part 1, the callback becomes a dangling reference and the plain sentence should come back.
+
+*After applying: `./scripts/build-all.sh`, then `python3 scripts/image_ratios.py --check` (items 7 and 9 change figure geometry — commit `/Users/dz00762/repos/ENGS28/assets/book.css`), `python3 scripts/check_rules.py --quiet source/*.ptx`, `python3 scripts/check_deck.py assets/decks/day13x.json`, `python3 scripts/check_starters.py` (item 8 adds a pair).*
+
+*Application note (session): item 8's edit to assets/starters/lsm303agr_partial.c (the "8 control registers" comment) was NOT applied — her files are not edited without her approval (only the two comments she approved on Day 13 were); it goes to the ask-Petra list as a one-word fix instead.*
