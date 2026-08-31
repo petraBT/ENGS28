@@ -2597,6 +2597,26 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 at ±2 g; the 3.9 mg/digit we derived yesterday is the same
                 number, before the table rounds it.</p>
             </instructor>
+
+            <slide xml:id="sl-day14-look-reg1" ref="fig-ctrl-reg1-fields">
+    <caption>The eight bits of CTRL_REG1_A: the four ODR bits, LPen, and the three axis enables.</caption>
+    <note>≈ 1 min for all four table slides together: page through them for sixty seconds before the commit.  If the reading did not happen, this look is the mitigation: take your best guess from the tables.  We want 400 Hz, normal mode, all three axes, ±2 g.</note>
+</slide>
+
+            <slide xml:id="sl-day14-look-rates" ref="fig-ctrl-reg1-rates">
+    <caption>One of these rows is the 400 Hz we want.</caption>
+    <note>Part of the sixty-second look; no separate budget.</note>
+</slide>
+
+            <slide xml:id="sl-day14-look-reg4" ref="fig-ctrl-reg4-fields">
+    <caption>FS[1:0] picks the range; HR is half of the mode selection.</caption>
+    <note>Part of the sixty-second look; no separate budget.</note>
+</slide>
+
+            <slide xml:id="sl-day14-look-modes" ref="fig-accel-modes">
+    <caption>LPen and HR together select the row.  We want normal mode.</caption>
+    <note>Part of the sixty-second look; no separate budget.  This table also holds the reveal's sensitivity clause: its 4 mg/digit at ±2 g is yesterday's derived 3.9, rounded by the table.</note>
+</slide>
         </subsection>
 
         <!-- Part 3 -->
@@ -2642,6 +2662,23 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                     the project still compiles.</p></statement>
                 </task>
             </activity>
+
+            <slide xml:id="sl-day14-verify">
+    <ul>
+        <li>Run Tuesday's <c>whoami_test.c</c>, unchanged.  If it still prints <c>Accelerometer initialized!</c>, your wiring survived.</li>
+        <li>That check is what makes today debuggable: the hardware is verified first, so anything that goes wrong from here on is in the software we are about to write.</li>
+    </ul>
+    <note>≈ 3 min.  The Week 5 standing rule: verify Tuesday's wiring before depending on it.  A board that fails here gets priority triage during the coming worktime; do not let it wait for the checkpoint, whose rescue file fixes software, not hardware.</note>
+</slide>
+
+            <slide xml:id="sl-day14-exclude" ref="fig-exclude-from-build">
+    <ul>
+        <li>A project can only have one <c>main()</c>, and after you add <c>accel_test.c</c> your project has two.</li>
+        <li>Exclude <c>whoami_test.c</c> from the build: right-click it, choose <em>Resource Configurations → Exclude from Build</em>, check both configurations, click OK.</li>
+        <li>If your build fails with <c>multiple definition of 'main'</c>, you skipped this step.</li>
+    </ul>
+    <note>≈ 2 min.  The dialog is Day 1x's figure.  The last bullet is the self-rescue line: leave it on the wall long enough to be remembered, because the linker error arrives twenty minutes from now, at the worst moment to need help.</note>
+</slide>
         </subsection>
 
         <!-- Part 4 -->
@@ -2704,6 +2741,44 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                     model.  It takes one I2C library call.</p></statement>
                 </task>
             </activity>
+
+            <slide xml:id="sl-day14-partial">
+    <ul>
+        <li><c>lsm303agr_partial.c</c> is most of a driver.  <c>lsm303_AccelRegisterRead()</c> is given, and has been running on your board since Tuesday.</li>
+        <li><c>lsm303_AccelReadRaw()</c> is given: we walked through it yesterday.</li>
+        <li><c>lsm303_AccelInit()</c> is given except for the two register values, which you just committed to.</li>
+        <li><c>lsm303_AccelRegisterWrite()</c> is entirely yours to write.</li>
+    </ul>
+    <note>≈ 2 min.  Orientation only; the file itself goes on screen next.  The split is her design: the homework drafted RegisterWrite on paper, and the reading derived the two AccelInit values.</note>
+</slide>
+
+            <slide xml:id="sl-day14-attempt">
+    <p>Complete <c>lsm303_AccelRegisterWrite()</c>, on your own and in silence, from your paper draft if you have it, or fresh, with the given read function as the model.  It takes one I2C library call.</p>
+    <program language="c"><code><![CDATA[
+void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
+	// complete this function
+
+
+}
+]]></code></program>
+    <program language="c"><code><![CDATA[
+/* The model: the given read function */
+uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
+	uint8_t data;
+	i2c1_memRead(LSM303_ADDRESS_ACCEL, RegisterAddress, 1, &data);
+
+	return data;
+}
+]]></code></program>
+    <note>≈ 2 min, silent.  Two minutes is deliberate: a student with the paper draft transcribes it, and a student without one still writes before watching (Gate 1).  Then the reveal.</note>
+</slide>
+
+            <slide xml:id="sl-day14-write-transfer">
+    <p>The write your new function makes is the pattern you captured on Tuesday.  In the datasheet's own tables (§6.1.1), the write transfers:</p>
+    <image source="images/Day13-I2C(3)/i2c_transfer_writes.svg" width="92%"/>
+    <caption>Table 20 is RegisterWrite's whole job: device address, register address (SUB), one data byte.</caption>
+    <note>≈ 2 min, after the reveal.  The room saw these tables on Tuesday; today the point is that the one library call produces exactly Table 20.  Do not re-teach the rows.</note>
+</slide>
 
             <instructor xml:id="ins-day14-registerwrite">
                 <p>One call does the whole job:</p>
@@ -2778,6 +2853,29 @@ uint8_t lsm303_AccelInit() {
                 <p>Hex works just as well (0x77 and 0x00); the binary form
                 shows the fields.</p>
             </instructor>
+
+            <slide xml:id="sl-day14-accelinit">
+    <p><c>lsm303_AccelInit()</c> needs no new I2C work, only your two values in its blanks:</p>
+    <program language="c"><code><![CDATA[
+uint8_t lsm303_AccelInit() {
+	// Check the WHOAMI register
+  	if (lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A) != 0x33) {
+    	return 0;		// failure
+  	}
+  	else {
+		uint8_t ctrl_reg1 =      ; // normal power mode @ 400 Hz, all axes enabled
+		lsm303_AccelRegisterWrite(LSM303_CTRL_REG1_A, ctrl_reg1);
+
+		uint8_t ctrl_reg4 =      ; // continuous update, 2g full scale, I2C
+		lsm303_AccelRegisterWrite(LSM303_CTRL_REG4_A, ctrl_reg4);
+
+		return 1;			// success
+  	}
+}
+]]></code></program>
+    <caption>The WHO_AM_I check and the uint8_t return are given: 0 reports failure, 1 success, and the test program is about to use exactly that answer.</caption>
+    <note>≈ 3 min.  The listing is abridged for the wall (the file's comment blocks are off it); the blanks stay blank here on purpose — the values were just committed, and the fill is the activity.  Point at the intent comments beside each blank: they are her wording for what the byte means.</note>
+</slide>
         </subsection>
 
         <!-- Part 5 — the CRUCIAL step -->
@@ -2913,6 +3011,59 @@ int main(void) {
                 code.  The logic analyzer stays available as the instrument
                 of last resort, wired as on Tuesday.
             </p>
+
+            <slide xml:id="sl-day14-accel-test-setup">
+    <p>Before you run <c>accel_test.c</c>, read it.  The setup half:</p>
+    <program language="c"><code><![CDATA[
+int main(void) {
+	int16_t accel_x, accel_y, accel_z;
+	lsm303AccelData_s accel_raw;
+
+	i2c1_init();
+	uart2_init();
+
+	if( lsm303_AccelInit() ) {
+		printf("Accelerometer initialized! \n\r");
+	}
+	else {
+		printf("Could not connect to accelerometer \n\r");
+	}
+
+  	printf("Control Register 1 = %x \n\r", lsm303_AccelRegisterRead(LSM303_CTRL_REG1_A));
+  	printf("Control Register 4 = %x \n\r", lsm303_AccelRegisterRead(LSM303_CTRL_REG4_A));
+]]></code></program>
+    <caption>The init check says which way it went, and the two readbacks prove your writes landed: the values you committed should come back out.</caption>
+    <note>≈ 1 min.  Abridged for the wall: the includes, the header comment, the #define block (yesterday's ACC_FS/ACC_REGISTERWIDTH/MILLI, verbatim) and the banner printf are off it; the full file is in the book and in the download.</note>
+</slide>
+
+            <slide xml:id="sl-day14-accel-test-loop">
+    <p>The loop half: read, scale, print.</p>
+    <program language="c"><code><![CDATA[
+	while(1) {
+		lsm303_AccelReadRaw(&accel_raw);
+		accel_x = (ACC_FS * accel_raw.x * MILLI) >> ACC_REGISTERWIDTH;
+		accel_y = (ACC_FS * accel_raw.y * MILLI) >> ACC_REGISTERWIDTH;
+		accel_z = (ACC_FS * accel_raw.z * MILLI) >> ACC_REGISTERWIDTH;
+
+		printf("accel_raw_x=%x, accel_raw_y=%x, accel_raw_z=%x \n\r", accel_raw.x, accel_raw.y, accel_raw.z);
+		printf("accel_x=%d mg, accel_y=%d mg, accel_z=%d mg \n\n\r", accel_x, accel_y, accel_z);
+
+		delay_ms(2000);
+	}
+]]></code></program>
+    <p>The scaling line is yesterday's formula in C, with a right shift by 16 where the formula said divide by 2¹⁶.  Each pass prints the raw readings in hex and the converted milli-g right underneath: yesterday's left-justified reading and what it means, side by side.</p>
+    <note>≈ 2 min.  The variables are int16_t; the big intermediate product (±131 million at most) exists only inside the arithmetic, which C carries out in a wider integer type.  If that question comes up, the Reference section has the full story, including the signed-shift subtlety.</note>
+</slide>
+
+            <slide xml:id="sl-day14-ladder">
+    <ul>
+        <li>If <c>Could not connect to accelerometer</c> appears, the WHO_AM_I check failed.  That is hardware: re-seat the wiring against Tuesday's diagram.</li>
+        <li>If it connects but a control-register readback is not what you wrote, the write path is suspect.  That is today's new code: compare your <c>lsm303_AccelRegisterWrite()</c> against the reveal.</li>
+        <li>If everything prints but the values are nonsense, the readings are arriving and the scaling is wrong.  That is yesterday's formula, not today's code.</li>
+        <li>The logic analyzer stays the instrument of last resort, wired as on Tuesday.</li>
+    </ul>
+    <note>≈ 4 min of worktime with this on the wall.  Checkpoint is the end of this Part, minute 58: a student not yet streaming gets the completed driver file, ONE-TO-ONE and not announced, and still runs their own board through the flip and rotate tests — what they did not finish is the write logic, whose reveal already graded their paper version.  A second re-seat failure is not software and the file will not fix it: priority triage now, not at the bell.</note>
+</slide>
         </subsection>
 
         <!-- Part 6 -->
@@ -2979,6 +3130,24 @@ delay_ms(100);      // or less
                 comma-separated value becomes one trace.
             </p>
 
+            <slide xml:id="sl-day14-plot-mod">
+    <p>Two small changes turn <c>accel_test.c</c> into a data source CoolTerm can plot.</p>
+    <ul>
+        <li>Comment out all the <c>printf()</c> statements.</li>
+        <li>Inside the <c>while(1)</c> loop, print the three values as one comma-separated line instead, and shorten the delay so the plot moves:</li>
+    </ul>
+    <program language="c"><code><![CDATA[
+printf("%d,%d,%d\n\r", accel_x, accel_y, accel_z);
+delay_ms(100);      // or less
+]]></code></program>
+    <note>≈ 3 min.  Her slide 13's modification list.  The comma-separated line is what the chart parses: one value per trace.</note>
+</slide>
+
+            <slide xml:id="sl-day14-chartview" ref="fig-coolterm-chartview">
+    <caption>Connect as usual, then View menu, View Chart.  Each comma-separated value becomes one trace.</caption>
+    <note>≈ 3 min.  New tool, one menu deep: her screenshot, and the wording matches the current CoolTerm build.  Wait for the whole room's charts to move before the experiments.</note>
+</slide>
+
             <figure xml:id="fig-coolterm-chartview">
                 <caption>CoolTerm's View menu, from the toolbar: View Plain,
                 View Hex, and View Chart.  With the program printing
@@ -3015,6 +3184,11 @@ delay_ms(100);      // or less
                 the right edge are shaking.</caption>
                 <image source="images/Day14-Accelerometer(2)/coolterm_plotter.png" width="85%"/>
             </figure>
+
+            <slide xml:id="sl-day14-plotter" ref="fig-accel-plotter">
+    <caption>The steady levels are gravity; the steps are the board turning; the bursts are shaking.</caption>
+    <note>≈ 1 min, after the experiments, her slide 15.  Use it to name what the room just saw, not to replace seeing it.</note>
+</slide>
         </subsection>
 
         <!-- Part 8 -->
@@ -3029,12 +3203,6 @@ delay_ms(100);      // or less
                  same from the raw values, since the scale factor cancels
                  in the ratio).  The geometry paragraphs are written now
                  because the two figures assert their formulas. -->
-            <p>
-                Suppose the board is tilted by 30 degrees.  Which of the
-                three readings change, and roughly how?  Commit to an answer
-                before reading on.
-            </p>
-
             <activity xml:id="act-day14-tilt-commit">
                 <title>Predict the readings at 30 degrees</title>
                 <task xml:id="task-day14-tilt-commit">
@@ -3082,6 +3250,14 @@ delay_ms(100);      // or less
                 <image source="images/Day14-Accelerometer(2)/tilt_single_axis.svg" width="88%"/>
             </figure>
 
+            <slide xml:id="sl-day14-tilt-single" ref="fig-tilt-single" stack="yes">
+    <ul>
+        <li>One axis is enough for small tilts: A_x = g sin θ, so θ = sin⁻¹(A_x / g).</li>
+        <li>But the slope of sin θ is cos θ, which goes to zero at 90°: near 0° a small tilt moves A_x a lot, and near 90° it barely moves it, so a fixed amount of sensor noise can swing the computed angle by tens of degrees there.  One axis also cannot tell all four quadrants apart.</li>
+    </ul>
+    <note>≈ 4 min.  The mechanism, not just the verdict (Gate 1): say "the slope goes to zero" while pointing at the tilted drawing.  AN-1057 is hosted with the course documents; Lab 7's optional full-orientation route is in it.</note>
+</slide>
+
             <p>
                 Two axes fix both problems
                 (<xref ref="fig-tilt-two"/>).  With
@@ -3104,6 +3280,14 @@ delay_ms(100);      // or less
                 360°.  C's <c>atan2()</c> handles the quadrants.</caption>
                 <image source="images/Day14-Accelerometer(2)/tilt_two_axis.svg" width="88%"/>
             </figure>
+
+            <slide xml:id="sl-day14-tilt-two" ref="fig-tilt-two" stack="yes">
+    <ul>
+        <li>Two axes fix both problems.  With A_x = g sin θ and A_y = g cos θ, the ratio gives θ = tan⁻¹(A_x / A_y): the g cancels, the sensitivity is constant at every angle, and the signs of the two readings say which quadrant you are in, covering the full 360°.</li>
+        <li>Handling the quadrants by hand is fiddly, and C's math library does it for you: <c>atan2(ax, ay)</c> takes the two readings separately and returns the angle in the correct quadrant.  In Lab 7 you will use exactly this.</li>
+    </ul>
+    <note>≈ 4 min.  The lab is explicit: atan2, never plain atan.  One clause to land out loud: ax and ay are the milli-g numbers already on the screen, and the angle comes out the same from the raw values, because the scale factor cancels in the ratio.</note>
+</slide>
         </subsection>
 
         <!-- Part 9 -->
@@ -3130,18 +3314,13 @@ delay_ms(100);      // or less
                 what is about to bite.
             </p>
 
-            <p>
-                Here is the acceleration in g as a float, from the raw
-                reading: <c>raw * 4 / 65536</c>.  Where must a
-                <c>(float)</c> cast go to make the division come out right,
-                and why there?  Commit to an answer before reading on.
-            </p>
-
             <activity xml:id="act-day14-cast">
                 <title>Place the cast</title>
                 <task xml:id="task-day14-cast">
-                    <statement><p>The conversion is
-                    <c>raw * 4 / 65536</c>.  Write the expression with a
+                    <statement><p>In <c>uart.c</c>'s baud-rate line,
+                    <c>/</c> between two integers throws away the
+                    remainder, and the conversion <c>raw * 4 / 65536</c>
+                    has the same trap.  Write the expression with a
                     <c>(float)</c> cast placed so the result keeps its
                     fraction, and say what goes wrong if the cast is
                     somewhere else.</p></statement>
@@ -3161,6 +3340,43 @@ float a = (float) ACCEL_RAW * ACC_FS / 65536;    // 65536 = 2^16; no need for mi
                 divide already truncated (for us, to a whole number of g),
                 and the damage is done before the cast ever runs.</p>
             </instructor>
+
+            <slide xml:id="sl-day14-format-recap">
+    <p>Recall yesterday's integer conversion, which is what the float version is about to replace:</p>
+    <program language="c"><code><![CDATA[
+a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
+]]></code></program>
+    <caption>The shift right by 16 is an integer divide by 2¹⁶: whole milli-g out, and the fraction is thrown away.</caption>
+    <note>≈ 1 min, one beat, the integer before-picture (Gate 1 R3): recall, not re-teach.  Her slide 19 re-showed the whole format page; one line is enough here.</note>
+</slide>
+
+            <slide xml:id="sl-day14-float">
+    <ul>
+        <li>A sine or an arctangent does not come out of integer arithmetic; we need real numbers.</li>
+        <li>C's type for them is <c>float</c> (single-precision floating point): 4 bytes, the same size as an <c>int32_t</c>.</li>
+        <li>The math functions come from <c>math.h</c>: <c>sin()</c>, <c>cos()</c>, <c>atan2()</c>, <c>round()</c>.</li>
+    </ul>
+    <note>≈ 2 min.  Her slide 18's hinge ("Sine? Cosine? Tangent? Looks like we need floating point arithmetic") spoken, then this.  The cast question comes next: do not preview the answer.</note>
+</slide>
+
+            <!-- check-rules: allow L-2  (the slide recalls Day 5's no-%f
+                 rule and teaches round() as the delta) -->
+            <slide xml:id="sl-day14-round">
+    <ul>
+        <li>Compute in float, but come back to integers to print: <c>printf</c>'s <c>%f</c> is not enabled in our projects, so the route is still convert, then <c>%d</c>.</li>
+        <li>The new piece is <c>round()</c>, from <c>math.h</c>: where Day 5's cast to <c>int</c> truncated toward zero, <c>round()</c> goes to the nearest integer, which is what you want for an angle headed to a display.</li>
+    </ul>
+    <note>≈ 1 min.  A delta on Day 5's rule, not a re-teach: the caveat was taught in ch-uart with the enabling flag in Lab 4 Appendix A.  Students will try %f in Lab 7 anyway; this is the inoculation.</note>
+</slide>
+
+            <slide xml:id="sl-day14-cost">
+    <ul>
+        <li>A <c>float</c> spends its 32 bits as a sign bit, an 8-bit exponent, and a 23-bit fraction: it trades exactness for range.</li>
+        <li>The STM32C031C6 has no FPU (floating point unit), meaning no dedicated hardware circuit for float math, so every float operation is done in software.</li>
+        <li>Software floats are slower than integer arithmetic, and the library code takes up flash memory.  In Lab 7 you are asked to measure exactly that: your program's size with the math library in it.</li>
+    </ul>
+    <note>≈ 3 min.  Her slide 20's cost paragraph.  Depth (IEEE 754 layout, precision versus range) is in the chapter's Reference section, not here.</note>
+</slide>
 
             <!-- check-rules: allow L-2  (this paragraph teaches the delta on
                  Day 5's no-%f rule: round() in place of the truncating
@@ -3209,6 +3425,16 @@ float a = (float) ACCEL_RAW * ACC_FS / 65536;    // 65536 = 2^16; no need for mi
                 pre-lab is a working accelerometer driver, which is what
                 you just built.
             </p>
+
+            <slide xml:id="sl-day14-lab7">
+    <ul>
+        <li>In Lab 7 you are asked to run two I2C devices on the same bus at once, the accelerometer and the seven-segment display.  This is Tuesday's keep-the-display question, now graded.</li>
+        <li>You are asked to compute and display tilt from −180° to 180°, with <c>atan2()</c> and <c>round()</c>.</li>
+        <li>You are asked to light orientation LEDs as a phone does when its screen rotates.  That design is deliberately yours.</li>
+        <li>The pre-lab is a working accelerometer driver, which is what you just built.</li>
+    </ul>
+    <note>≈ 5 min, her slide 21.  Homework equals the pre-lab, already done by everyone who streamed data today.  The remaining minutes start Lab 7's shared-bus wiring with help in the room.</note>
+</slide>
         </subsection>
     </section>
 
