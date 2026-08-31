@@ -2209,10 +2209,291 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
          Tables 41–42 (p. 49) of external/datasheets/lsm303agr.pdf.
          ============================================================ -->
     <section xml:id="sec-accel-day14-before">
-        <title>Before Class: The Datasheet Scavenger Hunt</title>
-        <p>
-            This section is still being written.
-        </p>
+        <title>Before Class: Configuring the Accelerometer</title>
+        <introduction>
+            <p>
+                On Thursday we'll complete the accelerometer's device driver
+                and watch live acceleration data stream to CoolTerm.  To get
+                ready for that class you have two pieces of homework: writing
+                <c>lsm303_AccelRegisterWrite()</c> on paper, and working out
+                what settings belong in the two control registers,
+                <c>CTRL_REG1_A</c> and <c>CTRL_REG4_A</c>.  This reading has
+                two jobs.  The first is to say what a working accelerometer
+                reads when it is sitting still, which is how you'll know on
+                Thursday whether your driver is right.  The second is a
+                guided walk through the datasheet tables the two register
+                settings come from.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-day14-stationary">
+            <title>What a Stationary Accelerometer Reads</title>
+            <p>
+                Gravity is itself an acceleration, so an accelerometer that
+                is not moving at all is still measuring something: each axis
+                reports the component of gravitational acceleration that
+                points along that axis.  That is worth knowing before we
+                configure the sensor, because a stationary reading is how you
+                will check your driver on Thursday.  The units of the
+                sensor's output are g, where 1 g is the acceleration of
+                gravity, 9.8 m/s², and one milli-g (mg) is a thousandth of
+                that.  So with the board lying flat on the table, component
+                side up, the sensor should report approximately +1000 mg on
+                its z axis and approximately 0 mg on x and y.
+            </p>
+            <p>
+                Flip the board over and the z reading changes sign, to
+                approximately −1000 mg.  Tilt or rotate the board and
+                gravity's 1000 mg moves between the three axes, and that is
+                what we'll use on Thursday to measure tilt.  A
+                <q>perfect</q> value is 1000, but a real board will be off by
+                a few tens of milli-g, because the sensor has a zero-g
+                offset: the datasheet says a flat, motionless sensor
+                typically reads ±40 mg away from the true value, and its Min
+                and Max columns allow ±80 mg.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-day14-hunt-reg1">
+            <title>CTRL_REG1_A: Data Rate, Power Mode, and Axes</title>
+            <p>
+                Open the
+                <url href="external/datasheets/lsm303agr.pdf">LSM303AGR
+                datasheet</url> to §8.6 (p. 47).  Tables 33 and 34 describe
+                <c>CTRL_REG1_A</c>, at register address 0x20: which bit is
+                which, and what each field selects
+                (<xref ref="fig-ctrl-reg1-fields"/>).  The top four bits,
+                ODR[3:0] (ODR is the output data rate), set how often the
+                sensor takes a reading; the LPen bit (low-power enable)
+                selects between normal mode and low-power mode; and the
+                bottom three bits, Zen, Yen and Xen, enable the three axes
+                independently, one bit per axis.
+            </p>
+
+            <!-- Reading figures: her Day 14 slide 6's own datasheet pulls,
+                 used raw (they ARE the datasheet's tables; no shape-layer
+                 annotations to lose).  Her "Setting: 0b..." callouts are
+                 deliberately NOT carried into the reading (P-15): the
+                 assembled bytes are Thursday's reveal.  Do not add them. -->
+            <figure xml:id="fig-ctrl-reg1-fields">
+                <caption>Tables 33 and 34 of the LSM303AGR datasheet (§8.6,
+                p. 47): the eight bits of <c>CTRL_REG1_A</c> and what each
+                field selects.  ODR[3:0] is the output data rate, LPen
+                enables low-power mode, and Zen, Yen, and Xen enable the
+                three axes.</caption>
+                <image source="images/Day14-Accelerometer(2)/ctrl_reg1_fields.png" width="82%"/>
+            </figure>
+
+            <p>
+                The data rates themselves are in Table 35, on the same page
+                (<xref ref="fig-ctrl-reg1-rates"/>): each ODR[3:0] pattern
+                selects one rate, from 1 Hz up to the kilohertz range.  Here
+                is what we want from the sensor this week: readings at
+                400 Hz, in normal mode, with all three axes enabled.
+                Find the four ODR bits that select 400 Hz, decide what LPen
+                must be, and decide what the three axis-enable bits must be.
+                Write the resulting eight-bit value down; that is your
+                <c>CTRL_REG1_A</c> setting, and on Thursday we'll compare
+                answers before we put it into the sensor.
+            </p>
+
+            <figure xml:id="fig-ctrl-reg1-rates">
+                <caption>Table 35 of the LSM303AGR datasheet (§8.6, p. 47):
+                the data rate selected by each ODR[3:0] pattern.  One of
+                these rows is the 400 Hz we want.</caption>
+                <image source="images/Day14-Accelerometer(2)/ctrl_reg1_rates.png" width="82%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-day14-hunt-reg4">
+            <title>CTRL_REG4_A: Range and Resolution</title>
+            <p>
+                The second register of the pair is <c>CTRL_REG4_A</c>, at
+                address 0x23, described in §8.9 (p. 49), Tables 41 and 42
+                (<xref ref="fig-ctrl-reg4-fields"/>).  The two fields that
+                matter for us are FS[1:0] (full scale), which selects the
+                measurement range: ±2 g, ±4 g, ±8 g, or ±16 g, and HR (high
+                resolution), which is the second half of the mode selection:
+                LPen in <c>CTRL_REG1_A</c> and HR here together pick one of
+                the three resolution modes.  We want ±2 g, which is the
+                range we assumed in every conversion we worked yesterday.
+                The remaining fields, BDU (block data update), BLE
+                (big/little endian data selection), the self-test bits, and
+                SPI_ENABLE (which selects the SPI serial interface we are
+                not using), we leave at their default values, which Table 42
+                lists.
+            </p>
+
+            <figure xml:id="fig-ctrl-reg4-fields">
+                <caption>Tables 41 and 42 of the LSM303AGR datasheet (§8.9,
+                p. 49): the eight bits of <c>CTRL_REG4_A</c>.  FS[1:0]
+                selects the full-scale range, and HR is half of the
+                resolution-mode selection; the other fields stay at their
+                defaults.</caption>
+                <image source="images/Day14-Accelerometer(2)/ctrl_reg4_fields.png" width="82%"/>
+            </figure>
+
+            <p>
+                How LPen and HR combine is in a different part of the
+                datasheet: §4.2.1, Table 14 (p. 27), reproduced in
+                <xref ref="fig-accel-modes"/>.  Each row is one mode, with
+                its data width and its sensitivity at ±2 g.  We want normal
+                mode, the 10-bit row.  Read off what LPen and HR must be for
+                that row, then assemble your eight-bit <c>CTRL_REG4_A</c>
+                value the same way you assembled <c>CTRL_REG1_A</c>.
+            </p>
+
+            <figure xml:id="fig-accel-modes">
+                <caption>Table 14 of the LSM303AGR datasheet (§4.2.1, p. 27):
+                the three operating modes.  The LPen bit of
+                <c>CTRL_REG1_A</c> and the HR bit of <c>CTRL_REG4_A</c>
+                together select the row, and each row lists its data width
+                and its sensitivity at ±2 g in mg/digit.</caption>
+                <image source="images/Day14-Accelerometer(2)/accel_modes.png" width="82%"/>
+            </figure>
+        </subsection>
+
+        <reading-questions xml:id="rq-accel-day14">
+            <exercise xml:id="rq-day14-stationary">
+                <statement><p>Your board lies flat and motionless on the
+                table, component side up.  Roughly what should the three
+                converted readings be, in milli-g?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Approximately 0 on x, 0 on y, and
+                        +1000 on z.</p></statement>
+                        <feedback><p>Correct.  A stationary accelerometer
+                        reads gravity's projection on each axis, and with the
+                        board flat, all of it lands on z.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Approximately 0 on all three axes,
+                        because the board is not moving.</p></statement>
+                        <feedback><p>Gravity is an acceleration, and each
+                        axis reports the component of it that points along
+                        that axis.  Flat on the table, component side up,
+                        that is approximately +1000 mg on z.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Approximately +1000 on every
+                        axis.</p></statement>
+                        <feedback><p>Each axis reports only the component of
+                        gravity along that axis.  Flat on the table, gravity
+                        lies along z alone, so x and y read near
+                        zero.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Approximately −1000 on z.</p></statement>
+                        <feedback><p>The sign is worth getting right: −1000 mg
+                        on z is what the board reads <em>flipped over</em>.
+                        Component side up, z reads approximately
+                        +1000 mg.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-day14-lpen">
+                <statement><p>According to Table 34, what does writing 1 to
+                the LPen bit of <c>CTRL_REG1_A</c> select?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Low-power mode.</p></statement>
+                        <feedback><p>Correct.  LPen is the low-power enable:
+                        0 is normal mode and 1 is low-power mode, and
+                        Table 14 shows what that choice does to the data
+                        width.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A lower output data rate.</p></statement>
+                        <feedback><p>The data rate has its own field, the
+                        four ODR bits.  LPen selects the power mode, which
+                        sets the data width, not the rate.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>High-resolution mode.</p></statement>
+                        <feedback><p>The HR bit that selects high-resolution
+                        mode is in <c>CTRL_REG4_A</c>, not here.  LPen = 1
+                        selects low-power mode, the 8-bit
+                        row of Table 14.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>It powers the sensor down.</p></statement>
+                        <feedback><p>Power-down is an ODR setting: ODR[3:0]
+                        = 0000 in Table 35.  LPen = 1 keeps the sensor
+                        running, in low-power (8-bit) mode.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-day14-fs">
+                <statement><p>According to Table 42, which FS[1:0] pattern in
+                <c>CTRL_REG4_A</c> selects the ±2 g full-scale
+                range?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>00</p></statement>
+                        <feedback><p>Correct.  00 is ±2 g, and it is also the
+                        register's default.  The other patterns select the
+                        wider ranges, at the cost of coarser
+                        steps.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>01</p></statement>
+                        <feedback><p>01 selects ±4 g.  The table's order runs
+                        ±2, ±4, ±8, ±16 g as the pattern counts up; ±2 g is
+                        00.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>10</p></statement>
+                        <feedback><p>10 selects ±8 g.  The ±2 g range we want
+                        is pattern 00, the smallest range and the finest
+                        steps.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>11</p></statement>
+                        <feedback><p>11 selects ±16 g, the widest range and
+                        the coarsest steps.  The ±2 g range is
+                        00.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-day14-modes">
+                <statement><p>According to Table 14, with LPen = 0 and
+                HR = 0 the accelerometer is in which operating
+                mode?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>Normal mode, with 10-bit data
+                        output.</p></statement>
+                        <feedback><p>Correct.  That is the middle row of
+                        Table 14, and it is the mode we'll run this week: 10
+                        valid bits, 4 mg per digit at ±2 g.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>Low-power mode, with 8-bit data
+                        output.</p></statement>
+                        <feedback><p>Low-power mode is the LPen = 1, HR = 0
+                        row.  With both bits 0 the sensor is in normal mode,
+                        10 bits.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>High-resolution mode, with 12-bit data
+                        output.</p></statement>
+                        <feedback><p>High-resolution mode needs HR = 1.  With
+                        both bits 0 the sensor is in normal mode, 10
+                        bits.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The combination is not
+                        allowed.</p></statement>
+                        <feedback><p>The disallowed combination is LPen = 1
+                        with HR = 1, the table's last row.  Both bits 0 is
+                        normal mode.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+        </reading-questions>
     </section>
 
     <!-- ============================================================
