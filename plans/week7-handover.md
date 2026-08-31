@@ -1,4 +1,101 @@
-# Week 7 handover — where things stand after session 4 (updated 2026-08-31)
+# Week 7 handover — where things stand after session 5 (updated 2026-08-31)
+
+## Session 5 (2026-08-31): Day 14 is built, through Gate 2′ — awaiting her pass 1
+
+Everything in `plans/day14-prompt.md`'s ordering ran: the Before Class
+reading (the guided datasheet walk through CTRL_REG1_A §8.6 Tables 33–35
+and CTRL_REG4_A §8.9 Tables 41–42 plus Table 14 §4.2.1 p. 27, all pasted
+from the hosted PDF; the stationary-reading subsection in her decks'
+framing; four lookup reading questions; the answers 0x77/0x00 nowhere in
+it; Gate 1.5 voice probe applied), the in-class skeleton Parts 2–10 per
+the plan (110 min, checkpoint minute 58; activities with instructor
+reveals; DELIVERY-2 markers naming the owed connecting prose by id), the
+chapter's full Reference section (all seven manifest items — C1/C2,
+the header beside Table 26, the data format in all three modes, the
+signed shift, zero-g calibration via AN-1057 Eq. 17, the three-angle
+orientation from AN-1057 p. 7, IEEE 754 precision-versus-range), and
+the 51-slide `assets/decks/day14.json`, fit-swept whole at 1600×900
+(51/51) with every figure slide looked at.  Gate 2′
+(`reviews/day14-gate2.md`: twelve reports, the synthesizer's 22-item
+list applied and verified item by item) caught six correctness blockers
+that had reached the draft: the reading's projection rule gave the wrong
+sign for its own +1000 mg example; the 30° reveal's "axis the board
+tilted toward rises" misread; the two-axis arctangent shipped without
+the hold-it-upright-like-a-phone precondition (three reviewers
+independently; the atan2(ax, ay) pair itself stands, Gate 1 F7); the
+signed-shift example used a raw value normal mode cannot produce; the
+"bug we met on Day 5" framing that ch-uart refutes (uart.c rounds, and
+its division was exact); and round() printed as an int without the
+(int) cast Lab 7's graded line needs.  Q7 closed in passing: the
+current CoolTerm build carries "View Chart", matching her screenshot
+(the View button on the toolbar).  **Stopped for Petra's pass 1 on
+Day 14.  In-class connecting prose is a later session, from the slides
+she passes** (the DELIVERY 2 markers name what each Part owes).
+
+### Ask-Petra list from session 5
+
+1. **`assets/starters/lsm303agr_partial.c` line 19** still cites
+   "Table 13" (a magnetometer ODR table in the hosted PDF; the
+   single-byte read is Table 22, and `whoami_test.c`'s copy is already
+   corrected with your 2026-08-30 approval).  One word, your file, your
+   call; the book prints the corrected citation meanwhile.
+2. **A plain-view CoolTerm screenshot** of a successful run (banner,
+   `Accelerometer initialized!`, the two readbacks, two or three
+   raw/mg line pairs) — the thing the diagnostic ladder asks students
+   to judge against is described only in words, while the chart view
+   has two screenshots.  Drop path:
+   `assets/images/Day14-Accelerometer(2)/coolterm_plainview.png`; only
+   an `<image source>` line changes.
+3. **The original Eclipse exclude-from-build screenshots, as two
+   images** (menu, dialog).  On the wall the current portrait composite
+   renders its menu text at 0.6–0.8 % of slide height.  Day 14 may only
+   need the dialog panel.  Related: the screenshot's Select All button
+   is greyed out (Debug/Release pre-checked), so the Day 1x and Day 8
+   captions that said "click Select All" now say "confirm both are
+   checked" — a pre-check capture would let them revert.
+4. **Reference openers**: your new whole-sentences rule is applied to
+   this chapter's Reference opener ("This section is lookup
+   material…").  Your passed ch-i2c opener has the terse form — does
+   the rule override it corpus-wide?
+5. **One 30-second hardware check, whenever convenient**: do the unused
+   low bits of the left-justified output actually read as zero?  The
+   datasheet says "left-justified" and never states the padding value;
+   nothing shipped depends on it, but the "zeros below" phrasing does.
+6. **Part 7's chart-view beat**: logistics measured the first-time
+   CoolTerm chart setup at 5–6 real minutes against 3 budgeted.  The
+   beats are re-split inside Part 7 (2 modify + 5 chart + 4 experiments
+   + 1 reveal) without touching the Part rows; if it still runs over in
+   class, the 2 minutes from Part 6 are the right source and only you
+   can move them.
+7. **The reading's section title** is "Before Class: Configuring the
+   Accelerometer" rather than your spoken "scavenger hunt" phrase
+   (S-11; your passed reading titles are all descriptive).  Day 5x does
+   use "Datasheet Scavenger Hunt" as an in-class activity title, so
+   either is defensible — say the word and it flips.
+8. **Q3 unchanged, at your pace** — nothing student-facing asserts what
+   the program prints on a wrong-device-address NACK; the ladder's
+   first rung was rewritten at Gate 2′ to stay inside that constraint.
+
+### Recorded so later passes do not undo them (session 5)
+
+- The two-axis tilt pair is **atan2(ax, ay)** with the held-upright
+  frame stated beside it — a reviewer proposed atan2(ax, az) to match
+  the flat-frame 30° reveal, and the fix is the frame sentence, not the
+  axis pair (Gate 1 F7; Lab 7 is explicit).
+- The reveal figure `ctrl_bytes_filled.svg` is instructor-only and
+  deliberately after the commit; the four reading table figures carry
+  no Setting callouts (P-15) — do not add them.
+- `sl-day14-write-transfer` deliberately says "one byte longer than the
+  write we captured on Tuesday": Tuesday's write was the read's first
+  phase (no data byte).  Do not "simplify" back to "the same pattern".
+- The ladder's first rung deliberately states no causal verdict for the
+  `Could not connect` print (Q3, Day 13 gate item 23).
+- Dissent recorded at the gate: the ladder slide names the four lead
+  colors in words instead of carrying `fig-accel-bb` — if rung-1
+  failures do not resolve in the room, the picture is the next thing
+  to try.
+- The signed-shift Reference example is −64 (0xFFC0), one normal-mode
+  step; −16 is impossible there (raw readings are multiples of 64).
 
 ## Session 4 (2026-08-31): her pass 3 applied — Day 13x awaiting her next look
 
