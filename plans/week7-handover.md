@@ -43,11 +43,11 @@ DELIVERY 2 markers name what each Part owes).
    un-cropped slide-9 export, or the Adafruit schematic PDF (vector) —
    it probably then becomes two zoomed panels.  We deliberately did not
    patch the composite (the Day 9 lesson).
-2. **`mems_mechanism.png`'s right panel** draws the moving plate displaced
-   in the SAME direction as its "← Acceleration" arrow — the wrong answer
-   to Part 1's commit.  It is your figure, so the call is yours: redraw
-   the panel, or drop it.  Interim, the book shows only the left (at-rest)
-   panel.
+2. ~~`mems_mechanism.png`'s right panel~~ **RESOLVED by her pass 1
+   (2026-08-31, comment 13: "You cropped out the second picture that
+   shows the situation when the mass has moved") — both panels restored;
+   her C1/C2 differential speaker-note content is now the slide's
+   instructor note.**
 3. **The §6.1.1 blockquote keeps the datasheet's "slave"** while the book
    says controller/target; a one-clause gloss now leads into it ("where
    its 'slave' is our target").  Confirm the gloss, or the quote can stand
