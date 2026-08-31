@@ -53,6 +53,9 @@ STARTERS = [
     # comments agree; the CODE is what this pair checks either way.
     ("assets/starters/whoami_test.c", "source/ch-accelerometers.ptx",
      "who_am_i = lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A);"),
+    # Day 14 Part 5 reads accel_test.c whole before running it.
+    ("assets/starters/accel_test.c", "source/ch-accelerometers.ptx",
+     "accel_raw_x=%x"),
 ]
 
 # (starter file, function name in it, chapter, marker in the <program> block)
@@ -91,6 +94,16 @@ FRAGMENTS = [
     ("assets/starters/lsm303agr_partial.c", "lsm303_AccelReadRaw",
      "source/ch-accelerometers.ptx",
      "i2c1_memRead(LSM303_ADDRESS_ACCEL, LSM303_OUT_X_L_A | (1<<7), 6, &data[0]);"),
+    # Day 14 Part 4 prints the two unfinished pieces of lsm303agr_partial.c
+    # as the file ships them: RegisterWrite's blank body, and AccelInit with
+    # its two register-value blanks (the filled versions are <instructor>
+    # blocks, deliberately different, and no marker below matches them).
+    ("assets/starters/lsm303agr_partial.c", "lsm303_AccelRegisterWrite",
+     "source/ch-accelerometers.ptx",
+     "// complete this function"),
+    ("assets/starters/lsm303agr_partial.c", "lsm303_AccelInit",
+     "source/ch-accelerometers.ptx",
+     "// Check the WHOAMI register"),
 ]
 
 

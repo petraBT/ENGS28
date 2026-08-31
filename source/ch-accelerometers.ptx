@@ -2525,9 +2525,691 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
          ============================================================ -->
     <section xml:id="sec-accel-day14">
         <title>Day 14 In-Class: Finish the Driver, See the Data, Measure Tilt</title>
-        <p>
-            This section is still being written.
-        </p>
+
+        <introduction>
+            <!-- DELIVERY 2: prose polish only. The introduction is written
+                 (it frames the day); do not add teaching to it. -->
+            <p>
+                You worked out the two control-register settings on paper,
+                and you drafted <c>lsm303_AccelRegisterWrite()</c>.  Today
+                we'll put both to work: complete the device driver, watch
+                live x-y-z data stream to CoolTerm, plot it, and work out how
+                tilt follows from what the sensor measures.  By the end of
+                class your own driver will be reading the accelerometer,
+                which is exactly the pre-lab for Lab 7.
+            </p>
+        </introduction>
+
+        <!-- Part 2 (Part 1 was the cut HiTA slot; numbering kept so
+             plans/week7.md cross-references stay valid) -->
+        <subsection xml:id="subsec-day14-settings">
+            <title>Part 2: The Settings, Committed and Revealed</title>
+
+            <!-- DELIVERY 2: connecting prose.  OWES, by id: a lead
+                 paragraph tying the reading's guided walk to the commit
+                 (act-day14-settings), and after the reveal one paragraph
+                 landing 0x77/0x00 in running text with the
+                 rounds-3.9-to-4 clause (ins-day14-settings carries it
+                 meanwhile, instructor-only).  The sixty-second-look
+                 sentence below is written now because the deck's first
+                 slides assert it. -->
+            <p>
+                The four datasheet tables from the reading are on the screen
+                once more: the fields of <c>CTRL_REG1_A</c>
+                (<xref ref="fig-ctrl-reg1-fields"/>), the data rates
+                (<xref ref="fig-ctrl-reg1-rates"/>), the fields of
+                <c>CTRL_REG4_A</c> (<xref ref="fig-ctrl-reg4-fields"/>), and
+                the operating modes (<xref ref="fig-accel-modes"/>).  If you
+                did not finish the reading, take your best guess from the
+                tables now; we want readings at 400 Hz, in normal mode, on
+                all three axes, over the ±2 g range.
+            </p>
+
+            <activity xml:id="act-day14-settings">
+                <title>Commit to the two settings</title>
+                <introduction>
+                    <p>Write your answers down before we reveal them; they
+                    go into your driver in a few minutes.</p>
+                </introduction>
+                <task xml:id="task-day14-settings-reg1">
+                    <statement><p>What byte goes in <c>CTRL_REG1_A</c>?
+                    Write it in binary, field by field: the four ODR bits,
+                    LPen, then Zen, Yen, and Xen.</p></statement>
+                </task>
+                <task xml:id="task-day14-settings-reg4">
+                    <statement><p>What byte goes in <c>CTRL_REG4_A</c>?
+                    Write it in binary, field by field, and say which
+                    operating mode your LPen and HR choices select in
+                    Table 14.</p></statement>
+                </task>
+            </activity>
+
+            <instructor xml:id="ins-day14-settings">
+                <p><c>CTRL_REG1_A</c>, field by field: ODR[3:0] = 0111 is
+                the 400 Hz row of Table 35; LPen = 0 keeps normal mode; and
+                Zen = Yen = Xen = 1 enables all three axes.  Assembled:
+                <c>0b01110111</c> = 0x77.</p>
+                <p><c>CTRL_REG4_A</c>: BDU = 0 (continuous update), BLE = 0,
+                FS[1:0] = 00 selects ±2 g, HR = 0, and the self-test and SPI
+                bits stay 0.  Assembled: <c>0b00000000</c> = 0x00.  With
+                LPen = 0 and HR = 0, Table 14 says we are in normal mode:
+                10-bit readings.  Its sensitivity column prints 4 mg/digit
+                at ±2 g; the 3.9 mg/digit we derived yesterday is the same
+                number, before the table rounds it.</p>
+            </instructor>
+        </subsection>
+
+        <!-- Part 3 -->
+        <subsection xml:id="subsec-day14-verify-stage">
+            <title>Part 3: Verify the Wiring, Stage the Project</title>
+
+            <!-- DELIVERY 2: connecting prose.  OWES, by id: a paragraph on
+                 the hardware-vs-software split that act-day14-stage's first
+                 task establishes (if whoami_test.c still prints, Tuesday's
+                 wiring survived and everything after today is software).
+                 The two-main() explanation below is written now because the
+                 staging slide asserts the rescue line. -->
+            <p>
+                A project can only have one <c>main()</c>, and after you add
+                <c>accel_test.c</c> your project will contain two: the new
+                test program's, and <c>whoami_test.c</c>'s.  The fix is the
+                one from Day 1x: exclude the file you are done with from the
+                build (right-click <c>whoami_test.c</c>, then
+                <em>Resource Configurations → Exclude from Build</em>, both
+                configurations; <xref ref="fig-exclude-from-build"/> shows
+                the dialog).  If your build fails with
+                <c>multiple definition of 'main'</c>, you skipped this step.
+            </p>
+
+            <activity xml:id="act-day14-stage">
+                <title>Verify Tuesday's wiring, then stage the project</title>
+                <task xml:id="task-day14-reverify">
+                    <statement><p>Run Tuesday's <c>whoami_test.c</c>,
+                    unchanged.  If it still prints
+                    <c>Accelerometer initialized!</c>, your wiring survived,
+                    and anything that goes wrong from here on is
+                    software.</p></statement>
+                </task>
+                <task xml:id="task-day14-download">
+                    <statement><p>Download <c>lsm303agr_partial.c</c> and
+                    <c>accel_test.c</c> from Canvas and put both into the
+                    <c>Src</c> folder of your <c>Accelerometer</c>
+                    project.</p></statement>
+                </task>
+                <task xml:id="task-day14-exclude">
+                    <statement><p>Exclude <c>whoami_test.c</c> from the
+                    build.  Build now, before changing anything, and confirm
+                    the project still compiles.</p></statement>
+                </task>
+            </activity>
+        </subsection>
+
+        <!-- Part 4 -->
+        <subsection xml:id="subsec-day14-driver">
+            <title>Part 4: Complete the Driver</title>
+
+            <!-- DELIVERY 2: connecting prose.  OWES, by id: a lead
+                 paragraph walking what lsm303agr_partial.c gives and what
+                 is blank (the listing below asserts it; the walk narrates
+                 it), and a closing paragraph on what the uint8_t return
+                 reports and how accel_test.c uses it (currently carried by
+                 the paragraph before ins-day14-accelinit).  The listing is
+                 guarded by check_starters.py (lsm303_AccelInit fragment
+                 pair). -->
+            <p>
+                <c>lsm303agr_partial.c</c> is most of a driver.  Of the four
+                functions the header declares,
+                <c>lsm303_AccelRegisterRead()</c> and
+                <c>lsm303_AccelReadRaw()</c> are given whole, and
+                <c>lsm303_AccelInit()</c> is given except for the two
+                register values, which are the ones you just committed to.
+                Only <c>lsm303_AccelRegisterWrite()</c> is entirely yours to
+                write:
+            </p>
+
+            <program language="c"><code><![CDATA[
+/**************************************************************************
+ * Write one byte to an accelerometer register (Datasheet, Table 20)
+ */
+void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
+	// complete this function
+
+
+}
+]]></code></program>
+
+            <!-- The model beside the blank: the same function whoami_test.c
+                 carried (its code is guarded by that file's whole-file pair
+                 in check_starters.py; this copy matches
+                 lsm303agr_partial.c's verbatim). -->
+            <program language="c"><code><![CDATA[
+/**************************************************************************
+ * Read one byte from an accelerometer register (Datasheet, Table 22)
+ */
+uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
+	uint8_t data;
+	i2c1_memRead(LSM303_ADDRESS_ACCEL, RegisterAddress, 1, &data);
+
+	return data;
+}
+]]></code></program>
+
+            <activity xml:id="act-day14-registerwrite">
+                <title>Write the register-write function</title>
+                <task xml:id="task-day14-registerwrite">
+                    <statement><p>Complete
+                    <c>lsm303_AccelRegisterWrite()</c>, on your own and in
+                    silence, from your paper draft if you have it, or fresh,
+                    with the given <c>lsm303_AccelRegisterRead()</c> as the
+                    model.  It takes one I2C library call.</p></statement>
+                </task>
+            </activity>
+
+            <instructor xml:id="ins-day14-registerwrite">
+                <p>One call does the whole job:</p>
+                <program language="c"><code><![CDATA[
+void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
+	i2c1_memWrite(LSM303_ADDRESS_ACCEL, RegisterAddress, 1, &data);
+}
+]]></code></program>
+                <p><c>i2c1_memWrite()</c> wants a pointer to the data and a
+                byte count, which is why the argument is <c>&amp;data</c>
+                and the count is 1.  On the wire this is the write transfer
+                of Datasheet §6.1.1, Table 20: address, then the register
+                address (SUB), then the data byte.  It is the same pattern
+                the room captured on Tuesday.</p>
+            </instructor>
+
+            <!-- The AccelInit skeleton, as the file ships it: the blanks
+                 stay blank here (P-15 — the values were committed in
+                 Part 2 and land in ins-day14-accelinit).  Guarded by
+                 check_starters.py. -->
+            <p>
+                <c>lsm303_AccelInit()</c> needs no new I2C work, only your
+                two values in its blanks:
+            </p>
+
+            <program language="c"><code><![CDATA[
+uint8_t lsm303_AccelInit() {
+	// Check the WHOAMI register
+  	if (lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A) != 0x33) {
+    	return 0;		// failure
+  	}
+  	else {
+		/******* Control register 1 (Datasheet 8.6) *******/
+		uint8_t ctrl_reg1 =      ; // normal power mode @ 400 Hz, all axes enabled
+		lsm303_AccelRegisterWrite(LSM303_CTRL_REG1_A, ctrl_reg1);
+
+		/******* Control register 4 (Datasheet 8.9) *******/
+		uint8_t ctrl_reg4 =      ; // continuous update, 2g full scale, I2C
+		lsm303_AccelRegisterWrite(LSM303_CTRL_REG4_A, ctrl_reg4);
+
+		return 1;			// success
+  	}
+}
+]]></code></program>
+
+            <p>
+                The function begins with the WHO_AM_I check from Tuesday and
+                returns 0 if the expected 0x33 does not come back, and 1 if
+                initialization succeeded.  That <c>uint8_t</c> return value
+                is for the caller: a test program can ask whether the sensor
+                is actually there before trusting any readings, and in a
+                moment you will see <c>accel_test.c</c> do exactly
+                that.
+            </p>
+
+            <activity xml:id="act-day14-accelinit">
+                <title>Fill in the two settings</title>
+                <task xml:id="task-day14-accelinit">
+                    <statement><p>Put your two committed values into the
+                    blanks in <c>lsm303_AccelInit()</c>, then build.  Fix
+                    any compile errors before we move on.</p></statement>
+                </task>
+            </activity>
+
+            <instructor xml:id="ins-day14-accelinit">
+                <p>The two lines, filled in:</p>
+                <program language="c"><code><![CDATA[
+		uint8_t ctrl_reg1 = 0b01110111; // normal power mode @ 400 Hz, all axes enabled
+
+		uint8_t ctrl_reg4 = 0b00000000; // continuous update, 2g full scale, I2C
+]]></code></program>
+                <p>Hex works just as well (0x77 and 0x00); the binary form
+                shows the fields.</p>
+            </instructor>
+        </subsection>
+
+        <!-- Part 5 — the CRUCIAL step -->
+        <subsection xml:id="subsec-day14-run">
+            <title>Part 5: Run It</title>
+
+            <!-- DELIVERY 2: connecting prose.  OWES, by id: a lead
+                 paragraph for the read-before-you-run beat (the walk of
+                 accel_test.c below), and a short paragraph tying the tests
+                 to the reading's stationary-reading expectation
+                 (subsec-day14-stationary by xref).  The scaling-line and
+                 paired-print explanations are written now because the
+                 listing asserts both and the diagnostic ladder leans on
+                 them.  The listing is guarded by check_starters.py
+                 (accel_test.c whole-file pair). -->
+            <p>
+                Before you run <c>accel_test.c</c>, read it.  It is the
+                driver's unit test, and each print line is a probe you will
+                want later:
+            </p>
+
+            <program language="c"><code><![CDATA[
+/* Shell program to test LSM303AGR driver code
+ *
+ * ENGS 28
+ * Description:	 	Simple calls to the driver functions for my LSM303AGR accelerometer,
+ * 					to test basic functionality.
+ *
+ * Target device:	Nucleo C031C6, Adafruit LSM303AGR breakout
+ * Dependencies:	lsm303agr, i2c.c, uart.c
+ */
+
+#include <stdio.h>
+#include "ES28.h"
+#include "uart.h"
+#include "lsm303agr.h"
+#include "i2c.h"
+
+#define ACC_FS 4
+#define ACC_REGISTERWIDTH 16
+#define MILLI 1000
+
+/* CODE */
+int main(void) {
+  	// Setup code (run once) goes here:
+	int16_t accel_x, accel_y, accel_z;
+	lsm303AccelData_s accel_raw;
+
+	i2c1_init();
+	uart2_init();
+	printf("LSM303AGR test program \n\r");
+
+	if( lsm303_AccelInit() ) {
+		printf("Accelerometer initialized! \n\r");
+	}
+	else {
+		printf("Could not connect to accelerometer \n\r");
+	}
+
+  	printf("Control Register 1 = %x \n\r", lsm303_AccelRegisterRead(LSM303_CTRL_REG1_A));
+  	printf("Control Register 4 = %x \n\r", lsm303_AccelRegisterRead(LSM303_CTRL_REG4_A));
+
+	while(1) {
+		lsm303_AccelReadRaw(&accel_raw);
+		accel_x = (ACC_FS * accel_raw.x * MILLI) >> ACC_REGISTERWIDTH;
+		accel_y = (ACC_FS * accel_raw.y * MILLI) >> ACC_REGISTERWIDTH;
+		accel_z = (ACC_FS * accel_raw.z * MILLI) >> ACC_REGISTERWIDTH;
+
+		printf("accel_raw_x=%x, accel_raw_y=%x, accel_raw_z=%x \n\r", accel_raw.x, accel_raw.y, accel_raw.z);
+		printf("accel_x=%d mg, accel_y=%d mg, accel_z=%d mg \n\n\r", accel_x, accel_y, accel_z);
+
+		delay_ms(2000);
+	}
+
+	return 0;		/* never reached */
+}
+]]></code></program>
+
+            <p>
+                Three things to notice.  First, the program checks
+                <c>lsm303_AccelInit()</c>'s return value and says which way
+                it went.  Second, it reads both control registers back and
+                prints them: if your writes landed, the values you committed
+                in class come back out.  Third, the scaling line is
+                yesterday's formula in C, with the <c>#define</c>s from
+                yesterday and a right shift by 16 where the formula said
+                divide by 2¹⁶.  The variables are <c>int16_t</c>; the large
+                intermediate product (up to about ±131 million) exists only
+                inside the arithmetic, which C carries out in a wider
+                integer type, and the result after the shift is back within
+                ±2000.  Each pass through the loop prints the raw readings
+                in hex and the converted milli-g values right underneath:
+                yesterday's left-justified reading and what it means, side
+                by side on every line of output.
+            </p>
+
+            <activity xml:id="act-day14-run">
+                <title>Stream your first acceleration data</title>
+                <task xml:id="task-day14-run-build">
+                    <statement><p>Build, run, and open CoolTerm.  You should
+                    see the banner, <c>Accelerometer initialized!</c>, the
+                    two control-register readbacks, and then a new reading
+                    every two seconds.</p></statement>
+                </task>
+                <task xml:id="task-day14-run-tests">
+                    <statement><p>Test it against gravity: flat on the
+                    table, z should read approximately +1000 mg.  Flip the
+                    board over and the sign flips.  Rotate the board to move
+                    gravity onto x and then y.</p></statement>
+                </task>
+                <task xml:id="task-day14-run-raw">
+                    <statement><p>Pick one printed line and check it: does
+                    the raw hex value convert to the milli-g value printed
+                    beside it, by yesterday's formula?</p></statement>
+                </task>
+            </activity>
+
+            <!-- The diagnostic ladder is written now (the ladder slide
+                 asserts it).  Checkpoint mechanics are deck presenter
+                 notes only (S-25). -->
+            <p>
+                If something is wrong, the printout tells you which layer to
+                look at.  If <c>Could not connect to accelerometer</c>
+                appears, the WHO_AM_I check failed: that is hardware, and
+                the fix is Tuesday's: re-seat the wiring against
+                <xref ref="fig-accel-bb"/>.  If the connection succeeds but
+                a control-register readback is not what you wrote, the write
+                path is suspect: that is today's new code, so compare your
+                <c>lsm303_AccelRegisterWrite()</c> against the reveal.  If
+                everything prints but the values are nonsense (nowhere near
+                1000 mg on any axis at rest), the readings are arriving and
+                the problem is scaling: yesterday's formula, not today's
+                code.  The logic analyzer stays available as the instrument
+                of last resort, wired as on Tuesday.
+            </p>
+        </subsection>
+
+        <!-- Part 6 -->
+        <subsection xml:id="subsec-day14-library">
+            <title>Part 6: Make It a Library</title>
+
+            <!-- DELIVERY 2: connecting prose.  OWES, by id: one lead
+                 paragraph naming this as Day 10's promotion discipline on a
+                 second device (act-day14-promote's tasks carry the steps
+                 meanwhile). -->
+            <activity xml:id="act-day14-promote">
+                <title>Promote the driver to your library</title>
+                <introduction>
+                    <p>The driver works, so it stops being project code and
+                    becomes library code, exactly as the display driver did
+                    on Day 10.</p>
+                </introduction>
+                <task xml:id="task-day14-rename">
+                    <statement><p>Rename <c>lsm303agr_partial.c</c> to
+                    <c>lsm303agr.c</c>.</p></statement>
+                </task>
+                <task xml:id="task-day14-move">
+                    <statement><p>Copy <c>lsm303agr.c</c> into your
+                    <c>mylib</c> folder, then delete it from the
+                    <c>Accelerometer</c> project's <c>Src</c>
+                    folder.</p></statement>
+                </task>
+                <task xml:id="task-day14-rebuild">
+                    <statement><p>Rebuild the project and run it again, to
+                    confirm everything still works from its new
+                    home.</p></statement>
+                </task>
+            </activity>
+        </subsection>
+
+        <!-- Part 7 -->
+        <subsection xml:id="subsec-day14-plot">
+            <title>Part 7: Plot It</title>
+
+            <!-- DELIVERY 2: connecting prose.  OWES, by id: a lead
+                 paragraph motivating the plot (numbers scrolling by are
+                 hard to read as motion; a chart shows the shape), tied to
+                 fig-coolterm-chartview.  The modification list and the
+                 chart-view path are written now because the slides assert
+                 them (Q7: menu wording verified against the current
+                 CoolTerm build, and her screenshot). -->
+            <p>
+                Two small changes turn <c>accel_test.c</c> into a data
+                source CoolTerm can plot.  Comment out all the
+                <c>printf()</c> statements, and inside the <c>while(1)</c>
+                loop print the three values as one comma-separated line
+                instead; then shorten the delay so the plot moves:
+            </p>
+
+            <program language="c"><code><![CDATA[
+printf("%d,%d,%d\n\r", accel_x, accel_y, accel_z);
+delay_ms(100);      // or less
+]]></code></program>
+
+            <p>
+                In CoolTerm, connect as usual, then open the
+                <em>View</em> menu and choose <em>View Chart</em>
+                (<xref ref="fig-coolterm-chartview"/>).  Each
+                comma-separated value becomes one trace.
+            </p>
+
+            <figure xml:id="fig-coolterm-chartview">
+                <caption>CoolTerm's View menu, from the toolbar: View Plain,
+                View Hex, and View Chart.  With the program printing
+                comma-separated values, View Chart plots each value as its
+                own trace.</caption>
+                <image source="images/Day14-Accelerometer(2)/coolterm_view_chart.png" width="90%"/>
+            </figure>
+
+            <activity xml:id="act-day14-experiments">
+                <title>Make the chart move</title>
+                <introduction>
+                    <p>For each experiment, predict what the three traces
+                    will do before you move the board.</p>
+                </introduction>
+                <task xml:id="task-day14-exp-flip">
+                    <statement><p>Flip the board over, then rotate it to
+                    align x and then y with gravity.</p></statement>
+                </task>
+                <task xml:id="task-day14-exp-raise">
+                    <statement><p>Raise and lower the board periodically, at
+                    different speeds.</p></statement>
+                </task>
+                <task xml:id="task-day14-exp-shake">
+                    <statement><p>Shake the board.  Then set it on the table
+                    and bang the table: that is what a shock looks
+                    like.</p></statement>
+                </task>
+            </activity>
+
+            <figure xml:id="fig-accel-plotter">
+                <caption>Three axes of live acceleration in CoolTerm's chart
+                view.  The steady levels are gravity's projection on each
+                axis; the steps are the board being turned; the bursts near
+                the right edge are shaking.</caption>
+                <image source="images/Day14-Accelerometer(2)/coolterm_plotter.png" width="85%"/>
+            </figure>
+        </subsection>
+
+        <!-- Part 8 -->
+        <subsection xml:id="subsec-day14-tilt">
+            <title>Part 8: Tilt</title>
+
+            <!-- DELIVERY 2: connecting prose.  OWES, by id: a lead
+                 paragraph posing the day's last question (from streaming
+                 data to a tilt angle) ahead of act-day14-tilt-commit, and
+                 a closing clause landing that ax and ay are the milli-g
+                 numbers already on the screen (the angle comes out the
+                 same from the raw values, since the scale factor cancels
+                 in the ratio).  The geometry paragraphs are written now
+                 because the two figures assert their formulas. -->
+            <p>
+                Suppose the board is tilted by 30 degrees.  Which of the
+                three readings change, and roughly how?  Commit to an answer
+                before reading on.
+            </p>
+
+            <activity xml:id="act-day14-tilt-commit">
+                <title>Predict the readings at 30 degrees</title>
+                <task xml:id="task-day14-tilt-commit">
+                    <statement><p>The board lies flat, then tilts by 30
+                    degrees about one edge.  Write down what happens to each
+                    of the three readings: which move, which direction, and
+                    roughly where they end up.</p></statement>
+                </task>
+            </activity>
+
+            <instructor xml:id="ins-day14-tilt-commit">
+                <p>Gravity's 1000 mg redistributes.  The z reading falls
+                from 1000 to 1000 cos 30° ≈ 866 mg; the axis the board
+                tilted toward rises from 0 to 1000 sin 30° = 500 mg; the
+                third axis stays near zero.  Nothing about the total
+                changes: the vector still has length 1000 mg; it just
+                projects differently.</p>
+            </instructor>
+
+            <p>
+                This is inclination sensing, and Analog Devices wrote the
+                application note the field uses:
+                <url href="external/datasheets/an-1057.pdf">AN-1057,
+                <em>Using an Accelerometer for Inclination Sensing</em></url>.
+                With one axis (<xref ref="fig-tilt-single"/>), the x reading
+                is <m>A_x = g \sin\theta</m>, so
+                <m>\theta = \sin^{-1}(A_x/g)</m>.  That works, but not
+                everywhere: the slope of <m>\sin\theta</m> is
+                <m>\cos\theta</m>, which goes to zero as <m>\theta</m>
+                approaches 90°.  Near 0° a small tilt change moves
+                <m>A_x</m> a lot; near 90° the same change barely moves it,
+                so a fixed amount of sensor noise barely disturbs the angle
+                near 0° but can swing the computed angle by tens of degrees
+                near 90°.  And a single axis cannot distinguish all four
+                quadrants, so there is no full-circle answer.
+            </p>
+
+            <figure xml:id="fig-tilt-single">
+                <caption>Single-axis tilt, from AN-1057 (Figure 1).  The x
+                reading is the projection of gravity:
+                <m>A_x = g \sin\theta</m>, so
+                <m>\theta = \sin^{-1}(A_x/g)</m>.  The sine's slope
+                flattens toward 90°, so the angle computed this way loses
+                sensitivity there.</caption>
+                <image source="images/Day14-Accelerometer(2)/tilt_single_axis.svg" width="88%"/>
+            </figure>
+
+            <p>
+                Two axes fix both problems
+                (<xref ref="fig-tilt-two"/>).  With
+                <m>A_x = g \sin\theta</m> and <m>A_y = g \cos\theta</m>,
+                the ratio gives <m>\theta = \tan^{-1}(A_x/A_y)</m>: the
+                gravity magnitude cancels, the sensitivity is constant at
+                every angle, and the signs of the two readings say which
+                quadrant you are in, covering the full 360°.  Handling
+                those quadrants by hand is fiddly, and C's math library has
+                a function that does it for you: <c>atan2(ax, ay)</c> takes
+                the two readings separately and returns the angle in the
+                correct quadrant.  In Lab 7 you will use exactly this.
+            </p>
+
+            <figure xml:id="fig-tilt-two">
+                <caption>Two-axis tilt, from AN-1057 (Figure 7).  The ratio
+                of the two projections gives
+                <m>\theta = \tan^{-1}(A_x/A_y)</m>, with constant
+                sensitivity and, if the quadrants are handled, the full
+                360°.  C's <c>atan2()</c> handles the quadrants.</caption>
+                <image source="images/Day14-Accelerometer(2)/tilt_two_axis.svg" width="88%"/>
+            </figure>
+        </subsection>
+
+        <!-- Part 9 -->
+        <subsection xml:id="subsec-day14-float">
+            <title>Part 9: Floating Point</title>
+
+            <!-- DELIVERY 2: connecting prose.  OWES, by id: a lead
+                 paragraph recalling the integer conversion as the
+                 before-picture (subsec-day13x-data-format by xref, one
+                 beat, B-8), and a closing paragraph on cost (the no-FPU
+                 sentence below stays; the flash-size tie to Lab 7 D4 is
+                 written).  The cast question, its answer, and the
+                 round()/%f delta are written now (P-18; the slides assert
+                 them). -->
+            <p>
+                A sine or an arctangent does not come out of integer
+                arithmetic; we need real numbers.  C's type for them is
+                <c>float</c> (single-precision floating point), 4 bytes,
+                the same size as an <c>int32_t</c>, and the math functions
+                come from <c>math.h</c>.  Before converting our formula,
+                recall a bug we met on Day 5: in <c>uart.c</c>'s baud-rate
+                line, <c>/</c> between two integers throws away the
+                remainder (<xref ref="subsec-uart-brr"/>).  That is exactly
+                what is about to bite.
+            </p>
+
+            <p>
+                Here is the acceleration in g as a float, from the raw
+                reading: <c>raw * 4 / 65536</c>.  Where must a
+                <c>(float)</c> cast go to make the division come out right,
+                and why there?  Commit to an answer before reading on.
+            </p>
+
+            <activity xml:id="act-day14-cast">
+                <title>Place the cast</title>
+                <task xml:id="task-day14-cast">
+                    <statement><p>The conversion is
+                    <c>raw * 4 / 65536</c>.  Write the expression with a
+                    <c>(float)</c> cast placed so the result keeps its
+                    fraction, and say what goes wrong if the cast is
+                    somewhere else.</p></statement>
+                </task>
+            </activity>
+
+            <instructor xml:id="ins-day14-cast">
+                <p>The cast goes on the raw value, first in the chain:</p>
+                <program language="c"><code><![CDATA[
+float a = (float) ACCEL_RAW * ACC_FS / 65536;    // 65536 = 2^16; no need for milli-g
+]]></code></program>
+                <p>Evaluation runs left to right: <c>(float) ACCEL_RAW</c>
+                makes the multiply a float multiply, and then the divide is
+                a float divide, so the fraction survives.  Casting the
+                finished <c>raw * 4 / 65536</c> instead is too late: that
+                expression was already computed in integer arithmetic, the
+                divide already truncated (for us, to a whole number of g),
+                and the damage is done before the cast ever runs.</p>
+            </instructor>
+
+            <!-- check-rules: allow L-2  (this paragraph teaches the delta on
+                 Day 5's no-%f rule: round() in place of the truncating
+                 cast) -->
+            <p>
+                Compute in float, but come back to integers to print.
+                Recall from Day 5 that <c>printf</c>'s <c>%f</c> is not
+                enabled in our projects
+                (<xref ref="subsec-uart-printf-usage"/>); the route is
+                still convert-then-<c>%d</c>.  The new piece is
+                <c>round()</c>, from <c>math.h</c>: where Day 5's cast to
+                <c>int</c> truncated toward zero, <c>round()</c> goes to
+                the nearest integer, which is what you want for an angle
+                headed to a display.
+            </p>
+
+            <p>
+                What does floating point cost?  A <c>float</c> spends its
+                32 bits as a sign bit, an 8-bit exponent, and a 23-bit
+                fraction, so it trades away exactness for range;
+                <xref ref="sec-accel-reference"/> lays the format out.  The
+                bigger cost is that the STM32C031C6 has no FPU (floating
+                point unit), meaning no dedicated hardware circuit for
+                float math, so every float operation is done in software:
+                slower than integer arithmetic, and the library code takes
+                up flash memory.  In Lab 7 you are asked to measure exactly that,
+                your program's size with the math library in it.
+            </p>
+        </subsection>
+
+        <!-- Part 10 -->
+        <subsection xml:id="subsec-day14-lab7">
+            <title>Part 10: Lab 7</title>
+
+            <!-- DELIVERY 2: prose polish only.  The hand-off list is the
+                 content and it is written; do not grow it. -->
+            <p>
+                Everything today pointed at Lab 7.  In the lab you are asked
+                to run two I2C devices on the same bus at once, the
+                accelerometer and the seven-segment display, which is
+                Tuesday's <q>do I need to take the display down?</q>
+                question, now graded; to compute and display tilt from
+                −180° to 180°, with <c>atan2()</c> and <c>round()</c>; and
+                to light orientation LEDs as a phone does when its screen
+                rotates, a design problem that is deliberately yours.  The
+                pre-lab is a working accelerometer driver, which is what
+                you just built.
+            </p>
+        </subsection>
     </section>
 
     <!-- ============================================================
