@@ -1298,10 +1298,15 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
         <title>Day 13x In-Class: What a MEMS Accelerometer Is</title>
 
         <!-- DELIVERY 2: section introduction prose.  OWES: the day's opening
-             paragraph (yesterday we read 0x33 out of a chip without knowing
-             what is inside it; today is the inside — the physics, the
-             datasheet's numbers, and the format the data arrives in
-             tomorrow), in the shape of sec-accel-day13's introduction. -->
+             paragraph, in the shape of sec-accel-day13's introduction and
+             in the recap slide's words — yesterday we wired the LSM303AGR
+             onto the I2C bus, read 0x33 out of its WHO_AM_I register, and
+             watched the transactions on the logic analyzer; today we'll
+             look at how the sensor works inside: the physics that senses
+             acceleration, the numbers in its datasheet, and the format the
+             data will arrive in tomorrow.  Do NOT write "Today is the
+             inside" — her passed line is Day 13 Part 8's closing
+             paragraph (Gate 2' voice, item 1b). -->
 
         <!-- Part 1 -->
         <subsection xml:id="subsec-day13x-physics">
@@ -1319,15 +1324,19 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                  fig-accel-mems (machined out of silicon; the
                  capacitance-to-voltage circuit; the C1/C2 differential
                  detail is Reference material, sec-accel-reference — do not
-                 grow it back here). -->
+                 grow it back here).  The derivation paragraph motivates
+                 and adds the three-axes point; it does NOT re-derive
+                 kx = ma a third time — fig-accel-proof-mass's caption and
+                 sl-day13x-derivation already carry the algebra (B-8). -->
 
             <activity xml:id="act-day13x-mass-commit">
                 <title>What does the mass do?</title>
                 <introduction>
-                    <p>Your phone already measures what we are wiring up this
-                    week: open its level app and tilt the phone, and the
-                    reading follows.  Something inside the phone senses the
-                    motion, and today we look at how.  Inside the sensor
+                    <p>Your phone already measures what we wired up
+                    yesterday: open its level app and tilt the phone (try
+                    it now) — the reading changes as you tilt.  Something
+                    inside the phone senses that motion, and today we'll
+                    look at how it does it.  Inside the sensor
                     a small mass — the <term>proof mass</term> — is connected
                     by a spring to the sensor's case.</p>
                 </introduction>
@@ -1338,6 +1347,16 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                     out.</p></statement>
                 </task>
             </activity>
+
+            <!-- The projected form of act-day13x-mass-commit: the same
+                 question with the AT-REST drawing on the wall (the
+                 displaced drawing is the reveal's — P-15).  Two tellings
+                 of one question: change them together. -->
+            <slide xml:id="sl-day13x-mass-commit" room="yes">
+    <p>Your phone already measures what we wired up yesterday: open its level app and tilt the phone (try it now) — the reading changes as you tilt.  Inside the sensor that does this, a small mass — the <term>proof mass</term> — is connected by a spring to the sensor's case.  Suppose the case accelerates to the right.  Seen from inside the case, what does the mass do?  Commit to an answer, and to a reason, before we work it out.</p>
+    <image source="images/Day13x-Accelerometer/mass_spring_rest.svg" width="56%"/>
+    <note>≈ 3 min, committed in writing with a reason.  The level-app hook comes first — have the room actually pull phones out and tilt; if a student has no level app or a dead phone, the case-accelerating-right scenario alone answers the question — the phone is a hook, not a requirement.  Then pose the mass question.  Collect two or three answers out loud without ruling on them; the derivation on the next slides settles it, not you.  The drawing is deliberately at rest — the displaced drawing is the reveal's.</note>
+</slide>
 
             <instructor xml:id="ins-day13x-mass-commit">
                 <p>Because of its inertia, the mass gets left behind: seen
@@ -1364,7 +1383,7 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
     <ul>
         <li>Acceleration <m>a</m> results in force <m>ma</m> on the mass — that is the force it takes to carry the mass along with the case.</li>
         <li>The spring counteracts with force <m>kx</m>, where <m>k</m> is the spring constant and <m>x</m> is the displacement.</li>
-        <li>These are the same force, so <m>kx = ma</m> — and <m>a = (k/m)x</m>: if we observe a displacement <m>x</m>, then the mass has undergone acceleration <m>a</m>.</li>
+        <li>Measure the displacement <m>x</m> when the forces balance: <m>kx = ma</m> — and <m>a = (k/m)x</m>: if we observe a displacement <m>x</m>, then the mass has undergone acceleration <m>a</m>.</li>
         <li>This system only measures acceleration along the length of the spring.  For a 3-axis accelerometer, duplicate it along three axes.</li>
     </ul>
     <note>≈ 4 min, the reveal's derivation — her slide 3, two named facts before they are combined. If we can measure the displacement we can compute acceleration; the whole rest of today is the two hand-offs that follow (displacement to capacitance, capacitance to bits). No physics course is assumed — both facts are named on the slide.</note>
@@ -1393,9 +1412,10 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                 the proof mass, suspended on springs, and its fingers
                 interleave with fixed fingers to form capacitors that change
                 as it moves.  Right: a micrograph of a real device's
-                interleaved fingers, a few µm across.</caption>
-                <sidebyside widths="66% 24%" margins="2%" valign="middle">
-                    <image source="images/Day13x-Accelerometer/mems_mechanism.png"/>
+                interleaved fingers, a few µm across (surface micromachined
+                capacitors — Roger Howe, Stanford).</caption>
+                <sidebyside widths="48% 36%" margins="4%" valign="middle">
+                    <image source="images/Day13x-Accelerometer/mems_mechanism_rest.png"/>
                     <image source="images/Day13x-Accelerometer/mems_micrograph.png"/>
                 </sidebyside>
             </figure>
@@ -1414,60 +1434,68 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
             <title>Part 2: Why Accelerometers Are Everywhere</title>
 
             <!-- DELIVERY 2: prose.  OWES: one paragraph carrying the three
-                 examples and the one-sentence tail exactly as the slide has
-                 them (Gate 1 spent this Part's slack — three examples plus
-                 one sentence, no growth without a named displacement), and
+                 examples and the two-sentence tail exactly as
+                 sl-day13x-applications has them (Gate 1 spent this Part's
+                 slack — no growth without a named displacement), including
                  the SignalQuest/Simbex sentence. -->
 
             <slide xml:id="sl-day13x-applications">
     <ul>
         <li>Tilt: your phone measures gravity's pull along each axis to decide when to rotate its screen.</li>
         <li>Shock: an airbag sensor detects the sudden deceleration of a crash.</li>
-        <li>Free fall: before solid-state drives, a falling laptop pulled the disk heads off its spinning drive before impact.</li>
-        <li>Accelerometers are also in wearables and football helmets, they monitor vibration in machinery, and paired with a gyroscope they form an IMU (inertial measurement unit) — the motion sensor in vehicles and drones.</li>
-        <li>Two local companies founded by Thayer alumni build on exactly this sensor: SignalQuest (precision motion sensing) and Simbex (the helmet impact sensors).</li>
+        <li>Free fall: before solid-state drives, an accelerometer detected a falling laptop and pulled the disk heads off the spinning drive before it hit the floor.</li>
+        <li>Accelerometers are also in wearables and football helmets; they monitor vibration in machinery; and paired with a gyroscope they form an IMU (inertial measurement unit) — the motion sensor in vehicles and drones.</li>
+        <li>Two local companies founded by Thayer alumni build on exactly this technology: SignalQuest (precision motion sensing) and Simbex (the helmet impact sensors).</li>
     </ul>
-    <note>≈ 3 min, her slide 6 compressed to three examples plus one sentence (Gate 1's trade — the minutes went to Parts 1 and 4). If the clock is behind, this Part drops to one example.</note>
+    <note>≈ 3 min, her slide 6 compressed to three examples plus two sentences (Gate 1's trade — the minutes went to Parts 1 and 4). If the clock is behind, this Part drops to one example.</note>
 </slide>
         </subsection>
 
         <!-- Part 3 -->
         <subsection xml:id="subsec-day13x-datasheet">
-            <title>Part 3: Our Device, by Its Datasheet</title>
+            <title>Part 3: The LSM303AGR, and What Its Datasheet Says</title>
 
             <!-- DELIVERY 2: prose.  OWES: the lead-in paragraph from the
                  generic MEMS structure to our particular part (the LSM303AGR
                  we verified yesterday), a sentence for the block diagram's
-                 chain, and the sensitivity lead-in that poses the commit's
-                 question in the book's own words (P-18) ahead of
-                 act-day13x-sensitivity; the modes-trade and zero-g
-                 sentences following the reveal; the one-sentence breakout
+                 chain — naming the charge amplifier as *the
+                 capacitance-to-voltage circuit from Part 1* (one
+                 parenthetical, not a second explanation) — and the
+                 sensitivity lead-in that poses the commit's question in the
+                 book's own words (P-18) ahead of act-day13x-sensitivity
+                 (the milli-g gloss is NO LONGER owed — it is written in
+                 that activity's introduction; do not repeat it); the
+                 modes-trade and zero-g sentences following the reveal
+                 (typically ±40 mg, Min/Max ±80); the one-sentence breakout
                  close beside fig-accel-breakout. -->
 
             <figure xml:id="fig-lsm303agr-block">
                 <caption>The LSM303AGR's block diagram, from its datasheet.
-                The accelerometer is the upper half (boxed): three variable
-                capacitors — one per axis — feed a charge amplifier, an
-                analog-to-digital converter, and control logic that answers
-                on the I2C bus (the SCL and SDA pins, boxed).  The lower
-                half is a magnetometer, which we don't use; the chip also
-                contains a temperature sensor.</caption>
+                The accelerometer is the upper half, boxed in blue: six
+                sense capacitors — a pair per axis (X±, Y±, Z±) — feed a
+                multiplexer, and the three axes share one charge amplifier
+                and one analog-to-digital converter behind it, the same
+                picture as the STM32C031C6's ADC.  Control logic answers on
+                the SCL and SDA pins, boxed in red (the datasheet prints
+                them SCL/SPC and SDA/SDI/SDO, because the same pins serve
+                SPI).  The lower half is a magnetometer, which we don't
+                use; the chip also contains a temperature sensor.</caption>
                 <image source="images/Day13x-Accelerometer/lsm303agr_block.svg" width="88%"/>
             </figure>
 
             <slide xml:id="sl-day13x-block">
     <ul>
-        <li>Our device: the STMicro LSM303AGR — a 3-axis accelerometer, plus a 3-axis magnetometer and a temperature sensor we won't use.</li>
-        <li>Per axis, the chain is the one we just built: a variable capacitor, a charge amplifier, an analog-to-digital converter, and control logic on the I2C bus.</li>
-        <li>You interact with it through control and data registers, over I2C (SPI is the other option; the breakout wires it for I2C by default).</li>
-        <li>It also has hardware interrupt pins — INT_1_XL, INT_2_XL, and INT_MAG — which we're not using.</li>
+        <li>Our device is the STMicro LSM303AGR: a 3-axis accelerometer, a 3-axis magnetometer, and a temperature sensor.  We'll only use the accelerometer.</li>
+        <li>The signal follows the path we just worked out: a pair of variable capacitors per axis, then — through a multiplexer — one charge amplifier (the capacitance-to-voltage circuit from earlier today) and one analog-to-digital converter shared by all three axes, and control logic that puts the result on the I2C bus.</li>
+        <li>You interact with it through control and data registers, over I2C (SPI is the other option; the breakout wires it for I2C by default), and through hardware interrupt pins we're not using.</li>
     </ul>
-    <note>≈ 1 min. Her slides 7 and 10, folded — the claims first; the diagram is next, full size, and the chain gets walked there. Registers over I2C is yesterday made general: WHO_AM_I was one of the control registers.</note>
+    <note>≈ 1 min. Her slides 7 and 10, folded — the claims first; the diagram is next, full size, and the chain gets walked there. Registers over I2C is yesterday made general: WHO_AM_I is one you read; the control registers are the ones you write.</note>
 </slide>
 
-            <slide xml:id="sl-day13x-block-fig" ref="fig-lsm303agr-block">
-    <caption>The accelerometer is the boxed upper half: find the three variable capacitors on the left, then the charge amplifier, the A/D converter, and the control logic that answers on the SCL and SDA pins.</caption>
-    <note>≈ 2 min. Walk the chain left to right on the diagram — this is Part 1's physics arriving at yesterday's bus. The lower half is the magnetometer we don't use.</note>
+            <slide xml:id="sl-day13x-block-fig">
+    <image source="images/Day13x-Accelerometer/lsm303agr_block_accel.svg" width="94%"/>
+    <caption>The accelerometer half: find the six sense capacitors on the left — a pair per axis — then the multiplexer, the one charge amplifier and one A/D converter they share, and the control logic that answers on the SCL and SDA pins.</caption>
+    <note>≈ 2 min. Walk the chain left to right on the diagram — this is Part 1's physics arriving at yesterday's bus. The slide shows the accelerometer half so the labels are readable from the back; the full diagram, with the magnetometer's identical lower half, is in the book.</note>
 </slide>
 
             <activity xml:id="act-day13x-sensitivity">
@@ -1475,9 +1503,12 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                 <introduction>
                     <p>The datasheet's sensor-characteristics table
                     (<url href="external/datasheets/lsm303agr.pdf">LSM303AGR
-                    datasheet</url>, §2.1, Table 3, pp. 13–14) is where the
-                    measurement starts: first pick a full-scale range —
-                    ±2 g, ±4 g, ±8 g, or ±16 g.  We'll use ±2 g, and the
+                    datasheet</url>, §2.1, Table 3, pp. 13–14) says how
+                    acceleration at the input is turned into bits at the
+                    output.  The first thing to decide is the measurement
+                    range: ±2 g, ±4 g, ±8 g, or ±16 g — where 1 g is the
+                    acceleration of gravity, 9.8 m/s², and one milli-g (mg)
+                    is a thousandth of that.  We'll use ±2 g, and the
                     sensor's <term>normal</term> resolution mode, which
                     gives 10 valid bits per reading.</p>
                 </introduction>
@@ -1485,16 +1516,18 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                     <statement><p>The <term>sensitivity</term> is the size of
                     one step of the output — how much acceleration one least
                     significant bit stands for.  From the range and the bit
-                    count, compute it, in mg per step.  This is the ADC
-                    argument from <xref ref="ch-adc"/> again: the full range,
-                    divided into <m>2^{bits}</m> bins.</p></statement>
+                    count, compute it, in milli-g per step.  This is the same
+                    calculation we did for the ADC (<xref ref="ch-adc"/>):
+                    the full range, divided into <m>2^{bits}</m>
+                    bins.</p></statement>
                 </task>
             </activity>
 
             <slide xml:id="sl-day13x-specs-commit" room="yes">
-    <p>Pick the ±2 g range, in normal mode — 10 valid bits.  The sensitivity is the size of one step: how much acceleration does one least significant bit stand for?  Compute it, in mg.  (This is the ADC argument again: the full range, divided into 2^bits bins.)</p>
+    <p>The sensitivity is the size of one step: how much acceleration does one least significant bit stand for?  Compute it, in milli-g (mg), for the ±2 g range in normal mode — 10 valid bits.  (This is the same calculation we did for the ADC on Day 7: the full range, divided into 2^bits bins.)</p>
+    <image source="images/Day13x-Accelerometer/accel_specs_header.png" width="82%"/>
     <image source="images/Day13x-Accelerometer/accel_specs_masked.svg" width="82%"/>
-    <note>≈ 3 min, committed in writing before the reveal.  The sensitivity column is masked on purpose — the datasheet prints the answer, and the point is to derive it (range / 2^bits, Day 7's 1 LSB = V_ref/2^B in new units).  Full range 4 g, not 2: the range is ±2 g.</note>
+    <note>≈ 3 min, committed in writing before the reveal.  The sensitivity column is masked on purpose — the datasheet prints the answer, and the point is to derive it (range / 2^bits, Day 7's 1 LSB = V_ref/2^B in new units).  Full range 4 g, not 2: the range is ±2 g.  The top strip carries the Min/Typ/Max column headers the masked block's columns belong to.</note>
 </slide>
 
             <instructor xml:id="ins-day13x-sensitivity">
@@ -1503,9 +1536,9 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                 2¹⁰ = 1024 bins:
                 4 g / 1024 = 3.90625 mg per step.  The datasheet's Table 3
                 prints 3.9 mg/LSB for this range and mode — our derived
-                number, rounded — and the note under the table says the same
-                thing in its own words: <q>1 LSb = 3.9 mg in normal mode
-                (10-bit) at FS = ±2 g</q>.  Rounded once more, one digit of
+                number, rounded — and the table's note 8 says the same
+                thing in its own words: <q>1LSb = 3.9 mg in normal mode
+                (10-bit) at FS=±2 g</q>.  Rounded once more, one digit of
                 the output is worth about 4 mg.</p>
             </instructor>
 
@@ -1517,8 +1550,9 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                 high-resolution is 12 bits, normal 10, low-power 8 — and at
                 ±2 g in normal mode the table prints 3.9 mg/LSB, the
                 number we derived as 4 g / 2¹⁰ = 3.90625 mg.  Bottom: the
-                zero-g offset row — a sensor lying perfectly flat can read
-                up to ±40 mg away from the true value.</caption>
+                zero-g offset row — a sensor lying perfectly flat reads
+                typically ±40 mg away from the true value, and the table's
+                Min and Max columns allow ±80.</caption>
                 <image source="images/Day13x-Accelerometer/accel_specs_range.png" width="86%"/>
                 <image source="images/Day13x-Accelerometer/accel_specs_sensitivity.svg" width="86%"/>
                 <image source="images/Day13x-Accelerometer/accel_specs_offset.png" width="86%"/>
@@ -1526,25 +1560,26 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
 
             <slide xml:id="sl-day13x-specs-reveal">
     <ul>
-        <li>The table prints 3.9 mg/LSB at ±2 g in normal mode — our 3.90625, rounded.  The three modes trade speed against resolution: fewer bits means faster measurements and bigger steps.</li>
-        <li>The zero-g offset row (below) is worth reading honestly: lying perfectly flat, the sensor can read up to ±40 mg away from the true value — that is ten of our steps.</li>
+        <li>The unmasked table confirms the arithmetic.  The three modes trade resolution against speed: fewer bits means bigger steps, and low-power mode runs at rates the other two cannot.</li>
+        <li>The zero-g offset row is below it: lying perfectly flat, the sensor reads typically ±40 mg away from the true value, and the datasheet's Min and Max columns allow ±80.  That is ten of our steps — twenty at the limit — and a significant amount of error.</li>
     </ul>
-    <image source="images/Day13x-Accelerometer/accel_specs_sensitivity.svg" width="68%"/>
-    <image source="images/Day13x-Accelerometer/accel_specs_offset.png" width="68%"/>
-    <note>≈ 1 min — the unmasked column confirms the arithmetic; then the modes trade and the offset row. ±40 mg is significant — it comes back as the stretch's calibration question, and tomorrow's suggested tests will show it on real boards.</note>
+    <image source="images/Day13x-Accelerometer/accel_specs_sensitivity.svg" width="74%"/>
+    <image source="images/Day13x-Accelerometer/accel_specs_offset.png" width="74%"/>
+    <note>≈ 1 min — the unmasked column confirms the arithmetic; then the modes trade and the offset row. ±40 mg typical is significant — it comes back as the stretch's calibration question, and tomorrow's suggested tests will show it on real boards.</note>
 </slide>
 
             <figure xml:id="fig-accel-breakout">
                 <caption>The breakout board's schematic (partial).  The
-                pull-up resistors for SDA and SCL are on the board, and
-                pull-ups on the chip's configuration pins strap it into I2C
-                mode; a regulator supplies the chip, and the 6-pin header
-                is where the STEMMA QT connector's four wires arrive.</caption>
+                board carries what the chip needs: pull-up resistors on SDA
+                and SCL, a regulator to supply the chip, and pull-ups on
+                the configuration pins that strap it into I2C mode.  The
+                6-pin header brings power, ground, SCL, SDA and the
+                magnetometer interrupt out to the breadboard.</caption>
                 <image source="images/Day13x-Accelerometer/breakout_schematic.svg" width="92%"/>
             </figure>
 
             <slide xml:id="sl-day13x-breakout" ref="fig-accel-breakout">
-    <caption>The breakout does the analog housekeeping for us: pull-ups on the board, a regulator, and pull-ups that strap the chip into I2C mode.</caption>
+    <caption>The breakout carries the parts the chip needs: the I2C pull-up resistors, a voltage regulator, and pull-ups on the configuration pins that set the chip for I2C.</caption>
     <note>≈ 1 min, one sentence — her slide 9.  The big chip is the accelerometer, the little one the regulator; the SDA and SCL wires run to on-board pull-ups.  Do not linger; the schematic is here so the board is not a black box.</note>
 </slide>
         </subsection>
@@ -1561,10 +1596,23 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                  one-byte-unsigned paragraph with the 0x4000 walk; the sign
                  paragraph (bit 15 is worth −2¹⁵ — FIRST teaching, nothing
                  before Week 7 decodes a signed bit pattern; the 4-bit +2/−2
-                 contrast; the 0xC000 worked example); the collapse
-                 paragraph reading fig-accel-data-format; and the lead-in
-                 sentences for the auto-increment and byte-assembly beats
-                 (their load-bearing content is already written below). -->
+                 contrast; the 0xC000 worked example by the top-byte route,
+                 fig sign_bit_weights beside it) — THE ONE PARAGRAPH HERE
+                 NOT TO BE COMPRESSED: slides are stripped from the reading
+                 book, so this is the only place a student can go back to
+                 two's complement; the collapse paragraph, which READS
+                 fig-accel-data-format rather than restating its rows; the
+                 milli-g paragraph (units of g, 1 g = 9.8 m/s², ×1000 gives
+                 mg) with a body <program> carrying the ACC_FS /
+                 ACC_REGISTERWIDTH / MILLI block that sl-day13x-mg-formula
+                 condenses — accel_test.c's names, and the SHIFT, not the
+                 divide — plus a forward xref to sec-accel-reference for
+                 the signed-shift caveat behind "the shift by 16 does the
+                 divide by 2¹⁶"; the lsm303AccelData_s struct as a body
+                 <program> with a one-sentence pointer gloss; and the
+                 lead-in sentences for the auto-increment and byte-assembly
+                 beats (their load-bearing content is already written
+                 below). -->
 
             <slide xml:id="sl-day13x-one-byte">
     <ul>
@@ -1578,44 +1626,45 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
             <slide xml:id="sl-day13x-sign">
     <ul>
         <li>So far we read the byte as unsigned — but acceleration has a direction, and the sensor's output is a <term>two's complement</term> number: bit 15 is worth −2¹⁵, not +2¹⁵.  Every other bit keeps its usual value.</li>
-        <li>The idea in 4 bits: 0b0010 reads 2.  In two's complement, 0b1110 reads −8 + 4 + 2 = −2 — the top bit is worth −8, and the rest are ordinary.</li>
+        <li>The same idea is easier to see in 4 bits: 0b0010 reads 2, and in two's complement 0b1110 reads −8 + 4 + 2 = −2, because the top bit is worth −8 and the rest are ordinary.</li>
         <li>A number with its top bit set is therefore negative, and its value is the unsigned reading minus 2 to the width: 0b1110 is 14 − 16 = −2.</li>
     </ul>
-    <note>≈ 3 min — FIRST teaching, not review: nothing before this week has decoded a signed bit pattern.  Land the one fact (the top bit's value is negative) and its consequence (unsigned minus 2^width), both shown in 4 bits before anyone sees 16.</note>
+    <image source="images/Day13x-Accelerometer/sign_bit_weights.svg" width="64%"/>
+    <note>≈ 3 min — FIRST teaching, not review: nothing before this week has decoded a signed bit pattern.  Land the one fact (the top bit's value is negative) and its consequence (unsigned minus 2^width), both shown in 4 bits before anyone sees 16 — point at the crossed-out weight in the picture as you say it.</note>
 </slide>
 
             <slide xml:id="sl-day13x-worked">
     <ul>
         <li>The reading is 0xC000 = 0b1100 0000 0000 0000.  Bit 15 is set, so the value is negative: −2¹⁵ + 2¹⁴ = −32768 + 16384 = −16384.  (Equivalently: unsigned 0xC000 is 49152, and 49152 − 65536 = −16384.)</li>
-        <li>Carried to milli-g: (4 × −16384 × 1000) / 2¹⁶ = <em>−1000 mg</em> — minus one g.</li>
-        <li>That is tomorrow's experiment: a board lying flat reads about +1000 mg on its z axis, and flipping it over flips the sign.</li>
+        <li>In milli-g, by the route we already have: in low-power mode the valid bits are the top byte alone — 0xC0 is 192 unsigned, and 192 − 256 = −64, at 15.625 mg a step.  So −64 × 15.625 = <em>−1000 mg</em>: minus one g, and comfortably inside the ±2000 mg the range allows.</li>
+        <li>Tomorrow we'll check this on real boards: lying flat, a board reads about +1000 mg on its z axis, and flipping it over flips the sign.</li>
     </ul>
-    <note>≈ 2 min, worked TOGETHER on the board, top to bottom — this is the model for the conversion the room does alone next.  Both sign routes shown once: the bit-worth sum and unsigned-minus-2¹⁶.</note>
+    <note>≈ 2 min, worked TOGETHER on the board, top to bottom — this is the model for the conversion the room does alone shortly.  Both sign routes shown once: the bit-worth sum and unsigned-minus-2¹⁶ — then the same shift-and-scale the 0x4000 example used, sign carried along, and the plausibility check said out loud.  The next slide's formula gets the same answer from the whole 16-bit word.</note>
 </slide>
 
             <figure xml:id="fig-accel-data-format">
                 <caption>The three resolution modes write their valid bits
                 into the same 16-bit word, always starting at bit 15 —
                 low-power mode fills 8 bits, normal 10, high-resolution 12,
-                with zeros below.  Bit 15 is the sign, worth −2¹⁵.  Because
-                the valid bits always start in the same place, one formula
-                converts the raw word in every mode:
-                <m>a = \mathrm{FS} \cdot \mathrm{raw} / 2^{16}</m>.</caption>
+                with zeros below.  Bit 15 is the sign, worth −2¹⁵, so one
+                formula converts the raw word in every mode:
+                <m>a = \mathrm{FS} \cdot \mathrm{raw} / 2^{16}</m>, where
+                FS is the full-scale range, 4 g here.</caption>
                 <image source="images/Day13x-Accelerometer/data_format_rows.svg" width="80%"/>
             </figure>
 
             <slide xml:id="sl-day13x-collapse" ref="fig-accel-data-format" stack="yes">
     <ul>
-        <li>In each mode: shift the zeros off, then scale by that mode's step.  Low-power: (raw ≫ 8) · 4g/2⁸.  Normal: (raw ≫ 6) · 4g/2¹⁰.  High-resolution: (raw ≫ 4) · 4g/2¹².</li>
-        <li>Every one of them simplifies to the same thing: a = 4g · raw / 2¹⁶.  Left-justification is why — the valid bits always start at bit 15, so the shift and the step size always cancel to 2¹⁶.</li>
+        <li>Each row shifts its zeros off and scales by that mode's step — the equation is on the row.</li>
+        <li>Every one of them simplifies to the same thing: a = 4g · raw / 2¹⁶.  This works because the valid bits always start at bit 15, so the shift and the step size always cancel to 2¹⁶.</li>
     </ul>
-    <note>≈ 2 min. Her slide 15's three bit-rows, with the zeros visible — show the algebra on one row and say the other two collapse the same way.  The punchline is one formula in every mode.</note>
+    <note>≈ 2 min. Her slide 15's three bit-rows, with the zeros visible and each mode's equation at the end of its own row — show the algebra on one row and say the other two collapse the same way.  Close the loop on 0xC000: 4 g × (−16384) / 2¹⁶ = −1000 mg, the same answer the top-byte route gave.  The punchline is one formula in every mode.</note>
 </slide>
 
             <slide xml:id="sl-day13x-mg-formula">
     <p>In milli-g, for the ±2 g range, the conversion is</p>
     <program language="c"><code><![CDATA[
-a = (4 * ACCEL_raw * 1000) / 65536             // in mg
+a = (4 * ACCEL_raw * 1000) >> 16;              // in mg
 
 // or, with names instead of magic numbers:
 #define ACC_FS            4                    // full-scale range, in g
@@ -1624,7 +1673,7 @@ a = (4 * ACCEL_raw * 1000) / 65536             // in mg
 
 a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;
 ]]></code></program>
-    <caption>The units of the output are g — 1 g = 9.8 m/s² — so multiplying by 1000 gives milli-g, and the divide by 2¹⁶ is the shift.</caption>
+    <caption>The units of the output are g — 1 g = 9.8 m/s² — so multiplying by 1000 gives milli-g, and the shift by 16 does the divide by 2¹⁶.</caption>
     <note>≈ 1 min, her slide 16.  The #defines are accel_test.c's, verbatim; tomorrow's scaling line in accel_test.c is this computation, done once per axis.</note>
 </slide>
 
@@ -1639,9 +1688,10 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;
                 </task>
                 <task xml:id="task-day13x-offset-stretch">
                     <statement><p>If you finish early: the datasheet's
-                    zero-g offset row says a flat, motionless board can
-                    read up to ±40 mg off.  Suppose your board reads
-                    +1032 mg lying flat and −968 mg lying flipped.  What is
+                    zero-g offset row says a flat, motionless board
+                    typically reads ±40 mg off, and its Min and Max columns
+                    allow ±80.  Suppose your board averages +1032 mg lying
+                    flat and −968 mg lying flipped.  What is
                     its offset, and how would you correct future
                     readings?</p></statement>
                 </task>
@@ -1656,9 +1706,9 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;
                 <p>The stretch: the two readings should be +1000 and
                 −1000 mg; they are both 32 mg high, so the offset is their
                 average, (1032 + (−968)) / 2 = +32 mg.  Correct future
-                readings by subtracting 32 mg.  That is the calibration
-                her datasheet note describes: read flat, read flipped,
-                average.</p>
+                readings by subtracting 32 mg.  That is how you calibrate
+                the zero-g offset out: read flat, read flipped, and
+                average the two readings.</p>
             </instructor>
 
             <!-- Auto-increment: the load-bearing quote is written now
@@ -1667,9 +1717,10 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;
                 The three axes arrive as six data registers at successive
                 subaddresses — <c>OUT_X_L_A</c> at 0x28 through
                 <c>OUT_Z_H_A</c> at 0x2D — and you can read all six bytes
-                in one transfer, starting at 0x28.  One thing has to be
-                said to the chip first, and the datasheet says it in §6.1.1
-                (p. 38):
+                in one transfer, starting at 0x28, if you set one bit in
+                the register address first.  The datasheet explains that
+                bit in §6.1.1 (p. 38) — where its <q>slave</q> is our
+                target and <q>MSb</q> is the most significant bit:
             </p>
             <blockquote>
                 <p>After the start condition (ST) a slave address is sent,
@@ -1681,16 +1732,19 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;
                 multiple data read/writes.</p>
             </blockquote>
             <p>
-                So instead of sending 0x28 as the register address, send
-                <c>0x28 | (1&lt;&lt;7)</c>: the accelerometer then advances
-                to the next data register after every byte, and one
-                six-byte read collects all three axes.
+                So instead of sending 0x28 as the register address, you
+                send <c>0x28 | (1&lt;&lt;7)</c>, and the accelerometer
+                advances to the next data register after every byte.  This
+                is the read pattern of
+                <xref ref="fig-i2c-transfer-pattern"/>, extended to
+                multiple bytes.
             </p>
 
             <slide xml:id="sl-day13x-autoincrement">
-    <p>The three axes arrive as six data registers at successive subaddresses — OUT_X_L_A at 0x28 through OUT_Z_H_A at 0x2D — and you can read all six bytes in one transfer.  But note (Datasheet §6.1.1): the subaddress's MSB enables address auto-increment.  Send <c>0x28 | (1&lt;&lt;7)</c>, and the register address advances after every byte.</p>
-    <image source="images/Day13-I2C(3)/i2c_transfer_reads.svg" width="88%"/>
-    <note>≈ 2 min. The tables are yesterday's — Table 22 is the WHO_AM_I read's shape; Table 23 is today's payoff, the multi-byte read: after each DATA the controller ACKs (MAK) and the chip serves the next register, until the final NACK.  The gloss line under Table 23 is the auto-increment rule.</note>
+    <p>The three axes arrive as six data registers at successive subaddresses — OUT_X_L_A at 0x28 through OUT_Z_H_A at 0x2D — and you can read all six bytes in one transfer.  But note (Datasheet §6.1.1): the subaddress's most significant bit (MSB) enables address auto-increment.  Send <c>0x28 | (1&lt;&lt;7)</c> instead of 0x28.</p>
+    <image source="images/Day13-I2C(3)/i2c_transfer_reads.svg" width="94%"/>
+    <caption>Table 22 is yesterday's single-register read; Table 23 is today's — after each DATA byte the controller ACKs (MAK) and the chip serves the next register, until the final NACK.</caption>
+    <note>≈ 2 min. The gloss line under Table 23 is the auto-increment rule.  If anyone asks about the tables' Master and Slave rows: its Master is our controller, its slave our target — said on Day 13 too.</note>
 </slide>
 
             <!-- Byte assembly: its own beat (Gate 1 item 4) — the claim is
@@ -1700,20 +1754,22 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;
                 The six bytes come back <em>low byte first</em>:
                 <c>OUT_X_L_A</c> at 0x28 holds the low byte of x and
                 <c>OUT_X_H_A</c> at 0x29 the high byte.
-                <c>lsm303_AccelReadRaw()</c> — given to you, and short
-                enough to read whole — makes the six-byte read and then
+                <c>lsm303_AccelReadRaw()</c>, which we'll hand you, makes
+                the six-byte read and then
                 assembles each pair into one signed 16-bit value:
                 <c>((int16_t) data[1] &lt;&lt; 8) | ((int16_t) data[0])</c>
-                promotes each byte to 16 bits, moves the high byte up
-                eight places, and ORs the two together.  This is a
-                different use of the shift-and-OR machinery than we have
-                seen so far: it builds a wider signed value out of two
-                array elements, rather than setting a bit inside a
+                widens each byte, moves the high byte up
+                eight places, ORs them, and stores the result in an
+                <c>int16_t</c> — which is where bit 15 becomes the sign.
+                This is a
+                different use of the shift and OR operators than we have
+                seen so far: here they build a wider signed value out of
+                two array elements, rather than setting a bit inside a
                 register.
             </p>
 
             <slide xml:id="sl-day13x-readraw">
-    <p><c>lsm303agr.h</c> declares a structure for one three-axis reading, and <c>lsm303_AccelReadRaw()</c> — given to you — fills it: one six-byte auto-increment read, then each pair of bytes is assembled low-byte-first into a signed 16-bit value.</p>
+    <p><c>lsm303agr.h</c> declares a structure for one three-axis reading, and <c>lsm303_AccelReadRaw()</c> — given to you — fills it: one six-byte auto-increment read, then each pair of bytes is assembled low-byte-first — <c>data[0]</c> is <c>OUT_X_L_A</c> — into a signed 16-bit value.</p>
     <program language="c"><code><![CDATA[
 typedef struct {
 	int16_t x;
@@ -1731,8 +1787,8 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
 	result->z = ((int16_t) data[5] << 8) | ((int16_t) data[4]);
 }
 ]]></code></program>
-    <caption>These functions use i2c.c and lsm303agr.h — Day 10's firmware layers, made concrete.</caption>
-    <note>≈ 2 min.  The listing is abridged for the wall (the file's comment blocks are off it); the full file arrives tomorrow as lsm303agr_partial.c.  Low byte first: data[0] is OUT_X_L_A.  The shift-and-OR builds a wider signed value from two array elements — a new use of familiar machinery, worth saying out loud.</note>
+    <caption>This function uses i2c.c and lsm303agr.h: it is the device-driver layer from Day 10, now for the accelerometer.</caption>
+    <note>≈ 1 min.  The listing is abridged for the wall (the file's comment blocks are off it); the full file arrives tomorrow as lsm303agr_partial.c.  Low byte first: data[0] is OUT_X_L_A.  The shift and OR build a wider signed value from two array elements — a new use of familiar operators, worth saying out loud.</note>
 </slide>
         </subsection>
 
@@ -1746,20 +1802,28 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
 
             <!-- DELIVERY 2: prose.  OWES: the lead-in paragraph (the data
                  format is settled; what remains is telling the sensor how
-                 to run) and a closing sentence pointing at the reading,
-                 xref sec-accel-day14-before. -->
+                 to run); the six control registers, one line each, as body
+                 prose or a body <tabular> — sl-day13x-control-regs is
+                 stripped from the reading book, and Part 5 would otherwise
+                 reach the chapter as two sentences — with CTRL_REG1_A and
+                 CTRL_REG4_A marked as ours (CTRL_REG2_A is HIGH-PASS
+                 filter configuration, §8.7; the resolution mode is
+                 CTRL_REG4_A's HR bit together with CTRL_REG1_A's LPen —
+                 do not re-introduce "analog filter" or "power mode" as a
+                 separate thing); and a closing sentence pointing at the
+                 reading, xref sec-accel-day14-before. -->
 
             <slide xml:id="sl-day13x-control-regs">
     <p>The accelerometer has six control registers, all reachable over I2C.  Only two of them matter for us — the rest are about features we leave at their defaults.</p>
     <tabular halign="left">
         <col width="30%"/><col width="70%"/>
         <row header="yes"><cell>Register</cell><cell>What it governs</cell></row>
-        <row><cell><c>CTRL_REG1_A</c></cell><cell>Data rate, power mode, axis selection — <em>ours to set</em>.</cell></row>
-        <row><cell><c>CTRL_REG2_A</c></cell><cell>Analog filter selection (we accept the defaults).</cell></row>
+        <row><cell><c>CTRL_REG1_A</c></cell><cell>Data rate, the LPen bit, axis selection — <em>ours to set</em>.</cell></row>
+        <row><cell><c>CTRL_REG2_A</c></cell><cell>High-pass filter configuration (§8.7) — bypassed by default.</cell></row>
         <row><cell><c>CTRL_REG3_A</c></cell><cell>Interrupt selection (none used; off by default).</cell></row>
-        <row><cell><c>CTRL_REG4_A</c></cell><cell>Full-scale range (±2, ±4, ±8, ±16 g) and resolution mode — <em>ours to set</em>.</cell></row>
-        <row><cell><c>CTRL_REG5_A</c></cell><cell>More interrupts (none used; off by default).</cell></row>
-        <row><cell><c>CTRL_REG6_A</c></cell><cell>Yet more interrupts (none used; off by default).</cell></row>
+        <row><cell><c>CTRL_REG4_A</c></cell><cell>Full-scale range (±2, ±4, ±8, ±16 g) and the HR bit; together with LPen in <c>CTRL_REG1_A</c> it picks the resolution mode — <em>ours to set</em>.</cell></row>
+        <row><cell><c>CTRL_REG5_A</c></cell><cell>Interrupt configuration (unused; defaults).</cell></row>
+        <row><cell><c>CTRL_REG6_A</c></cell><cell>Interrupt configuration (unused; defaults).</cell></row>
     </tabular>
     <note>≈ 3 min, her slide 11 moved to the end on purpose: this question is the last thing said before the homework that answers it.  Everything today assumed ±2 g and normal mode — CTRL_REG1_A and CTRL_REG4_A are where those choices actually get made.  End-of-class beat: protected, do not cut.</note>
 </slide>
@@ -1769,16 +1833,19 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
         <subsection xml:id="subsec-day13x-homework">
             <title>Homework for Thursday</title>
 
-            <!-- DELIVERY 2: prose.  OWES: the two-sentence close (the
-                 scavenger-hunt reading, xref sec-accel-day14-before,
-                 decides what goes into those two registers; RegisterWrite
-                 on paper if not already done; tomorrow, data on the
-                 screen). -->
+            <!-- DELIVERY 2: prose.  OWES: the three-item close (the
+                 reading, xref sec-accel-day14-before, "a guided walk
+                 through the datasheet"; lsm303_AccelRegisterWrite() on
+                 paper; the CTRL_REG1_A/CTRL_REG4_A settings worked out on
+                 paper), matching Day 13 Part 8 and her slide 19, plus
+                 "tomorrow, data on the screen".  L-13: the reading does
+                 not "decide" anything. -->
 
             <slide xml:id="sl-day13x-close">
     <ul>
-        <li>Do the accelerometer readings on the daily page — the reading is a scavenger hunt through the datasheet, and it decides what goes into CTRL_REG1_A and CTRL_REG4_A.  Take notes on paper.</li>
+        <li>Do the accelerometer readings on the daily page — a guided walk through the datasheet.</li>
         <li>On paper, write <c>lsm303_AccelRegisterWrite()</c>, if you have not already.  (Mimic the read function.)</li>
+        <li>From the datasheet, work out what settings belong in <c>CTRL_REG1_A</c> and <c>CTRL_REG4_A</c>, and take notes on paper.</li>
     </ul>
     <caption>Tomorrow we'll put your settings into the sensor and get acceleration data onto the screen.</caption>
     <note>≈ 2 min, her slide 19.  Same assignment as yesterday's Part 8 — this is the reminder, not a new item.  The register question is the one the class was just set up for.</note>

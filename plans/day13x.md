@@ -6,9 +6,11 @@ one.** Chapter: `source/ch-accelerometers.ptx`. Old deck:
 `Day13x-Accelerometer.pptx` (19 slides). Ground truth:
 `plans/week7-ground-truth.md`. Gate 1 applied: `reviews/week7-gate1.md`.
 
-Yesterday the class read 0x33 out of a chip without knowing what is inside
-it. Today is the inside: the physics, the datasheet's numbers, and the format
-the data will arrive in tomorrow.
+Yesterday the class wired the LSM303AGR onto the I2C bus, read 0x33 out of
+its WHO_AM_I register, and watched the transactions on the logic analyzer.
+Today we look at how the sensor works inside: the physics that senses
+acceleration, the numbers in its datasheet, and the format the data will
+arrive in tomorrow.
 
 ## Objectives
 
@@ -92,7 +94,7 @@ not-cuttable list for the same reason.
 | --- | --- | --- | --- |
 | — | 2 | — | Settling |
 | 0 | 1 | tell | Announcements |
-| 1 | 11 | predict → explain | **The physics.** Commit, `room="yes"` — *the case accelerates to the right; what does the mass do, seen from inside the case?* — with a second concrete route in: pull out your phone's level app and tilt it (3). Then the derivation, two named facts before they are combined: **F = ma** (the mass resists) and **F = kx** (the spring pushes back in proportion); the same force, so kx = ma → a = (k/m)x — measure displacement, get acceleration; three copies for three axes (6). Displacement → capacitance, and the whole structure etched in silicon — the MEMS pictures; the differential C1/C2 detail goes to Reference (2) |
+| 1 | 11 | predict → explain | **The physics.** Commit, `room="yes"` — *the case accelerates to the right; what does the mass do, seen from inside the case?* — with a second concrete route in: pull out your phone's level app and tilt it (3). Then the derivation, two named facts before they are combined: **F = ma** (the mass resists) and **F = kx** (the spring pushes back in proportion); measure the displacement x when the forces balance, kx = ma → a = (k/m)x — measure displacement, get acceleration; three copies for three axes (6). Displacement → capacitance, and the whole structure etched in silicon — the MEMS pictures; the differential C1/C2 detail goes to Reference (2) |
 | 2 | 3 | tell | **Why these are everywhere.** Three examples: tilt (your phone's screen), airbags, laptop free-fall protection; one sentence on the rest (helmets, vibration monitoring, + gyro = IMU) with SignalQuest and Simbex named, both Thayer-founded (3) |
 | 3 | 9 | do → explain | **Our device, by its datasheet.** The block diagram: three sense capacitors → ADC → logic → I2C; control registers and data registers are how you interact — I2C here (SPI exists; the breakout straps it to I2C), and the INT pins we do not use (3). **Datasheet moment:** pick ±2 g; commit, `room="yes"`: *at 10 bits, what is the sensitivity?* — the same LSB-size logic as the ADC's V_ref/2^B (Day 7): 4 g / 2¹⁰ = 3.9 mg — which is what the datasheet itself prints (§2.1 Table 3: "1 LSb = 3.9 mg in normal mode (10-bit) at FS=±2 g"; her old slide's callout rounds it to 4). **The commit-time table image must have the sensitivity column masked or cropped — the full table is the reveal** (4). The three modes as a trade (speed vs resolution), and the zero-g offset line read honestly (1). The breakout schematic in one sentence: pull-ups on board, a regulator, the pull-ups strap it to I2C (1) |
 | 4 | 19 | do → reveal | **The data format — CRUCIAL.** (1) One byte, unsigned: the reading arrives at a **subaddress — the datasheet's own word for yesterday's register address** — and the value lives at the *top* of a 16-bit word; 8-bit mode first, shift and scale, no three-mode picture yet (3). (2) **The sign — first teaching, not review**: bit 15 is worth −2¹⁵, not +2¹⁵ — the one fact that lets "left-justified" and "two's complement" compose; a 4-bit +2/−2 contrast; then one worked hex example carried to mg on the board: `0xC000` → `1100 0000 …` → bit 15 set → 49152 − 65536 = −16384 → (4 × −16384 × 1000)/2¹⁶ = **−1000 mg** — tomorrow's flip test (5). (3) **The collapse**: now her three bit-row pictures with the zeros visible — (raw ≫ 6)·4g/2¹⁰ = 4g·raw/2¹⁶, the same in every mode, and the mg form with the #defines (3). (4) **On paper, committed — a negative raw value**: convert it to mg; reveal together (4). (5) Six bytes in one transfer: subaddresses 0x28–0x2D, and the subaddress MSB that turns on auto-increment (`0x28 \| (1<<7)`, datasheet §6.1.1) (2). (6) **Byte assembly**: the six bytes come back **low byte first** — `OUT_X_L_A` at 0x28, `OUT_X_H_A` at 0x29 — and `AccelReadRaw()` joins each pair with `result->x = ((int16_t)data[1] << 8) \| ((int16_t)data[0])`, an operation unlike the bit-idioms so far (it builds a wider signed value from two array elements, not a bit inside one register). These functions use `i2c.c` and `lsm303agr.h` — Day 13's layers figure, made concrete (2) |
@@ -109,7 +111,8 @@ funding Parts 1 and 4. **If a part still overruns:** Part 2 drops to one
 example (−2), and the close absorbs one minute. **Not cuttable:** Part 4
 (Day 14's scaling line and Lab 7's tilt both stand on it), Part 3's
 sensitivity commit (already compressed once — if the room stalls on the
-derivation, its fifth minute is the first thing to give back), and **Part 5**
+derivation, the commit's discussion minute is the first thing to give back),
+and **Part 5**
 — it is the sole in-class setup for the homework that Day 14 Part 2's commit
 stands on, and end-of-class beats get cut by the clock unless the plan
 protects them.
