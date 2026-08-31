@@ -121,9 +121,13 @@ flip-and-shake → Part 8's single-axis contrast compressed (state, don't
 derive, why atan2 wins) — and if the room visibly did not do the paper
 homework, treat Part 4 as needing the full buffer. **Never cut** Parts 4–5
 (the crucial step) or Part 9's cast-and-round mechanics — Lab 7's
-Deliverable 3 dies without them; and never cut Part 3's build-exclusion beat,
+Deliverable 3 dies without them; never cut Part 3's build-exclusion beat,
 because a two-`main` project fails with a linker error no student has seen
-before.
+before; and never cut Part 6, because Lab 7 presumes the driver is in
+`mylib`. Part 7's beats were re-split at Gate 2′ (2 modify + 5 chart view +
+4 experiments + 1 reveal): the chart view is a first-time tool on thirty
+laptops, and Part 6, a repeat of Day 10's procedure, is the natural source
+of surplus minutes if it needs more.
 
 ## Datasheet moments (P-11)
 
