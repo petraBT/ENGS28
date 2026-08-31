@@ -3439,37 +3439,304 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
     </section>
 
     <!-- ============================================================
-         DELIVERY (week 7, session 4): sec-accel-reference prose.
-         Sibling shape is sec-i2c-reference ("nothing here is new"
-         opener, then lookup-form subsections).  OWES, by id — each is
-         already asserted or promised somewhere a reader can see:
-           - the signed-shift note (>> is an arithmetic floor shift) —
-             the xref in subsec-day13x-data-format's mg paragraph sends
-             the reader here for it
-           - the C1/C2 differential-capacitance detail — asserted by
-             sl-day13x-mems-differential, routed here by the Part 1
-             comment ("do not grow it back here"); until this is
-             written it reaches the room only, and no reader at all
-           - the zero-g offset calibration (flat + flipped, average) —
-             worked in ins-day13x-convert, which is stripped from the
-             reading book
-           - the LSM303AGR register map / lsm303agr.h
-           - the data-format arithmetic in full, with the worked
-             negative example
-           - IEEE 754 layout; precision vs range said precisely
-           - AN-1057 depth (three-angle orientation, quadrants) —
-             external/datasheets/an-1057.pdf is hosted (2026-08-27)
-         Until this section exists it must not be xref'd from any NEW
-         location.  If it is still unwritten when the book goes to
-         Petra, add the pre-approved C1/C2 sentence to the Part 1 MEMS
-         paragraph (two capacitors, ΔC = C1 − C2, and with Q = CV the
-         differential charge is ΔQ = (C1 − C2)·V_exc) as a placeholder.
+         Reference section WRITTEN 2026-08-31 (week 7 session 4), per
+         the manifest in plans/day14-prompt.md: every OWES item from the
+         earlier marker landed (C1/C2, register map/lsm303agr.h, data
+         format in full, signed shift, zero-g calibration, AN-1057
+         orientation, IEEE 754 precision-vs-range).  Code size is
+         deliberately NOT here: Day 14 Part 9 teaches it and Lab 7 D4
+         grades it.  Reference sections generate no slides.
          ============================================================ -->
     <section xml:id="sec-accel-reference">
         <title>Reference: The LSM303AGR and Floating Point</title>
-        <p>
-            This section is still being written.
-        </p>
+        <introduction>
+            <p>
+                Lookup material for the accelerometer chapter.  Nothing here
+                is new; it is the same information arranged in a fashion more
+                suitable for a quick look-up, plus some additional depth in
+                case you are curious.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-accel-ref-mems">
+            <title>The Differential Capacitors Inside the Sensor</title>
+            <p>
+                A MEMS (Micro-Electro-Mechanical Systems) accelerometer
+                measures its proof mass's displacement capacitively, and the
+                real structure uses <em>two</em> capacitors per sense
+                direction, not one.  The moving plate, attached to the proof
+                mass, hangs between two fixed plates: it forms a capacitor
+                C1 with one and a capacitor C2 with the other.  At rest the
+                two gaps are equal, so C1 = C2.  When the case accelerates
+                and the mass gets left behind, one gap narrows and the other
+                widens, so C1 grows exactly as C2 shrinks.
+            </p>
+            <p>
+                The electronics measure the difference, ΔC = C1 − C2, which
+                is zero at rest, grows with displacement, and carries the
+                direction in its sign.  With a known excitation voltage
+                V_exc across the plates, Q = CV turns the
+                capacitance difference into a charge difference,
+                <m>\Delta Q = (C_1 - C_2)\,V_{exc}</m>, which the chip's
+                amplifier converts to a voltage for the ADC
+                (analog-to-digital converter).  Measuring the difference of a matched pair,
+                rather than one capacitance alone, cancels effects that move
+                both capacitors together, such as temperature.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-accel-ref-registers">
+            <title>The Register Map, and lsm303agr.h</title>
+            <p>
+                The LSM303AGR's register address map is §7, Table 26
+                (p. 43) of the
+                <url href="external/datasheets/lsm303agr.pdf">datasheet</url>;
+                <c>lsm303agr.h</c> is that table transcribed into
+                <c>#define</c>s, plus the driver's data structure and
+                prototypes.  Here is the header in full:
+            </p>
+
+            <!-- Displayed copy of assets/starters/lsm303agr.h.  Matches the
+                 file in CODE; not registered in check_starters.py because
+                 the display copy normalizes the file's internal tab
+                 whitespace so the DEFAULT/TYPE columns line up (Petra,
+                 2026-08-30, same ruling as the Day 13 excerpt), and two
+                 stale-revision citations in comments are corrected to the
+                 hosted PDF (the file says "Sec 6, 7.1" and "Section 7.1";
+                 the hosted map is §7, Table 26).  Change file and listing
+                 together. -->
+            <program language="c"><code><![CDATA[
+// Simple C library for the Adafruit LSM303AGR accelerometer/magnetometer.
+// ENGS 28
+// Accelerometer only.
+
+// Sensor calibration constants (Datasheet, Section 2)
+#define ACCEL_GRAVITY       9.8         // "one g"
+#define ACCEL_RANGE         2           // g, see CTRL_REG4
+
+// I2C address for the sensor
+#define LSM303_ADDRESS_ACCEL    (0x32 >> 1)         // 0011001x
+
+// ACCELEROMETER SECTION
+// Accelerometer registers (Datasheet 7, Table 26)  // DEFAULT    TYPE
+#define LSM303_WHO_AM_I_A          0x0F   // 00110011   r
+#define LSM303_CTRL_REG1_A         0x20   // 00000111   rw
+#define LSM303_CTRL_REG2_A         0x21   // 00000000   rw
+#define LSM303_CTRL_REG3_A         0x22   // 00000000   rw
+#define LSM303_CTRL_REG4_A         0x23   // 00000000   rw
+#define LSM303_CTRL_REG5_A         0x24   // 00000000   rw
+#define LSM303_CTRL_REG6_A         0x25   // 00000000   rw
+#define LSM303_REFERENCE_A         0x26   // 00000000   rw
+#define LSM303_STATUS_REG_A        0x27   // 00000000   r
+#define LSM303_OUT_X_L_A           0x28
+#define LSM303_OUT_X_H_A           0x29
+#define LSM303_OUT_Y_L_A           0x2A
+#define LSM303_OUT_Y_H_A           0x2B
+#define LSM303_OUT_Z_L_A           0x2C
+#define LSM303_OUT_Z_H_A           0x2D
+#define LSM303_FIFO_CTRL_REG_A     0x2E
+#define LSM303_FIFO_SRC_REG_A      0x2F
+#define LSM303_INT1_CFG_A          0x30
+#define LSM303_INT1_SRC_A          0x31
+#define LSM303_INT1_THS_A          0x32
+#define LSM303_INT1_DURATION_A     0x33
+#define LSM303_INT2_CFG_A          0x34
+#define LSM303_INT2_SRC_A          0x35
+#define LSM303_INT2_THS_A          0x36
+#define LSM303_INT2_DURATION_A     0x37
+#define LSM303_CLICK_CFG_A         0x38
+#define LSM303_CLICK_SRC_A         0x39
+#define LSM303_CLICK_THS_A         0x3A
+#define LSM303_TIME_LIMIT_A        0x3B
+#define LSM303_TIME_LATENCY_A      0x3C
+#define LSM303_TIME_WINDOW_A       0x3D
+
+// Because each sensor outputs an (x, y, z) triple for acceleration field and
+// magnetic field, it makes sense to put these in structures.
+typedef struct{
+        int16_t x;
+        int16_t y;
+        int16_t z;
+    } lsm303AccelData_s;
+
+// C function prototypes for accelerometer driver
+// These are low-level functions that interact with the registers via I2C,
+// and are called by higher-level functions used by the top
+// level application.
+
+// The accelerometer has several gain and update rate settings.  These are described
+// in the datasheet and are set up in the AccelInit function.
+uint8_t lsm303_AccelInit();
+
+// The AccelRegisterWrite function should take a register address and a command byte
+// to be written into the register.
+void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data);
+
+// The AccelRegisterRead function should take a register address and return a data byte
+// read from the register.
+uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress);
+
+// Here is the higher-level function to read the acceleration vector.  Output struct
+// contains raw (unscaled) acceleration values.
+void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
+]]></code></program>
+
+            <p>
+                The <c>_A</c> suffix marks the accelerometer's half of the
+                register map; the magnetometer has its own registers, which
+                this course does not use.  The registers from 0x2E on (FIFO,
+                interrupts, click detection) stay at their defaults.  The
+                comment columns record each register's power-on default and
+                whether it is readable, writable, or both, from Table 26.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-accel-ref-data-format">
+            <title>The Data Format, and the Conversion in All Three Modes</title>
+            <p>
+                Each axis's reading is 16 bits (two data registers, low byte
+                at the lower address), left-justified, two's complement.
+                The three resolution modes write 8, 10, or 12 valid bits
+                into the top of the same 16-bit word, zeros below.  Each
+                mode's conversion is: shift the zero bits off the bottom,
+                then multiply by that mode's step size at the chosen
+                full-scale range.  For the ±2 g range (4 g of span):
+            </p>
+            <sidebyside widths="86%" margins="7%">
+            <tabular halign="left">
+                <col width="34%"/><col width="16%"/><col width="16%"/><col width="34%"/>
+                <row header="yes"><cell>Mode</cell><cell>Valid bits</cell><cell>Shift</cell><cell>Step size at ±2 g</cell></row>
+                <row><cell>Low-power</cell><cell>8</cell><cell>≫ 8</cell><cell>4 g / 2⁸ = 15.625 mg</cell></row>
+                <row><cell>Normal</cell><cell>10</cell><cell>≫ 6</cell><cell>4 g / 2¹⁰ = 3.90625 mg</cell></row>
+                <row><cell>High-resolution</cell><cell>12</cell><cell>≫ 4</cell><cell>4 g / 2¹² = 0.9765625 mg</cell></row>
+            </tabular>
+            </sidebyside>
+            <p>
+                All three collapse to one formula, because the valid bits
+                always start at bit 15: the shift and the step size cancel
+                to 2¹⁶, giving
+                <m>a = \mathrm{FS} \cdot \mathrm{raw} / 2^{16}</m> with FS
+                the full-scale span (4 g here) and the raw value read as a
+                signed 16-bit integer.  Change the range and the constant
+                changes with it: at ±4 g the span is 8 g, and so on.
+            </p>
+            <p>
+                A worked negative example, in low-power mode at ±2 g: the
+                reading 0xC000 has bit 15 set, so it is negative.  By the
+                top byte: 0xC0 is −128 + 64 = −64, and
+                −64 × 15.625 mg = −1000 mg.  By the whole word:
+                0xC000 as a signed 16-bit integer is −32768 + 16384 =
+                −16384, and 4 g × (−16384) / 2¹⁶ = −1000 mg.  Both routes
+                always agree; the collapsed formula is just the top-byte
+                route with the shift folded into the constant.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-accel-ref-signed-shift">
+            <title>Shifting a Signed Value Is Not Quite Dividing It</title>
+            <p>
+                <c>accel_test.c</c> converts with
+                <c>(ACC_FS * raw * MILLI) &gt;&gt; ACC_REGISTERWIDTH</c>.
+                On a signed value, <c>&gt;&gt;</c> is an
+                <term>arithmetic shift</term>: it shifts the sign bit back
+                in at the top, and it rounds toward negative infinity (it is
+                a <em>floor</em>).  Integer division with <c>/</c> rounds
+                toward zero instead.  For positive values the two agree; for
+                negative values they can differ by one.
+            </p>
+            <p>
+                That difference is visible in this chapter's own numbers,
+                because the program multiplies by 4000 <em>before</em>
+                shifting by 16, and the product is usually not a multiple of
+                2¹⁶.  Take a raw reading of −16 (0xFFF0): the product is
+                4 × (−16) × 1000 = −64000, which is −0.9765… of 2¹⁶.  The
+                shift floors it to −1, so CoolTerm prints −1 mg; a hand
+                check with <c>/</c> or a calculator truncates to 0 mg.  So
+                a hand-converted negative reading can land 1 mg away from
+                what the program prints, and neither is wrong; they round
+                differently.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-accel-ref-offset">
+            <title>Calibrating the Zero-g Offset</title>
+            <p>
+                The datasheet's sensor-characteristics table (§2.1, Table 3)
+                says a flat, motionless sensor typically reads ±40 mg away
+                from the true value on an axis, and its Min and Max columns
+                allow ±80 mg.  The offset is constant for a given board, so
+                you can measure it and subtract it.  Read the z axis flat
+                (expect +1000 mg) and flipped (expect −1000 mg); the offset
+                is the average of the two readings, because the true ±1000
+                cancels in the sum.  If a board averages +1032 mg flat and
+                −968 mg flipped, the offset is (1032 + (−968)) / 2 =
+                +32 mg, and future readings are corrected by subtracting
+                32 mg.  This is the two-point calibration of AN-1057
+                (its Equation 17: the offset is half the sum of the +1 g
+                and −1 g measurements), applied to the z axis.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-accel-ref-orientation">
+            <title>Full Orientation from Three Axes (AN-1057)</title>
+            <p>
+                The two-axis arctangent gives one tilt angle.
+                <url href="external/datasheets/an-1057.pdf">AN-1057</url>
+                (p. 7, Equations 11–13) extends this to a full orientation:
+                measure each axis's angle against the horizon using the
+                other two axes as the reference,
+                <md>
+                    \theta = \tan^{-1}\!\left(\frac{A_x}{\sqrt{A_y^2 + A_z^2}}\right),\qquad
+                    \psi = \tan^{-1}\!\left(\frac{A_y}{\sqrt{A_x^2 + A_z^2}}\right),\qquad
+                    \varphi = \tan^{-1}\!\left(\frac{\sqrt{A_x^2 + A_y^2}}{A_z}\right)
+                </md>
+                where θ and ψ are the x and y axes' angles above the
+                horizon and φ is the angle between the gravity vector and
+                the z axis.  Because each is an arctangent of a ratio of
+                accelerations, the two-axis benefits carry over: constant
+                sensitivity, and validity at every orientation of the
+                sensor.  This is the route for Lab 7's optional
+                Going Further.
+            </p>
+            <p>
+                On quadrants: a plain arctangent only returns angles in a
+                half circle, because it cannot tell
+                <m>(+A_x, +A_y)</m> from <m>(-A_x, -A_y)</m>: the ratio is
+                the same.  <c>atan2(ax, ay)</c> takes the two values
+                separately, looks at both signs to pick the correct
+                quadrant, and returns an angle over the full circle, from
+                −π to π (in radians; multiply by 180/π for degrees).  It
+                also handles <c>ay</c> = 0, where the plain ratio would
+                divide by zero.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-accel-ref-float">
+            <title>The float Format: Precision Traded for Range</title>
+            <p>
+                A <c>float</c> (single-precision floating point, IEEE 754)
+                spends its 32 bits as 1 sign bit, an 8-bit exponent, and a
+                23-bit fraction, and represents
+                <m>N = \pm\,\mathrm{fraction} \times 2^{\mathrm{exponent}}</m>:
+                like scientific notation, but in base 2.  The stored 23 fraction bits plus
+                an implied leading 1 give about 24 significant bits, which
+                is roughly 7 decimal digits of relative precision, while
+                the exponent lets the value range over about 10⁻³⁸ to
+                10³⁸.
+            </p>
+            <p>
+                Compare an <c>int32_t</c>: it is <em>exact</em> at every
+                one of its values over its full ±2³¹ range, but it has no
+                fractions and nothing beyond that range.  A <c>float</c> of
+                the same 32 bits carries only ~24 significant bits of
+                precision, but places them anywhere in an enormous range.
+                Precision and range are traded against the same 32 bits;
+                neither type gets both.  For our sensor the trade is easy:
+                the readings carry at most 12 significant bits, so a
+                float's 24 lose nothing, and the trigonometry needs
+                fractions.
+            </p>
+        </subsection>
     </section>
 
 </chapter>
