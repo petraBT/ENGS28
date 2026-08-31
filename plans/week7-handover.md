@@ -1,4 +1,83 @@
-# Week 7 handover — where things stand after session 2+ (updated 2026-08-30)
+# Week 7 handover — where things stand after session 3 (updated 2026-08-30)
+
+## Session 3 (2026-08-30): Day 13x is built, through Gate 2′ — awaiting her pass 1
+
+Everything in `plans/day13x-prompt.md`'s ordering ran: the in-class skeleton
+for `sec-accel-day13x` (Parts 1–5 + close per the plan's 2+1+11+3+9+19+3+2 =
+50; three committed activities — the mass commit with the level-app hook,
+the sensitivity derivation against the MASKED table, the 0xE000 conversion
+with the zero-g-offset stretch — each with a projected instructor reveal;
+the §6.1.1 auto-increment quote and the byte-assembly paragraph written in
+the book per B-8a; DELIVERY-2 markers naming what each subsection owes, by
+id), the figures (her block diagram, breakout schematic and annotated
+sensitivity table rebuilt with `pptx_annotate.py`; a masked-column commit
+variant derived from her table; hand-authored SVGs for the mass-spring
+derivation and its at-rest commit variant, the capacitive pickoff, the
+three-mode bit rows with her per-row equations, and the 4-bit/16-bit
+sign-weights figure; the auto-increment slide reuses Day 13's
+`i2c_transfer_reads.svg` — same base, never re-crop it in place), and the
+32-slide `assets/decks/day13x.json`, fit-swept whole at 1600×900 with every
+figure slide looked at.  Gate 2′ (`reviews/day13x-gate2.md`: eleven
+reports, the synthesizer's 24-item list applied and verified item by item)
+caught six correctness blockers that had reached the draft — six sense
+capacitors captioned as three and a per-axis chain where the chip shares
+one amplifier and one ADC through a MUX; ±40 mg quoted as the offset bound
+where the row reads −80/±40/+80; CTRL_REG2_A called an analog filter
+(§8.7 is high-pass); a presenter note calling WHO_AM_I a control register;
+a caption sending students to a STEMMA connector the schematic crop had
+deleted; and `/ 65536` on the formula slide where her `accel_test.c` uses
+the shift.  It also moved the sign teaching onto a picture and re-routed
+the worked 0xC000 example through the top-byte machinery (192 − 256 = −64;
+−64 × 15.625 mg = −1000 mg) so no slide uses the a = 4g·raw/2¹⁶ formula
+before the collapse derives it.  **Stopped for Petra's pass 1.  In-class
+connecting prose is a later session, from the slides she passes** (the
+DELIVERY 2 markers name what each Part owes).
+
+### Ask-Petra list from session 3
+
+1. **The breakout schematic composite is cropped and its callouts are
+   displaced** (`breakout_schematic.svg`): the source bitmap's STEMMA/I2C
+   Headers block is discarded by the clip, and every callout sits up-left
+   of its target (the regulator arrow runs through the part label).  The
+   false caption sentence is already fixed; the figure itself needs your
+   un-cropped slide-9 export, or the Adafruit schematic PDF (vector) —
+   it probably then becomes two zoomed panels.  We deliberately did not
+   patch the composite (the Day 9 lesson).
+2. **`mems_mechanism.png`'s right panel** draws the moving plate displaced
+   in the SAME direction as its "← Acceleration" arrow — the wrong answer
+   to Part 1's commit.  It is your figure, so the call is yours: redraw
+   the panel, or drop it.  Interim, the book shows only the left (at-rest)
+   panel.
+3. **The §6.1.1 blockquote keeps the datasheet's "slave"** while the book
+   says controller/target; a one-clause gloss now leads into it ("where
+   its 'slave' is our target").  Confirm the gloss, or the quote can stand
+   bare.
+4. **The homework close is restored to your slide 19's three items** (the
+   draft had folded the CTRL_REG1/4 item into the reading bullet).  If you
+   want it at two, say so.
+5. **Q3 unchanged, at your pace** — nothing in Day 13x touches the
+   wrong-address print.
+
+### Recorded so later passes do not undo them (session 3)
+
+- The MEMS figure deliberately shows only the at-rest panel until A2 is
+  answered; the displaced panel contradicts the mass commit's reveal.
+- The worked 0xC000 slide deliberately does NOT use a = 4g·raw/2¹⁶ — the
+  collapse slide derives it one beat later (P-1); its note closes the loop.
+- `sl-day13x-block` deliberately names no INT pin identifiers (cut at
+  Gate 2′ over the voice reviewer's gloss option — three names used
+  nowhere else).
+- The Close section divider stays: `check_deck.py` attributes each beat
+  to the preceding section entry, so cutting it folds the close's minutes
+  into Part 5 and breaks the S-8 reconciliation.
+- Dissent recorded at the gate: if the room stalls on the conversion
+  commit anyway, learner-in-the-room's deck reorder (collapse and formula
+  before the worked example) is the next thing to try — watch the
+  completion spread on the day.
+- Pre-existing, not this session's: `day11x.json` Part 5 reports a 1-min
+  S-8 overshoot (row 5, beats 6) — it predates this session; flagged, not
+  touched.
+
 
 ## Session 2+ (2026-08-30): her pass 1 is applied, the prose is written, Gate 3′ ran — awaiting her pass 2
 
