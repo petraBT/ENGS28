@@ -1,4 +1,74 @@
-# Week 7 handover — where things stand after session 5 (updated 2026-08-31)
+# Week 7 handover — where things stand after session 6 (updated 2026-09-01)
+
+## Session 6 (2026-09-01): her Day 14 pass 1 applied — awaiting her next look
+
+All 37 of her pass-1 comments (3 book, 34 deck) are applied and archived,
+plus her five chat rulings.  The substance: the reading is retitled to
+her scavenger-hunt intent and gains "The Rest of the Hunt" (four more
+datasheet stops: Table 3's zero-g offset, Table 26's output registers,
+§8.4's WHO_AM_I, §6.1.1's transfer tables) with two new lookup reading
+questions; the Part 2 commit became a table comparison of the homework
+values (no written commit, no "reveal" language) and her slide 6
+(`accelRegisterSettingsInstructor.png`) is a second instructor slide;
+Part 3 is one slide (her ruling) carrying the steps beside her fresh
+`CubeIDEExcludeFromBuild.png` dialog, whose unchecked boxes make "click
+Select All" the right instruction again (the book got a new
+`fig-exclude-dialog`); Part 4's silent attempt lost its "or fresh" out;
+the write-transfer beat was rewritten to her read-vs-write framing with
+a new `i2c_transfer_read_vs_write.svg` (Table 22 above Table 20; Table
+21 off the wall; the Day 13 SVGs untouched); the unverified tiny-printf
+%x sign-extension claims came OUT (the hand check now uses the flat
+positive reading); the ladder took her three wordings; Part 6's intro
+is her sentence plus the header's whereabouts; the chart-view beat uses
+her words ("In the View menu, select View Chart") over a circled
+composite; the tilt sensitivity beat is bulleted and labeled; the cast
+activity gained her part (b) casting review; three single-task
+activities lost their orphan (a); "jobs" is "goals"; and
+`lsm303agr_partial.c`'s Table-13 comment is corrected to Table 22 with
+her approval.  Her whole-sentences rule is now applied CORPUS-WIDE
+(her authorization, captions and checklists exempt): 30 fragments
+fixed across eight chapters, including her own passed Reference
+openers; L-15 gains meet/met ("we are not 'meeting' registers").
+Deck is 50 slides, full fit sweep 50/50 after two layout fixes.
+
+### Ask-Petra list from session 6
+
+1. **REMINDER — the plain-view CoolTerm screenshot is still needed**
+   (she asked to be reminded, 2026-09-01: no accelerometer set up right
+   now).  The book carries a marked placeholder figure
+   (`fig-coolterm-plainview`); drop the real capture at
+   `assets/images/Day14-Accelerometer(2)/coolterm_plainview.png` — the
+   banner line, `Accelerometer initialized!`, the two readbacks, and a
+   few raw/mg line pairs — and only the `<image source>` line changes.
+2. **How a negative raw reading prints** is deliberately unstated
+   everywhere (her challenge on the %x claim was right: the course's
+   printf is not in the repo and the claim was unverified).  When the
+   hardware is next out: does a negative `accel_raw.x` print as four
+   hex digits or eight?  One glance at the flipped-board output settles
+   it, and the hand-check task can then gain its negative case back.
+3. **Q3 unchanged, at her pace** (the wrong-address print).
+4. **The padding-bits check** (do the unused low bits read as zero?)
+   rides the same next-hardware session as item 2.
+5. **Part 7's chart-view minutes**: watch the real time in class; if
+   5 minutes still runs over, the 2 from Part 6 are the source.
+
+### Recorded so later passes do not undo them (session 6)
+
+- The Part 2 activity is a TABLE COMPARISON of homework values, not a
+  written commit, and there is no "reveal" framing — her ruling
+  ("This was their homework... How about comparing values at their
+  tables instead?" / "are we going to reveal? I don't think so?").
+  The two instructor slides confirm; they do not reveal.
+- Part 4's attempt line reads "from your paper draft", full stop — no
+  "if you have it, or fresh" ("Don't give them an out!").
+- `i2c_transfer_read_vs_write.svg` shows Tables 22 and 20 only; Table
+  21 is deliberately off the wall ("The writing multiple bytes is not
+  something we use").
+- No student-facing text asserts how a negative raw reading prints
+  (unverified tiny-printf behavior; see ask item 2).
+- The whole-sentences rule now overrides previously passed fragments
+  corpus-wide, captions/titles/checklists/answer-options exempt; the
+  corpus-wide EM-DASH sweep of pre-rule chapters remains unscheduled.
 
 ## Session 5 (2026-08-31): Day 14 is built, through Gate 2′ — awaiting her pass 1
 

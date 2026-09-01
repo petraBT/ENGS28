@@ -1475,7 +1475,7 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
 </slide>
 
             <slide xml:id="sl-day13x-mems-differential" instructor="yes">
-    <p>Inside the chip:</p>
+    <p>Here is what is inside the chip:</p>
     <ul>
         <li>A proof mass is suspended by tiny springs, and on both sides are interdigitated comb fingers.  These form two capacitors, C_1 and C_2.</li>
         <li>When acceleration occurs, the mass moves slightly: one capacitance increases and the other decreases, so the system measures the difference, ΔC = C_1 − C_2.</li>
@@ -2209,7 +2209,7 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
          Tables 41–42 (p. 49) of external/datasheets/lsm303agr.pdf.
          ============================================================ -->
     <section xml:id="sec-accel-day14-before">
-        <title>Before Class: Configuring the Accelerometer</title>
+        <title>Before Class: The Datasheet Scavenger Hunt</title>
         <introduction>
             <p>
                 On Thursday we'll complete the accelerometer's device driver
@@ -2218,11 +2218,12 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 <c>lsm303_AccelRegisterWrite()</c> on paper, and working out
                 what settings belong in the two control registers,
                 <c>CTRL_REG1_A</c> and <c>CTRL_REG4_A</c>.  This reading has
-                two jobs.  The first is to say what a working accelerometer
+                two goals.  The first is to say what a working accelerometer
                 reads when it is sitting still, which is how you'll know on
                 Thursday whether your driver is right.  The second is a
-                guided walk through the datasheet tables the two register
-                settings come from.
+                scavenger hunt through the datasheet, to get familiar with
+                the many kinds of information in it; on the way you will
+                pass the tables from which the two register settings come.
             </p>
         </introduction>
 
@@ -2263,8 +2264,8 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 which, and what each field selects
                 (<xref ref="fig-ctrl-reg1-fields"/>).  The top four bits,
                 ODR[3:0] (ODR here is the output data rate, a different ODR
-                than the GPIO output data register you met earlier in the
-                course), set how often the
+                than the GPIO output data register from the earlier
+                chapters), set how often the
                 sensor takes a reading; the LPen bit (low-power enable)
                 selects between normal mode and low-power mode; and the
                 bottom three bits, Zen, Yen and Xen, enable the three axes
@@ -2357,6 +2358,38 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 width and its sensitivity at ±2 g in mg/digit.</caption>
                 <image source="images/Day14-Accelerometer(2)/accel_modes.png" width="82%"/>
             </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-day14-hunt-tour">
+            <title>The Rest of the Hunt</title>
+            <p>
+                A datasheet is not read cover to cover; the skill is jumping
+                to the part that answers your question, and that takes
+                knowing roughly what is in the document.  So before you
+                close the PDF, make four more stops.  Each one is a place
+                this course has already leaned on, or is about to.
+            </p>
+            <ul>
+                <li><p>Go to §2.1, Table 3 (pp. 13–14), the sensor
+                characteristics.  Find the zero-g offset row and read off
+                its typical value; this is the number behind the
+                <q>a few tens of milli-g off</q> in
+                <xref ref="subsec-day14-stationary"/>.</p></li>
+                <li><p>Go to §7, Table 26 (p. 43), the register address
+                map.  Find the six output registers, <c>OUT_X_L_A</c>
+                through <c>OUT_Z_H_A</c>, and note their addresses; these
+                are the registers <c>lsm303_AccelReadRaw()</c> reads in one
+                auto-increment transfer.  Notice the map also lists the
+                magnetometer's registers and a temperature-sensor
+                configuration register; we use neither.</p></li>
+                <li><p>Go to §8.4 (p. 46) and find WHO_AM_I_A, the register
+                Tuesday's test program read; the fixed value 0x33 is
+                printed there as its default.</p></li>
+                <li><p>Go to §6.1.1, Tables 20–23 (p. 38), the four I2C
+                transfer diagrams.  Table 22 is the read you captured on
+                Tuesday, and Table 20 is the write you will make on
+                Thursday.</p></li>
+            </ul>
         </subsection>
 
         <reading-questions xml:id="rq-accel-day14">
@@ -2500,6 +2533,73 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                     </choice>
                 </choices>
             </exercise>
+
+            <exercise xml:id="rq-day14-offset">
+                <statement><p>According to Table 3 of the LSM303AGR
+                datasheet, what is the typical zero-g offset of an
+                accelerometer axis?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>±40 mg</p></statement>
+                        <feedback><p>Correct.  That is the typical value;
+                        the table's Min and Max columns allow ±80 mg.  It
+                        is why a flat board reads close to, but rarely
+                        exactly, +1000 mg on z.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>±80 mg</p></statement>
+                        <feedback><p>±80 mg is the table's Min and Max
+                        bound, the worst case.  The typical column says
+                        ±40 mg.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>±4 mg</p></statement>
+                        <feedback><p>4 mg is the sensitivity per digit in
+                        normal mode at ±2 g, a different row of the same
+                        table.  The typical zero-g offset is
+                        ±40 mg.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>0 mg; a stationary axis reads
+                        exactly its share of gravity.</p></statement>
+                        <feedback><p>A real sensor carries a small constant
+                        offset; the datasheet says ±40 mg is typical.  That
+                        is why the reading is <q>approximately</q>
+                        +1000 mg, not exactly.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-day14-outaddr">
+                <statement><p>According to Table 26 of the LSM303AGR
+                datasheet, at what address is <c>OUT_X_L_A</c>, the low
+                byte of the x-axis reading?</p></statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>0x28</p></statement>
+                        <feedback><p>Correct.  The six output registers run
+                        from 0x28 to 0x2D, and the auto-increment read
+                        starts there.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>0x20</p></statement>
+                        <feedback><p>0x20 is <c>CTRL_REG1_A</c>, the first
+                        control register.  The output registers start at
+                        0x28.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>0x0F</p></statement>
+                        <feedback><p>0x0F is WHO_AM_I_A.  The output
+                        registers start at 0x28.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>0x32</p></statement>
+                        <feedback><p>0x32 is the sensor's 8-bit I2C
+                        address, not a register address inside it.  The
+                        output registers start at 0x28.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
         </reading-questions>
     </section>
 
@@ -2571,23 +2671,24 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
             </p>
 
             <activity xml:id="act-day14-settings">
-                <title>Commit to the two settings</title>
+                <title>Compare the two settings at your table</title>
                 <introduction>
                     <p>We want readings at 400 Hz, in normal mode, with all
-                    three axes enabled, over the ±2 g range.  Write your
-                    answers down before we reveal them; they go into your
+                    three axes enabled, over the ±2 g range.  You worked
+                    the two bytes out for homework, and they go into your
                     driver later today.</p>
                 </introduction>
                 <task xml:id="task-day14-settings-reg1">
-                    <statement><p>What byte goes in <c>CTRL_REG1_A</c>?
-                    Write it in binary, field by field: the four ODR bits,
-                    LPen, then Zen, Yen, and Xen.</p></statement>
+                    <statement><p>Compare your <c>CTRL_REG1_A</c> byte with
+                    your table group, field by field: the four ODR bits,
+                    LPen, then Zen, Yen, and Xen.  Settle any disagreement
+                    against the tables.</p></statement>
                 </task>
                 <task xml:id="task-day14-settings-reg4">
-                    <statement><p>What byte goes in <c>CTRL_REG4_A</c>?
-                    Write it in binary, field by field, and say which
-                    operating mode your LPen and HR choices select in
-                    Table 14 of the LSM303AGR datasheet.</p></statement>
+                    <statement><p>Do the same for <c>CTRL_REG4_A</c>, and
+                    agree on which operating mode your LPen and HR choices
+                    select in Table 14 of the LSM303AGR
+                    datasheet.</p></statement>
                 </task>
             </activity>
 
@@ -2607,9 +2708,18 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 number, before the table rounds it.</p>
             </instructor>
 
+            <!-- Her slide 6, at export resolution: all four tables on one
+                 slide with the two Setting callouts and the color-coded
+                 boxes (her comment of 2026-09-01 asked for exactly this
+                 as a second instructor slide; she supplied the file). -->
+            <slide xml:id="sl-day14-settings-tables" instructor="yes">
+    <image source="images/Day14-Accelerometer(2)/accelRegisterSettingsInstructor.png" width="56%"/>
+    <note>Her slide 6, whole: all four tables with the values boxed in color and the two Setting callouts.  Use it to confirm the discussion's answers with everything on one screen; the per-field derivation is the previous slide.</note>
+</slide>
+
             <slide xml:id="sl-day14-look-reg1" ref="fig-ctrl-reg1-fields">
     <caption>The eight bits of CTRL_REG1_A: the four ODR bits, LPen, and the three axis enables.</caption>
-    <note>≈ 1 min for all four table slides together: page through them for sixty seconds before the commit.  If the reading did not happen, this look is the mitigation: take your best guess from the tables.  We want 400 Hz, normal mode, all three axes, ±2 g.</note>
+    <note>≈ 1 min for all four table slides together: page through them for sixty seconds before the table comparison.  A student who skipped the homework derives the fields from these during the discussion.  We want 400 Hz, normal mode, all three axes, ±2 g.</note>
 </slide>
 
             <slide xml:id="sl-day14-look-rates" ref="fig-ctrl-reg1-rates">
@@ -2643,14 +2753,22 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 <c>accel_test.c</c> your project will contain two: the new
                 test program's, and <c>whoami_test.c</c>'s.  The fix is the
                 one from Day 1x: exclude the file you are done with from the
-                build (right-click <c>whoami_test.c</c>, then
-                <em>Resource Configurations → Exclude from Build</em>, both
-                configurations; <xref ref="fig-exclude-from-build"/> shows
-                the dialog).  If your build fails with
-                <c>multiple definition of 'main'</c>, or of
+                build.  Right-click <c>whoami_test.c</c>, choose
+                <em>Resource Configurations → Exclude from Build</em>,
+                click <em>Select All</em> so both Debug and Release exclude
+                the file, then click OK
+                (<xref ref="fig-exclude-dialog"/>).  If your build fails
+                with <c>multiple definition of 'main'</c>, or of
                 <c>lsm303_AccelRegisterRead</c>, which both files define,
                 you skipped this step.
             </p>
+
+            <figure xml:id="fig-exclude-dialog">
+                <caption>The Exclude from build dialog.  Click Select All
+                so both Debug and Release exclude the file, then click
+                OK.</caption>
+                <image source="images/Day14-Accelerometer(2)/CubeIDEExcludeFromBuild.png" width="45%"/>
+            </figure>
 
             <activity xml:id="act-day14-stage">
                 <title>Verify Tuesday's wiring, then stage the project</title>
@@ -2674,21 +2792,23 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 </task>
             </activity>
 
-            <slide xml:id="sl-day14-verify">
-    <ul>
-        <li>Run Tuesday's <c>whoami_test.c</c>, unchanged.  If it still prints <c>Accelerometer initialized!</c>, your wiring survived.</li>
-        <li>We verify the hardware first, so anything that goes wrong from here on is in the software we are about to write.</li>
-    </ul>
-    <note>≈ 3 min.  The Week 5 standing rule: verify Tuesday's wiring before depending on it.  A board that fails here gets priority triage during the coming worktime; do not let it wait for the checkpoint, whose rescue file fixes software, not hardware.</note>
-</slide>
-
-            <slide xml:id="sl-day14-exclude" ref="fig-exclude-from-build">
-    <ul>
-        <li>A project can only have one <c>main()</c>, and after you add <c>accel_test.c</c> your project has two.</li>
-        <li>Exclude <c>whoami_test.c</c> from the build: right-click it, choose <em>Resource Configurations → Exclude from Build</em>, check both configurations, click OK.</li>
-        <li>If your build fails with <c>multiple definition of 'main'</c>, or of <c>lsm303_AccelRegisterRead</c>, which both files define, you skipped this step.</li>
-    </ul>
-    <note>≈ 2 min.  The dialog is Day 1x's figure.  The last bullet is the self-rescue line: leave it on the wall long enough to be remembered, because the linker error arrives twenty minutes from now, at the worst moment to need help.</note>
+            <!-- One slide for the whole Part (her comment, 2026-09-01:
+                 the earlier verify and exclude slides duplicated this
+                 activity's tasks; the order of steps reads best here).
+                 Self-contained because an activity ref drops images, and
+                 her CubeIDEExcludeFromBuild.png belongs on the wall.
+                 Two tellings of act-day14-stage: change them together. -->
+            <slide xml:id="sl-day14-stage">
+    <sidebyside widths="66% 30%" margins="1%" valign="middle">
+        <stack>
+            <p>Run Tuesday's <c>whoami_test.c</c>, unchanged, and confirm it still prints <c>Accelerometer initialized!</c>  If it does not, double-check your wiring against Tuesday's diagram before you continue.</p>
+            <p>Download <c>lsm303agr_partial.c</c> and <c>accel_test.c</c> from Canvas and put both into the <c>Src</c> folder of your <c>Accelerometer</c> project.</p>
+            <p>Exclude <c>whoami_test.c</c> from the build: right-click it, choose <em>Resource Configurations → Exclude from Build</em>, click <em>Select All</em>, then OK.</p>
+            <p>If your build fails with <c>multiple definition of 'main'</c>, or of <c>lsm303_AccelRegisterRead</c>, which both files define, you skipped this step.</p>
+        </stack>
+        <image source="images/Day14-Accelerometer(2)/CubeIDEExcludeFromBuild.png"/>
+    </sidebyside>
+    <note>≈ 8 min, the whole Part on one slide.  We verify the hardware first, so anything that goes wrong from here on is software.  A board that fails the re-verify gets priority triage during the coming worktime; do not let it wait for the checkpoint, whose rescue file fixes software, not hardware.  The last line is the self-rescue: the linker error arrives twenty minutes from now, at the worst moment to need help.  We have excluded files from the build several times already; this should be routine.</note>
 </slide>
         </subsection>
 
@@ -2711,9 +2831,11 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 <c>lsm303agr_partial.c</c> is most of a driver.  Of the four
                 functions the header declares,
                 <c>lsm303_AccelRegisterRead()</c> and
-                <c>lsm303_AccelReadRaw()</c> are given whole, and
-                <c>lsm303_AccelInit()</c> is given except for the two
-                register values, which are the ones you just committed to.
+                <c>lsm303_AccelReadRaw()</c> are given whole:
+                RegisterRead is the function that was included in
+                <c>whoami_test.c</c>, and we went through ReadRaw
+                yesterday.  <c>lsm303_AccelInit()</c> is given except for
+                the two register values, which you will fill in.
                 Only <c>lsm303_AccelRegisterWrite()</c> is entirely yours to
                 write:
             </p>
@@ -2731,12 +2853,10 @@ void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
 
             <!-- The model beside the blank: the same function whoami_test.c
                  carried (its code is guarded by that file's whole-file pair
-                 in check_starters.py).  The CODE matches
-                 lsm303agr_partial.c; the comment does not — her file still
-                 cites "Table 13" (a magnetometer ODR table in the hosted
-                 PDF; the single-byte read is Table 22).  On the ask-Petra
-                 list, same one-word class she approved 2026-08-30.  The
-                 book prints the corrected citation. -->
+                 in check_starters.py).  This copy matches
+                 lsm303agr_partial.c verbatim: the file's stale "Table 13"
+                 citation was corrected to Table 22 with her approval
+                 (2026-09-01). -->
             <program language="c"><code><![CDATA[
 /**************************************************************************
  * Read one byte from an accelerometer register (Datasheet, Table 22)
@@ -2754,7 +2874,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 <task xml:id="task-day14-registerwrite">
                     <statement><p>Complete
                     <c>lsm303_AccelRegisterWrite()</c>, on your own first,
-                    from your paper draft if you have it, or fresh,
+                    from your paper draft,
                     with the given <c>lsm303_AccelRegisterRead()</c> as the
                     model.  It takes one I2C library call.</p></statement>
                 </task>
@@ -2762,16 +2882,15 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 
             <slide xml:id="sl-day14-partial">
     <ul>
-        <li><c>lsm303agr_partial.c</c> is most of a driver.  <c>lsm303_AccelRegisterRead()</c> is given, and has been running on your board since Tuesday.</li>
-        <li><c>lsm303_AccelReadRaw()</c> is given: we walked through it yesterday.</li>
-        <li><c>lsm303_AccelInit()</c> is given except for the two register values, which you just committed to.</li>
+        <li><c>lsm303_AccelRegisterRead()</c> and <c>lsm303_AccelReadRaw()</c> are given whole.  RegisterRead is the function that was included in <c>whoami_test.c</c>, and we went through ReadRaw yesterday.</li>
+        <li><c>lsm303_AccelInit()</c> is given except for the two register values, which you will fill in.</li>
         <li><c>lsm303_AccelRegisterWrite()</c> is entirely yours to write.</li>
     </ul>
     <note>≈ 2 min.  Orientation only; the file itself goes on screen next.  The split is her design: the homework drafted RegisterWrite on paper, and the reading derived the two AccelInit values.</note>
 </slide>
 
             <slide xml:id="sl-day14-attempt">
-    <p>Complete <c>lsm303_AccelRegisterWrite()</c>, on your own first, from your paper draft if you have it, or fresh, with the given read function as the model.  It takes one I2C library call.</p>
+    <p>Complete <c>lsm303_AccelRegisterWrite()</c>, on your own first, from your paper draft, with the given read function as the model.  It takes one I2C library call.</p>
     <program language="c"><code><![CDATA[
 void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
 	// complete this function
@@ -2788,15 +2907,42 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 	return data;
 }
 ]]></code></program>
-    <note>≈ 2 min, silent.  Two minutes is deliberate: a student with the paper draft transcribes it, and a student without one still writes before watching (Gate 1).  Then the reveal.</note>
+    <note>≈ 2 min, on their own.  This was the homework; do not offer an out (her ruling, 2026-09-01).  A student with the paper draft transcribes it.  Then the reveal.</note>
 </slide>
 
+            <!-- Her comments of 2026-09-01 shaped this beat: explain the
+                 read-vs-write difference through Tuesday's WHO_AM_I read,
+                 and show read-one-byte beside write-one-byte (Table 21,
+                 which we never use, is off the wall).  The composite
+                 i2c_transfer_read_vs_write.svg reuses the shared base and
+                 glosses; the Day 13 SVGs are untouched. -->
+            <p>
+                On Tuesday we read from one of the accelerometer's
+                registers: the controller sent the accelerometer's address,
+                then the register's sub-address, and the accelerometer sent
+                the register's contents back
+                (<xref ref="fig-i2c-read-vs-write"/>, Table 22).  Writing
+                to a register begins the same way: the address, then the
+                sub-address, and then, instead of reading a byte back, we
+                send the value we want written (Table 20).
+            </p>
+
+            <figure xml:id="fig-i2c-read-vs-write">
+                <caption>Tuesday's read beside today's write, in the
+                datasheet's own tables (§6.1.1, p. 38).  Table 22 is the
+                single-register read that <c>lsm303_AccelRegisterRead()</c>
+                makes; Table 20 is the single-register write that
+                <c>lsm303_AccelRegisterWrite()</c> makes: the same device
+                address and sub-address, and a data byte sent in place of
+                the read-back.</caption>
+                <image source="images/Day14-Accelerometer(2)/i2c_transfer_read_vs_write.svg" width="92%"/>
+            </figure>
+
             <slide xml:id="sl-day14-write-transfer">
-    <p>The write your new function makes is one byte longer than the write we captured on Tuesday: the same START, the same 0x19 address byte with the write bit, the same register address (SUB), and then the data byte, which is the byte a read transaction never sends.  The datasheet draws it in its own tables (§6.1.1).</p>
-    <image source="images/Day13-I2C(3)/i2c_transfer_writes.svg" width="100%"/>
+    <p>On Tuesday we read from one of the accelerometer's registers: the controller sent the accelerometer's address, then the register's sub-address, and the accelerometer sent the register's contents back (Table 22).  Writing to a register begins the same way: the address, then the sub-address, and then, instead of reading a byte back, we send the value we want written (Table 20).</p>
+    <image source="images/Day14-Accelerometer(2)/i2c_transfer_read_vs_write.svg" width="94%"/>
     <p>In Table 20's row, <c>LSM303_ADDRESS_ACCEL</c> is the SAD + W cell, <c>RegisterAddress</c> is the SUB cell, the count of 1 is the single DATA cell, and <c>&amp;data</c> is what that cell carries.</p>
-    <caption>Table 20 is the whole job of lsm303_AccelRegisterWrite(); Table 21 below it is the multiple-byte form we are not using.</caption>
-    <note>≈ 2 min, after the reveal.  Tuesday's captured write was the read's first phase, which stops after SUB; today's adds the data byte.  Do not re-teach the rows; walk the argument-to-cell mapping.</note>
+    <note>≈ 2 min, after the reveal.  Do not re-teach the rows; the point is read-versus-write, then the argument-to-cell mapping.</note>
 </slide>
 
             <instructor xml:id="ins-day14-registerwrite">
@@ -2823,10 +2969,10 @@ void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
             <program language="c"><code><![CDATA[
 uint8_t lsm303_AccelInit() {
 	// Check the WHOAMI register
-  	if (lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A) != 0x33) {
-    	return 0;		// failure
-  	}
-  	else {
+	if (lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A) != 0x33) {
+		return 0;		// failure
+	}
+	else {
 		/******* Control register 1 (Datasheet 8.6) *******/
 		uint8_t ctrl_reg1 =      ; // normal power mode @ 400 Hz, all axes enabled
 		lsm303_AccelRegisterWrite(LSM303_CTRL_REG1_A, ctrl_reg1);
@@ -2835,8 +2981,8 @@ uint8_t lsm303_AccelInit() {
 		uint8_t ctrl_reg4 =      ; // continuous update, 2g full scale, I2C
 		lsm303_AccelRegisterWrite(LSM303_CTRL_REG4_A, ctrl_reg4);
 
-		return 1;			// success
-  	}
+		return 1;		// success
+	}
 }
 ]]></code></program>
 
@@ -2852,11 +2998,10 @@ uint8_t lsm303_AccelInit() {
 
             <activity xml:id="act-day14-accelinit">
                 <title>Fill in the two settings</title>
-                <task xml:id="task-day14-accelinit">
-                    <statement><p>Put your two committed values into the
-                    blanks in <c>lsm303_AccelInit()</c>, then build.  Fix
-                    any compile errors before we move on.</p></statement>
-                </task>
+                <statement><p>Put your two values into the
+                blanks in <c>lsm303_AccelInit()</c> and build.  Fix
+                any compile errors, but do not run anything yet; the test
+                program comes next.</p></statement>
             </activity>
 
             <instructor xml:id="ins-day14-accelinit">
@@ -2875,22 +3020,22 @@ uint8_t lsm303_AccelInit() {
     <program language="c"><code><![CDATA[
 uint8_t lsm303_AccelInit() {
 	// Check the WHOAMI register
-  	if (lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A) != 0x33) {
-    	return 0;		// failure
-  	}
-  	else {
+	if (lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A) != 0x33) {
+		return 0;		// failure
+	}
+	else {
 		uint8_t ctrl_reg1 =      ; // normal power mode @ 400 Hz, all axes enabled
 		lsm303_AccelRegisterWrite(LSM303_CTRL_REG1_A, ctrl_reg1);
 
 		uint8_t ctrl_reg4 =      ; // continuous update, 2g full scale, I2C
 		lsm303_AccelRegisterWrite(LSM303_CTRL_REG4_A, ctrl_reg4);
 
-		return 1;			// success
-  	}
+		return 1;		// success
+	}
 }
 ]]></code></program>
     <caption>The WHO_AM_I check and the uint8_t return are given: 0 reports failure, 1 success, and the test program is about to use that answer.</caption>
-    <note>≈ 3 min.  The listing is abridged for the wall (the file's comment blocks are off it); the blanks stay blank here on purpose — the values were just committed, and the fill is the activity.  Point at the intent comments beside each blank: they are her wording for what the byte means.</note>
+    <note>≈ 3 min.  The listing is abridged for the wall (the file's comment blocks are off it); the blanks stay blank here on purpose — the values come from the homework discussion, and the fill is the activity.  Point at the intent comments beside each blank: they are her wording for what the byte means.</note>
 </slide>
         </subsection>
 
@@ -2974,25 +3119,39 @@ int main(void) {
                 The program checks
                 <c>lsm303_AccelInit()</c>'s return value and prints which way
                 it went.  It also reads both control registers back and
-                prints them: if your writes landed, the values you committed
-                in class come back out.  The scaling line is
+                prints them, so you can check that the values you worked
+                out were actually written.  The scaling line is
                 yesterday's formula in C, with the <c>#define</c>s from
                 yesterday and a right shift by 16 where the formula said
                 divide by 2¹⁶ (the arithmetic behind the shift, including
                 what happens to the large intermediate product, is in
                 <xref ref="subsec-accel-ref-signed-shift"/>).  Each pass
                 through the loop prints the raw readings
-                in hex and the converted milli-g values right underneath;
-                because <c>printf</c>'s <c>%x</c> widens the 16-bit reading
-                to 32 bits, a negative raw reading prints as eight digits,
-                <c>ffffc000</c>, and the reading is the bottom four.
+                in hex and the converted milli-g values right underneath.
+                <xref ref="fig-coolterm-plainview"/> shows what a
+                successful run looks like.
             </p>
+
+            <!-- PLACEHOLDER (Petra, 2026-09-01): she will capture the
+                 real screenshot when the accelerometer is set up again.
+                 Drop path: assets/images/Day14-Accelerometer(2)/
+                 coolterm_plainview.png — then only the <image source>
+                 line below changes.  REMIND HER at the next delivery. -->
+            <figure xml:id="fig-coolterm-plainview">
+                <caption>CoolTerm's output from a successful run of
+                <c>accel_test.c</c>: the opening line, the initialization
+                message, the two control-register readbacks, and then a
+                raw and converted line pair every two seconds.
+                (Placeholder; the real screenshot is coming.)</caption>
+                <image source="images/Day14-Accelerometer(2)/coolterm_plainview_placeholder.svg" width="82%"/>
+            </figure>
 
             <activity xml:id="act-day14-run">
                 <title>Stream your first acceleration data</title>
                 <task xml:id="task-day14-run-build">
                     <statement><p>Build, run, and open CoolTerm.  You should
-                    see the banner, <c>Accelerometer initialized!</c>, the
+                    see the <c>LSM303AGR test program</c> line,
+                    <c>Accelerometer initialized!</c>, the
                     two control-register readbacks, and then a new reading
                     every two seconds.</p></statement>
                 </task>
@@ -3003,20 +3162,18 @@ int main(void) {
                     gravity onto x and then y.</p></statement>
                 </task>
                 <task xml:id="task-day14-run-raw">
-                    <statement><p>Pick one printed line and check it: does
+                    <statement><p>While the board lies flat, pick one
+                    printed line and check the z pair: does
                     the raw hex value convert to the milli-g value printed
-                    beside it, by yesterday's formula?  (For a negative
-                    reading, take the bottom four hex digits.)</p></statement>
+                    beside it, by yesterday's formula?</p></statement>
                 </task>
             </activity>
 
             <instructor xml:id="ins-day14-run-line">
-                <p>One line, worked both ways.  Flat on the table, the raw
+                <p>One line, worked.  Flat on the table, the raw
                 z reading is about 0x4000 = 16384, and
-                (4 × 16384 × 1000) ≫ 16 = 1000 mg.  Flipped, the same axis
-                prints <c>ffffc000</c>; the bottom four digits are 0xC000,
-                which as a signed 16-bit value is −16384, and
-                (4 × (−16384) × 1000) ≫ 16 = −1000 mg.</p>
+                (4 × 16384 × 1000) ≫ 16 = 1000 mg.  A real board is a few
+                tens of milli-g off, per the zero-g offset.</p>
             </instructor>
 
             <!-- The diagnostic ladder is written now (the ladder slide
@@ -3027,10 +3184,9 @@ int main(void) {
                 When the program runs and the output is wrong, the printout
                 narrows it to one layer.  If
                 <c>Could not connect to accelerometer</c>
-                appears, the WHO_AM_I check did not read back 0x33.  The
-                first move is the one from Tuesday: re-seat the four leads
-                against <xref ref="fig-accel-bb"/>, yellow on the SCL row,
-                blue on the SDA row, black to GND and red to 3.3 V, and try
+                appears, the WHO_AM_I check did not return 0x33:
+                double-check your wiring against
+                <xref ref="fig-accel-bb"/> and try
                 again.  If the connection succeeds but
                 a control-register readback is not what you wrote, the write
                 path is suspect, and that is today's new code: check that
@@ -3039,12 +3195,13 @@ int main(void) {
                 register address, a count of 1, and a pointer to the data
                 byte.  If everything prints and both readbacks match, but
                 the values are nowhere near 1000 mg on any axis at rest,
-                the readings are arriving and the numbers you committed are
+                the readings are arriving, and the values with which you
+                initialized the control registers are
                 the suspect: the scaling in <c>accel_test.c</c> assumes
                 ±2 g, so a different FS[1:0] scales every axis by the ratio
                 of the ranges.  Recompute one printed line by hand against
-                yesterday's formula, then compare the two values in your
-                <c>lsm303_AccelInit()</c> against the readbacks on the
+                yesterday's formula, then compare those two values against
+                the readbacks on the
                 screen.  If none of those three finds it, put the logic
                 analyzer back on the bus as you did on Tuesday and watch
                 the transaction itself.
@@ -3070,8 +3227,8 @@ int main(void) {
   	printf("Control Register 1 = %x \n\r", lsm303_AccelRegisterRead(LSM303_CTRL_REG1_A));
   	printf("Control Register 4 = %x \n\r", lsm303_AccelRegisterRead(LSM303_CTRL_REG4_A));
 ]]></code></program>
-    <caption>The init line shows which way it went, and Control Register 1 is the one that proves your write landed: its power-on default is 07, so 77 can only have come from your code.</caption>
-    <note>≈ 1 min.  Abridged for the wall: the includes, the header comment, the #define block (yesterday's ACC_FS/ACC_REGISTERWIDTH/MILLI, verbatim) and the accel_x/y/z declaration line are off it; the full file is in the book and in the download.  CTRL_REG4's default equals the committed 0x00, so only the REG1 readback is diagnostic.</note>
+    <caption>The first line of output shows whether the initialization succeeded, and the Control Register 1 readback lets you check that the value you worked out was actually written.</caption>
+    <note>≈ 1 min.  Abridged for the wall: the includes, the header comment, the #define block (yesterday's ACC_FS/ACC_REGISTERWIDTH/MILLI, verbatim) and the accel_x/y/z declaration line are off it; the full file is in the book and in the download.  Worth saying out loud: CTRL_REG1's power-on default is 0x07, so a readback of 0x77 must have come from the student's own write; CTRL_REG4's default equals the intended 0x00, so that readback alone proves nothing.</note>
 </slide>
 
             <slide xml:id="sl-day14-accel-test-loop">
@@ -3089,15 +3246,15 @@ int main(void) {
 		delay_ms(2000);
 	}
 ]]></code></program>
-    <p>The scaling line is yesterday's formula in C, with a right shift by 16 where the formula said divide by 2¹⁶.  Each pass prints the raw readings in hex and the converted milli-g right underneath; because <c>printf</c>'s <c>%x</c> widens the 16-bit reading to 32 bits, a negative raw reading prints as eight digits, and the reading is the bottom four.</p>
+    <p>The scaling line is yesterday's formula in C, with a right shift by 16 where the formula said divide by 2¹⁶.  Each pass prints the raw readings in hex and the converted milli-g values right underneath.</p>
     <note>≈ 2 min.  The variables are int16_t; the big intermediate product (±131 million at most) exists only inside the arithmetic, which C carries out in a wider integer type.  If that question comes up, the Reference section has the full story, including the signed-shift subtlety.</note>
 </slide>
 
             <slide xml:id="sl-day14-ladder">
     <ul>
-        <li>If <c>Could not connect to accelerometer</c> appears, the WHO_AM_I check did not read back 0x33.  Re-seat the four leads against Tuesday's diagram: yellow on the SCL row, blue on the SDA row, black to GND and red to 3.3 V, and try again.</li>
+        <li>If <c>Could not connect to accelerometer</c> appears, the WHO_AM_I check did not return 0x33.  Double-check your wiring against Tuesday's diagram and try again.</li>
         <li>If it connects but a control-register readback is not what you wrote, the write path is suspect, and that is today's new code.  Check that your <c>lsm303_AccelRegisterWrite()</c> makes a single <c>i2c1_memWrite()</c> call, with the device address, the register address, a count of 1, and a pointer to the data byte.</li>
-        <li>If everything prints and both readbacks match, but the values are nowhere near 1000 mg at rest, the numbers you committed are the suspect.  Recompute one printed line by hand against yesterday's formula, then compare your two <c>lsm303_AccelInit()</c> values against the readbacks.</li>
+        <li>If everything prints and both readbacks match, but the values are nowhere near 1000 mg at rest, the values with which you initialized the control registers are the suspect.  Recompute one printed line by hand against yesterday's formula, then compare those two values against the readbacks.</li>
         <li>If none of those three finds it, put the logic analyzer back on the bus as you did on Tuesday and watch the transaction itself.</li>
         <li>Still stuck?  We're here to help!</li>
     </ul>
@@ -3116,10 +3273,12 @@ int main(void) {
             <activity xml:id="act-day14-promote">
                 <title>Promote the driver to your library</title>
                 <introduction>
-                    <p>Your driver works, so it stops being project code and
-                    becomes library code.  We'll promote it to your
-                    <c>mylib</c> folder exactly as we did with the display
-                    driver on Day 10.</p>
+                    <p>Once your driver works, you can move it out of your
+                    project's <c>Src</c> folder into the <c>mylib</c>
+                    folder, so that it becomes accessible to other projects
+                    as well.  The header, <c>lsm303agr.h</c>, is already in
+                    <c>mylib</c>; you put it there on Tuesday.  Follow
+                    these steps:</p>
                 </introduction>
                 <task xml:id="task-day14-rename">
                     <statement><p>Rename <c>lsm303agr_partial.c</c> to
@@ -3164,8 +3323,8 @@ delay_ms(100);      // or less
 ]]></code></program>
 
             <p>
-                In CoolTerm, connect as usual, then click <em>View</em> in
-                the toolbar and choose <em>View Chart</em>
+                In CoolTerm, connect as usual.  Then, in the
+                <em>View</em> menu, select <em>View Chart</em>
                 (<xref ref="fig-coolterm-chartview"/>).  Each
                 comma-separated value becomes one trace.
             </p>
@@ -3183,17 +3342,18 @@ delay_ms(100);      // or less
     <note>≈ 2 min.  Her slide 13's modification list.  The comma-separated line is what the chart parses: one value per trace.</note>
 </slide>
 
-            <slide xml:id="sl-day14-chartview" ref="fig-coolterm-chartview">
-    <caption>Connect as usual, then click View in the toolbar and choose View Chart.  Each comma-separated value becomes one trace.</caption>
-    <note>≈ 5 min.  First-time tool on thirty laptops: rebuild, reflash, reconnect, find the button.  Her screenshot, and the wording matches the current CoolTerm build.  Wait for the whole room's charts to move before the experiments.</note>
+            <slide xml:id="sl-day14-chartview">
+    <p>In the <em>View</em> menu, select <em>View Chart</em>.  Each comma-separated value becomes one trace.</p>
+    <image source="images/Day14-Accelerometer(2)/coolterm_view_chart_circled.svg" width="94%"/>
+    <note>≈ 5 min.  First-time tool on thirty laptops: rebuild, reflash, reconnect, find the menu.  Her screenshot with View Chart circled, as on her own slide.  Wait for the whole room's charts to move before the experiments.</note>
 </slide>
 
             <figure xml:id="fig-coolterm-chartview">
-                <caption>CoolTerm's View menu, from the toolbar: View Plain,
-                View Hex, and View Chart.  With the program printing
+                <caption>CoolTerm's View menu: View Plain, View Hex, and
+                View Chart (circled).  With the program printing
                 comma-separated values, View Chart plots each value as its
                 own trace.</caption>
-                <image source="images/Day14-Accelerometer(2)/coolterm_view_chart.png" width="90%"/>
+                <image source="images/Day14-Accelerometer(2)/coolterm_view_chart_circled.svg" width="90%"/>
             </figure>
 
             <activity xml:id="act-day14-experiments">
@@ -3262,12 +3422,10 @@ delay_ms(100);      // or less
                  because the two figures assert their formulas. -->
             <activity xml:id="act-day14-tilt-commit">
                 <title>Predict the readings at 30 degrees</title>
-                <task xml:id="task-day14-tilt-commit">
-                    <statement><p>The board lies flat, then tilts by 30
-                    degrees about one edge.  Write down what happens to each
-                    of the three readings: which move, which direction, and
-                    roughly where they end up.</p></statement>
-                </task>
+                <statement><p>The board lies flat, then tilts by 30
+                degrees about one edge.  Write down what happens to each
+                of the three readings: which move, which direction, and
+                roughly where they end up.</p></statement>
             </activity>
 
             <instructor xml:id="ins-day14-tilt-commit">
@@ -3294,9 +3452,11 @@ delay_ms(100);      // or less
                 With one axis (<xref ref="fig-tilt-single"/>), the x reading
                 is <m>A_x = g \sin\theta</m>, so
                 <m>\theta = \sin^{-1}(A_x/g)</m>.  That works, but not
-                everywhere: the slope of <m>\sin\theta</m> is
+                everywhere.  The slope of <m>\sin\theta</m> is
                 <m>\cos\theta</m>, which goes to zero as <m>\theta</m>
-                approaches 90°.  Near 0° a 1° tilt moves the reading by
+                approaches 90°, and this slope is the measurement's
+                <term>sensitivity</term>.  Near 0° a 1° tilt moves the
+                reading by
                 about 17 mg, and near 90° the same 1° tilt moves it by less
                 than 1 mg, so a fixed amount of sensor noise barely
                 disturbs the angle near 0° but can swing the computed angle
@@ -3318,7 +3478,10 @@ delay_ms(100);      // or less
             <slide xml:id="sl-day14-tilt-single" ref="fig-tilt-single" stack="yes">
     <ul>
         <li>One axis is enough for small tilts: A_x = g sin θ, so θ = sin⁻¹(A_x / g).</li>
-        <li>But the slope of sin θ is cos θ, which goes to zero at 90°: near 0° a 1° tilt moves the reading by about 17 mg, and near 90° the same 1° tilt moves it by less than 1 mg, so a fixed amount of sensor noise can swing the computed angle by tens of degrees there.  One axis also cannot tell all four quadrants apart.</li>
+        <li><term>Sensitivity.</term> The slope of sin θ is cos θ, and it goes to zero at 90°.</li>
+        <li>Near 0° a 1° tilt moves the reading by about 17 mg; near 90° the same 1° tilt moves it by less than 1 mg.</li>
+        <li>So a fixed amount of sensor noise can swing the computed angle by tens of degrees near 90°.</li>
+        <li>One axis also cannot tell all four quadrants apart.</li>
     </ul>
     <note>≈ 4 min.  The mechanism, not just the verdict (Gate 1): say "the slope goes to zero" while pointing at the tilted drawing.  AN-1057 is hosted with the course documents; Lab 7's optional full-orientation route is in it.</note>
 </slide>
@@ -3403,8 +3566,13 @@ delay_ms(100);      // or less
                     <c>ACCEL_raw * ACC_FS / 65536</c>
                     has that trap in it.  Write the expression with a
                     <c>(float)</c> cast placed so the result keeps its
-                    fraction, and say what goes wrong if the cast is
-                    somewhere else.</p></statement>
+                    fraction.</p></statement>
+                </task>
+                <task xml:id="task-day14-cast-review">
+                    <statement><p>As a review of how casting works in C: in
+                    your expression, what exactly does the <c>(float)</c>
+                    apply to, and when does it run relative to the
+                    <c>*</c> and the <c>/</c>?</p></statement>
                 </task>
             </activity>
 
@@ -3413,7 +3581,10 @@ delay_ms(100);      // or less
                 <program language="c"><code><![CDATA[
 float a = (float) ACCEL_raw * ACC_FS / 65536;    // 65536 = 2^16; the result is in g, not mg
 ]]></code></program>
-                <p><c>*</c> and <c>/</c> group left to right, so the
+                <p>The <c>(float)</c> applies only to <c>ACCEL_raw</c>,
+                the value written right after it, and it runs before
+                either operator.  <c>*</c> and <c>/</c> group left to
+                right, so the
                 multiply happens first, on a float, and then the divide is
                 a float divide, so the fraction survives.  Casting the
                 finished <c>ACCEL_raw * ACC_FS / 65536</c> instead is too
@@ -3503,9 +3674,8 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
             <p>
                 Today's work is the preparation for Lab 7.  In the lab you
                 are asked to run two I2C devices on the same bus at once,
-                the accelerometer and the seven-segment display, which is
-                the question we discussed on Tuesday and now have to make
-                work.  You are asked to compute and display tilt from
+                the accelerometer and the seven-segment display.  You are
+                asked to compute and display tilt from
                 −180° to 180°, with <c>atan2()</c> and <c>round()</c>.
                 And you are asked to light orientation LEDs the way a phone
                 does when its screen rotates; how you show the orientation
@@ -3516,7 +3686,7 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
 
             <slide xml:id="sl-day14-lab7">
     <ul>
-        <li>In Lab 7 you are asked to run two I2C devices on the same bus at once, the accelerometer and the seven-segment display.  This is the question we discussed on Tuesday, and now we have to make it work.</li>
+        <li>In Lab 7 you are asked to run two I2C devices on the same bus at once, the accelerometer and the seven-segment display.</li>
         <li>You are asked to compute and display tilt from −180° to 180°, with <c>atan2()</c> and <c>round()</c>.</li>
         <li>You are asked to light orientation LEDs the way a phone does when its screen rotates.  How you show the orientation is your own design decision.</li>
         <li>The pre-lab is a working accelerometer driver, which is what you just built.</li>
