@@ -15,7 +15,7 @@
             So far our programs can only communicate with the outside world by blinking LEDs.
             The <term>Universal Asynchronous Receiver-Transmitter (UART)</term> lets the
             microcontroller exchange text with a PC terminal over a serial connection.
-            It is the simplest and most ubiquitous serial protocol in embedded systems—
+            It is the simplest and most ubiquitous serial protocol in embedded systems,
             invaluable for debugging and for building human-readable interfaces.
         </p>
         <objectives>
@@ -50,7 +50,7 @@
                 Suppose your laptop wants to receive the letter <sq>E</sq> from the
                 STM32.  The simplest possible connection is one wire: that wire is
                 either HIGH (3.3 V) or LOW (0 V).  To send <sq>E</sq>, the STM32
-                first looks up its ASCII code — 69 — converts it to binary
+                first looks up its ASCII code (69), converts it to binary
                 (<m>64 + 4 + 1 = 69</m>, so <c>0b01000101</c>), and then puts
                 those eight bits on the wire one at a time: HIGH for a 1, LOW for a 0.
             </p>
@@ -64,7 +64,7 @@
             <figure xml:id="fig-uart-serialize">
                 <caption>A UART transmitter serializes parallel data into a bit stream; the
                 receiver deserializes it back.  Both sides share a timing agreement (the
-                baud rate) but no clock wire — the <q>asynchronous</q> in UART.</caption>
+                baud rate) but no clock wire, the <q>asynchronous</q> in UART.</caption>
                 <image source="images/Day05-UART/slide16_img1.png" width="80%"/>
             </figure>
         </subsection>
@@ -90,7 +90,7 @@
                 The wire sits HIGH when nothing is being transmitted.  To announce the
                 start of a byte, the STM32 pulls the wire LOW for exactly one bit
                 period.  This is the <term>start bit</term>.  After the start bit come
-                the 8 data bits, sent <em>least-significant bit first</em> — D0 before
+                the 8 data bits, sent <em>least-significant bit first</em>, D0 before
                 D7.  A final <term>stop bit</term>, always HIGH, closes the transmission
                 and guarantees the line returns to idle before the next byte arrives.
             </p>
@@ -98,10 +98,10 @@
                 The complete frame for transmitting <sq>E</sq> at 9600 baud is shown
                 in <xref ref="fig-uart-frame-E"/>.  Three things are worth noticing.
                 First, the idle state is HIGH, so the start bit is a <em>falling
-                edge</em> — a sharp, unambiguous signal even after a long silence.
+                edge</em>, a sharp, unambiguous signal even after a long silence.
                 Second, the three consecutive LOW bits (D3, D4, D5 are all zero) look
                 identical to a single long pulse from the outside; only a receiver that
-                knows the baud rate can count them correctly — this is exactly why
+                knows the baud rate can count them correctly.  This is exactly why
                 mismatched baud rates produce garbled output rather than silence.
                 Third, to decode the frame yourself: read D7 down to D0, write out
                 <c>01000101</c>, and convert: <m>64 + 4 + 1 = 69</m>.
@@ -111,7 +111,7 @@
                 <caption>UART frame for the character <sq>E</sq> (ASCII 69 =
                 <c>0b01000101</c>) at 9600 baud.  Each bit lasts 104 µs.  The
                 start bit is a falling edge from the idle-high line.  Data
-                bits are sent LSB first — D0 through D7.  The stop bit
+                bits are sent LSB first, D0 through D7.  The stop bit
                 returns the line HIGH, ready for the next start bit.</caption>
                 <image source="uart_frame_E.svg" width="100%"/>
             </figure>
@@ -120,7 +120,7 @@
                 <caption>General UART frame structure: the line idles HIGH, a start bit
                 pulls it LOW, eight data bits follow (LSB first), an optional parity
                 bit may be included, and one or more stop bits return the line to idle.
-                We use 8N1 — 8 data bits, no parity, 1 stop bit.</caption>
+                We use 8N1: 8 data bits, no parity, 1 stop bit.</caption>
                 <image source="images/Day05-UART/slide17_img1.png" width="90%"/>
             </figure>
         </subsection>
@@ -130,11 +130,11 @@
             <p>
                 So far, data flows only one direction.  To reply, the laptop sends on
                 a <em>separate</em> wire simultaneously.  This gives two independent
-                one-way channels: the <term>TX</term> pin (transmit — STM32 to laptop)
-                and the <term>RX</term> pin (receive — laptop to STM32).  Both operate
+                one-way channels: the <term>TX</term> pin (transmit, STM32 to laptop)
+                and the <term>RX</term> pin (receive, laptop to STM32).  Both operate
                 at the same time, independently.  This two-wire arrangement is called
                 <term>full duplex</term>.  Because the two wires carry traffic in
-                opposite directions, TX on one device connects to RX on the other —
+                opposite directions, TX on one device connects to RX on the other,
                 a crossing that confuses many first-time builders.
                 A shared ground connection is also required.
             </p>
@@ -142,7 +142,7 @@
                 <caption>Full-duplex UART wiring between two devices.  TX on the left
                 device crosses to RX on the right, and vice versa.  Both devices also
                 share a common ground reference.  Connecting TX→TX is the most common
-                wiring mistake — neither side receives anything.</caption>
+                wiring mistake: neither side receives anything.</caption>
                 <image source="images/Day05-UART/slide20_img1.png" width="55%"/>
             </figure>
         </subsection>
@@ -164,7 +164,7 @@
         <subsection xml:id="subsec-uart-vs-usart">
             <title>UART vs. USART</title>
             <p>
-                The STM32's serial peripheral is labeled <term>USART</term> — the
+                The STM32's serial peripheral is labeled <term>USART</term>.  The
                 <q>S</q> stands for Synchronous.  The hardware also supports a clocked
                 mode for special cases, but in this course we use it exclusively in
                 asynchronous mode.  The USART handles all the timing in hardware: it
@@ -176,7 +176,7 @@
                 (7, 8, or 9), the number of stop bits (0.5, 1, 1.5, or 2), and an
                 optional parity bit can all be adjusted to match whatever device is
                 on the other end.  In practice the vast majority of UART devices use
-                8 data bits, no parity, and 1 stop bit — a combination so common it
+                8 data bits, no parity, and 1 stop bit, a combination so common it
                 has its own shorthand: <term>8N1</term>.  That is what we use
                 throughout this course, and it is what the frame in
                 <xref ref="fig-uart-frame-E"/> illustrates.
@@ -196,7 +196,7 @@
                 <choices randomize="no">
                     <choice correct="yes">
                         <statement><p>By sampling the wire at exactly the agreed baud
-                        rate — once per bit period — so that each 104 µs window is
+                        rate (once per bit period) so that each 104 µs window is
                         counted as one bit regardless of whether consecutive bits have
                         the same value.</p></statement>
                         <feedback><p>Correct.  This is precisely what <q>asynchronous</q>
@@ -205,7 +205,7 @@
                         from that point on.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>By detecting voltage transitions — the line changes
+                        <statement><p>By detecting voltage transitions: the line changes
                         level at each new bit.</p></statement>
                         <feedback><p>Consecutive identical bits produce no transition at
                         all.  A receiver that relies on transitions cannot count repeated
@@ -214,7 +214,7 @@
                     <choice>
                         <statement><p>By measuring the total duration of the LOW pulse
                         and dividing by a standard minimum bit width.</p></statement>
-                        <feedback><p>There is no standard minimum — bit width depends on
+                        <feedback><p>There is no standard minimum.  Bit width depends on
                         baud rate, which varies across devices.  Without knowing the
                         agreed rate, the duration alone tells you nothing about the
                         number of bits.</p></feedback>
@@ -242,12 +242,12 @@
                         <statement><p>Yes.  The gap between bytes is enough for the
                         receiver to reset.</p></statement>
                         <feedback><p>There is no guaranteed gap in a continuous UART
-                        stream — bytes can follow immediately one after another.  The
+                        stream: bytes can follow immediately one after another.  The
                         stop bit is the only guaranteed return to HIGH.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>No, but only because the hardware requires it —
-                        there is no fundamental protocol reason.</p></statement>
+                        <statement><p>No, but only because the hardware requires it.
+                        There is no fundamental protocol reason.</p></statement>
                         <feedback><p>There is a fundamental reason: start-bit detection
                         depends on a falling edge, which requires the line to be HIGH
                         first.  The stop bit provides that guarantee.</p></feedback>
@@ -262,7 +262,7 @@
                 <choices randomize="yes">
                     <choice correct="yes">
                         <statement><p>The laptop's RX pin, because TX on one device
-                        must connect to RX on the other — data sent by one must be
+                        must connect to RX on the other: data sent by one must be
                         received by the other.</p></statement>
                         <feedback><p>Correct.  TX → RX is the fundamental UART
                         wiring rule.  Connecting TX → TX puts two drivers on the
@@ -277,7 +277,7 @@
                         listening.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>Either pin — UART is symmetric.</p></statement>
+                        <statement><p>Either pin: UART is symmetric.</p></statement>
                         <feedback><p>UART is asymmetric: TX and RX are separate pins
                         carrying traffic in opposite directions.</p></feedback>
                     </choice>
@@ -375,7 +375,7 @@
 
             <p>
                 In this first activity you will set up a project that prints
-                a live counter to your laptop over UART — the same workflow you
+                a live counter to your laptop over UART, the same workflow you
                 will use as a debugging tool throughout the rest of the course.
                 The figure below shows what the finished project should look like
                 in STM32CubeIDE; use it to check your file placement before
@@ -407,7 +407,7 @@
                         Configure it as shown next,
                         then click OK.  Save the configuration using the toolbar
                         <em>Save</em> button and name the file
-                        <c>ENGS28.CoolTermSettings</c> — next time you can
+                        <c>ENGS28.CoolTermSettings</c>.  Next time you can
                         reload it instantly with <em>Open</em>.  If you open
                         the saved settings but have your Nucleo connected to a
                         different USB port of your laptop and see a
@@ -422,7 +422,7 @@
                         <caption>CoolTerm Options → Serial Port.  Click the Port
                         drop-down and select the entry that looks like a USB
                         modem or USB serial device (on Mac: <c>usbmodem…</c>;
-                        on Windows: <c>COM4 (USB Serial Device)</c>) — not
+                        on Windows: <c>COM4 (USB Serial Device)</c>), not
                         <c>debug-console</c> or Bluetooth.  Set Baudrate to
                         <c>9600</c>, Data Bits to <c>8</c>, Parity to
                         <c>None</c>, Stop Bits to <c>1</c>, and leave all
@@ -492,7 +492,7 @@
                 <ul>
                     <li>Each line prints once per 500 ms.</li>
                     <li>Press the Nucleo reset button and the count restarts from zero.</li>
-                    <li>4800 baud is half the correct rate — the receiver samples each bit for twice as long, so every byte is corrupted.</li>
+                    <li>4800 baud is half the correct rate: the receiver samples each bit for twice as long, so every byte is corrupted.</li>
                 </ul>
                 <caption>CoolTerm showing counter output at 9600 baud.</caption>
                 <note>OPTIONAL / REVEAL — after the baud experiment.</note>
@@ -558,7 +558,7 @@ int main(void) {
             <!-- check-rules: allow L-2  (this paragraph teaches that %f is unsupported) -->
             <p>
                 Note that <c>%f</c> is <em>not</em> supported by the
-                <c>printf</c> library used in this course — floating-point
+                <c>printf</c> library used in this course.  Floating-point
                 formatting requires a much larger library.  To print a
                 floating-point value, convert to integer first: compute
                 <c>int mV = (int)(voltage * 1000)</c> and print
@@ -571,7 +571,7 @@ int main(void) {
                 <ul>
                     <li>Setup: add <c>#include &lt;stdio.h&gt;</c> and <c>#include "uart.h"</c>, and call <c>uart2_init()</c> once before any printf.</li>
                     <li>End each line with <c>\r\n</c> (not just <c>\n</c>) so the cursor returns to the left edge.</li>
-                    <li>No <c>%f</c>: convert first — <c>int mV = (int)(v*1000); printf("%d mV", mV);</c></li>
+                    <li>No <c>%f</c>: convert first, as in <c>int mV = (int)(v*1000); printf("%d mV", mV);</c></li>
                 </ul>
                 <program language="c"><code><![CDATA[
 printf("count = %d\r\n", count);            // signed decimal
@@ -611,7 +611,7 @@ printf("key = %c\r\n", ch);                  // single character
 
             <p>
                 Below is <c>uart.c</c> with all comments stripped.  Annotate your
-                assigned section — explain what each line does and <em>why</em> it
+                assigned section: explain what each line does and <em>why</em> it
                 is necessary.  After eight minutes you will teach your section to
                 a classmate; your goal is that they could explain any line
                 without your help.
@@ -664,7 +664,7 @@ int uart2_read(void) {
             <slide xml:id="sl-uart-jigsaw">
                 <p><em>Annotate the driver in groups:</em></p>
                 <ul>
-                    <li>Below is <c>uart.c</c> with all comments stripped. Annotate your assigned section — what each line does and why.</li>
+                    <li>Below is <c>uart.c</c> with all comments stripped. Annotate your assigned section: what each line does and why.</li>
                     <li>Groups A &amp; B: <c>uart2_init</c> (GPIO/AF, then clock/BRR/CR1). Groups C &amp; D: <c>uart2_write</c> and <c>uart2_read</c>.</li>
                     <li>After 8 minutes, pair up across the split and teach each other.</li>
                 </ul>
@@ -676,7 +676,7 @@ int uart2_read(void) {
                  Group D's function was clipped off entirely — the one section
                  those students were assigned to annotate. -->
             <slide xml:id="sl-uart-driver-stripped">
-                <p>Groups A and B — <c>uart2_init</c>:</p>
+                <p>Groups A and B, <c>uart2_init</c>:</p>
                 <program language="c"><code><![CDATA[
 #define APB_CLK 12000000U
 #define BAUD_RATE   9600U
@@ -696,7 +696,7 @@ void uart2_init(void) {
             </slide>
 
             <slide xml:id="sl-uart-driver-stripped-cd">
-                <p>Groups C and D — <c>uart2_write</c> and <c>uart2_read</c>:</p>
+                <p>Groups C and D, <c>uart2_write</c> and <c>uart2_read</c>:</p>
                 <program language="c"><code><![CDATA[
 // -- Group C --
 void uart2_write(int ch) {
@@ -762,7 +762,7 @@ int uart2_read(void) {
             <p>
                 Your counter currently only sends data.  Now make it listen too:
                 pressing a key in CoolTerm should change the count.  The challenge
-                is doing this without freezing the 500 ms print loop — use the
+                is doing this without freezing the 500 ms print loop.  Use the
                 technique below and test it in CoolTerm.
             </p>
 
@@ -773,7 +773,7 @@ int uart2_read(void) {
                         Modify <c>counter.c</c> so that:
                     </p>
                     <ul>
-                        <li>The counter no longer auto-increments — it only changes
+                        <li>The counter no longer auto-increments.  It only changes
                         when one of the control keys below is pressed.  Any other
                         key, or no key at all, leaves the count unchanged and the
                         same value prints every 500 ms.</li>
@@ -785,7 +785,7 @@ int uart2_read(void) {
                         Use the RXNE flag for a non-blocking receive: if a byte is
                         waiting in the receive register, read it and act on it; if
                         not, skip straight to the print and delay.  Do <em>not</em>
-                        call <c>uart2_read()</c> — that function blocks until a byte
+                        call <c>uart2_read()</c>.  That function blocks until a byte
                         arrives and will freeze the counter.
                     </p>
                     <program language="c"><code><![CDATA[
@@ -805,7 +805,7 @@ while (1) {
                     <p>
                         <em>Optional challenge:</em> Change the counter so that pressing
                         <c>u</c> or <c>U</c> sets the direction to <q>up</q> and pressing
-                        <c>d</c> or <c>D</c> sets the direction to <q>down</q> — and then
+                        <c>d</c> or <c>D</c> sets the direction to <q>down</q>, and then
                         the counter keeps incrementing or decrementing automatically every
                         500 ms, even when no further key is pressed.  Pressing <c>r</c>
                         or <c>R</c> resets the count to zero and pauses auto-counting until
@@ -813,11 +813,26 @@ while (1) {
                     </p>
                 </statement>
             </activity>
-        
+
+            <p>
+                Here is the same exercise in the simulator, for working on it
+                away from your Nucleo.  The panel below the editor is a stand-in
+                for CoolTerm: <c>printf</c> output arrives there, and clicking it
+                lets you type back to the board.  The RXNE flag and
+                <c>USART2-&gt;RDR</c> behave as they do on hardware, and you can
+                watch both in the register panel as you type.  The terminal also
+                decodes at whatever baud rate you select in it, so you can
+                reproduce the mismatch from Part 1 without touching a cable.
+                Nothing here is saved for you, so copy your finished code
+                somewhere safe, or use <em>Full screen</em>, which carries your
+                edits into a new tab you can bookmark.
+            </p>
+
+            <sim starter="keyboardCounter" coolterm="yes" height="740"/>
 
             <slide xml:id="sl-uart-listen">
                 <ul>
-                    <li>Your counter only sends — now make it listen. Pressing a key should change the count.</li>
+                    <li>Your counter only sends.  Now make it listen. Pressing a key should change the count.</li>
                     <li>Calling <c>uart2_read()</c> at the top of the loop would block forever waiting for a key, freezing the counter.</li>
                     <li>The fix: poll the RXNE flag. If a byte is waiting, read it and act; if not, skip to the print and delay.</li>
                 </ul>
@@ -892,12 +907,12 @@ int main(void) {
 
             <p>
                 The STM32C031 has two USART instances: USART1 (full feature set) and
-                USART2 (basic feature set — more than enough for this course).  Both
+                USART2 (basic feature set, more than enough for this course).  Both
                 can be routed to several different pins via the alternate function
                 system, but on the Nucleo board only one set of pins per peripheral is
                 connected via solder bridges to the ST-LINK MCU: for USART2 these are
                 TX on PA2 and RX on PA3.  Note that PA2 and PA3 do not appear on the
-                Arduino-compatible headers, but that does not matter here — because the
+                Arduino-compatible headers, but that does not matter here, because the
                 connection to the ST-LINK is made internally on the board, no external
                 wiring is needed at all.
             </p>
@@ -950,7 +965,7 @@ int main(void) {
             <figure xml:id="fig-rcc-iopenr">
                 <caption>RCC I/O port clock enable register (RCC_IOPENR).  Setting bit 0
                 (GPIOAEN) ungates the clock to GPIOA; without this, writes to MODER and
-                AFR have no effect.  Reset value is 0x0000 0000 — all GPIO clocks off
+                AFR have no effect.  Reset value is 0x0000 0000, all GPIO clocks off
                 by default.</caption>
                 <image source="images/Day05-UART/slide25_img1.png" width="85%"/>
             </figure>
@@ -991,8 +1006,8 @@ GPIOA->MODER |= (GPIO_ALTERNATE << GPIO_MODER_MODE3_Pos);
 
             <slide xml:id="sl-uart-physical" ref="fig-uart-physical-connection">
                 <ul>
-                    <li>The ST-Link section (top of the board) is a second STM32 — programmer AND USB-to-serial bridge.</li>
-                    <li>USART2 TX = PA2, RX = PA3 connect internally (solder bridges) to the ST-Link — no external wiring.</li>
+                    <li>The ST-Link section (top of the board) is a second STM32: programmer AND USB-to-serial bridge.</li>
+                    <li>USART2 TX = PA2, RX = PA3 connect internally (solder bridges) to the ST-Link, no external wiring.</li>
                     <li>The ST-Link appears on your laptop as a USB serial device.</li>
                     <li>So: printf → PA2 → ST-Link → USB → CoolTerm.</li>
                 </ul>
@@ -1001,12 +1016,12 @@ GPIOA->MODER |= (GPIO_ALTERNATE << GPIO_MODER_MODE3_Pos);
 
             <slide xml:id="sl-uart-af" ref="fig-uart-afr-register">
                 <ul>
-                    <li>One physical pin can serve many peripherals — two fields decide which.</li>
+                    <li>One physical pin can serve many peripherals: two fields decide which.</li>
                     <li><c>GPIOA->MODER</c> = 10 puts PA2/PA3 in Alternate Function mode.</li>
-                    <li><c>GPIOA->AFR[0]</c> picks which function — 4 bits per pin. AF1 = USART2 for PA2/PA3.</li>
+                    <li><c>GPIOA->AFR[0]</c> picks which function, 4 bits per pin. AF1 = USART2 for PA2/PA3.</li>
                     <li>That is exactly the Group A code in the driver.</li>
                 </ul>
-                <caption>AFRL — 4 bits per pin: PA2 = bits [11:8], PA3 = bits [15:12]; write 0001 (AF1) into each.</caption>
+                <caption>AFRL, 4 bits per pin: PA2 = bits [11:8], PA3 = bits [15:12]; write 0001 (AF1) into each.</caption>
             </slide>
             </subsection>
 
@@ -1038,7 +1053,7 @@ RCC->APBENR1 |= RCC_APBENR1_USART2EN;
                 exactly when each bit starts.  Its solution is to run its internal
                 sampling clock at <em>16 times</em> the baud rate, watch for the falling
                 edge of the start bit, count 8 ticks to land in the middle of the start
-                bit, then sample every 16 ticks after that — always reading each bit at
+                bit, then sample every 16 ticks after that, always reading each bit at
                 its center, where the signal is most stable.
             </p>
 
@@ -1072,7 +1087,7 @@ RCC->APBENR1 |= RCC_APBENR1_USART2EN;
             </p>
 
             <figure xml:id="fig-uart-brr-register">
-                <caption>USART Baud Rate Register (BRR).  Bits [15:0] hold USARTDIV —
+                <caption>USART Baud Rate Register (BRR).  Bits [15:0] hold USARTDIV,
                 the integer divisor.  For 9600 baud with a 12 MHz APB clock the value
                 is 1250 (0x04E2).</caption>
                 <image source="images/Day05-UART/slide34_img1.png" width="75%"/>
@@ -1102,7 +1117,7 @@ USART2->BRR = APB_CLK / UART_BAUD_RATE;   // = 1250
                     <li>No shared clock wire, so both ends must agree on the bit rate in advance.</li>
                     <li><c>USART_BRR</c> holds USARTDIV, a plain divisor of the APB clock.</li>
                     <li>BRR = f_APB / baud = 12,000,000 / 9600 = 1250.</li>
-                    <li>Load the wrong divisor and every bit is mistimed — that is what you saw when you set CoolTerm to 4800.</li>
+                    <li>Load the wrong divisor and every bit is mistimed.  That is what you saw when you set CoolTerm to 4800.</li>
                 </ul>
                 <caption>USART_BRR bits [15:0] = USARTDIV. 9600 baud at 12 MHz → 1250 (0x04E2).</caption>
             </slide>
@@ -1110,7 +1125,7 @@ USART2->BRR = APB_CLK / UART_BAUD_RATE;   // = 1250
             <slide xml:id="sl-uart-oversampling" ref="fig-uart-oversampling" stack="yes">
                 <ul>
                     <li>Each byte is framed: line idles HIGH, a START bit (LOW) begins it, 8 data bits LSB-first, a STOP bit (HIGH) ends it (8N1).</li>
-                    <li>The receiver samples at 16× the baud rate: catch the START edge, count 8 ticks to bit center, then sample every 16 ticks — always mid-bit.</li>
+                    <li>The receiver samples at 16× the baud rate: catch the START edge, count 8 ticks to bit center, then sample every 16 ticks, always mid-bit.</li>
                     <li>That is how it reads several identical bits correctly with no clock wire.</li>
                 </ul>
                 <caption>Dense ticks = the 16× sample clock. Black arrow = start-bit center; red arrows = each bit sampled at its center.</caption>
@@ -1122,7 +1137,7 @@ USART2->BRR = APB_CLK / UART_BAUD_RATE;   // = 1250
             <p>
                 <c>USART_CR1</c> and <c>USART_CR2</c> together control the frame format
                 and operating mode.  The reset value of 0x00000000 already gives us
-                8 data bits, 1 stop bit, no parity, and oversampling by 16 —
+                8 data bits, 1 stop bit, no parity, and oversampling by 16,
                 exactly what we need for 8N1 operation.  The only bits we must
                 set explicitly are TE (bit 3, transmitter enable), RE (bit 2, receiver
                 enable), and UE (bit 0, USART enable).  UE must be set last.
@@ -1133,7 +1148,7 @@ USART2->BRR = APB_CLK / UART_BAUD_RATE;   // = 1250
                 annotated.  The reset value of 0x0000 0000 already selects oversampling
                 by 16 (OVER8 = 0), 8 data bits (M0 = M1 = 0), no parity (PCE = 0), and
                 1 stop bit (STOP[1:0] = 00).  The only bits to write are TE, RE, and
-                UE — in that order.</caption>
+                UE, in that order.</caption>
                 <image source="images/Day05-UART/slide38.png" width="95%"/>
             </figure>
 
@@ -1145,7 +1160,7 @@ USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
 
             <slide xml:id="sl-uart-cr1" ref="fig-uart-cr1">
                 <ul>
-                    <li>The reset value of CR1/CR2 (0x00000000) already gives 8 data bits, no parity, 1 stop bit, oversampling ×16 — exactly 8N1.</li>
+                    <li>The reset value of CR1/CR2 (0x00000000) already gives 8 data bits, no parity, 1 stop bit, oversampling ×16, exactly 8N1.</li>
                     <li>So we set only three bits: TE (transmit), RE (receive), UE (enable).</li>
                     <li>UE must be set last, after BRR. That is the Group B code.</li>
                 </ul>
@@ -1201,11 +1216,11 @@ int uart2_read(void) {
                 <choices randomize="yes">
                     <choice correct="yes"><statement><p>The baud rate may be wrong because BRR defaults to 0, giving an undefined or infinite divisor.</p></statement>
                     <feedback><p>Correct.  Always configure BRR before enabling the USART.</p></feedback></choice>
-                    <choice><statement><p>Nothing — the USART will wait for BRR to be written before operating.</p></statement>
+                    <choice><statement><p>Nothing: the USART will wait for BRR to be written before operating.</p></statement>
                     <feedback><p>The hardware does not wait; once UE is set it uses whatever is in BRR at that moment.</p></feedback></choice>
                     <choice><statement><p>A hardware fault exception is triggered.</p></statement>
                     <feedback><p>Writing registers in the wrong order does not cause a fault; it just produces incorrect behavior.</p></feedback></choice>
-                    <choice><statement><p>The USART works fine — order does not matter.</p></statement>
+                    <choice><statement><p>The USART works fine.  Order does not matter.</p></statement>
                     <feedback><p>Order matters.  Enable the USART only after all other registers are configured.</p></feedback></choice>
                 </choices>
             </exercise>
@@ -1217,8 +1232,8 @@ int uart2_read(void) {
         <title>Inside uart.c: Reading the Driver</title>
         <introduction>
             <p>
-                The ENGS 28 support library provides two files — <c>uart.h</c> and
-                <c>uart.c</c> — that you <c>#include</c> and call without worrying too much
+                The ENGS 28 support library provides two files, <c>uart.h</c> and
+                <c>uart.c</c>, that you <c>#include</c> and call without worrying too much
                 about what they do.  This section shows the complete driver, connects every
                 line to a register you already know, and prepares you to adapt it for a
                 different UART peripheral.
@@ -1244,7 +1259,7 @@ int  uart2_read(void);    // receive one byte (blocking)
 #endif // UART_H
 ]]></code></program>
             <p>
-                Notice that <c>printf</c> is not listed here — it comes from the C standard
+                Notice that <c>printf</c> is not listed here.  It comes from the C standard
                 library.  The driver connects <c>printf</c> to the UART via a
                 <term>retarget layer</term>, described at the end of <c>uart.c</c> below.
             </p>
@@ -1368,12 +1383,12 @@ static uint16_t compute_uart_bd(uint32_t PeriphClk, uint32_t BaudRate) {
                 built-in (no-op) version unless you supply your own stronger definition.
                 By defining it in <c>uart.c</c>, we override the weak version, and every
                 character that <c>printf</c> (or <c>putchar</c>) emits is automatically
-                routed to <c>uart2_write</c> — no changes to application code required.
+                routed to <c>uart2_write</c>, no changes to application code required.
             </p>
             <p>
                 Notice that <c>__io_putchar</c> passes the character straight through
                 without any modification.  This means a bare <c>'\n'</c> arrives at the
-                terminal as ASCII 10 (line feed) only — and most terminal emulators,
+                terminal as ASCII 10 (line feed) only, and most terminal emulators,
                 including CoolTerm, interpret a lone line feed as "move cursor down" but
                 <em>not</em> "return to column 0."  The result is the classic
                 <term>staircase effect</term>, where successive lines march diagonally
@@ -1406,7 +1421,7 @@ printf("Voltage: %d mV\n",  mV);   // wrong: LF only → staircase
                     <choice>
                         <statement><p>TXE means a transmit error occurred; skipping the check
                         causes the USART to assert a fault interrupt.</p></statement>
-                        <feedback><p>TXE stands for Transmit Data Register Empty — it is a
+                        <feedback><p>TXE stands for Transmit Data Register Empty.  It is a
                         readiness flag, not an error flag.  Transmit errors use different flags
                         (e.g. framing error, noise error).</p></feedback>
                     </choice>
@@ -1414,7 +1429,7 @@ printf("Voltage: %d mV\n",  mV);   // wrong: LF only → staircase
                         <statement><p>Removing the check would make transmission faster with no
                         side effects because the USART hardware buffers bytes automatically.
                         </p></statement>
-                        <feedback><p>The STM32C031 USART has only a one-byte TDR — there is no
+                        <feedback><p>The STM32C031 USART has only a one-byte TDR.  There is no
                         deeper FIFO in basic mode.  Consecutive writes without checking TXE
                         overwrite the previous byte before it leaves the chip.</p></feedback>
                     </choice>
@@ -1437,7 +1452,7 @@ printf("Voltage: %d mV\n",  mV);   // wrong: LF only → staircase
                         instead of <c>"\n"</c> sends a carriage return first, which moves
                         the cursor to column 0 before the line feed advances to the next
                         line.</p></statement>
-                        <feedback><p>Correct — <c>'\r'</c> (ASCII 13) is the carriage return
+                        <feedback><p>Correct.  <c>'\r'</c> (ASCII 13) is the carriage return
                         that moves the cursor to column 0.  Because the retarget layer does
                         not insert it automatically, your format strings must include it
                         explicitly.</p></feedback>
@@ -1455,7 +1470,7 @@ printf("Voltage: %d mV\n",  mV);   // wrong: LF only → staircase
                         words instead of a newline.</p></statement>
                         <feedback><p><c>'\n'</c> in a C string literal is the control character
                         ASCII 10, not the two printable characters <c>\</c> and <c>n</c>.
-                        The terminal does receive a line feed and does advance the cursor —
+                        The terminal does receive a line feed and does advance the cursor,
                         just not back to column 0.</p></feedback>
                     </choice>
                 </choices>

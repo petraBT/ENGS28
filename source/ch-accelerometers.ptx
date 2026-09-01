@@ -5,7 +5,7 @@
         <p>
             The goal of this chapter is to measure acceleration with the
             LSM303AGR, a three-axis accelerometer, and to use what it measures
-            to compute how far the sensor is tilted — the same computation your phone
+            to compute how far the sensor is tilted, the same computation your phone
             does when it decides to rotate its screen.  The sensor is an I2C
             (Inter-Integrated Circuit) device, so everything we built in
             <xref ref="ch-i2c"/> carries
@@ -21,7 +21,7 @@
                 <li>Wire a second device onto the I2C bus and verify the link by reading its WHO_AM_I register.</li>
                 <li>Debug an I2C bus with the Analog Discovery 2's logic analyzer and protocol decoder.</li>
                 <li>Explain how a MEMS (Micro-Electro-Mechanical Systems) accelerometer converts acceleration into a digital reading.</li>
-                <li>Convert the sensor's raw output — 16-bit, left-justified, two's complement — into milli-g.</li>
+                <li>Convert the sensor's raw output (16-bit, left-justified, two's complement) into milli-g.</li>
                 <li>Complete, test, and package a device driver for the LSM303AGR.</li>
                 <li>Compute tilt angles from gravity's projection, using floating-point arithmetic on a processor without floating-point hardware.</li>
             </ul>
@@ -56,8 +56,8 @@
                 The I2C bus we built in
                 <xref ref="ch-i2c"/> has two wires: SDA (serial data) and SCL
                 (serial clock), both held HIGH by pull-up resistors unless a
-                device is pulling one LOW.  One device is in charge of the bus —
-                the <term>controller</term>, which for us is the STM32C031C6 —
+                device is pulling one LOW.  One device is in charge of the bus
+                (the <term>controller</term>, which for us is the STM32C031C6),
                 and every other device on the bus is a <term>target</term>.
                 Each target has its own 7-bit address, and every transaction
                 begins with the controller sending the address of the device it
@@ -66,7 +66,7 @@
                 the rest of the transaction, and the other devices on the bus
                 don't respond.  If you'd like to review more than this
                 paragraph covers, go to <xref ref="sec-i2c-reference"/>, which
-                has the protocol in full — START and STOP, the ACK handover,
+                has the protocol in full: START and STOP, the ACK handover,
                 and the byte-by-byte framing.
             </p>
             <p>
@@ -95,7 +95,7 @@
             <p>
                 The chip itself is a couple of millimeters across, far too
                 small to handle directly.  It comes to us on a
-                <term>breakout board</term> — a small board that carries the
+                <term>breakout board</term>, a small board that carries the
                 chip and the extra parts it needs, in this case the bus's
                 pull-up resistors and a voltage regulator.  The breakout
                 connects by a STEMMA QT cable, a 4-wire plug that only goes in
@@ -112,8 +112,8 @@
                 entirely through its internal registers: each register has an address inside the device, we
                 configure the sensor by writing to some of them, and we get
                 measurements out by reading others.  Which registers exist, and
-                what each bit in them means, comes from the device's datasheet
-                — for this chapter, the
+                what each bit in them means, comes from the device's datasheet:
+                for this chapter, the
                 <url href="external/datasheets/lsm303agr.pdf">LSM303AGR
                 datasheet</url>.
             </p>
@@ -122,7 +122,7 @@
                 connection: the accelerometer's WHO_AM_I register always
                 contains the value 0x33.  It is read-only, and its contents are
                 fixed when the chip is manufactured
-                (Datasheet §8.4, register WHO_AM_I_A, address 0x0F — the
+                (Datasheet §8.4, register WHO_AM_I_A, address 0x0F: the
                 default value 00110011 is 0x33).  If you read the WHO_AM_I
                 register and get the right result, you can be confident in
                 your I2C setup: the wiring, the device address, and your whole
@@ -149,19 +149,19 @@
                 <choices randomize="yes">
                     <choice correct="yes">
                         <statement><p>Every transaction begins with a device
-                        address — seven address bits plus a read/write bit.
+                        address, seven address bits plus a read/write bit.
                         All the targets hear it, and only the device that
                         recognizes the address as its own acknowledges and
                         takes part.</p></statement>
                         <feedback><p>Correct.  Addressing is what lets many
-                        devices share the same two wires — each target answers
+                        devices share the same two wires, since each target answers
                         only to its own address.</p></feedback>
                     </choice>
                     <choice>
                         <statement><p>Each device is wired to the controller
                         through its own pair of SDA and SCL lines.</p></statement>
                         <feedback><p>Separate wires per device is exactly what
-                        I2C avoids — that was UART's limitation.  All I2C
+                        I2C avoids.  That was UART's limitation.  All I2C
                         devices share one SDA and one SCL, and the address at
                         the start of each transaction says who is being
                         spoken to.</p></feedback>
@@ -178,8 +178,8 @@
                         voltage for the device it wants.</p></statement>
                         <feedback><p>SCL is the shared clock, and it only ever
                         switches between LOW and 3.3 V.  Selection happens with
-                        data — the 7-bit address sent at the start of every
-                        transaction — not with voltage levels.</p></feedback>
+                        data (the 7-bit address sent at the start of every
+                        transaction), not with voltage levels.</p></feedback>
                     </choice>
                 </choices>
             </exercise>
@@ -191,26 +191,26 @@
                 library function does that whole job?</p></statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p><c>i2c1_memRead()</c> — it takes the
+                        <statement><p><c>i2c1_memRead()</c>: it takes the
                         device address <em>and</em> a register address, and
                         reads one or more bytes from that location inside the
                         target.</p></statement>
                         <feedback><p>Correct.  Reading a specific register is a
-                        two-step conversation — say which register, then read —
+                        two-step conversation (say which register, then read),
                         and <c>i2c1_memRead()</c> carries out both
                         steps.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p><c>i2c1_byteRead()</c> — it reads one
+                        <statement><p><c>i2c1_byteRead()</c>: it reads one
                         byte from a target device.</p></statement>
                         <feedback><p><c>i2c1_byteRead()</c> takes only a device
-                        address, no register address — there is no way to tell
+                        address, no register address, so there is no way to tell
                         the sensor which of its many registers you mean.  Reading a specific
                         register needs <c>i2c1_memRead()</c>, which takes the
                         register address too.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p><c>i2c1_memWrite()</c> — it sends the
+                        <statement><p><c>i2c1_memWrite()</c>: it sends the
                         register address to the device.</p></statement>
                         <feedback><p><c>i2c1_memWrite()</c> does send a
                         register address, but what follows is data written
@@ -219,7 +219,7 @@
                         <c>i2c1_memRead()</c>.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p><c>i2c1_init()</c> — it sets up the bus,
+                        <statement><p><c>i2c1_init()</c>: it sets up the bus,
                         which includes scanning the registers.</p></statement>
                         <feedback><p><c>i2c1_init()</c> configures the
                         STM32C031C6's own I2C peripheral and pins.  It sends
@@ -247,7 +247,7 @@
                         <statement><p>The accelerometer is configured and its
                         measurements are ready to use.</p></statement>
                         <feedback><p>WHO_AM_I says nothing about
-                        configuration — its value is fixed at manufacture and
+                        configuration, since its value is fixed at manufacture and
                         never changes.  Setting the sensor's mode and range is
                         separate work, done through other registers.</p></feedback>
                     </choice>
@@ -263,7 +263,7 @@
                         <statement><p>The sensor passed its power-on self-test
                         of the measurement hardware.</p></statement>
                         <feedback><p>Reading WHO_AM_I exercises none of the
-                        measurement hardware — the register is a fixed
+                        measurement hardware, since the register is a fixed
                         constant.  What the successful read demonstrates is
                         that the bus and your read path work.</p></feedback>
                     </choice>
@@ -296,14 +296,14 @@
 
         <!-- Part 1 -->
         <subsection xml:id="subsec-day13-back-to-i2c">
-            <title>Part 1: Back to I2C — a Second Device on the Bus</title>
+            <title>Part 1: Back to I2C, a Second Device on the Bus</title>
 
             <!-- Prose WRITTEN 2026-08-30.  The reveal paragraph below the
                  activity is load-bearing (Lab 7 D2 depends on it). -->
             <p>
                 The LSM303AGR is an I2C device: it joins the same two-wire
                 bus we have been using, speaks the same protocol, and is
-                driven through the same I2C library — the five functions we
+                driven through the same I2C library: the five functions we
                 have been calling since the display are all we need to talk
                 to it.  It also has a magnetometer, but we'll only use the
                 accelerometer in this class.
@@ -311,7 +311,7 @@
 
             <slide xml:id="sl-day13-back-to-i2c">
     <ul>
-        <li>The LSM303AGR is an I2C device: it joins the same two-wire bus we have been using — SDA and SCL, held HIGH by pull-up resistors, every device tapped onto the same two wires.</li>
+        <li>The LSM303AGR is an I2C device: it joins the same two-wire bus we have been using, with SDA and SCL held HIGH by pull-up resistors and every device tapped onto the same two wires.</li>
         <li>It speaks the same protocol and uses the same I2C library: the five functions we have been calling since the display are all we need to talk to it.</li>
         <li>It also has a magnetometer, but we'll only use the accelerometer in this class.</li>
     </ul>
@@ -323,7 +323,7 @@
                 <statement>
                     <p>Suppose your seven-segment display is still connected
                     to the I2C pins of your Nucleo, and today we are adding the
-                    accelerometer — a second I2C device.  Do you
+                    accelerometer, a second I2C device.  Do you
                     need to take the display down first?  What if you wanted to
                     use both the accelerometer and the display in one project?
                     Commit to an answer, and to a reason, before we discuss
@@ -332,7 +332,7 @@
             </activity>
 
             <instructor xml:id="ins-day13-keep-display">
-                <p>No — the display stays.  Both devices share the same two
+                <p>No, the display stays.  Both devices share the same two
                 wires, and each has its own address: every transaction opens
                 with the address of the device the controller wants to
                 communicate with, so the
@@ -350,14 +350,14 @@
                  on the reveal, not the resurface slide — P-15, Gate 2'
                  item 10. -->
             <p>
-                No — the display stays: both devices share the same two
+                No, the display stays: both devices share the same two
                 wires, and each has its own address.  Every transaction opens
                 with the address of the device the controller wants to
                 communicate with, so the
                 display simply does not respond to transactions addressed to
                 the accelerometer, and the other way around.  Letting several
                 devices share two wires is the reason the bus exists, and in
-                Lab 7 you will run both devices on one bus — so leave the
+                Lab 7 you will run both devices on one bus, so leave the
                 display wired.
             </p>
         </subsection>
@@ -377,17 +377,17 @@
 
             <figure xml:id="fig-accel-wiring">
                 <caption>The LSM303AGR breakout and its STEMMA QT cable.  Either
-                socket on the breakout takes the cable's plug — it only fits
+                socket on the breakout takes the cable's plug, and it only fits
                 one way.  Its four wires go to the Nucleo: black to GND,
                 red to 3.3 V, yellow to SCL (D15, PB8), and blue to SDA
-                (D14, PB9) — the same SCL and SDA rows the display is already
+                (D14, PB9), the same SCL and SDA rows the display is already
                 using.  The pin the red wire feeds is VIN; the board accepts
-                either 3.3 or 5 V logic — in this course we use 3.3 V.</caption>
+                either 3.3 or 5 V logic, and in this course we use 3.3 V.</caption>
                 <image source="images/Day13-I2C(3)/stemma_wiring.svg" width="92%"/>
             </figure>
 
             <slide xml:id="sl-day13-wiring" ref="fig-accel-wiring">
-    <caption>Black to GND, red to 3.3 V, yellow to SCL (D15, PB8), blue to SDA (D14, PB9) — and the display stays wired.</caption>
+    <caption>Black to GND, red to 3.3 V, yellow to SCL (D15, PB8), blue to SDA (D14, PB9), and the display stays wired.</caption>
     <note>≈ 3 min. Leave this up while the room wires, and page back to it during the build. The photo's wire label was edited to 3.3 V at her request (her export said 5 V; the breakout takes either). Early finishers can start Part 4's analyzer wiring now (DIO0/DIO1/ground); it does not depend on Part 3. If a display looks dead after three days in a kit, don't stop to fix it now — the point still holds.</note>
 </slide>
 
@@ -402,7 +402,7 @@
                  +3V3 label is hidden under the wire).  Do NOT "correct"
                  this drawing. -->
             <figure xml:id="fig-accel-bb">
-                <caption>The accelerometer joins the bus — yellow to the
+                <caption>The accelerometer joins the bus: yellow to the
                 SCL row, blue to the SDA row, black to GND, and red to
                 3.3 V.  The display, not drawn here, stays wired to the
                 same two rows.</caption>
@@ -447,13 +447,13 @@
             <p>
                 Here is the whole of <c>whoami_test.c</c>.  Notice the first
                 <c>#define</c>: the device address is written
-                <c>(0x32 &gt;&gt; 1)</c> — a number shifted right by one
+                <c>(0x32 &gt;&gt; 1)</c>, a number shifted right by one
                 rather than written out.  <c>&gt;&gt;</c> moves every bit of a
                 value one place toward the least significant end, dropping the
                 bit that falls off the bottom and bringing in a 0 at the top;
                 it is the mirror of the <c>&lt;&lt;</c> we have used on
                 register bits since the first GPIO write.  What that does to
-                <c>0x32</c> — we'll come back to that, and to why the address
+                <c>0x32</c>, we'll come back to, and to why the address
                 is written this way, once we have the logic analyzer on the
                 bus.
             </p>
@@ -507,19 +507,19 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 The program has the same shape as the programs we have been
                 writing all term: initialize the two peripherals, print a
                 startup message, and then a loop that does one thing once a
-                second — read WHO_AM_I, compare what came back to the number
+                second: read WHO_AM_I, compare what came back to the number
                 0x33, and
                 print one of two lines.  The only function it
                 defines besides <c>main()</c>,
                 <c>lsm303_AccelRegisterRead()</c>, is a single call into the
-                I2C library from <xref ref="ch-i2c"/> —
+                I2C library from <xref ref="ch-i2c"/>:
                 <c>i2c1_memRead()</c>, asked for one byte from one register.
                 Receiving 0x33 back from the accelerometer as the contents of
                 the WHO_AM_I register verifies the whole read path: the
                 wiring, the device address, the protocol and the code all had
                 to work for that value to arrive.  If it prints
                 <c>Could not connect to accelerometer</c> instead, that is
-                data too — the analyzer we are about to put on the bus shows
+                data too.  The analyzer we are about to put on the bus shows
                 exactly what the wire is doing.
             </p>
 
@@ -571,7 +571,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             <slide xml:id="sl-day13-whoami-proves">
     <ul>
         <li>Receiving 0x33 back from the accelerometer as the contents of the WHO_AM_I register verifies the whole read path: the wiring, the device address, the protocol, and the code all had to work for that value to arrive.</li>
-        <li>It is not yet evidence about how the sensor is configured — the control registers are still at their power-on defaults, and setting them up is work still ahead of us.</li>
+        <li>It is not yet evidence about how the sensor is configured, since the control registers are still at their power-on defaults, and setting them up is work still ahead of us.</li>
     </ul>
     <note>≈ 2 min. This is the reading's WHO_AM_I point, said once in class: proof of communication, not of configuration.</note>
 </slide>
@@ -589,8 +589,8 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             <p>
                 The line CoolTerm prints tells us that the read worked, but
                 it does not show us what happened on the two wires.  To see
-                the transactions themselves — the address going out, the
-                register number, and the byte coming back — we'll put the
+                the transactions themselves (the address going out, the
+                register number, and the byte coming back), we'll put the
                 AD2's logic analyzer on the bus, and we'll work from that
                 trace for the rest of class.
             </p>
@@ -639,10 +639,10 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
     <p>The AD2's digital channels are the larger flying-lead bundle.  Three leads go onto the bus:</p>
     <ul>
         <li>A ground lead (black) to ground.</li>
-        <li>DIO0 — the first pink lead — to the SDA row.</li>
-        <li>DIO1 — the first green — to the SCL row.</li>
+        <li>DIO0 (the first pink lead) to the SDA row.</li>
+        <li>DIO1 (the first green) to the SCL row.</li>
     </ul>
-    <caption>The digital leads are numbered 0–15 on the sheet — lead 0 is DIO0, lead 1 is DIO1 — and the ground leads carry the ⏚ symbol.</caption>
+    <caption>The digital leads are numbered 0–15 on the sheet (lead 0 is DIO0, lead 1 is DIO1), and the ground leads carry the ⏚ symbol.</caption>
     <note>≈ 3 min. The wiring is the recall from Day 9x; early finishers did it during the build. The pinout strip is how to find lead 0, lead 1 and a ground lead in the bundle. The STEMMA leads and the display stay where they are.</note>
 </slide>
 
@@ -688,8 +688,8 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 <title>Capture the WHO_AM_I read</title>
                 <task xml:id="task-day13-sweep">
                     <statement><p>Put the AD2's digital leads on the bus as
-                    above, set up Waveforms and the decoder as on Day 9x —
-                    with the time base at 50 µs per division — and take a
+                    above, set up Waveforms and the decoder as on Day 9x
+                    (with the time base at 50 µs per division), and take a
                     single sweep.</p></statement>
                 </task>
                 <task xml:id="task-day13-read-decode">
@@ -705,7 +705,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             <figure xml:id="fig-whoami-capture">
                 <caption>The WHO_AM_I read, captured and decoded.  Two
                 transactions cross the screen: <c>h19 WR</c>, its ACK, the
-                register address <c>h0F</c>, its ACK, and a STOP — then
+                register address <c>h0F</c>, its ACK, and a STOP, then
                 <c>h19 RD</c>, its ACK, the returned <c>h33</c>, a NACK, and
                 the final STOP.  SCL is DIO1 (green) and SDA is DIO0 (pink),
                 as wired on Day 9x.</caption>
@@ -713,7 +713,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             </figure>
 
             <slide xml:id="sl-day13-capture-c" ref="fig-whoami-capture">
-    <caption>Two transactions: h19 WR · A · h0F · A · P, then h19 RD · A · h33 · N · P — where A is an acknowledge, N a NACK and P a STOP.  Find the device address, the register address and the returned value on your own screen.</caption>
+    <caption>Two transactions: h19 WR · A · h0F · A · P, then h19 RD · A · h33 · N · P, where A is an acknowledge, N a NACK and P a STOP.  Find the device address, the register address and the returned value on your own screen.</caption>
     <note>≈ 2 min, and the Part's rescue: a student who cannot get a sweep marks this projected capture instead — the decoded values are the same by construction. The next slide has the same capture close up, large enough to read the bytes from the back. Checkpoint at minute 65 is the end of this Part.</note>
 </slide>
 
@@ -725,8 +725,8 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                  back. -->
             <figure xml:id="fig-whoami-capture-closeup">
                 <caption>The same capture, close up: the write transaction
-                (top — the device address and the register address going
-                out), then the read transaction (bottom — the device address
+                (top: the device address and the register address going
+                out), then the read transaction (bottom: the device address
                 again, and the 0x33 coming back, ended by the controller's
                 NACK).</caption>
                 <image source="images/Day13-I2C(3)/waveforms_capture_c_write.png" width="97%"/>
@@ -734,20 +734,20 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             </figure>
 
             <slide xml:id="sl-day13-capture-c-closeup" ref="fig-whoami-capture-closeup">
-    <caption>Between the halves: a STOP, then a fresh START — the same h19 goes out again, this time RD.</caption>
+    <caption>Between the halves: a STOP, then a fresh START.  The same h19 goes out again, this time RD.</caption>
     <note>≈ 1 min. The code walk's companion is the transfer diagram one slide back, not this one — no backward jump needed.</note>
 </slide>
 
             <instructor xml:id="ins-day13-predict-decoder">
                 <p>Two transactions, one right after the other.  The decoder
-                reads: <c>h19 WR</c>, ACK, <c>h0F</c>, ACK, STOP — the device
-                address and the register address going out — then
-                <c>h19 RD</c>, ACK, <c>h33</c>, NACK, STOP — the device
-                address again, and the register's contents coming back.  Most
+                reads: <c>h19 WR</c>, ACK, <c>h0F</c>, ACK, STOP (the device
+                address and the register address going out), then
+                <c>h19 RD</c>, ACK, <c>h33</c>, NACK, STOP (the device
+                address again, and the register's contents coming back).  Most
                 predictions get the pieces right and the <em>two
                 transactions</em> wrong: our <c>i2c1_memRead()</c> ends the
                 first transaction and starts a second one.  That, the 0x19,
-                and the final NACK are what Part 5 digs into — let the room
+                and the final NACK are what Part 5 digs into.  Let the room
                 find them on their own traces first.</p>
             </instructor>
         </subsection>
@@ -776,7 +776,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             </activity>
 
             <activity xml:id="act-day13-digging-deeper">
-                <title>Digging deeper — against your own trace</title>
+                <title>Digging deeper, against your own trace</title>
                 <introduction>
                     <p>Answer these from your own decoded trace.</p>
                 </introduction>
@@ -790,7 +790,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 </task>
                 <task xml:id="task-day13-who-acks">
                     <statement><p>Find every acknowledge bit on the trace in
-                    front of you — there is one after each byte.  For each
+                    front of you.  There is one after each byte.  For each
                     one: who sent it, and is it an ACK or a NACK?</p></statement>
                 </task>
             </activity>
@@ -799,16 +799,16 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 <p>0x32 &gt;&gt; 1 = 0b00110010 &gt;&gt; 1 = 0b0011001 = 0x19.
                 The datasheet gives the 8-bit form with the R/W bit attached
                 (Table 24, p. 39); the decoder prints the 7-bit address, which
-                is what actually identifies the device — Day 9x's shift,
+                is what actually identifies the device: Day 9x's shift,
                 paying out.  The 0x7F test from Day 9x cannot settle this
-                one — 0x32 is below 0x7F either way; the datasheet's own
+                one, since 0x32 is below 0x7F either way; the datasheet's own
                 labelling is what does.</p>
                 <p>The address goes out twice because the read is two
                 transactions: a write that delivers the register address, a
                 STOP, then a fresh START and the same address with the read
                 bit.</p>
                 <p>The acknowledge bits after both <c>h19</c>s and after
-                <c>h0F</c> are the accelerometer's — it acknowledges its own
+                <c>h0F</c> are the accelerometer's.  It acknowledges its own
                 address once in each transaction.  The bit after <c>h33</c>
                 is a NACK, and it is the <em>controller's</em>, sent on
                 purpose: one byte was asked for, one byte arrived, and the
@@ -816,7 +816,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
             </instructor>
 
             <p>
-                Two different things on this bus are both called a NACK — a
+                Two different things on this bus are both called a NACK, a
                 not-acknowledge.  The NACK on your trace is the
                 <em>controller's</em>, and it is part of a successful read:
                 the controller asked for one byte, got it, and deliberately
@@ -835,20 +835,20 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 </slide>
 
             <slide xml:id="sl-day13-transfer-pattern">
-    <p>The datasheet's own drawing of what you captured, in four tables — its <em>Master</em> row is our controller, its <em>Slave</em> row our target.  The write transfers first:</p>
+    <p>The datasheet's own drawing of what you captured, in four tables: its <em>Master</em> row is our controller, its <em>Slave</em> row our target.  The write transfers first:</p>
     <image source="images/Day13-I2C(3)/i2c_transfer_writes.svg" width="92%"/>
     <note>≈ 1 min. Say the vocabulary once, off the lead line. Two Digging Deeper answers live here: the controller sends the address, and the register address goes out as SUB.</note>
 </slide>
 
             <slide xml:id="sl-day13-transfer-reads">
-    <p>Table 22 is the shape your trace has — and NMAK is the N on your trace.</p>
+    <p>Table 22 is the shape your trace has, and NMAK is the N on your trace.</p>
     <image source="images/Day13-I2C(3)/i2c_transfer_reads.svg" width="92%"/>
     <note>≈ 1 min. The last Digging Deeper answer: the data comes back from the target in the read half. Where the table draws SR, a repeated START, our trace shows a STOP and a fresh START — the close-up slide already showed it. If anyone asks whether ours is wrong: Day 10's answer. A STOP frees the bus, and with a second controller on it the register pointer you just set could be changed before you read. One controller here, so it is safe.</note>
 </slide>
 
             <p>
                 The transfer diagram in <xref ref="fig-i2c-transfer-pattern"/>
-                is the datasheet's own drawing of what you captured — §6.1.1,
+                is the datasheet's own drawing of what you captured: §6.1.1,
                 Tables 20–23, and Table 22 is the shape your trace has.  Three
                 more questions can be answered from its rows: who sends the
                 address, where we tell the accelerometer which register to
@@ -860,8 +860,8 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 shows exactly where our library makes that choice, and why it
                 matters on a bus with two controllers.  The NACK you found on
                 your own trace is in neither half of that listing: the library
-                describes the whole transaction in advance — how many bytes
-                (NBYTES), and what to do at the end (AUTOEND) — and the I2C
+                describes the whole transaction in advance, how many bytes
+                (NBYTES) and what to do at the end (AUTOEND).  The I2C
                 hardware puts the acknowledge bits and the STOP on the wire.
             </p>
 
@@ -886,7 +886,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
 </slide>
 
             <slide xml:id="sl-day13-memread-read">
-    <p>Then the same function starts over — a second CR2 write, this time with the read bit — and that is your trace's <em>second</em> transaction:</p>
+    <p>Then the same function starts over (a second CR2 write, this time with the read bit), and that is your trace's <em>second</em> transaction:</p>
     <program language="c"><code><![CDATA[
 	// Restart, with read request for n bytes
 	I2C1->CR2 = (deviceAddr<<1)                  // target address
@@ -905,7 +905,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
 	}
 }
 ]]></code></program>
-    <caption>The acknowledge bits and the STOP are not written by this function.  It describes the whole transaction to the peripheral in advance — how many bytes (NBYTES), and what to do at the end (AUTOEND) — and the I2C hardware puts them on the wire.</caption>
+    <caption>The acknowledge bits and the STOP are not written by this function.  It describes the whole transaction to the peripheral in advance, how many bytes (NBYTES) and what to do at the end (AUTOEND).  The I2C hardware puts them on the wire.</caption>
     <note>≈ 3 min. RD_WRN is the only new field — which is what put the device address on your screen twice. The register-level detail is in the ch-i2c Reference; match each piece to the trace as you go.</note>
 </slide>
         </subsection>
@@ -942,8 +942,8 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                     <statement><p>Rebuild and upload; then arm a single sweep
                     on the analyzer (trigger on DIO0 falling) and press the
                     board's reset button to catch the first transaction after
-                    startup.  The trace stays blank until you press reset —
-                    that is the sweep waiting, not a fault.  Read the decoded
+                    startup.  The trace stays blank until you press reset.
+                    That is the sweep waiting, not a fault.  Read the decoded
                     row: what happened after the address byte?</p></statement>
                 </task>
                 <task xml:id="task-day13-break-restore">
@@ -969,11 +969,11 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
 
             <slide xml:id="sl-day13-capture-a">
     <ul>
-        <li>This is the second kind of NACK — the one from nobody at all: no device recognized the address, so nothing pulled SDA LOW at the acknowledge bit.</li>
+        <li>This is the second kind of NACK, the one from nobody at all: no device recognized the address, so nothing pulled SDA LOW at the acknowledge bit.</li>
         <li>CoolTerm: compare what your board printed with what your neighbors' did.</li>
     </ul>
     <image source="images/Day13-I2C(3)/waveforms_capture_a.png" width="88%"/>
-    <caption>One transaction: h18 WR goes out, nothing pulls SDA LOW at the acknowledge bit, and the decoder's P — a STOP — ends it.</caption>
+    <caption>One transaction: h18 WR goes out, nothing pulls SDA LOW at the acknowledge bit, and the decoder's P (a STOP) ends it.</caption>
     <note>≈ 3 min, the projected rescue for this capture too, and the reveal — debrief on it. h18 is 0x30 &gt;&gt; 1. Collect what the room's CoolTerm windows showed rather than asserting it — the library's wrong-address behavior is still being checked (Q3), and nothing student-facing may claim what the program prints here. (Day 10 Part 9 and the ch-i2c Reference already give the wire-and-program story from the Reference Manual §23.4.9; Petra is re-checking it, and any change lands in ch-i2c too.)</note>
 </slide>
 
@@ -983,18 +983,18 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                     <statement><p>Restore the device address, and this time
                     read a wrong <em>register</em>: call
                     <c>lsm303_AccelRegisterRead(0x20)</c> instead of the
-                    WHO_AM_I address.  Predict first — will the transactions
+                    WHO_AM_I address.  Predict first: will the transactions
                     complete this time?  What value comes back?  Then capture
                     it, and check the value you got against the LSM303AGR
                     datasheet, §8.6 (CTRL_REG1_A).</p></statement>
                 </task>
                 <task xml:id="task-day13-stretch-display">
                     <statement><p>One more prediction: the display on your
-                    bus answers to address 0x70 (already the 7-bit address —
+                    bus answers to address 0x70 (already the 7-bit address,
                     no shift).  If you sent 0x0F to
                     <em>it</em> as a register address, the way this program
                     does to the accelerometer, what would happen at the
-                    acknowledge bit after the address byte — and can the
+                    acknowledge bit after the address byte, and can the
                     value that comes back verify the link the way 0x33
                     does?</p></statement>
                 </task>
@@ -1006,12 +1006,12 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                 acknowledge, it acknowledges: it is being addressed
                 correctly, so both transactions complete, and it returns
                 whatever register 0x20 holds.  At power-on that is
-                0x07 — CTRL_REG1_A's default, 0b00000111, straight from the
-                datasheet's §8.6 — so the wire shows a perfectly healthy read
+                0x07 (CTRL_REG1_A's default, 0b00000111, straight from the
+                datasheet's §8.6), so the wire shows a perfectly healthy read
                 of a value that is simply not 0x33; the captured trace below
                 shows exactly this.</p>
-                <p>For the display question: the address 0x70 gets an ACK —
-                the display is on the bus and recognizes it — and that ACK
+                <p>For the display question: the address 0x70 gets an ACK
+                (the display is on the bus and recognizes it), and that ACK
                 tells you that you reached <em>a</em> device.  Whether the
                 read then completes, and what byte comes back, is
                 discoverable on their own bus; let whoever captures it report
@@ -1026,9 +1026,9 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
             <figure xml:id="fig-whoami-capture-wrong-register">
                 <caption>The right device address, the wrong register
                 address: reading register 0x20 instead of WHO_AM_I.  Both
-                transactions complete — every acknowledge the accelerometer
+                transactions complete (every acknowledge the accelerometer
                 owes is an ACK, and the read ends with the controller's own
-                NACK, exactly as the WHO_AM_I read did — and the value that
+                NACK, exactly as the WHO_AM_I read did), and the value that
                 comes back is <c>h07</c>: CTRL_REG1_A's power-on default,
                 0b00000111 (Datasheet §8.6).</caption>
                 <image source="images/Day13-I2C(3)/waveforms_capture_b.png" width="97%"/>
@@ -1043,7 +1043,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
             </figure>
 
             <slide xml:id="sl-day13-capture-b" ref="fig-whoami-capture-wrong-register-closeup">
-    <caption>Right device, wrong register: everything the accelerometer is asked to acknowledge, it acknowledges, and the value that comes back is h07 — CTRL_REG1_A's power-on default.</caption>
+    <caption>Right device, wrong register: everything the accelerometer is asked to acknowledge, it acknowledges, and the value that comes back is h07, CTRL_REG1_A's power-on default.</caption>
     <note>≈ 1 min. The stretch's reveal — or the instructor demo of capture B if the stretch tier was cut for time. A healthy bus, reading the wrong thing perfectly. The whole-strip view is the figure above this one in the book.</note>
 </slide>
         </subsection>
@@ -1059,7 +1059,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                  one-running-one-homework paragraph. -->
 
             <p>
-                Writing a device driver follows five steps — the same
+                Writing a device driver follows five steps, the same
                 steps you followed for the display on Day 10.
                 <xref ref="fig-firmware-layers"/> is the map: the driver
                 reaches the device only through the I2C library, and the
@@ -1084,7 +1084,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
 </slide>
 
             <slide xml:id="sl-day13-recipe">
-    <p>Writing a device driver follows five steps — the same steps you followed for the display:</p>
+    <p>Writing a device driver follows five steps, the same steps you followed for the display:</p>
     <ol>
         <li>From the datasheet, understand the basic I2C transfers for reading and writing for the device you want to talk to.</li>
         <li>From the datasheet, <c>#define</c> the device's addresses and commands.</li>
@@ -1140,8 +1140,8 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
 ]]></code></program>
 
             <p>
-                The real file keeps going — FIFO, interrupt, and click
-                registers up to address 0x3D — and we leave all of those at
+                The real file keeps going (FIFO, interrupt, and click
+                registers up to address 0x3D), and we leave all of those at
                 their defaults.  The <c>_A</c> in every name marks the
                 accelerometer's half of the register map; the magnetometer
                 has its own, which we don't touch.  Notice the comment
@@ -1152,7 +1152,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
             </p>
 
             <slide xml:id="sl-day13-header">
-    <p>Open the accelerometer datasheet to §7, Table 26 — the register address map — and put <c>lsm303agr.h</c> beside it: the header is that table, transcribed into <c>#define</c>s.</p>
+    <p>Open the accelerometer datasheet to §7, Table 26 (the register address map), and put <c>lsm303agr.h</c> beside it: the header is that table, transcribed into <c>#define</c>s.</p>
     <program language="c"><code><![CDATA[
 #define LSM303_ADDRESS_ACCEL    (0x32 >> 1)         // 0011001x
 
@@ -1185,7 +1185,7 @@ void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint
                 <task xml:id="task-day13-header-check">
                     <statement><p>In the datasheet's Table 26 (p. 43), find
                     the rows for WHO_AM_I_A and CTRL_REG1_A and check them
-                    against the header's <c>#define</c>s — the address and
+                    against the header's <c>#define</c>s, the address and
                     the default value of each.</p></statement>
                 </task>
             </activity>
@@ -1215,14 +1215,14 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
 ]]></code></program>
 
             <p>
-                One of the four is already running on your board — we used
+                One of the four is already running on your board.  We used
                 <c>lsm303_AccelRegisterRead()</c> to read the WHO_AM_I
                 register.  Writing <c>lsm303_AccelRegisterWrite()</c> is
                 tonight's homework.
             </p>
 
             <slide xml:id="sl-day13-prototypes">
-    <p>The header also declares the four functions of the driver — the interface we'll build on for the rest of the week.</p>
+    <p>The header also declares the four functions of the driver, the interface we'll build on for the rest of the week.</p>
     <program language="c"><code><![CDATA[
 // The accelerometer has several gain and update rate settings.  These are described
 // in the datasheet and are set up in the AccelInit function.
@@ -1240,7 +1240,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress);
 // contains raw (unscaled) acceleration values.
 void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
 ]]></code></program>
-    <caption>One of the four is already running — we used RegisterRead to read the WHO_AM_I register.  RegisterWrite is tonight's homework, on paper.</caption>
+    <caption>One of the four is already running.  We used RegisterRead to read the WHO_AM_I register.  RegisterWrite is tonight's homework, on paper.</caption>
     <note>≈ 3 min. Do not open AccelInit or ReadRaw beyond their comments — the settings are the homework's scavenger hunt, and ReadRaw's walk comes with the data format.</note>
 </slide>
         </subsection>
@@ -1250,16 +1250,16 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
             <title>Part 8: Homework for Thursday</title>
 
             <p>
-                Here are three things to do for Thursday, all on paper —
-                there is nothing to submit.  This will help you prepare for
+                Here are three things to do for Thursday, all on paper.
+                There is nothing to submit.  This will help you prepare for
                 Lab 7.
             </p>
             <ul>
                 <li><p>Do the pre-class reading for Thursday
-                (<xref ref="sec-accel-day14-before"/>) — it is a guided walk
+                (<xref ref="sec-accel-day14-before"/>).  It is a guided walk
                 through the datasheet.</p></li>
                 <li><p>On paper, write <c>lsm303_AccelRegisterWrite()</c>.
-                Mimic the read function — you do not have to test it.</p></li>
+                Mimic the read function.  You do not have to test it.</p></li>
                 <li><p>From the datasheet, work out what settings belong in
                 CTRL_REG1_A and CTRL_REG4_A, and take notes on paper.</p></li>
             </ul>
@@ -1270,10 +1270,10 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
             </p>
 
             <slide xml:id="sl-day13-homework">
-    <p>Here are three things to do for Thursday, all on paper — there is nothing to submit.  This will help you prepare for Lab 7.</p>
+    <p>Here are three things to do for Thursday, all on paper.  There is nothing to submit.  This will help you prepare for Lab 7.</p>
     <ul>
-        <li>Do the pre-class reading for Thursday — it is a guided walk through the datasheet.</li>
-        <li>On paper, write <c>lsm303_AccelRegisterWrite()</c>.  Mimic the read function — you do not have to test it.</li>
+        <li>Do the pre-class reading for Thursday.  It is a guided walk through the datasheet.</li>
+        <li>On paper, write <c>lsm303_AccelRegisterWrite()</c>.  Mimic the read function.  You do not have to test it.</li>
         <li>From the datasheet, work out what settings belong in CTRL_REG1_A and CTRL_REG4_A, and take notes.</li>
     </ul>
     <caption>Wednesday and Thursday we'll get some acceleration data out of the sensor, and then use it in Lab 7.</caption>

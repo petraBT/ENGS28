@@ -6,7 +6,7 @@
             <term>Bluetooth Low Energy</term> (BLE) is a short-range wireless protocol designed
             for infrequent, low-volume data exchange with minimal power consumption.  Rather than
             implementing the BLE stack on the STM32 directly, this chapter uses the Adafruit
-            Bluefruit LE UART Friend — a self-contained BLE module that communicates with the
+            Bluefruit LE UART Friend, a self-contained BLE module that communicates with the
             STM32 over a familiar UART interface.  The module handles all BLE protocol details,
             leaving the firmware free to read and write ASCII strings.
         </p>
@@ -80,7 +80,7 @@
         <title>Before Class: Bluetooth Low Energy</title>
         <introduction>
             <p>
-                Every protocol you have used so far — UART, I2C, SPI — requires a physical
+                Every protocol you have used so far (UART, I2C, SPI) requires a physical
                 wire connecting the two devices.  This chapter removes the wire.
                 <term>Bluetooth Low Energy</term> (BLE) is a short-range wireless protocol
                 designed for battery-powered devices that need to exchange small amounts of
@@ -92,14 +92,14 @@
         </introduction>
 
         <subsection xml:id="subsec-ble-what-it-is">
-            <title>What BLE Is — and What It Is Not</title>
+            <title>What BLE Is, and What It Is Not</title>
             <p>
                 You have almost certainly used BLE without realizing it.  Fitness trackers,
                 smartwatches, wireless keyboards, glucose monitors, AirTag location beacons,
                 and heart-rate chest straps all communicate with your phone using BLE.  What
                 these devices have in common is that they run on a coin cell or small battery
-                for months or years, and they send small amounts of data — a step count, a
-                heart rate reading, a button press — at relatively infrequent intervals.
+                for months or years, and they send small amounts of data (a step count, a
+                heart rate reading, a button press) at relatively infrequent intervals.
                 BLE is optimized for exactly this pattern.
             </p>
 
@@ -118,7 +118,7 @@
 
             <p>
                 BLE is <em>not</em> the same as classic Bluetooth.  Classic Bluetooth
-                was designed for continuous high-bandwidth streams — audio to headphones,
+                was designed for continuous high-bandwidth streams: audio to headphones,
                 file transfers.  BLE trades bandwidth for dramatically lower power
                 consumption.  A BLE device can sleep between transmissions, waking only
                 long enough to send a few bytes, then returning to sleep.  The two
@@ -126,7 +126,7 @@
                 they are otherwise incompatible protocols serving different purposes.
             </p>
             <p>
-                BLE also has a short range — typically around 10 meters indoors — and
+                BLE also has a short range, typically around 10 meters indoors, and
                 is not suited for streaming video or audio.  Think of it as a wireless
                 replacement for a short serial cable: occasional, low-volume, low-power.
             </p>
@@ -142,7 +142,7 @@
             <p>
                 A <term>peripheral</term> is a device that wants to be found.  It
                 repeatedly broadcasts short radio packets called <term>advertising
-                packets</term> that announce its presence — essentially shouting "I'm
+                packets</term> that announce its presence, essentially shouting "I'm
                 here, my name is Bluefruit!" into the surrounding airspace about ten
                 times per second.  The peripheral is typically the small, battery-powered
                 device: the fitness tracker, the sensor node, or in our lab, the
@@ -151,12 +151,12 @@
             <p>
                 A <term>central</term> is a device that initiates connections.  It
                 listens for advertising packets, picks one, and sends a connection
-                request.  The central is typically a phone or laptop — a device with
+                request.  The central is typically a phone or laptop, a device with
                 more processing power and a larger battery.  In our lab the central
                 is your phone running the Bluefruit Connect app.
             </p>
             <figure xml:id="fig-ble-central-role">
-                <caption>A central device (smartphone) surrounded by BLE peripherals —
+                <caption>A central device (smartphone) surrounded by BLE peripherals:
                 smart lock, bulb, thermometer, fan, wall switch, and door handle.  Each
                 peripheral advertises independently; the central scans and manages
                 connections to whichever ones it chooses.</caption>
@@ -164,7 +164,7 @@
             </figure>
 
             <p>
-                Once the central connects, the peripheral stops advertising — it no
+                Once the central connects, the peripheral stops advertising: it no
                 longer needs to announce itself because it already has a connection.
                 At this point GAP's job is done, and a different protocol layer takes
                 over to handle the actual data exchange.
@@ -180,14 +180,14 @@
             </p>
             <p>
                 A <term>service</term> is a collection of related data.  For example,
-                there is a standard "Heart Rate" service, a "Battery" service, and —
-                relevant to this chapter — a "UART" service on the Bluefruit module.
+                there is a standard "Heart Rate" service, a "Battery" service, and,
+                relevant to this chapter, a "UART" service on the Bluefruit module.
                 Each service is identified by a unique number called a UUID.
             </p>
             <p>
                 Within each service, individual data values are called
                 <term>characteristics</term>.  A characteristic is a single, typed,
-                addressable value — like a variable with permissions attached.
+                addressable value, like a variable with permissions attached.
                 The central can <em>read</em> a characteristic to get its current
                 value, <em>write</em> to it to send data to the peripheral, or
                 <em>subscribe to notifications</em> so the peripheral automatically
@@ -198,7 +198,7 @@
             </p>
             <figure xml:id="fig-ble-gatt-overview">
                 <caption>The GATT attribute hierarchy.  The outermost box is the
-                peripheral's GATT server — the structured data store it exposes to
+                peripheral's GATT server, the structured data store it exposes to
                 any connected central.  Inside it are <em>services</em> (named groups
                 of related data), and inside each service are <em>characteristics</em>
                 (individual typed values).  The left service is the UART bridge used
@@ -211,7 +211,7 @@
             </figure>
 
             <p>
-                The net effect is a bidirectional byte stream — just like a serial port,
+                The net effect is a bidirectional byte stream, just like a serial port,
                 but over the air.  You send a string from the STM32 over UART, the
                 Bluefruit forwards it as a GATT notification, and it appears in the
                 phone app.  You type a command in the phone app, the Bluefruit writes
@@ -222,9 +222,9 @@
         <subsection xml:id="subsec-ble-module">
             <title>Why We Use a Module: The Bluefruit as a UART Bridge</title>
             <p>
-                A complete BLE implementation involves multiple protocol layers — the
+                A complete BLE implementation involves multiple protocol layers (the
                 physical radio, the link layer, logical link control, the attribute
-                protocol, GATT, GAP, and a security manager — running as a real-time
+                protocol, GATT, GAP, and a security manager) running as a real-time
                 firmware stack on a radio-equipped processor.  Writing this from scratch
                 takes months and requires specialist expertise.  Even using a library
                 it is a substantial undertaking.
@@ -232,12 +232,12 @@
             <p>
                 The <term>Adafruit Bluefruit LE UART Friend</term> solves this by
                 putting the entire BLE stack on a separate chip.  The module contains
-                a Nordic Semiconductor nRF51822 — a dedicated BLE processor — running
+                a Nordic Semiconductor nRF51822, a dedicated BLE processor, running
                 Adafruit's firmware.  It handles advertising, connecting, GAP, GATT,
                 encryption, and retransmission completely on its own.  The interface
                 it presents to the STM32 is simply a UART connection at 9600 baud:
                 bytes in, bytes out.  From the STM32's perspective the Bluefruit looks
-                identical to the CoolTerm serial connection from Chapter 3 — the only
+                identical to the CoolTerm serial connection from Chapter 3: the only
                 difference is that the wire has been replaced by a radio link.
             </p>
 
@@ -251,8 +251,8 @@
             </figure>
 
             <p>
-                This pattern — a dedicated module that hides a complex protocol behind
-                a simple serial interface — appears frequently in embedded systems.
+                This pattern, a dedicated module that hides a complex protocol behind
+                a simple serial interface, appears frequently in embedded systems.
                 Wi-Fi modules, cellular modems, and GPS receivers all work the same
                 way.  Learning to use the Bluefruit module teaches you how to work
                 with the whole family.
@@ -267,14 +267,14 @@
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>The Bluefruit module — it is the peripheral.</p></statement>
+                        <statement><p>The Bluefruit module: it is the peripheral.</p></statement>
                         <feedback><p>Correct.  The peripheral advertises; the central
                         (your phone) scans for advertising packets and initiates the
                         connection.  Once connected, the Bluefruit stops
                         advertising.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>The phone — it broadcasts its identity so the
+                        <statement><p>The phone: it broadcasts its identity so the
                         Bluefruit can find it.</p></statement>
                         <feedback><p>The phone is the central: it scans and initiates.
                         The Bluefruit is the peripheral: it advertises and waits.
@@ -284,11 +284,11 @@
                         <statement><p>Both devices advertise simultaneously until one
                         detects the other.</p></statement>
                         <feedback><p>Only the peripheral advertises.  The central is
-                        silent during the discovery phase — it listens for advertising
+                        silent during the discovery phase: it listens for advertising
                         packets rather than sending any.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>Neither — BLE connections are established by a
+                        <statement><p>Neither: BLE connections are established by a
                         separate pairing server.</p></statement>
                         <feedback><p>There is no third-party server involved.  GAP defines
                         the peripheral/central roles so that two devices can discover and
@@ -319,7 +319,7 @@
                         The phone writes to TX to send commands.</p></statement>
                         <feedback><p>The characteristic that carries phone-to-module data
                         is the RX characteristic (the module receives it).  TX is for
-                        module-to-phone data — the module transmits it.</p></feedback>
+                        module-to-phone data: the module transmits it.</p></feedback>
                     </choice>
                     <choice>
                         <statement><p>TX is the service UUID that identifies the UART
@@ -345,9 +345,9 @@
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>A complete BLE stack is extremely complex — multiple
+                        <statement><p>A complete BLE stack is extremely complex (multiple
                         protocol layers including the radio, link layer, GATT, GAP, and
-                        security — and would take months to implement correctly.  The module
+                        security) and would take months to implement correctly.  The module
                         handles all of it, presenting a simple UART interface.</p></statement>
                         <feedback><p>Correct.  This is the standard industry approach:
                         use a certified module for the complex radio protocol and focus
@@ -401,7 +401,7 @@
             <term>GATT</term> defines how connected devices exchange structured data.
             The peripheral hosts a <term>GATT server</term> containing one or more
             <term>services</term>, each comprising one or more <term>characteristics</term>.
-            A characteristic is a typed, addressable data value — the central reads or writes
+            A characteristic is a typed, addressable data value: the central reads or writes
             it, or subscribes to notifications when it changes.  For example, the Bluefruit
             module exposes a "UART" service with TX and RX characteristics that bridge BLE
             to a serial byte stream.
@@ -444,7 +444,7 @@
                     <choice><statement><p>The Bluefruit module is the central; the smartphone is
                     the peripheral.</p></statement>
                     <feedback><p>It is the opposite.  The Bluefruit module advertises its presence
-                    and waits to be connected to — that is the peripheral role.</p></feedback></choice>
+                    and waits to be connected to: that is the peripheral role.</p></feedback></choice>
                     <choice><statement><p>Both devices can be central or peripheral simultaneously
                     in a single connection.</p></statement>
                     <feedback><p>A single BLE connection has exactly one central and one peripheral.

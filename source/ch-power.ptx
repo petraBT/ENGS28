@@ -25,12 +25,12 @@
         <title>Before Class: Power Management</title>
         <introduction>
             <p>
-                Every embedded system you have built so far has run at full speed continuously —
+                Every embedded system you have built so far has run at full speed continuously:
                 the CPU executing instructions, all peripherals clocked, all the time.  For a
                 board plugged into USB that is fine.  For a device running on a coin cell or a
                 small lithium cell, it is a death sentence: even a modest 5 mA draw drains a
-                200 mAh coin cell in under two days.  Real battery-powered products — fitness
-                trackers, environmental sensors, wireless nodes — routinely run for months or
+                200 mAh coin cell in under two days.  Real battery-powered products (fitness
+                trackers, environmental sensors, wireless nodes) routinely run for months or
                 years on a single charge.  Before class you will learn how they do it: by
                 switching off the parts of the chip that are not needed, and waking them back
                 up only when there is work to do.
@@ -48,7 +48,7 @@
                 waiting, every milliamp of idle current subtracts directly from battery life.
             </p>
             <p>
-                The solution is not a faster processor or a larger battery — it is to consume
+                The solution is not a faster processor or a larger battery: it is to consume
                 as little current as possible during idle periods.  Power management is the
                 engineering discipline of matching the chip's activity level to the work it
                 actually needs to do at each moment.  A well-designed firmware can reduce
@@ -60,7 +60,7 @@
         <subsection xml:id="subsec-power-sleep-concept">
             <title>Saving Power by Stopping Clocks</title>
             <p>
-                A digital circuit consumes power whenever its transistors switch state —
+                A digital circuit consumes power whenever its transistors switch state,
                 that is, whenever logic values change.  What drives those transitions is the
                 clock: every clock edge causes flip-flops throughout the chip to sample their
                 inputs and update their outputs, burning a small pulse of current.  Stop the
@@ -72,7 +72,7 @@
                 The STM32 (and most modern microcontrollers) exploit this by letting firmware
                 gate individual clocks under software control.  You have already seen a limited
                 version: enabling a peripheral clock with <c>RCC->IOPENR |= ...</c> before
-                using it.  The same mechanism works in reverse — disable the clock for a
+                using it.  The same mechanism works in reverse: disable the clock for a
                 peripheral you are not using, and it stops consuming power.  The low-power
                 <em>modes</em> carry this idea further by gating the CPU's own clock.
             </p>
@@ -80,8 +80,8 @@
             <figure xml:id="fig-power-mode-spectrum">
                 <caption>The STM32C0 low-power mode spectrum.  Each row is a mode; the
                 arrows show relative current consumption (shorter arrow = less power).
-                Moving down reduces current dramatically — from 58 µA/MHz in Run mode
-                to 19 nA in Shutdown — but increases wakeup time and reduces which
+                Moving down reduces current dramatically, from 58 µA/MHz in Run mode
+                to 19 nA in Shutdown, but increases wakeup time and reduces which
                 peripherals remain available.  Sleep mode (CPU clock gated, peripherals
                 active) gives a good tradeoff for interrupt-driven designs.
                 Stop mode (most clocks halted) is used when the longest possible idle
@@ -91,7 +91,7 @@
 
             <p>
                 The key tradeoff is <em>wakeup latency</em>.  Gating only the CPU clock
-                (Sleep mode) costs almost nothing to undo — an interrupt arrives, the
+                (Sleep mode) costs almost nothing to undo: an interrupt arrives, the
                 CPU clock restarts within a few cycles, and the ISR runs.  Halting the
                 high-speed oscillator and the PLL (Stop mode) saves more power, but
                 the clocks take several microseconds to stabilize when a wakeup event
@@ -103,7 +103,7 @@
                 For the lab in this chapter you will use <term>Sleep mode</term> via the
                 <c>WFI</c> (Wait For Interrupt) instruction: the CPU halts until an interrupt
                 fires, the ISR runs, and then the CPU immediately sleeps again.  This pattern
-                — initialize, enable interrupts, loop on <c>WFI</c> — is the standard
+                (initialize, enable interrupts, loop on <c>WFI</c>) is the standard
                 structure of interrupt-driven, battery-conscious firmware.
             </p>
         </subsection>
@@ -115,7 +115,7 @@
                 what happens if it gets stuck?  A buggy pointer can corrupt the stack.
                 A hardware glitch can leave a peripheral waiting for an event that never
                 arrives.  A race condition can cause the main loop to spin forever.
-                These situations are not detected by the CPU — from its perspective it is
+                These situations are not detected by the CPU, since from its perspective it is
                 still executing instructions, just the wrong ones.  The device simply
                 stops responding, and because it is battery-powered and headless there
                 is nobody to press the reset button.
@@ -124,14 +124,14 @@
                 The <term>independent watchdog timer</term> (IWDG) solves this with a simple
                 mechanism: it is a counter that counts down continuously, and if it ever
                 reaches zero, it resets the chip.  Firmware's only job is to reload the
-                counter — "kick" the watchdog — before it expires.  Healthy firmware running
+                counter ("kick" the watchdog) before it expires.  Healthy firmware running
                 through its main loop will kick the watchdog on every iteration, and the
                 counter will never reach zero.  Stuck firmware will miss one or more kicks,
                 the counter will expire, and the chip will reset and restart cleanly.
             </p>
             <p>
                 Two design decisions are important.  First, the watchdog must be clocked
-                independently of the main clock tree — otherwise a firmware fault that
+                independently of the main clock tree, since otherwise a firmware fault that
                 crashes the main oscillator would also freeze the watchdog counter.  The
                 IWDG runs off the LSI, a separate low-speed internal oscillator that
                 operates even in Stop mode.  Second, once started, the watchdog cannot be
@@ -147,8 +147,8 @@
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>The CPU core clock is gated — the CPU stops executing
-                        instructions — but all peripheral clocks (timers, USART, ADC, etc.)
+                        <statement><p>The CPU core clock is gated (the CPU stops executing
+                        instructions), but all peripheral clocks (timers, USART, ADC, etc.)
                         continue running normally.</p></statement>
                         <feedback><p>Correct.  Sleep mode halts only the CPU clock.  Peripherals
                         keep running and can generate interrupts that wake the CPU back up.
@@ -158,7 +158,7 @@
                         <statement><p>The entire chip is powered down; only the RTC keeps
                         running to provide a wakeup timestamp.</p></statement>
                         <feedback><p>That describes a deeper mode (Standby or Shutdown).
-                        Sleep mode is much shallower — the CPU clock is gated but peripherals
+                        Sleep mode is much shallower: the CPU clock is gated but peripherals
                         stay active.</p></feedback>
                     </choice>
                     <choice>
@@ -172,8 +172,8 @@
                         <statement><p>All clocks stop, including peripherals, but GPIO pins
                         retain their state so outputs hold their last value.</p></statement>
                         <feedback><p>GPIO retention is correct for deeper modes, but this
-                        description is too aggressive for Sleep mode.  Peripherals — including
-                        timers that might count events while the CPU sleeps — keep their
+                        description is too aggressive for Sleep mode.  Peripherals, including
+                        timers that might count events while the CPU sleeps, keep their
                         clocks in Sleep mode.</p></feedback>
                     </choice>
                 </choices>
@@ -207,7 +207,7 @@
                     <choice>
                         <statement><p>Stop mode resets all registers, so the entire chip
                         must be re-initialized on every wakeup, as if after a hard reset.</p></statement>
-                        <feedback><p>Stop mode does not reset registers — RAM and most
+                        <feedback><p>Stop mode does not reset registers: RAM and most
                         peripheral configuration are preserved.  Only clocks are stopped,
                         not state.</p></feedback>
                     </choice>
@@ -234,14 +234,14 @@
                         keep firing, kicking from ISRs would prevent the reset even though
                         the firmware is effectively stuck.</p></statement>
                         <feedback><p>Correct.  A hung main loop with active interrupts is
-                        a failure state — the watchdog should detect it and reset the chip.
+                        a failure state: the watchdog should detect it and reset the chip.
                         Kicking from ISRs would hide exactly the kind of fault the watchdog
                         is supposed to catch.</p></feedback>
                     </choice>
                     <choice>
                         <statement><p>ISRs execute too infrequently to keep a fast watchdog
                         from expiring.</p></statement>
-                        <feedback><p>The opposite is the concern — ISRs may fire <em>more</em>
+                        <feedback><p>The opposite is the concern: ISRs may fire <em>more</em>
                         frequently than the main loop, or keep firing even when the main
                         loop is stuck.  The problem is that ISR-based kicks hide main-loop
                         failures, not that they kick too rarely.</p></feedback>
@@ -407,7 +407,7 @@ void TIM14_IRQHandler(void) {
         </p>
         <p>
             The IWDG is clocked by the LSI (low-speed internal oscillator, ~32 kHz), which
-            runs even in Stop mode and is independent of the main clock tree — hence the
+            runs even in Stop mode and is independent of the main clock tree, hence the
             name.  This independence means the watchdog can catch a lockup that disables
             the HSI or PLL.
         </p>
