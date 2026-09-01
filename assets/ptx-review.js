@@ -5,6 +5,8 @@
 //   ◎ Review button (bottom right) or R  -> arm/disarm review mode
 //   drag a lasso around anything          -> comment box pops up
 //   ⌘⏎ / Send                             -> queued in reviews/slide-comments.jsonl
+//   ← / →                                 -> previous/next page, without leaving
+//                                            review mode (see navPage below)
 //
 // Loaded by assets/ptx-edit.js (one html.js.extra slot, two layers), so it
 // exists only in the web-edit authoring build, never in a deployed book. It
@@ -144,7 +146,7 @@
     overlay.classList.toggle('on', on)
     btn.classList.toggle('on', on)
     if (!on) clearLasso()
-    else toast('Review mode — circle something, then type. R or Esc leaves.')
+    else toast('Review mode — circle something, then type. ← → turn the page. R or Esc leaves.')
     try { sessionStorage.setItem('ptx:review:on', on ? '1' : '') } catch (e) {}
   }
   btn.addEventListener('click', function () { setReview(!reviewOn) })
@@ -357,12 +359,28 @@
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send() }
     else if (e.key === 'Escape') clearLasso()
   })
+  /* Page turns from the keyboard, so reviewing a chapter never means leaving
+     review mode. The overlay covers the viewport, so PreTeXt's own Next and
+     Previous buttons are unclickable while armed; ← and → follow the same
+     links instead. Up/Down are left alone — they still scroll the page. */
+  function navPage (dir) {
+    var link = document.querySelector('a.' + (dir > 0 ? 'next' : 'previous') + '-button[href]')
+    if (!link) { toast(dir > 0 ? 'Last page of the book.' : 'First page of the book.'); return }
+    location.href = link.getAttribute('href')
+  }
+
   document.addEventListener('keydown', function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return
     var t = e.target
     if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable)) return
     if (e.key === 'r' || e.key === 'R') setReview(!reviewOn)
     else if (e.key === 'Escape' && reviewOn) setReview(false)
+    else if (reviewOn && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+      // An unsent comment comes first — turning the page would lose it.
+      if (box.classList.contains('on')) return
+      e.preventDefault()
+      navPage(e.key === 'ArrowRight' ? 1 : -1)
+    }
   })
 
   window.addEventListener('resize', function () { renderPins() })
