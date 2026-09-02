@@ -1,4 +1,47 @@
-# Week 7 handover — where things stand after session 6 (updated 2026-09-01)
+# Week 7 handover — where things stand after session 7 (updated 2026-09-01)
+
+## Session 7 (2026-09-01): her pass-2 comments applied, connecting prose complete
+
+Her 11 pass-2 comments (all on the deck) are applied and archived.
+Substance: task (a) of the settings comparison gains "datasheet's" for
+consistency with task (b); the exclude-from-build dialog is circled on
+Select All, in both the book figure and the slide, matching the
+CoolTerm precedent; the register-write attempt drops a dangling
+"first" with no stated follow-up; the reveal names why the write uses
+`i2c1_memWrite()` and not `i2c1_byteWrite()`; the single-axis tilt
+bullet says what the derivation is for and adds the near-0°
+sensitivity contrast; the two-axis claim was checked against
+`Lab7_ES28.pdf` (it does not say "hold it like a phone" or state exact
+rest values, only that gravity must lie in the plane of the axes used
+and that students must check their own board), so the text now says
+exactly that instead of overclaiming; the cast explanation generalizes
+to the rule she supplied (any operand cast before the division works;
+only casting the finished integer result fails), replacing a narrower
+one-true-placement framing, and "trap" is cut for a fuller statement of
+the integer-division mechanism; and "A float spends its 32 bits" is cut
+everywhere in favor of "The 32 bits of a float consist of," including
+one occurrence in Part 9's own running prose that the fix had missed on
+the first pass.
+
+Then the book version of the in-class Parts: the last real gaps behind
+the DELIVERY-2 markers are filled (Part 2's closing paragraph landing
+0x77/0x00 in student-visible text, not just the stripped instructor
+block; Part 7's motivating sentence for plotting at all; Part 8's lead
+paragraph posing the day's last question; Part 9's lead paragraph
+recalling yesterday's formula by name and xref). Every other marker was
+already resolved by earlier passes, so all ten are now removed rather
+than left as stale commentary. Read the whole section end to end as the
+student book renders it (instructor blocks and slides stripped): every
+Part stands on its own and the ten Parts read as one continuous
+narrative. Full fit sweep and all four mechanical checks pass.
+
+### Ask-Petra list, unchanged from session 6
+
+Still open: the plain-view CoolTerm screenshot (reminder standing,
+placeholder figure in the book), the negative-raw-print question and
+the padding-bits check (both wait on hardware being set up again), Q3
+(the wrong-address print, at her pace), and Part 7's real chart-view
+minutes in class.
 
 ## Session 6 (2026-09-01): her Day 14 pass 1 applied — awaiting her next look
 
