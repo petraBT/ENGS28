@@ -2737,25 +2737,6 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
         <subsection xml:id="subsec-day14-verify-stage">
             <title>Part 3: Verify the Wiring, Stage the Project</title>
 
-            <p>
-                Exclude <c>whoami_test.c</c> from the build before you add
-                <c>accel_test.c</c>: right-click it, choose
-                <em>Resource Configurations → Exclude from Build</em>,
-                click <em>Select All</em> so both Debug and Release exclude
-                the file, then click OK
-                (<xref ref="fig-exclude-dialog"/>).  If your build fails
-                with <c>multiple definition of 'main'</c>, or of
-                <c>lsm303_AccelRegisterRead</c>, which both files define,
-                you skipped this step.
-            </p>
-
-            <figure xml:id="fig-exclude-dialog">
-                <caption>The Exclude from build dialog.  Click Select All
-                so both Debug and Release exclude the file, then click
-                OK.</caption>
-                <image source="images/Day14-Accelerometer(2)/CubeIDEExcludeFromBuild_circled.svg" width="45%"/>
-            </figure>
-
             <activity xml:id="act-day14-stage">
                 <title>Verify Tuesday's wiring, then stage the project</title>
                 <task xml:id="task-day14-reverify">
@@ -2773,11 +2754,29 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 </task>
                 <task xml:id="task-day14-exclude">
                     <statement><p>Exclude <c>whoami_test.c</c> from the
-                    build.  <c>lsm303agr_partial.c</c> is not finished yet,
-                    so the build will still show errors, just not the
+                    build: right-click it, choose
+                    <em>Resource Configurations → Exclude from Build</em>,
+                    click <em>Select All</em> so both Debug and Release
+                    exclude the file, then click OK
+                    (<xref ref="fig-exclude-dialog"/>).
+                    <c>lsm303agr_partial.c</c> is not finished yet, so the
+                    build will still show errors, just not the
                     <c>multiple definition of 'main'</c> one.</p></statement>
                 </task>
             </activity>
+
+            <figure xml:id="fig-exclude-dialog">
+                <caption>The Exclude from build dialog.  Click Select All
+                so both Debug and Release exclude the file, then click
+                OK.</caption>
+                <image source="images/Day14-Accelerometer(2)/CubeIDEExcludeFromBuild_circled.svg" width="45%"/>
+            </figure>
+
+            <p>
+                If your build fails with <c>multiple definition of
+                'main'</c>, or of <c>lsm303_AccelRegisterRead</c>, which
+                both files define, you skipped the exclude step.
+            </p>
 
             <!-- One slide for the whole Part (her comment, 2026-09-01:
                  the earlier verify and exclude slides duplicated this
@@ -3161,8 +3160,9 @@ int main(void) {
                  notes only (S-25).  Rung 1 deliberately does NOT assert a
                  causal verdict for the print (Q3, Day 13 gate item 23). -->
             <p>
-                When the program runs and the output is wrong, the printout
-                narrows it to one layer:
+                If the program runs but the output is not what you expect,
+                follow these steps to narrow down where the error might
+                be:
             </p>
 
             <ul>
@@ -3422,8 +3422,8 @@ delay_ms(100);      // or less
             <p>
                 This is inclination sensing, and Analog Devices'
                 <url href="external/datasheets/an-1057.pdf">AN-1057,
-                <em>Using an Accelerometer for Inclination Sensing</em></url>
-                presents the geometry and math the field uses.
+                <em>Using an Accelerometer for Inclination Sensing</em></url>,
+                presents the geometry and math.
                 From the acceleration data along one axis that is tilted
                 (<xref ref="fig-tilt-single"/>), the x reading
                 is <m>A_x = g \sin\theta</m>, so
@@ -3456,9 +3456,7 @@ delay_ms(100);      // or less
             <slide xml:id="sl-day14-tilt-single" ref="fig-tilt-single" stack="yes">
     <ul>
         <li>One axis is enough to derive the tilt angle for small tilts: from the acceleration data along the one axis that was tilted, A_x = g sin θ, so θ = sin⁻¹(A_x / g).</li>
-        <li><term>Sensitivity.</term> So the slope is cos θ: close to 1 near 0°, and it goes to zero at 90°.  This slope determines the reading's sensitivity.  This implies:</li>
-        <li>Near 0° a 1° tilt moves the reading by about 17 mg; near 90° the same 1° tilt moves it by less than 1 mg.</li>
-        <li>So a fixed amount of sensor noise can swing the computed angle by tens of degrees near 90°, whereas near 0° it is barely noticeable.</li>
+        <li><term>Sensitivity.</term> The slope of sin θ is cos θ, so it is close to 1 near 0° and goes to zero at 90°.  Near 0° a 1° tilt moves the reading by about 17 mg, but near 90° the same 1° tilt moves it by less than 1 mg.  So a fixed amount of sensor noise can swing the computed angle by tens of degrees near 90°, whereas near 0° it is barely noticeable.</li>
         <li>One axis also cannot tell all four quadrants apart.</li>
     </ul>
     <note>≈ 4 min.  The mechanism, not just the verdict (Gate 1): say "the slope goes to zero" while pointing at the tilted drawing.  AN-1057 is hosted with the course documents; Lab 7's optional full-orientation route is in it.</note>
@@ -3472,18 +3470,15 @@ delay_ms(100);      // or less
                 xy-plane.  With
                 <m>A_x = g \sin\theta</m> and <m>A_y = g \cos\theta</m>,
                 the ratio gives <m>\theta = \tan^{-1}(A_x/A_y)</m>: the
-                gravity magnitude cancels, the sensitivity is constant at
+                gravity magnitude cancels, the sensitivity is good at
                 every angle, and the signs of the two readings identify the
                 quadrant, covering the full 360°.  C's math library handles
                 the quadrants for you: <c>atan2(ax, ay)</c> takes
                 the two readings separately and returns the angle in the
                 correct quadrant.  Lab 7 asks you to watch the axis
                 directions marked on your own breakout board, since which
-                axis reads which sign depends on how the board sits.  Here
-                <c>ax</c> and <c>ay</c> are the milli-g x and y
-                readings already on your screen, and the angle comes out
-                the same from the raw values, because the scale factor
-                cancels in the ratio.  In addition, AN-1057 works out the
+                axis reads which sign depends on how the board sits.  In
+                addition, AN-1057 works out the
                 geometry and math for using all three axes to orient the
                 accelerometer fully in space, beyond the xy-plane; the
                 equations are in <xref ref="subsec-accel-ref-orientation"/>.
@@ -3500,9 +3495,9 @@ delay_ms(100);      // or less
 
             <slide xml:id="sl-day14-tilt-two" ref="fig-tilt-two" stack="yes">
     <ul>
-        <li>Two axes fix both problems.  With A_x = g sin θ and A_y = g cos θ, the ratio gives θ = tan⁻¹(A_x / A_y): the g cancels, the sensitivity is constant at every angle, and the signs of the two readings identify the quadrant, covering the full 360°.</li>
+        <li>Two axes fix both problems.  With A_x = g sin θ and A_y = g cos θ, the ratio gives θ = tan⁻¹(A_x / A_y): the g cancels, the sensitivity is good at every angle, and the signs of the two readings identify the quadrant, covering the full 360°.</li>
         <li>C's math library handles the quadrants for you: <c>atan2(ax, ay)</c> takes the two readings separately and returns the angle in the correct quadrant.  This assumes that tilt in the xz- or yz-plane is limited so that most of the acceleration due to gravity projects into the xy-plane.  Lab 7 asks you to check the axis directions marked on your own breakout board.</li>
-        <li>The AN-1057 Application Note explains the geometry and mathematics of using all three axes to orient the accelerometer in space (versus in the xy-plane).</li>
+        <li>The AN-1057 Application Note just explains the geometry and mathematics of using all three axes to orient the accelerometer in space (versus in the xy-plane).</li>
     </ul>
     <note>≈ 4 min.  The lab is explicit: atan2, never plain atan.  One clause to land out loud: ax and ay are the milli-g numbers already on the screen, and the angle comes out the same from the raw values, because the scale factor cancels in the ratio.  Three axes orient you fully in space; the equations are in the Reference section and in AN-1057.</note>
 </slide>
@@ -3517,15 +3512,16 @@ delay_ms(100);      // or less
                 Recall yesterday's conversion
                 (<xref ref="subsec-day13x-data-format"/>):
                 <c>a = (ACC_FS * ACCEL_raw * MILLI) &gt;&gt; ACC_REGISTERWIDTH</c>,
-                the shift standing in for a divide by 2¹⁶.  A sine or an
-                arctangent does not come out of that integer
-                arithmetic; we need real numbers.
-                C's type for them is
-                <c>float</c> (single-precision floating point), 4 bytes,
-                the same size as an <c>int32_t</c>, and the math functions
-                come from <c>math.h</c>: <c>sin()</c>, <c>cos()</c>,
-                <c>atan2()</c>, <c>round()</c>.  One more piece of C
-                matters here: a cast applies
+                the shift standing in for a divide by 2¹⁶.  Because of the
+                use of trigonometric functions such as <c>atan2()</c>,
+                we'll need to switch from exclusively using integers to
+                temporarily working with real numbers.  C's type for them
+                is <c>float</c> (single-precision floating point), 4
+                bytes, the same size as an <c>int32_t</c>.  To use
+                mathematical functions such as <c>sin()</c>, <c>cos()</c>,
+                <c>atan2()</c>, <c>round()</c>, we'll need to include the
+                math library, and therefore <c>#include &lt;math.h&gt;</c>
+                in our code.  One more piece of C matters here: a cast applies
                 only to the value written right after it, and it runs
                 before <c>*</c> or <c>/</c>.  So <c>(float) 7 / 2</c>
                 gives 3.5, while <c>(float)(7 / 2)</c> gives 3.0, because
@@ -3599,9 +3595,9 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
                  rule and teaches round() as the delta) -->
             <slide xml:id="sl-day14-round">
     <ul>
-        <li>Compute in float, but come back to integers to print: <c>printf</c>'s <c>%f</c> is not enabled in our projects, so the route is still convert, then <c>%d</c>.</li>
+        <li>Compute in float, but come back to integers to print: <c>printf</c>'s <c>%f</c> is not enabled in our projects, so the route is still convert back to an integer, then use <c>%d</c>.</li>
         <li>The math library contains the function <c>round()</c>: <c>double round(double x);</c></li>
-        <li><c>round()</c> goes to the nearest integer value, whereas casting straight to an <c>int</c> truncates toward zero, as Day 5's cast did.  You then cast <c>round()</c>'s result for printing: <c>(int)round(angle)</c>.</li>
+        <li><c>round()</c> goes to the nearest integer value, whereas casting straight to an <c>int</c> truncates.  You therefore need to cast <c>round()</c>'s result for printing: <c>(int)round(angle)</c>.</li>
     </ul>
     <note>≈ 1 min.  A delta on Day 5's rule, not a re-teach: the %f caveat is taught in ch-uart, and the enabling flag is shown in ch-debugging (Day 7x) via Lab 4 Appendix A.  If a student asks why flash grows: sin/cos/atan2/round are double-precision; the f-suffixed variants (atan2f, roundf) stay in float.</note>
 </slide>
@@ -3610,7 +3606,7 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
     <ul>
         <li>The 32 bits of a <c>float</c> consist of a sign bit, an 8-bit exponent, and a 23-bit fraction: exactness is traded for range.</li>
         <li>Computing with a float on a processor that has an FPU (floating point unit), which is part of the processor hardware, is fast.  The STM32C031C6 has none, so every float operation is done in software.</li>
-        <li>Software floats are slower than integer arithmetic, and the library code takes up flash memory.  In Lab 7 you are asked to measure exactly that: your program's size with the math library in it.</li>
+        <li>In addition, software floats are slower than integer arithmetic, and the library code takes up flash memory.  In Lab 7 you are asked to measure exactly that: your program's size with the math library in it.</li>
     </ul>
     <note>≈ 3 min.  Her slide 20's cost paragraph.  Depth (IEEE 754 layout, precision versus range) is in the chapter's Reference section, not here.  Her reassurance if precision comes up: our readings carry at most 12 bits, so a float's 24 lose nothing.</note>
 </slide>
@@ -3626,8 +3622,8 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
                 still convert-then-<c>%d</c>.  The math library contains
                 the function <c>round()</c>: <c>double round(double
                 x);</c>.  <c>round()</c> goes to the nearest integer
-                value, whereas casting straight to an <c>int</c> truncates
-                toward zero, as Day 5's cast did.  You then cast
+                value, whereas casting straight to an <c>int</c>
+                truncates.  You therefore need to cast
                 <c>round()</c>'s result for printing:
                 <c>(int)round(angle)</c>.  That is what you want for an
                 angle headed to a display.
@@ -3641,9 +3637,10 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
                 bigger cost is that computing with a float is fast on a
                 processor that has an FPU (floating point unit), which is
                 part of the processor hardware; the STM32C031C6 has none,
-                so every float operation is done in software: slower than
-                integer arithmetic, and the library code takes up flash
-                memory.  In Lab 7 you are asked to measure exactly that,
+                so every float operation is done in software.  In
+                addition, this is slower than integer arithmetic, and the
+                library code takes up flash memory.  In Lab 7 you are
+                asked to measure exactly that,
                 your program's size with the math library in it.
             </p>
         </subsection>
@@ -3706,24 +3703,27 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
                 real structure uses <em>two</em> capacitors per sense
                 direction, not one.  The moving plate, attached to the proof
                 mass, hangs between two fixed plates: it forms a capacitor
-                C1 with one and a capacitor C2 with the other.  At rest the
-                two gaps are equal, so C1 = C2.  When the case accelerates
-                and the mass gets left behind, one gap narrows and the other
-                widens, so C1 grows as C2 shrinks.
+                <m>C_1</m> with one and a capacitor <m>C_2</m> with the
+                other.  At rest the two gaps are equal, so
+                <m>C_1 = C_2</m>.  When the case accelerates and the mass
+                gets left behind, one gap narrows and the other widens, so
+                <m>C_1</m> grows as <m>C_2</m> shrinks.
             </p>
             <figure xml:id="fig-accel-differential-cap">
                 <caption>The differential pair: one moving plate, attached
                 to the proof mass, between two fixed plates attached to the
                 case.  As the moving plate shifts, one gap narrows and the
-                other widens, so C1 and C2 move in opposite directions.</caption>
+                other widens, so <m>C_1</m> and <m>C_2</m> move in opposite
+                directions.</caption>
                 <image source="images/Day13x-Accelerometer/capacitive_pickoff_differential.svg" width="82%"/>
             </figure>
 
             <p>
-                The electronics measure the difference, ΔC = C1 − C2, which
+                The electronics measure the difference,
+                <m>\Delta C = C_1 - C_2</m>, which
                 is zero at rest, grows with displacement, and carries the
                 direction in its sign.  With a known excitation voltage
-                V_exc across the plates, Q = CV turns the
+                <m>V_{exc}</m> across the plates, <m>Q = CV</m> turns the
                 capacitance difference into a charge difference,
                 <m>\Delta Q = (C_1 - C_2)\,V_{exc}</m>, which the chip's
                 amplifier converts to a voltage for the ADC
@@ -4001,8 +4001,7 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
                 Precision and range are traded against the same 32 bits;
                 neither type gets both.  For our sensor the trade is easy:
                 the readings carry at most 12 significant bits, so a
-                float's 24 lose nothing, and the trigonometry needs
-                fractions.
+                float's 24 lose nothing: floats it is.
             </p>
         </subsection>
     </section>

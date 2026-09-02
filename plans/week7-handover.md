@@ -1,4 +1,84 @@
-# Week 7 handover — where things stand after session 8 (updated 2026-09-02)
+# Week 7 handover — where things stand after session 9 (updated 2026-09-02)
+
+## Session 9 (2026-09-02): her pass-4 comments applied — 9 deck, 12 book, mirrored both ways
+
+21 comments this round: 9 on deck slides, 12 directly on book pages. Same
+instruction as session 8: apply slide fixes to the matching book
+paragraph too. Several of her annotations this round were single words
+or short phrases circled at a precise point, not full replacement text
+— resolved by querying the rendered DOM directly (`caretRangeFromPoint`
+at the comment's stroke coordinates) rather than guessing from the
+bounding box alone, after an initial pixel-offset estimate from a
+screenshot proved unreliable. Worth remembering for next time: the
+review tool's pin elements (`.review-pin`) sit exactly on the circled
+point, so temporarily setting `pointer-events: none` on them and then
+walking the underlying text node's offset is far more precise than
+reading coordinates off a screenshot.
+
+By location: `sl-day14-tilt-single`'s Sensitivity bullet is reworded
+again — she flagged that my session-8 rewrite ("So the slope is... This
+implies:") had dropped "The slope of sin θ is cos θ" and asked for it
+back, and separately asked (a second time) that the 17 mg/90° and
+noise-swing bullets be indented under it. PreTeXt's `<li>` schema does
+not support a nested `<ul>` (confirmed against the RNG: `<li>` is
+either inline text or all-`BlockStatement` content, and lists are
+neither), so both requests are resolved together by folding those two
+bullets into the Sensitivity bullet's own flowing text — no longer
+separate list items, so nothing needs indenting. `sl-day14-tilt-two`
+and its book mirror: "sensitivity is constant at every angle" softens
+to "sensitivity is good at every angle" (an honest claim given the
+xz-/yz-plane assumption is only approximate), and the AN-1057 bullet
+gains "just" ("just explains") to keep reinforcing that it presents
+existing math rather than inventing it. The book's version of that
+paragraph also drops a sentence about `ax`/`ay` being already-scaled
+milli-g values ("I have no idea what you are trying to say in this
+sentence. Delete.") — confirmed via DOM inspection that this, not the
+xz-/yz-plane sentence, was her actual target. The single-axis AN-1057
+sentence loses its trailing "the field uses" clause. `sl-day14-round`
+and its book mirror: bullet 1 gains "back to an integer" and "use"
+(now "convert back to an integer, then use %d"); bullet 3 drops the
+redundant "toward zero, as Day 5's cast did" and rewords "You then
+cast" to "You therefore need to cast". `sl-day14-cost` and its book
+mirror gain an "In addition" transition into the software-cost bullet.
+Part 3's activity order is fixed: the exclude-from-build how-to
+paragraph had ended up sequenced *before* the activity whose first
+task (re-run `whoami_test.c` unchanged) requires the file not yet
+excluded — a regression from session 8's shortening pass, caught by
+"This activity is listed after they have excluded whoami_test.c... so
+that won't work anymore." Fixed by moving the activity first and
+merging the how-to detail into its own exclude task, with the figure
+and troubleshooting note following after. Part 5's diagnostic-checklist
+lead sentence is rewritten plainly: "If the program runs but the output
+is not what you expect, follow these steps to narrow down where the
+error might be:". Part 9's book lead paragraph is rewritten to actually
+match `sl-day14-float`'s wording from session 8, which I had failed to
+mirror at the time ("You didn't apply my slide fixes here.") — logged
+as the thing to double-check going forward: a comment that only touches
+one surface (there, the book, removing a UART digression) does not
+mean the OTHER surface's most recent wording change was already
+carried over; check both, every time. `subsec-accel-ref-float`'s
+closing sentence drops the odd "and the trigonometry needs fractions"
+for "so a float's 24 lose nothing: floats it is."
+`subsec-accel-ref-mems` switches from plain "C1"/"C2" to subscript
+`<m>C_1</m>`/`<m>C_2</m>` throughout its prose, caption, and the
+`capacitive_pickoff_differential.svg` figure itself (converted to
+tspan-based subscripts matching the house style already used in
+`tilt_single_axis.svg`); `V_exc` and `Q = CV` picked up the same `<m>`
+treatment along the way, being the same class of issue in the same
+section.
+
+Full rebuild, all four mechanical checks pass, no new PreTeXt warnings.
+Verified every touched slide and book page against the rebuilt output
+(with a browser cache-buster on the book pages after an earlier check
+was silently reading a stale cached page).
+
+### Ask-Petra list, unchanged from session 8
+
+Still open: the plain-view CoolTerm screenshot (reminder standing, no
+accelerometer set up currently) and the control-register blur once it
+arrives; the negative-raw-print question and the padding-bits check
+(both wait on hardware); Q3 (the wrong-address print, at her pace); and
+Part 7's real chart-view minutes in class.
 
 ## Session 8 (2026-09-02): her pass-3 comments applied — 14 deck, 14 book, mirrored both ways
 
