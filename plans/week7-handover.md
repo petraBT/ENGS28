@@ -1,4 +1,87 @@
-# Week 7 handover — where things stand after session 7 (updated 2026-09-01)
+# Week 7 handover — where things stand after session 8 (updated 2026-09-02)
+
+## Session 8 (2026-09-02): her pass-3 comments applied — 14 deck, 14 book, mirrored both ways
+
+28 comments this round: 14 on deck slides, 14 directly on book pages. Her
+instruction going in: "be sure to apply the slide ones in the book also
+as I have not double marked them" — every slide fix below was checked
+for a matching book paragraph and fixed there too, not just where she
+happened to circle it.
+
+Two of her comments caught regressions from session 7's own work, not
+refinements: the `task-day14-run-tests` statement linked to
+`subsec-day14-stationary` for "last night's homework" — a forbidden
+in-class xref, since `act-day14-run` is ref'd directly with no `<slide>`
+wrapper, so the link was live on the projected slide ("no linking to
+book sections from the slides... would kick me out of the slides in
+class"). Fixed: plain text, no link. And `task-day14-exclude` claimed
+the project would "still compile" right after excluding
+`whoami_test.c`, before either driver function is finished — false,
+since `lsm303agr_partial.c` has a blank stub and an incomplete
+declaration at that point ("the partial driver will throw compiler
+errors... don't invent stuff like that"). Fixed: the task now says the
+`multiple definition of 'main'` error is gone but other errors remain.
+
+A third comment reversed a session-7 decision: the paragraph landing
+0x77/0x00 in student-visible book prose (added last session on the
+reasoning that a book-only reader needs the values) is exactly what she
+does not want — "You are giving away their work. Don't do that," and
+"this is their lab work - we are not going to give this to them" on the
+lead-in paragraph's "we'll settle both now" framing. Both are reworded;
+the settled byte values now live only in `ins-day14-settings`,
+instructor-only, never in student-facing running text, even after the
+in-class reveal. This appears to be a standing rule (homework answers
+stay out of student text permanently), not a pre-reveal-only
+restriction — noted in `no-em-dashes-whole-sentences`-style memory for
+next time.
+
+Everything else, by Part: Part 3's exclude-instructions paragraph is
+cut down ("too wordy... they are not babies"). Part 4's
+`act-day14-registerwrite` drops its lettered `<task>` wrapper for a
+plain `<statement>` (no sibling task, so no reason for an orphan "(a)"),
+matching `act-day14-tilt-commit` and `act-day14-accelinit`. Part 5's
+diagnostic-ladder paragraph becomes a four-item checklist, matching
+`sl-day14-ladder`'s structure ("Too much prose. Make this a checklist
+like on the slides"). Part 8: the AN-1057 sentence no longer reads as
+though Analog Devices invented the trigonometry ("They are just
+presenting the math"); the two-axis assumption is restated in her exact
+wording (tilt in the xz-/yz-plane limited, so gravity projects mostly
+into the xy-plane) on both the slide and the book paragraph, which also
+gains an "In addition" sentence on the three-axis AN-1057 extension,
+mirroring the slide's new optional bullet; the single-axis slide bullets
+gain the "so the slope is / this implies" connective phrasing and an
+explicit "this slope determines the reading's sensitivity" sentence,
+plus the near-0°-vs-near-90° contrast — note a true nested `<ul>` inside
+`<li>` is not valid PreTeXt (confirmed against the RNG: `<li>` is either
+inline text or all-block content, and `<ul>` isn't a `BlockStatement`),
+so "indent these two" is approximated with plain top-level bullets
+instead. Part 9: `sl-day14-float`'s two bullets take her fuller
+phrasing; the book paragraph drops a UART/BRR digression she flagged as
+"weird" here; `sl-day14-round` and its book mirror now name
+`round()`'s prototype (`double round(double x);`) and contrast it with
+a truncating int cast; `sl-day14-cost` and its book mirror reword the
+FPU bullet to "computing with a float... is fast" on a processor that
+has one, contrasted with the STM32C031C6 having none. The Reference
+section's differential-capacitor subsection gets a new figure,
+`capacitive_pickoff_differential.svg`, extending the existing
+single-plate `capacitive_pickoff.svg` (same visual language: vertical
+plates, `#444444` fill, the `arr2`-style arrow marker) to the real
+two-fixed-plate structure, showing C1 and C2 and the ΔC = C1 − C2
+relationship.
+
+Full rebuild, all four mechanical checks pass, no PreTeXt warnings
+introduced. Fit-checked slides 25, 39, 40, 43, 46, 47 and read every
+touched book page's rendered text against the source.
+
+### Ask-Petra list, updated
+
+Still open: the plain-view CoolTerm screenshot (reminder standing, no
+accelerometer set up currently) — **and now, when it arrives, the two
+control-register readouts need blurring before it goes in the book**
+(her 2026-09-02 comment, same reason as the Part 2 reveal); the
+negative-raw-print question and the padding-bits check (both wait on
+hardware); Q3 (the wrong-address print, at her pace); and Part 7's real
+chart-view minutes in class.
 
 ## Session 7 (2026-09-01): her pass-2 comments applied, connecting prose complete
 
