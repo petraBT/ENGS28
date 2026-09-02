@@ -2682,7 +2682,7 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                     <statement><p>Compare your <c>CTRL_REG1_A</c> byte with
                     your table group, field by field: the four ODR bits,
                     LPen, then Zen, Yen, and Xen.  Settle any disagreement
-                    against the tables.</p></statement>
+                    against the datasheet's tables.</p></statement>
                 </task>
                 <task xml:id="task-day14-settings-reg4">
                     <statement><p>Do the same for <c>CTRL_REG4_A</c>, and
@@ -2767,7 +2767,7 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
                 <caption>The Exclude from build dialog.  Click Select All
                 so both Debug and Release exclude the file, then click
                 OK.</caption>
-                <image source="images/Day14-Accelerometer(2)/CubeIDEExcludeFromBuild.png" width="45%"/>
+                <image source="images/Day14-Accelerometer(2)/CubeIDEExcludeFromBuild_circled.svg" width="45%"/>
             </figure>
 
             <activity xml:id="act-day14-stage">
@@ -2806,7 +2806,7 @@ void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
             <p>Exclude <c>whoami_test.c</c> from the build: right-click it, choose <em>Resource Configurations → Exclude from Build</em>, click <em>Select All</em>, then OK.</p>
             <p>If your build fails with <c>multiple definition of 'main'</c>, or of <c>lsm303_AccelRegisterRead</c>, which both files define, you skipped this step.</p>
         </stack>
-        <image source="images/Day14-Accelerometer(2)/CubeIDEExcludeFromBuild.png"/>
+        <image source="images/Day14-Accelerometer(2)/CubeIDEExcludeFromBuild_circled.svg"/>
     </sidebyside>
     <note>≈ 8 min, the whole Part on one slide.  We verify the hardware first, so anything that goes wrong from here on is software.  A board that fails the re-verify gets priority triage during the coming worktime; do not let it wait for the checkpoint, whose rescue file fixes software, not hardware.  The last line is the self-rescue: the linker error arrives twenty minutes from now, at the worst moment to need help.  We have excluded files from the build several times already; this should be routine.</note>
 </slide>
@@ -2873,7 +2873,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
                 <title>Write the register-write function</title>
                 <task xml:id="task-day14-registerwrite">
                     <statement><p>Complete
-                    <c>lsm303_AccelRegisterWrite()</c>, on your own first,
+                    <c>lsm303_AccelRegisterWrite()</c>, on your own,
                     from your paper draft,
                     with the given <c>lsm303_AccelRegisterRead()</c> as the
                     model.  It takes one I2C library call.</p></statement>
@@ -2890,7 +2890,7 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 </slide>
 
             <slide xml:id="sl-day14-attempt">
-    <p>Complete <c>lsm303_AccelRegisterWrite()</c>, on your own first, from your paper draft, with the given read function as the model.  It takes one I2C library call.</p>
+    <p>Complete <c>lsm303_AccelRegisterWrite()</c>, on your own, from your paper draft, with the given read function as the model.  It takes one I2C library call.</p>
     <program language="c"><code><![CDATA[
 void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
 	// complete this function
@@ -2954,7 +2954,12 @@ void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
 ]]></code></program>
                 <p><c>i2c1_memWrite()</c> wants a pointer to the data and a
                 byte count, which is why the argument is <c>&amp;data</c>
-                and the count is 1.</p>
+                and the count is 1.  This is also why the write uses
+                <c>i2c1_memWrite()</c> and not <c>i2c1_byteWrite()</c>: the
+                transaction sends two pieces of data after the device
+                address, the register address and the value, and
+                <c>i2c1_byteWrite()</c> has no register address argument to
+                carry the first of them.</p>
             </instructor>
 
             <!-- The AccelInit skeleton, as the file ships it: the blanks
@@ -3440,8 +3445,8 @@ delay_ms(100);      // or less
                 changes: the vector still has length 1000 mg; it just
                 projects differently.  This prediction is made in the flat
                 frame, with z along gravity at rest; the two-axis formula
-                later in this Part is written for the board held
-                upright.</p>
+                later in this Part assumes a different frame, with gravity
+                in the x-y plane instead.</p>
             </instructor>
 
             <p>
@@ -3449,11 +3454,14 @@ delay_ms(100);      // or less
                 application note the field uses:
                 <url href="external/datasheets/an-1057.pdf">AN-1057,
                 <em>Using an Accelerometer for Inclination Sensing</em></url>.
-                With one axis (<xref ref="fig-tilt-single"/>), the x reading
+                From the acceleration data along one axis that is tilted
+                (<xref ref="fig-tilt-single"/>), the x reading
                 is <m>A_x = g \sin\theta</m>, so
-                <m>\theta = \sin^{-1}(A_x/g)</m>.  That works, but not
+                <m>\theta = \sin^{-1}(A_x/g)</m>: one axis is enough to
+                derive the tilt angle, for small tilts.  That works, but not
                 everywhere.  The slope of <m>\sin\theta</m> is
-                <m>\cos\theta</m>, which goes to zero as <m>\theta</m>
+                <m>\cos\theta</m>, which is close to 1 near 0° and
+                goes to zero as <m>\theta</m>
                 approaches 90°, and this slope is the measurement's
                 <term>sensitivity</term>.  Near 0° a 1° tilt moves the
                 reading by
@@ -3477,8 +3485,8 @@ delay_ms(100);      // or less
 
             <slide xml:id="sl-day14-tilt-single" ref="fig-tilt-single" stack="yes">
     <ul>
-        <li>One axis is enough for small tilts: A_x = g sin θ, so θ = sin⁻¹(A_x / g).</li>
-        <li><term>Sensitivity.</term> The slope of sin θ is cos θ, and it goes to zero at 90°.</li>
+        <li>One axis is enough to derive the tilt angle from small tilts: from the acceleration data along the one axis that was tilted, A_x = g sin θ, so θ = sin⁻¹(A_x / g).</li>
+        <li><term>Sensitivity.</term> The slope of sin θ is cos θ: close to 1 near 0°, and it goes to zero at 90°.</li>
         <li>Near 0° a 1° tilt moves the reading by about 17 mg; near 90° the same 1° tilt moves it by less than 1 mg.</li>
         <li>So a fixed amount of sensor noise can swing the computed angle by tens of degrees near 90°.</li>
         <li>One axis also cannot tell all four quadrants apart.</li>
@@ -3488,11 +3496,10 @@ delay_ms(100);      // or less
 
             <p>
                 Two axes fix both problems
-                (<xref ref="fig-tilt-two"/>).  Hold the board upright, like
-                a phone, so that gravity lies in the x-y plane: at rest y
-                reads about +1000 mg and z about zero.  That is how you
-                will hold it for Lab 7, and it is the frame this formula
-                assumes.  With
+                (<xref ref="fig-tilt-two"/>).  The two-axis formula assumes
+                gravity lies in the plane of the two axes you use, the
+                geometry AN-1057's own Figure 7 draws, with y vertical and
+                reading about +1000 mg at rest.  With
                 <m>A_x = g \sin\theta</m> and <m>A_y = g \cos\theta</m>,
                 the ratio gives <m>\theta = \tan^{-1}(A_x/A_y)</m>: the
                 gravity magnitude cancels, the sensitivity is constant at
@@ -3503,7 +3510,10 @@ delay_ms(100);      // or less
                 correct quadrant, and the reason it needs both is in
                 <xref ref="subsec-accel-ref-orientation"/>, which also
                 gives the three-axis equations for a full orientation.
-                Here <c>ax</c> and <c>ay</c> are the milli-g x and y
+                Lab 7 asks you to watch the axis directions marked on your
+                own breakout board, since which axis reads which sign
+                depends on how the board sits.  Here <c>ax</c> and
+                <c>ay</c> are the milli-g x and y
                 readings already on your screen, and the angle comes out
                 the same from the raw values, because the scale factor
                 cancels in the ratio.
@@ -3521,7 +3531,7 @@ delay_ms(100);      // or less
             <slide xml:id="sl-day14-tilt-two" ref="fig-tilt-two" stack="yes">
     <ul>
         <li>Two axes fix both problems.  With A_x = g sin θ and A_y = g cos θ, the ratio gives θ = tan⁻¹(A_x / A_y): the g cancels, the sensitivity is constant at every angle, and the signs of the two readings identify the quadrant, covering the full 360°.</li>
-        <li>C's math library handles the quadrants for you: <c>atan2(ax, ay)</c> takes the two readings separately and returns the angle in the correct quadrant.  This assumes gravity lies in the x-y plane, which is how you hold the board for Lab 7: upright, like a phone, so at rest y reads about +1000 mg and z about zero.</li>
+        <li>C's math library handles the quadrants for you: <c>atan2(ax, ay)</c> takes the two readings separately and returns the angle in the correct quadrant.  This assumes gravity lies in the x-y plane, the geometry AN-1057's own figure draws, with y reading about +1000 mg at rest.  Lab 7 asks you to check the axis directions marked on your own breakout board.</li>
     </ul>
     <note>≈ 4 min.  The lab is explicit: atan2, never plain atan.  One clause to land out loud: ax and ay are the milli-g numbers already on the screen, and the angle comes out the same from the raw values, because the scale factor cancels in the ratio.  Three axes orient you fully in space; the equations are in the Reference section and in AN-1057.</note>
 </slide>
@@ -3561,10 +3571,12 @@ delay_ms(100);      // or less
             <activity xml:id="act-day14-cast">
                 <title>Place the cast</title>
                 <task xml:id="task-day14-cast">
-                    <statement><p><c>/</c> between two integers throws away
-                    the remainder, and the conversion
-                    <c>ACCEL_raw * ACC_FS / 65536</c>
-                    has that trap in it.  Write the expression with a
+                    <statement><p>When dividing integers in C, the division
+                    is performed in integer arithmetic: the remainder gets
+                    lost, and the result is just the integer part.  The
+                    conversion <c>ACCEL_raw * ACC_FS / 65536</c> divides that
+                    way unless something is done about it.  Write the
+                    expression with a
                     <c>(float)</c> cast placed so the result keeps its
                     fraction.</p></statement>
                 </task>
@@ -3577,21 +3589,24 @@ delay_ms(100);      // or less
             </activity>
 
             <instructor xml:id="ins-day14-cast">
-                <p>The cast goes on the raw value, first in the chain:</p>
+                <p>One placement that works, with the cast on the raw
+                value:</p>
                 <program language="c"><code><![CDATA[
 float a = (float) ACCEL_raw * ACC_FS / 65536;    // 65536 = 2^16; the result is in g, not mg
 ]]></code></program>
-                <p>The <c>(float)</c> applies only to <c>ACCEL_raw</c>,
-                the value written right after it, and it runs before
-                either operator.  <c>*</c> and <c>/</c> group left to
-                right, so the
-                multiply happens first, on a float, and then the divide is
-                a float divide, so the fraction survives.  Casting the
-                finished <c>ACCEL_raw * ACC_FS / 65536</c> instead is too
-                late: that expression was already computed in integer
-                arithmetic, the divide already truncated (for us, to a
-                whole number of g), and the damage is done before the cast
-                ever runs.  Note the unit change: this form drops the
+                <p>It does not matter which operand carries the cast, as
+                long as it happens before the division runs: <c>(float)
+                ACCEL_raw * ACC_FS / 65536</c> and
+                <c>ACCEL_raw * (float) ACC_FS / 65536</c> both keep the
+                fraction.  As soon as one operand in the chain is a
+                <c>float</c>, C computes the rest of that expression in
+                floating point, left to right, so the multiply is a float
+                multiply and the divide that follows is a float divide.
+                What does not work is casting the finished integer result,
+                <c>(float)(ACCEL_raw * ACC_FS / 65536)</c>: by then the
+                division has already run in integer arithmetic (for us, to
+                a whole number of g), and the fraction is already gone.
+                Note the unit change: this form drops the
                 <c>MILLI</c> factor, so <c>a</c> is in g rather than
                 milli-g.  For sin⁻¹(A_x/g) that is the fraction of one g
                 it needs, and for <c>atan2()</c> the scale cancels in the
@@ -3628,7 +3643,7 @@ a = (ACC_FS * ACCEL_raw * MILLI) >> ACC_REGISTERWIDTH;   // in mg
 
             <slide xml:id="sl-day14-cost">
     <ul>
-        <li>A <c>float</c> spends its 32 bits as a sign bit, an 8-bit exponent, and a 23-bit fraction: it trades exactness for range.</li>
+        <li>The 32 bits of a <c>float</c> consist of a sign bit, an 8-bit exponent, and a 23-bit fraction: exactness is traded for range.</li>
         <li>The STM32C031C6 has no FPU (floating point unit), meaning no dedicated hardware circuit for float math, so every float operation is done in software.</li>
         <li>Software floats are slower than integer arithmetic, and the library code takes up flash memory.  In Lab 7 you are asked to measure exactly that: your program's size with the math library in it.</li>
     </ul>
@@ -3991,9 +4006,10 @@ void lsm303_AccelReadRaw(lsm303AccelData_s * const result);
         <subsection xml:id="subsec-accel-ref-float">
             <title>The float Format: Precision Traded for Range</title>
             <p>
-                A <c>float</c> (single-precision floating point, IEEE 754)
-                spends its 32 bits as 1 sign bit, an 8-bit exponent, and a
-                23-bit fraction, and represents
+                The 32 bits of a <c>float</c> (single-precision floating
+                point, IEEE 754)
+                consist of 1 sign bit, an 8-bit exponent, and a
+                23-bit fraction, and represent
                 <m>N = \pm\,\mathrm{fraction} \times 2^{\mathrm{exponent}}</m>:
                 like scientific notation, but in base 2.  The stored 23 fraction bits plus
                 an implied leading 1 give about 24 significant bits, which
