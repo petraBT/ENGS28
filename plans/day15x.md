@@ -4,12 +4,14 @@
 day-parity rule in `CLAUDE.md`). **No pre-class reading — x-days do not get
 one.** Chapter: `source/ch-servos.ptx`. Old deck: `Day15x-Servos(2).pptx`
 (6 slides, all re-shows of Day 15's 27–30). Ground truth:
-`plans/week8-ground-truth.md`.
+`plans/week8-ground-truth.md`. Gate 1 applied: `reviews/week8-gate1.md`.
 
-Yesterday every student proved a 1–2 ms pulse on PA7 with the AD2. Today the
-servo goes on the regulator's 5 V and follows the potentiometer, and we add
-the one piece of code the week still lacks: reading two ADC channels in one
-program, which Thursday's photocells and Lab 8 §2 both need.
+Yesterday students designed and built a 1–2 ms pulse on PA7 and verified it
+with the AD2 — most of them; her note says the exercise takes a long time,
+and her x-hour exists to finish it. Today everyone re-verifies that pulse,
+the servo goes on the regulator's 5 V and follows the potentiometer, and we
+add the one piece of code the week still lacks: reading two ADC channels in
+one program, which Thursday's photocells and Lab 8 §2 both need.
 
 ## Objectives
 
@@ -19,9 +21,11 @@ By the end of class a student can:
    pin, ground shared with the Nucleo, the signal lead to PA7 (D11), nothing
    powered while wiring, USB first and the adapter second.
 2. Confirm with the multimeter that the regulator's 5V pin reads 5 V before
-   the servo is connected, and say why that check comes first.
+   the servo is connected, and say why that check comes first: a wrong
+   voltage there is found with nothing attached to it.
 3. Observe the servo follow the potentiometer, hold its position, and resist
-   a gentle push, and connect each observation to the internal loop.
+   a gentle push — the behavior predicted yesterday — and connect each
+   observation to the internal loop.
 4. Read two ADC channels in one program (question 4 decides the route), and
    say what the sequencer does with two bits set in `CHSELR`.
 
@@ -33,18 +37,29 @@ By the end of class a student can:
 
 Scaffolding (P-2):
 
+- **Part 2 opens on finishing Tuesday.** Every student re-verifies the pulse
+  on the AD2 before any servo lead carries it (two minutes for a working
+  board; it also catches a build that regressed overnight). A student still
+  in Tuesday's template spends Part 2 there, with Tuesday's ladder, and wires
+  the servo when the pulse is verified — not before.
 - The wiring is the Day 11 regulator setup with one consumer swapped: the
   motor driver's VM becomes the servo's center lead. The 5 V measurement at
-  the pins (Day 12's build-order table) comes before the servo does.
+  the pins (Day 12's build-order table) comes before the servo does, and the
+  adapter comes out again before any lead is added.
 - Nothing new is written for the servo: yesterday's program is still on the
   board (her slide 30).
 - The two-channel change is two or three lines on `ADCPot.c`, shown as a
   predict-then-reveal with the RM's sequencer paragraph on screen, and tested
-  with the second input tied to a rail so the answer is unambiguous.
-- **Checkpoint at minute 28** (end of Part 2): a servo that does not move
-  with the pulse verified yesterday is power (5 V at the pin? shared
-  ground?) or the signal lead on the wrong pin. A servo that twitches and
-  resets the board is the brown-out: the servo is on the Nucleo's rail.
+  with the second input tied to a rail, predicted first.
+- **Checkpoint at minute 30** (end of Part 2), a ladder: no motion with the
+  pulse re-verified → power (5 V at the pin? shared ground?) or the signal
+  lead on the wrong pin; twitching and a board that resets → the brown-out,
+  the servo is on the Nucleo's rail; motion that ignores the knob → the
+  program on the board is not Tuesday's.
+- **Decision point at minute 10:** if more than a third of the room is still
+  completing Tuesday's template, Part 3 collapses to its reveal (15 → 8) and
+  the do-step opens Thursday's Part 2, funded from Thursday's Part 3 (6 → 3,
+  its datasheet beat only). Totals stay 50 and 110.
 
 ## The STRETCH
 
@@ -57,11 +72,12 @@ and how far is that from the datasheet's ±90° (question 6)?
 
 | Her slides | Where |
 | --- | --- |
-| 2 (finish Tuesday first) | presenter note (S-25) |
-| 3 (servo wiring) | Part 1 recall slide (taught Day 15 Part 6) |
-| 4–5 (how to power) | Part 1 recall; the *why* was Tuesday's |
+| 1 (title) | deck glue |
+| 2 (finish Tuesday first) | **Part 2's first beat** — scheduling, not classroom management; her x-hour's premise |
+| 3 (servo wiring) | Part 1, one pointer to Tuesday's figure and lead map (taught Day 15 Part 6) |
+| 4–5 (how to power) | Part 1 pointer; the *why* was Tuesday's |
 | 6 (design exercise Part 2) | Part 2, in full |
-| — | **Part 3 is ours** (two ADC channels), named as an addition: Lab 8 §2 needs it, no deck teaches it |
+| — | **Part 3 is ours** (two ADC channels), named as an addition: Lab 8 §2 needs it, no deck teaches it (question 4) |
 
 ## Activity sequence (50 min; every Part's row equals the sum of its beats)
 
@@ -69,20 +85,21 @@ and how far is that from the datasheet's ±90° (question 6)?
 | --- | --- | --- | --- |
 | — | 2 | — | Settling |
 | 0 | 1 | tell | Announcements |
-| 1 | 5 | tell | **Where we are.** Yesterday: the pulse, verified. Today: the servo on its own supply. The wiring on one slide, recalled not re-taught: regulator 5V → center lead, GND shared, signal → PA7 (D11); unplug before wiring; USB, then the adapter (3). The order of checks from Day 12: power first, then ground, then the signal path (2) |
-| 2 | 20 | do | **Design exercise, Part 2 — CRUCIAL.** Everything unplugged: regulator board on the breadboard, 5V and GND to their own rail, ground jumper to the Nucleo (4). Adapter in, multimeter on the 5V pin: 5 V before anything is connected to it (3). Servo leads: center to the 5 V rail, darker outer to ground, signal to PA7 (3). Wiring checked; USB, then adapter; the servo follows the knob (5). Observe, `room="yes"` for a sentence each: it holds where you leave the knob; push the arm gently — it pushes back; turn the knob to the 1.5 ms position — the arm centers (3). Checkpoint minute 28 (2) |
-| 3 | 17 | predict → reveal → do | **Two channels.** The question: Thursday's photocells are two voltages on two pins — what does `pa0_adc_init()` need? Commit, `room="yes"`: *if `CHSELR` has both bit 0 and bit 1 set, what does `start_conversion()` + `adc_read()` return, and what happens to the second channel?* (3). Reveal with RM0490 §14.4 on screen: the sequencer converts the selected channels in number order, EOC after each, EOS at the end; so either read twice per start (route A) or select one channel per conversion and wait for CCRDY (route B) — whichever question 4 lands (5). Do: modify your Day 7 program to read A0 (the pot) and A1, A1 jumpered to 3.3 V then to GND, and print both; the second value should read near 4095 then near 0 while the first follows the knob (7). One sentence on what this becomes tomorrow (2) |
-| — | 5 | tell | **Close.** Tomorrow: photocells replace the pot, on the arm of this servo. The reading is the photocell and its datasheet — read the datasheet's table, not just the page (2). Leave the servo wired; bring the tracker fixture from your kit (3) |
+| 1 | 3 | tell | **Where we are.** Yesterday: the pulse, verified. Today: the servo on its own supply, wired as Tuesday's figure and lead map say (`fig-tb6612-regulator`, center lead to 5V, ground shared, signal to PA7) — a pointer, not a retelling (2). The order of checks from Day 12: power first, then ground, then the signal path (1) |
+| 2 | 24 | do | **Finish Tuesday, then wire — CRUCIAL.** Everything unplugged: regulator board on the breadboard, 5V and GND to their own rail, ground jumper to the Nucleo (4). Adapter in, multimeter on the 5V pin: 5 V before anything is connected to it — if it is not, the fault is upstream and you find it with nothing else attached (3). **Adapter out** before the next wire (1). Servo leads: center to the 5 V rail, darker outer to ground; the signal lead not yet (3). USB in, AD2 on PA7: the pulse is still 1–2 ms — everyone, and a student still in Tuesday's template does Tuesday's Part 5 here instead (2). USB out; signal lead to PA7 (D11); wiring checked; USB, then adapter; the servo follows the knob (5). You predicted this yesterday — watch it happen, `room="yes"` for a sentence each: it holds where you leave the knob; push the arm gently and it pushes back; the 1.5 ms knob position centers the arm (3). Checkpoint minute 30, the ladder above (3) |
+| 3 | 15 | predict → reveal → do | **Two channels.** The question: Thursday's photocells are two voltages on two pins — what does `pa0_adc_init()` need? Commit, `room="yes"`: *if `CHSELR` has both bit 0 and bit 1 set, what does `start_conversion()` + `adc_read()` return, and what happens to the second channel?* (3). Reveal, in two steps with RM0490 §14.4 on screen: first, the ADC converts the selected channels one after another in number order, EOC after each, EOS after the last — so either read twice per start (route A) or select one channel per conversion (route B), whichever question 4 lands (3); then the one new rule, pointed at on the excerpt rather than walked: after `CHSELR` changes, wait for CCRDY before starting (1). Do: modify your Day 7 program to read A0 (the pot) and A1; a wire from A1's breadboard row to the 3.3 V rail, then to GND; **predict the two raw values first**, then print both — the first follows the knob, the second reads what you predicted (6). One sentence on what this becomes tomorrow (2) |
+| — | 5 | tell | **Close.** Tomorrow: photocells replace the pot, on the arm of this servo. The reading is the photocell and its datasheet — read the datasheet's table, not just the page (2). Leave the servo wired. Presenter note: bring the tracker fixture, the photocells and the alligator clips from your kit (3) |
 
-Total: 2+1+5+20+17+5 = **50**.
+Total: 2+1+3+24+15+5 = **50**.
 
-**If a part overruns:** Part 3's activity becomes a demonstration from the
-front with the code on screen (−7), and the do-step is the first thing on
-Thursday. **Not cuttable:** Part 2 (Lab 8 §3 is this), and Part 3's reveal —
-Thursday's Part 2 assumes the sequencer fact has been said once.
+**If a part overruns:** the minute-10 decision point above is the default
+trigger; past it, Part 3's activity becomes a demonstration from the front
+with the code on screen, and the do-step is the first thing on Thursday.
+**Not cuttable:** Part 2 (Lab 8 §3 is this), and Part 3's reveal — Thursday's
+Part 2 assumes the sequencer fact has been said once.
 
 **If question 4 lands "make it Thursday's" or "leave it to the lab":** Part 3
-becomes 17 more minutes of Part 2 (a work session, her arc exactly) and Day
+becomes 15 more minutes of Part 2 (a work session, her arc exactly) and Day
 16 Part 2 gains the reveal at +5, funded from Day 16 Part 3.
 
 ## Datasheet moments (P-11)
@@ -96,7 +113,7 @@ becomes 17 more minutes of Part 2 (a work session, her arc exactly) and Day
 ## Writing room (S-2)
 
 - Part 2: the three observations, one sentence each.
-- Part 3: *what does two bits in CHSELR do?*
+- Part 3: *what does two bits in CHSELR do?* and the two predicted values.
 
 ## Hand-offs
 
@@ -106,4 +123,5 @@ becomes 17 more minutes of Part 2 (a work session, her arc exactly) and Day
 tour). Nothing to submit (question 8).
 
 **Day 16 needs from here:** the servo wired on 5 V and following the pot; two
-channels readable; the tracker fixture in hand.
+channels readable (or the do-step carried to Thursday's Part 2 by the
+decision point); the tracker fixture, photocells and clips in hand.

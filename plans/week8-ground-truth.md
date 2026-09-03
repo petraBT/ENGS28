@@ -594,7 +594,7 @@ shapes are noted.
 | 16/11 | Photocell in the cup, "Photocell" arrow (Lab App. A photo) | **Use raw** |
 | 16/12 | Alligator clips on the arm (Lab App. A photo) | **Use raw** |
 | 16/13 | = 15/30 with "Physically located in the cups" callout | question 5 |
-| 16/14 | Full Fritzing (dividers + pot + servo on 3V3) | question 5 |
+| 16/14 | Full Fritzing — **two dividers and the servo, no potentiometer** (corrected at Gate 1: this is her end state; the pot comes out once the servo is confirmed, her slide 13) — servo rail still from 3V3 | question 5 |
 | 16/16 | Survey QR | **Drop** |
 | all/1 | Logo slides | **Drop** |
 
@@ -743,12 +743,15 @@ two answered items at the top of this file are not re-asked.
    `ARR = PWM_TIMER_MAX-1` and `CCR1 = value`. May `tim.c` be aligned with the
    Day 11x convention, or should the book teach the difference? *(Blocks: the
    Day 15 book's Part 4 and every listing.)*
-3. **Which ADC channels.** The Day 15 template reads the pot on **PA0 (A0)**;
-   Lab 8 §3 says the pot goes on "analog channel 3"; Lab 8 Figure 2 and your
-   Day 16 Fritzing put the two photocells on **A0 and A1**. For the tracker:
-   photocells on A0 (PA0, ADC_IN0) and A1 (PA1, ADC_IN1), pot on A3 (PB1,
-   ADC_IN18)? Or A2 (PA4, ADC_IN4)? *(Blocks: Day 16's wiring figure and the
-   two-channel code.)*
+3. **Which ADC channels.** The Day 15 template reads the pot on **PA0 (A0)**
+   and slide 21 says "Analog 0, as usual" — but your own Day 15 slide 30
+   Fritzing (re-shown on 15x/6 and 16/10, 16/13) draws the pot's wiper on
+   **A2**; Lab 8 §3 says the pot goes on "analog channel 3"; Lab 8 Figure 2
+   and your Day 16 Fritzing put the two photocells on **A0 and A1**. For the
+   tracker: photocells on A0 (PA0, ADC_IN0) and A1 (PA1, ADC_IN1), pot on A2
+   (PA4, ADC_IN4) as drawn, or A3 (PB1, ADC_IN18) as the lab says? And which
+   is right for the figure we redraw? *(Blocks: Day 15 Part 5's wiring line,
+   Day 16's wiring figure and the two-channel code.)*
 4. **How you want two channels read.** Lab 8 calls it "an easy two-channel
    modification" of `ADCPot.c`, but nothing in the course has read two channels
    (§2c). Two honest routes: **(A)** select both in `CHSELR` and call
@@ -786,6 +789,14 @@ two answered items at the top of this file are not re-asked.
    material. Is there anything due Thursday (the Lab 8 photocell deliverables
    are done in class on Thursday in your arc)? *(Blocks nothing; shapes the
    Day 15 close.)*
+9. **`adc.c` and `adc.h`.** The Day 15 template `#include`s `adc.h` and your
+   slide 20 says "if you have previously added your adc code to the mylib
+   folder you are good to go." `ch-adc.ptx` never splits `ADCPot.c` into a
+   library the way `ch-uart` and `ch-i2c` do for theirs, and no `adc.h` is in
+   the repo (Gate 1, continuity). Did a lab (6 or 7) already have students
+   make `adc.c`/`adc.h` in `mylib`, or is Day 15 the first time? The plan
+   carries the split as a five-minute beat of Part 5 either way, with your
+   fallback (copy into `Src`/`Inc`). *(Blocks: Day 15 Part 5's first beats.)*
 
 Lab 8 fixes that are yours, not the book's, noted for whenever you next touch
 it: `OCR1A` → `CCR1` (§4, "before writing to OCR1A"); "page 133 of Williams";
