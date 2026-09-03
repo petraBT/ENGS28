@@ -286,8 +286,17 @@ void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
 }
 ```
 
-**`tim.h`** is on no slide. Its three prototypes follow from `tim.c`, but B-6
-says do not reconstruct — **question 2 asks for all three files.**
+**`tim.h`** was on no slide. **All three files landed in `assets/starters/`
+on 2026-09-03 (Petra)** — `Day15_servo_template.c`, `tim.c`, `tim.h` — and are
+now the authority over the deck text above. `tim.c` matches the slide
+verbatim (comments fuller). The template differs from the slide in shape,
+not in code that students touch: a `servo.c` header block naming the
+dependencies (`adc.c`, `uart.c`, `tim.c`) and the pins; `updateServo()` and
+`TIM16_IRQHandler()` moved below `main()`; the read comment is "Pot value
+(0 to MAXADC-1)"; a "Processor could sleep here" comment in the loop; the map
+line is boxed between two comment rules. `tim.h` declares the three
+prototypes, `tim14_pwm_set(uint16_t pulse)`. Register the book's listings
+against these files in `scripts/check_starters.py` when they exist.
 
 ### §2a Two things in `tim.c` that the plan must not paper over
 
@@ -299,9 +308,14 @@ says do not reconstruct — **question 2 asks for all three files.**
    and `CCR1 = value-1` (a `SERVO_MID` of 300 gives 299 counts HIGH). Neither
    is wrong enough to matter to a servo, but a student who reads both files —
    and Lab 8 §3 sends them back to their Day 15 program — sees two answers to
-   a question the course made a point of. **Question 2.** The plan's Part 4 is
-   written so that either answer lands: it teaches "what changed since
-   Wednesday's driver" off whichever file she confirms.
+   a question the course made a point of. **Petra, 2026-09-03: "tim.c is
+   updated on purpose from the previous version, so teach the difference."**
+   So Part 4 teaches it, honestly: with `ARR = timerMax` the counter runs
+   0..4000, a period of 4001 counts (20.005 ms); with `CCR1 = value-1` and PWM
+   mode 1 (HIGH while CNT < CCR1) the pin is HIGH for value−1 counts, one
+   5 µs step short of the number in mind. Follow-up 2b asks whether that is
+   the lesson she intends, since the honest version says the new file is one
+   count off in both places.
 2. **`tim14_pwm_set()` has lost its limit.** The Day 11x version limits the
    value to `PWM_TIMER_MAX-1` before writing `CCR1`; the servo version does
    not, because the limiting moved up into `updateServo()`, where it is
@@ -384,11 +398,21 @@ way to the right, '-90' (~1ms pulse) is all the way to the left."* Table:
 Speed (sec) 0.1; Torque (kg-cm) 2.5; Weight (g) 14.7; Voltage 4.8–6; dimensions
 A–F. Wiring figure: **PWM = Orange, Vcc = Red (+), Ground = Brown (−)**; timing
 figure "1–2 ms Duty Cycle, 20 ms (50 Hz) PWM Period, 4.8 V (~5 V) Power and
-Signal". **Not in it:** dead band, current draw, stall current. So her "dead
-band width 1 µs" (the number her prescaler choice turns on), "250 mA while
-moving", and the placeholder's "700 mA at stall" are all unsupported by the
-hosted sheet — **question 1**. The sheet's own title is SG90; her deck, Lab 8
-and the kit photo say **SG92R**.
+Signal". **Not in it:** dead band, current draw, stall current.
+
+**`assets/datasheets/C17481_SG92R_datasheet.pdf`** (Petra, 2026-09-03; the
+Adafruit-hosted sheet for the **SG92R**, which is the kit's part — there is no
+official one beyond the maker's page, https://towerpro.com.tw/product/sg92r-7/).
+One page, pasted: digital 9 g servo, Teflon bushing, 25 cm wire, coreless
+motor; 23 × 12.2 × 27 mm; **stall torque 2.5 kg/cm at 4.8 V**; **operation
+speed 0.1 s/60° at 4.8 V**; operating voltage 4.8 V; gear type **POM with
+carbon fiber gear**; **dead band width 1 µs**; 0–55 °C. So the dead band her
+prescaler choice turns on is now sourced, and so is her plastic-gear argument
+(POM). **Still in no sheet:** current draw — "250 mA while moving, can be much
+higher if stalled" is her slide 28's figure (follow-up 1b); the placeholder's
+"700 mA at stall" stays condemned. The book names the part **SG92R** and
+links this sheet; the SG90 sheet stays hosted for its wiring and timing
+figures.
 
 **`assets/datasheets/CdS-photocell-PDV-P8001.pdf`** (1 page, Advanced Photonix,
 rev 3/30/06). Electro-optical characteristics at 23 °C: dark resistance R_D
@@ -581,8 +605,8 @@ shapes are noted.
 | 15/22–23 | Waveforms captures, 1 ms and 2 ms pulses at 5 ms/div with cursors | **Use raw** as the reference for the verification step (nothing graded is in them) |
 | 15/27 | SG92R photo (same as 15/9 second image) | reuse 15/9 |
 | 15/28 | Battery box photo; Fritzing with a battery pack | **Drop both** — superseded by her answer |
-| 15/29 | Fritzing: servo, rail fed from the Nucleo's **3V3**; regulator render | Regulator render = `fig-tb6612-regulator`'s own file (identical bytes) — **xref**. The Fritzing **contradicts the separate-supply rule** — do not use as-is; **question 5** (corrected drawing, or rebuild in the style of `fig-day12-lab6-build`, which already draws the regulator board) |
-| 15/30 | Fritzing: servo + pot, same 3V3 rail | same as 15/29 — question 5 |
+| 15/29 | Her composite: Fritzing + the regulator board as a **separate layered picture**, which extraction drops. **CORRECTED 2026-09-03:** in her slide the servo's power lead runs to the regulator board's **5V pin**, not to the rail; the rail is the Nucleo's 3.3 V and GND (the pot's supply and the shared ground). The "wrong rail" reading in this file's first version and in Gate 1 was an extraction artifact, not her drawing. **Her export `towerProPowering.png` (2026-09-03) is the figure** — servo, regulator board on the breadboard, legend "Brown → GND, Orange → power, Yellow → PWM" |
+| 15/30 | Same, with the pot | **Her export `towerProPot.png` (2026-09-03)** — but its pot is on **A3** (the lab's channel); Day 15 wants **A0**, and she is re-exporting for that (follow-up 3b). Until then the book uses `towerProPowering.png` for the servo and Day 7's pot figure for the pot |
 | 15x/* | re-shows of 15/27–30 | as above |
 | 16/3 | Adafruit photocell photo | **Use raw**; credit as her slide did |
 | 16/4–5 | Resistance-vs-illumination log-log family (one curve red) | **Use raw** (`slide04_0c98f286.png`); the axes are legible. It is the generic family from the Adafruit guide, not the PDV-P8001's own — caption says so |
@@ -590,18 +614,18 @@ shapes are noted.
 | 16/7 | Divider schematic (R_sens over R_M, V_M formula) | **Use raw** — the interface figure; note Lab 8 Figure 1 draws the same circuit with R1/R2 |
 | 16/8 | Lab 8 Figure 1 + two formula images | Lab figures — **do not reproduce the deliverable text**; the divider drawing may be used once (16/7 is better) |
 | 16/9 | Lab 8 Figure 2 Fritzing (two dividers to A0/A1) | **Use raw** — it draws the 3V3 rail correctly for the dividers (no servo) |
-| 16/10 | = 15/30 + regulator | question 5 |
+| 16/10 | = 15/30 + regulator | `towerProPot.png` (A3) or its A0 re-export — whichever Thursday's pin plan says (follow-up 3b) |
 | 16/11 | Photocell in the cup, "Photocell" arrow (Lab App. A photo) | **Use raw** |
 | 16/12 | Alligator clips on the arm (Lab App. A photo) | **Use raw** |
-| 16/13 | = 15/30 with "Physically located in the cups" callout | question 5 |
-| 16/14 | Full Fritzing — **two dividers and the servo, no potentiometer** (corrected at Gate 1: this is her end state; the pot comes out once the servo is confirmed, her slide 13) — servo rail still from 3V3 | question 5 |
+| 16/13 | = 15/30 with "Physically located in the cups" callout | rebuild with `pptx_annotate.py` over her export once the pins are settled (follow-up 3b) |
+| 16/14 | Full Fritzing — **two dividers and the servo, no potentiometer** (corrected at Gate 1: this is her end state; the pot comes out once the servo is confirmed, her slide 13). Its regulator board is a layered picture dropped by extraction, as on 15/29 | ask for her export of this slide too (follow-up 3b); the extracted version is not usable |
 | 16/16 | Survey QR | **Drop** |
 | all/1 | Logo slides | **Drop** |
 
-**Figures that do not exist and are needed:** (a) a wiring drawing of the servo
-powered from the regulator board's 5V pin with the shared ground — the single
-most important figure of the week, and every candidate in her decks draws the
-wrong rail (question 5); (b) the two-loops picture for the week map (the servo's
+**Figures that do not exist and are needed:** (a) ~~the servo-on-the-regulator
+wiring drawing~~ — **delivered**: `towerProPowering.png`; the pot-on-A0
+version of `towerProPot.png` and the Day 16 end-state export are asked for
+(follow-up 3b); (b) the two-loops picture for the week map (the servo's
 internal loop, from her slide 8, next to the tracker loop, Lab 8 Figure 6) —
 hand-author, both halves exist; (c) a blank-then-filled version of her two
 tables, which are text and need no image.
@@ -720,10 +744,59 @@ driver"); the figure choices 16/3, 16/4, 16/7, 16/11–14 (with §6's caveats).
 
 ---
 
-## §9 Questions for Petra — sent 2026-09-02
+## §9 Questions for Petra — sent 2026-09-02; her answers of 2026-09-03 recorded
 
 Everything the repo cannot establish. Numbered so the plans can cite them; the
 two answered items at the top of this file are not re-asked.
+
+**Answered 2026-09-03** (her message, folded into §2, §3, §6 above):
+
+- **Q1 → mostly answered.** The part is the **SG92R**; the Adafruit-hosted
+  sheet `C17481_SG92R_datasheet.pdf` is in the repo (there is no official one,
+  only https://towerpro.com.tw/product/sg92r-7/). Dead band 1 µs, stall
+  torque, speed and the POM/carbon gears are sourced. **Still open, 1b:** the
+  current figure — no sheet has one; the book states "a few hundred mA while
+  moving, more when stalled" as hers unless she prefers no number.
+- **Q2 → answered.** `Day15_servo_template.c`, `tim.c`, `tim.h` are in
+  `assets/starters/`. "tim.c is updated on purpose from the previous version,
+  so teach the difference." **Follow-up 2b** (below).
+- **Q3 → answered for Day 15.** The pot is on **A0** on Day 15 (her
+  `towerProPot.png` shows A3 and she is re-exporting for A0 unless the book
+  can); in the lab students work out the move to A3 themselves — **so the
+  book never shows the pot on A3 or walks that change** (protected). Open for
+  Thursday: **follow-up 3b**.
+- **Q5 → moot, and mine to withdraw.** Nowhere in her slides is the servo
+  powered from the Nucleo. The extracted Fritzings had lost the regulator
+  board (a separate picture on the slide), so the orange lead ended at an
+  empty column and I read the rail as the servo's supply. Her composites are
+  right; `towerProPowering.png` is the figure.
+- **Q9 → answered.** A lab already had students split their ADC code into a
+  library; each student has their own `adc.c`/`adc.h`. Day 15 Part 5's split
+  beat is withdrawn; her fallback line stays as one clause.
+
+**Follow-ups (2026-09-03), narrow:**
+
+- **2b. What "teach the difference" should say.** Against `TTmotor_ramp.c`,
+  `tim.c` writes `ARR = timerMax` (the counter runs 0..4000, so the period is
+  4001 counts, 20.005 ms) and `CCR1 = value-1` (PWM mode 1 is HIGH while
+  CNT < CCR1, so the pin is HIGH for value−1 counts, one 5 µs step short).
+  Is the lesson "two conventions, know which one your file uses" — in which
+  case the book says both are one count off the number in mind — or is
+  there a reason for the new version I should teach instead?
+- **3b. Thursday's pins, and two exports.** On Day 16 the photocells go on
+  A0 and A1 (Lab 8 Figure 2) while the pot is still on A0 from Tuesday until
+  the lab moves it. Which pins do the photocells use in class on Thursday,
+  and is the pot still on A0 when the servo is re-confirmed (Part 4)? And two
+  Fritzing exports, if you have them: `towerProPot` with the pot on A0, and
+  the Day 16 "Ultimate Setup" slide (two dividers, servo, no pot) with the
+  regulator board in it — the extracted versions lost the board.
+- **6b. Lead colours, sharpened.** Your legend says orange → power, yellow →
+  PWM; the SG92R product photo shows brown/red/orange leads, and the SG90
+  sheet says red = power, orange = PWM. The book will teach Lab 8's rule
+  (center = power, darker outer = ground, the other = signal) and name the
+  colours of the kit's servos — which are they?
+
+The original list, for the record:
 
 1. **Which servo, and where do dead band and current come from.** Deck, Lab 8
    and the kit photo say **TowerPro SG92R**; the datasheet you dropped is
@@ -761,14 +834,8 @@ two answered items at the top of this file are not re-asked.
    version from a previous year, or a preference? The plan teaches it on
    Wednesday (Day 15x Part 3) so Thursday can use it — say if you would rather
    it were Thursday's or the lab's. *(Blocks: Day 15x Part 3 and Day 16 Part 2.)*
-5. **The wiring drawing.** Every Fritzing in the Day 15/15x/16 decks (slides
-   29, 30, 16/10, 13, 14) and Lab 8 Figure 4 draw the servo's power rail from
-   the Nucleo's **3V3** pin, which is the thing your slide 28 says never to do.
-   The regulator board is beside them as a separate picture. Do you have a
-   drawing with the regulator's 5V and GND pins feeding the servo rail? If not,
-   I will draw one in the style of Day 12's `fig-day12-lab6-build` (which
-   already has the regulator board in it) and send it for your check.
-   *(Blocks: the week's wiring figure — Day 15 Part 6, Day 15x, Day 16 Part 4.)*
+5. ~~**The wiring drawing.**~~ **Withdrawn 2026-09-03** — see above: an
+   extraction artifact, not her drawing. `towerProPowering.png` is the figure.
 6. **The servo's leads and its safe range.** The SG92R in your photo has brown
    / red / orange leads; your slides say "yellow → PWM"; the SG90 sheet says
    orange = PWM. Lab 8's rule (center = power, darker outer = GND, the other =
@@ -800,5 +867,5 @@ two answered items at the top of this file are not re-asked.
 
 Lab 8 fixes that are yours, not the book's, noted for whenever you next touch
 it: `OCR1A` → `CCR1` (§4, "before writing to OCR1A"); "page 133 of Williams";
-`V_AVR_PCx` in Figure 1; "analog channel 3" (question 3); Figure 4's 3V3 rail
-(question 5).
+`V_AVR_PCx` in Figure 1. ("Analog channel 3" is correct for the lab — the
+pot moves there as the students' own work.)

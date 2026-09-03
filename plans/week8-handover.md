@@ -82,6 +82,43 @@ lab "Lab 7". `ch-photosensors.ptx` prints Lab 8 Deliverable 1's numbers (and
 gets them wrong), gives away Deliverable 9 as `solar_tracker_update()` with a
 gain of 5 where the lab says 0.01, and claims the nonlinearity cancels.
 
+## Addendum, 2026-09-03: Petra's answers, and one withdrawal
+
+Her message answered five of the nine questions and delivered six files, all
+committed: `assets/datasheets/C17481_SG92R_datasheet.pdf` (the kit's part is
+the **SG92R**; dead band 1 µs, stall torque 2.5 kg/cm, 0.1 s/60°, POM and
+carbon gears — no current figure; there is no official sheet beyond
+https://towerpro.com.tw/product/sg92r-7/), `assets/starters/Day15_servo_template.c`,
+`tim.c`, `tim.h` (`tim.c` is "updated on purpose from the previous version,
+so teach the difference"), and `assets/images/Day15-Servos/towerProPowering.png`
+and `towerProPot.png`, her own composites. Each student has their own
+`adc.c`/`adc.h` from a lab (the Day 15 Part 5 split beat is withdrawn). The
+pot is on **A0** on Day 15; in the lab students work out the move to A3
+themselves, so the book never shows it.
+
+**Question 5 is withdrawn, and the Gate 1 "wrong rail" blocker with it**
+(erratum at the top of `reviews/week8-gate1.md`). Nowhere in her slides is
+the servo powered from the Nucleo: the regulator board is a separate picture
+layered over the Fritzing, media extraction drops it, so the servo's power
+lead ended at an empty column and the 3.3 V rail (the pot's) was misread as
+the servo's supply. Her exports show the lead going to the regulator's 5V
+pin. Ground truth §6 and §9, the map, and the three plans are corrected.
+
+**Still open (ground truth §9, follow-ups):** 1b the current figure (hers
+unless she prefers none); **2b what "teach the difference" should say** —
+`ARR = timerMax` makes the period 4001 counts and `CCR1 = value-1` makes the
+pulse one count short, so the honest lesson is "two conventions, one count
+off each way", unless she has a reason to teach; **3b Thursday's pins** (the
+photocells on A0/A1 while the pot is still on A0) and two Fritzing exports
+(`towerProPot` with the pot on A0; the Day 16 "Ultimate Setup" with the
+regulator board in it); 4 the two-channel route; 6b the kit servo's lead
+colours (her legend says orange → power, the SG92R photo and SG90 sheet say
+red); 7; 8.
+
+**Lesson for every later week:** a slide whose extracted picture ends a wire
+at nothing has lost a layered picture. Look at her composite (render the
+slide, or ask for the export) before calling her drawing wrong.
+
 ## Next session: `plans/day15-prompt.md` — the Day 15 book, delivery 1
 
 Then, in order, each session starting from this file: her pass → Day 15
@@ -91,9 +128,9 @@ status rows at the end of every session.
 
 ## Ask-Petra list, standing
 
-The nine questions above. Plus, for whenever she next touches Lab 8 (hers,
-not the book's): `OCR1A` → `CCR1`; "page 133 of Williams"; `V_AVR_PCx` in
-Figure 1; "analog channel 3" (question 3); Figure 4's 3V3 rail (question 5).
+The open follow-ups above (1b, 2b, 3b, 4, 6b, 7, 8). Plus, for whenever she
+next touches Lab 8 (hers, not the book's): `OCR1A` → `CCR1`; "page 133 of
+Williams"; `V_AVR_PCx` in Figure 1.
 
 ## Standing facts learned this week, for every later session
 

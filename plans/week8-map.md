@@ -22,7 +22,7 @@ Day 15x is an x-day → Wednesday, **50 min**. Day 16 is even → Thursday,
 | Chapter | `ch-servos.ptx` | `ch-servos.ptx` | `ch-photosensors.ptx` |
 | Pre-class reading | yes — what a servo is, its internal feedback loop, the pulse-width command, the power rule | **none — x-day** | yes — the photocell, resistance-based sensors, the divider interface, the datasheet tour |
 | New machinery | a second design of TIM14's period (50 Hz, sized by the dead band); TIM16 as a periodic tick; the pot→pulse map with bounds | the servo on the regulator's 5 V; **reading two ADC channels** (new code, ours — see below) | a resistive sensor in a divider; the geometric-mean rule; a feedback loop *we* write (the update rule, K, T, bounds) |
-| Students **build** | their own pot-controlled 1–2 ms pulse train on PA7, verified on the AD2 against their own prediction; `adc.c`/`adc.h` in `mylib` | the servo following the pot; a two-channel readout | two photocell dividers on the tracker arm, both channels printing, the pot retired, the loop designed |
+| Students **build** | their own pot-controlled 1–2 ms pulse train on PA7, verified on the AD2 against their own prediction | the servo following the pot; a two-channel readout | two photocell dividers on the tracker arm, both channels printing, the pot retired, the loop designed |
 | Load lands on | design arithmetic, then a long build | wiring and hands-on | the lab's Part 1 in class, then design |
 | Inherits from | Days 11/11x (TIM14 PWM, whole), Day 7 (ADC), Day 8 (periodic interrupt) | Day 15, Day 11 (the regulator), Day 7 (CHSELR) | Days 15/15x entirely; Day 7 (the divider, the ADC); Day 12 (`milliseconds()`) |
 
@@ -129,20 +129,18 @@ text, caption or screenshot.
 
 ## Week-level risks and their costs
 
-0. **`adc.c`/`adc.h` do not exist yet** (Gate 1, continuity). The Day 15
-   template `#include`s a library no chapter has taught students to make:
-   `ch-adc` never splits `ADCPot.c`, and her deck's own fallback ("otherwise
-   copy adc.c and adc.h into Src and Inc") is the only acknowledgment. Day 15
-   Part 5 now carries the split as a named beat; question 9 asks whether a
-   lab already had them do it.
-1. **The files** (question 2). `Day15_servo_template.c` and `tim.c` are
-   recovered verbatim from the deck; `tim.h` is not, and `tim.c`'s off-by-one
-   convention differs from the driver Day 11x taught (ground truth §2a). The
-   Day 15 book cannot register its listings until the files land; the plans do
-   not wait.
-2. **Every wiring drawing is wrong the same way** (question 5): the servo's
-   rail from 3V3. The week's most important figure has to be drawn or
-   delivered before Day 15's book ships its Part 6.
+0. ~~`adc.c`/`adc.h`~~ — **resolved 2026-09-03**: a lab already had
+   students split their ADC code; each has their own `adc.c`/`adc.h` in
+   `mylib`. Day 15 Part 5 assumes it, with her one-clause fallback.
+1. ~~**The files**~~ — **resolved 2026-09-03**: all three are in
+   `assets/starters/`. `tim.c`'s off-by-one convention differs from Day 11x's
+   driver **on purpose, and the book teaches the difference** (follow-up 2b
+   asks what the lesson is meant to be).
+2. ~~**Every wiring drawing is wrong the same way**~~ — **withdrawn
+   2026-09-03**: an extraction artifact (the regulator board is a layered
+   picture that media extraction drops). Her `towerProPowering.png` is the
+   figure. Still needed: the pot-on-A0 export and the Day 16 end-state export
+   (follow-up 3b).
 3. **Two-channel ADC is ours, not hers** (question 4). If she would rather it
    were the lab's, Day 15x Part 3 becomes a longer work session and Day 16
    Part 2 gains a taught beat.
@@ -174,13 +172,13 @@ Part 2; Day 16 Parts 2 and 5 (the lab's §2 and the design of §4).
 
 | # | Blocks | Question (ground truth §9) |
 |---|---|---|
-| 1 | Day 15 Part 3 reveal, reading's spec paragraph | which servo; source for dead band and current |
-| 2 | Day 15 book listings | the three files; `tim.c`'s off-by-one convention |
-| 3 | Day 16 wiring figure, the two-channel code | which A-pins for photocells and pot (her own Day 15 Fritzing draws the pot on A2 while its text says A0) |
+| 1 | ~~answered~~ — SG92R, `C17481_SG92R_datasheet.pdf`; dead band 1 µs sourced | **1b** the current figure stays hers ("a few hundred mA while moving") unless she prefers no number |
+| 2 | ~~answered~~ — the three files are in `assets/starters/`; teach the difference | **2b** Day 15 Part 4: what the difference is meant to teach (ground truth §2a) |
+| 3 | ~~answered for Day 15~~ — pot on A0 (her export shows A3; the A0 export is coming); the lab moves it to A3 as the students' own work | **3b** Day 16 Parts 2 and 4: which pins the photocells and the pot use on Thursday; the two Fritzing exports |
 | 4 | Day 15x Part 3, Day 16 Part 2 | route (A) or (B) for two channels; Wednesday or lab |
-| 5 | the week's wiring figure | a drawing with the regulator feeding the servo rail |
-| 6 | Day 15 reading, Day 15x observation | lead colours; what students see at 1 ms and 2 ms |
+| 5 | ~~withdrawn~~ — extraction artifact; `towerProPowering.png` is the figure | — |
+| 6 | Day 15 reading, Day 15x observation | **6b** lead colours (her legend vs the SG92R photo vs the SG90 sheet); what students see at 1 ms and 2 ms |
 | 7 | Day 16 Parts 5/6 | does Thursday end with the loop designed, or running |
 | 8 | Day 15 close | any homework due Thursday |
-| 9 | Day 15 Part 5 | do students already have `adc.c`/`adc.h` in `mylib` from a lab, or is the split new on Day 15 |
+| 9 | ~~answered~~ — each student has their own `adc.c`/`adc.h` from a lab | — |
 | — | Day 16 Part 5 | the two-loops figure (her slide 8 beside Lab 8 Figure 6) does not exist — hand-author before the Day 16 book |

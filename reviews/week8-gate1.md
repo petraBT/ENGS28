@@ -25,6 +25,17 @@ Verdict summary:
 | learner-weak-circuits | **BLOCKER** | **BLOCKER** | MAJOR |
 | learner-ai-reliant | MAJOR | MINOR | MAJOR |
 
+**Erratum, 2026-09-03.** The "every wiring drawing feeds the servo from the
+Nucleo's 3V3 pin" finding — reported as a BLOCKER by two reviewers and
+carried as question 5 — rested on an extraction artifact: the regulator board
+on her slides is a separate picture layered over the Fritzing, and
+`pptx_mine`'s media pull drops it, so the servo's orange lead ended at an
+empty breadboard column and the rail (the Nucleo's 3.3 V, for the pot) was
+read as the servo's supply. Petra's own exports (`towerProPowering.png`,
+`towerProPot.png`, 2026-09-03) show the lead going to the regulator's 5V pin.
+Nowhere in her slides is the servo powered from the Nucleo. The two findings
+are void; the figure exists. Everything else in this report stands.
+
 Every clock was found correct by every reviewer who checked it: the three
 class lengths are stated with the rule, the Part rows sum to them, and every
 Part's row equals the sum of its beats. The blockers are all structural, and

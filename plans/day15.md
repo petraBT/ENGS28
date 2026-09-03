@@ -28,8 +28,8 @@ By the end of class a student can:
    reading onto that range in integer arithmetic (multiply before you divide),
    and say why the value is bounded before it reaches CCR1.
 5. Build the program from the template, `tim.c` and their own `adc.c`/`adc.h`
-   (split out of Day 7's `ADCPot.c` into `mylib`, the way `uart.c` and `i2c.c`
-   were), and verify the pulse train on the AD2 against their own prediction —
+   (each student's own, from the lab that had them split it into `mylib`),
+   and verify the pulse train on the AD2 against their own prediction —
    width, period and its response to the knob.
 6. State the power rule for the servo and its reason (current draw, the
    Nucleo's brown-out), and where the 5 V comes from (the regulator board from
@@ -44,12 +44,13 @@ By the end of class a student can:
 
 Scaffolding (P-2):
 
-- The template is given whole except four `#define`s and one expression (her
-  slides 24–25); `tim.c` is given whole; the ADC code is their own from Day 7,
-  split into `adc.c`/`adc.h` as a named beat of Part 5 (ground truth: no
-  chapter has taught that split yet — question 9). The four numbers are
-  derived together in Part 3 before anyone opens the IDE, and the map
-  expression is derived in Part 4 from a round-number example first.
+- The template is given whole except four `#define`s and one expression
+  (`assets/starters/Day15_servo_template.c`); `tim.c` is given whole; the
+  ADC library is their own (`adc.c`/`adc.h` in `mylib`, from the lab that had
+  them split it — Petra, 2026-09-03), with her one-clause fallback for a
+  student who does not have it. The four numbers are derived together in
+  Part 3 before anyone opens the IDE, and the map expression is derived in
+  Part 4 from a round-number example first.
 - The verification is a Day 3 skill: CH1 (orange) on PA7, rising-edge
   trigger, and the "what time base?" question is asked before the capture (a
   5 ms/div base shows one full period — her captures are the time-base
@@ -104,10 +105,10 @@ Two tiers, both additional (P-3):
 | 20–21 (design exercise Part 1) | Part 5 |
 | 22–23 (her captures) | Part 5 time-base reference images (the values are the student's own prediction first) |
 | 24–25 (template blank/complete) | Part 4 (read it) and Part 5 (complete it); completed version `<instructor>` |
-| 26 (`tim.c`) | Part 4: "what changed since Wednesday's driver" (question 2) |
+| 26 (`tim.c`) | Part 4: "what changed since Wednesday's driver" — the real file, changed on purpose; teach the difference (follow-up 2b) |
 | 27 (servo wiring) | Part 6 |
-| 28–29 (how to power) | Part 6: her *why* (brown-out) plus xref to `fig-tb6612-regulator`; battery/9 V/7805 dropped per her rulings |
-| 30 (design exercise Part 2) | Day 15x Part 2 in full (Gate 1 moved the wiring start off Tuesday) |
+| 28–29 (how to power) | Part 6: her *why* (brown-out) plus xref to `fig-tb6612-regulator`; **her export `towerProPowering.png` is the wiring figure** (the servo's power lead to the regulator's 5V pin, the rail is the Nucleo's 3.3 V and ground); battery/9 V/7805 dropped per her rulings |
+| 30 (design exercise Part 2) | Day 15x Part 2 in full (Gate 1 moved the wiring start off Tuesday); figure: her `towerProPot.png` re-exported with the pot on A0 (follow-up 3b) |
 | 31 (x-hour attendance) | dropped — presenter note at most; the scheduling it implies is Day 15x Part 2's own first beat |
 
 **No ordering change from her deck.** The one structural difference is that
@@ -123,9 +124,9 @@ Parts 1–2's reveals (Gate 1 ruling 1).
 | 1 | 10 | predict → explain | **A motor with a loop inside it.** One recall slide: the DC motor, torque ∝ current — "key fact we need going forward" (2). The cutaway (her slide 6): commit, `room="yes"`: *the motor turns fast and the arm turns slowly — why put gears in the way?* Reveal in her words: power is (except for friction) conserved, so speed goes down and torque goes up (4). The feedback figure (her slide 8): what the pot measures, what the controller does with the error; commit: *if you push on the arm, what happens?* Reveal from her note: the pot senses it, the controller counteracts it, the servo strongly resists; never take it all the way around. You will see this on Wednesday with the servo in your hand (4) |
 | 2 | 8 | predict → tell | **How we command it.** Her slide 10 figure: 1 ms, 1.5 ms, 2 ms, every 20 ms; all we supply is this pulse, and today's work is making it. Commit, `room="yes"`: *what does the servo do between two pulses, and what happens if the pulses stop?* Reveal from her note: it holds as long as the pulses keep coming; no signal, no power on the motor. This is PWM used as a message, not as an average voltage — and the servo's electronics have a dead band: the smallest change in pulse width they will act on (5). **Datasheet moment 1**: which pins can TIM14 drive? Table 12: PA4, PA7, PB1 — and PA7 is D11, where the motor's PWM already was (3) |
 | 3 | 20 | do → reveal, ×3 | **Design the timer, a second time.** You did this search once, as the Day 11x going-further: 12 MHz into 50 Hz is 240,000 counts, and you split them into a prescaler and a count. Same search, new constraint: the servo's 1–2 ms window and its dead band. Recall: TIM14 counts up to its auto-reload value ARR, a 16-bit register, so the largest count it holds is 65,535 (2). Commit 1, `room="yes"`, individually: fill her table — prescaler 1, 2, 6, 60, 240 → timer clock → auto-reload; *which rows are usable?* Reveal: 240,000 and 120,000 do not fit in ARR (5). Commit 2: for the three usable rows, T0 = 20 ms/(ARR+1), the number of steps between 1 and 2 ms, the angular step; *which one do you like best?* Reveal, the chosen row first: prescaler 60 → 200 kHz → T0 = 20 ms/4000 = 5 µs; 1000 µs of range ÷ 5 µs = 200 steps; 180°/200 = 0.9° per step. Then why not finer: her own argument — this thing is made out of plastic, and 0.09° is finer than a plastic gear train can hold or the servo's dead band can act on (the 1 µs figure as confirmation, question 1); and why not coarser: 20 µs is 3.6° (7). Commit 3, her slide 19 fill-in: the clock, the prescaled clock, ARR+1 = `PWM_TIMER_MAX`, CCR1 for 1 / 1.5 / 2 ms = `SERVO_MIN` / `SERVO_MID` / `SERVO_MAX` — and then open `tim.c`: *what number actually reaches CCR1 for `SERVO_MID`?* (question 2). Reveal `<instructor>`: 60 / 4000 / 200 / 300 / 400 — "you HAVE to stay between those" (6) |
-| 4 | 10 | explain → predict | **The program, read before it is built.** `tim14_pa7_pwm_init(prescaleFactor, timerMax)`: Wednesday's driver with the two numbers as parameters — every register the same, Day 11x's figures by `refPage`; what else changed (the limit moved out of `tim14_pwm_set()` into `updateServo()`, and the off-by-one — per question 2) (3). `tim16_ms_interrupt_init(500)`: Day 8's recipe on a second timer, because TIM14 is busy making the pulse; the ISR raises `timerFlag`, the loop lowers it (1). The map, mechanic first: map 0–10 onto 100–200 — value = 100 + x·100/10 — and why the multiplication comes before the division in integer arithmetic (divide first and every step is zero) (2). Commit, `room="yes"`: *the pot reads 0 to 4095; write the expression that maps it onto `SERVO_MIN`…`SERVO_MAX`* — reveal her line, with the two arithmetic notes (int promotion; the top value is 399) and why `updateServo()` bounds the value first (4) |
-| 5 | 45 | do | **Design exercise, Part 1 — CRUCIAL.** Copy `TemplateProject` → `Servo`; `Day15_servo_template.c` and `tim.c` into `Src`, `tim.h` into `Inc` (5). Your ADC code as a library: split Day 7's `ADCPot.c` into `adc.c` (the three functions) and `adc.h` (their prototypes) in `mylib`, the step you did for `uart.c` and `i2c.c`; if you would rather, copy them into `Src` and `Inc` for now (her fallback) (5). Complete the four `#define`s and the map; adjust the ADC calls to your own names (7). Wire the pot to A0 as on Day 7 (question 3); AD2 CH1 (orange) to PA7 (D11) and ground. Commit before capturing, individually: *what time base shows one period? what trigger? and what will `pwm_value` print at each end of the knob and in the middle?* (5). Build, run, capture: the width sweeps 1 to 2 ms, the period is 20 ms — against your own predicted numbers; her two captures on screen for the time base. This is why the pulse is verified on the screen before any servo is connected: a wrong number shows up here, not in the gear train. Note the knob position that gives 1.5 ms and re-seat the knob at its midpoint (18). Checkpoint minute 78; the ladder above (5) |
-| 6 | 7 | explain | **Powering the servo.** Her slide 28's reason: it draws a lot of current, more when stalled, and a servo on the Nucleo's supply can starve the Nucleo into a brown-out. So it runs from the regulator board (Day 11, `fig-tb6612-regulator` by xref): 5V pin to the servo's center lead, GND shared, never Vin (4). The leads: center is power, the darker outer lead is ground, the other is the signal — brown/red/orange on ours (question 6); the signal lead goes to PA7. Unplug everything before wiring; USB first, then the adapter (Day 11's order). The wiring itself is tomorrow (3) |
+| 4 | 10 | explain → predict | **The program, read before it is built.** `tim14_pa7_pwm_init(prescaleFactor, timerMax)`: Wednesday's driver with the two numbers as parameters — every register the same, Day 11x's figures by `refPage`; and what changed on purpose, taught as a difference: the limit moved out of `tim14_pwm_set()` into `updateServo()` (the driver knows the timer, the program knows the servo), and the two off-by-one choices — `ARR = timerMax` where Wednesday wrote max−1 (the period is one count longer), `CCR1 = value-1` where Wednesday wrote value (the pulse is one count shorter); one count is 5 µs here (follow-up 2b for the lesson she intends) (3). `tim16_ms_interrupt_init(500)`: Day 8's recipe on a second timer, because TIM14 is busy making the pulse; the ISR raises `timerFlag`, the loop lowers it (1). The map, mechanic first: map 0–10 onto 100–200 — value = 100 + x·100/10 — and why the multiplication comes before the division in integer arithmetic (divide first and every step is zero) (2). Commit, `room="yes"`: *the pot reads 0 to 4095; write the expression that maps it onto `SERVO_MIN`…`SERVO_MAX`* — reveal her line, with the two arithmetic notes (int promotion; the top value is 399) and why `updateServo()` bounds the value first (4) |
+| 5 | 45 | do | **Design exercise, Part 1 — CRUCIAL.** Copy `TemplateProject` → `Servo`; `Day15_servo_template.c` and `tim.c` into `Src`, `tim.h` into `Inc`; your own `adc.c`/`adc.h` are already in `mylib` from the lab (if not, copy them into `Src` and `Inc` — her fallback) (5). Complete the four `#define`s and the map; adjust the ADC calls to your own names (10). Wire the pot to A0 as on Day 7 (Petra, 2026-09-03 — the lab moves it to A3 later, as the students' own work: the book never shows that); AD2 CH1 (orange) to PA7 (D11) and ground. Commit before capturing, individually: *what time base shows one period? what trigger? and what will `pwm_value` print at each end of the knob and in the middle?* (5). Build, run, capture: the width sweeps 1 to 2 ms, the period is 20 ms — against your own predicted numbers; her two captures on screen for the time base. This is why the pulse is verified on the screen before any servo is connected: a wrong number shows up here, not in the gear train. Note the knob position that gives 1.5 ms and re-seat the knob at its midpoint (20). Checkpoint minute 78; the ladder above (5) |
+| 6 | 7 | explain | **Powering the servo.** Her slide 28's reason: it draws a lot of current, more when stalled, and a servo on the Nucleo's supply can starve the Nucleo into a brown-out. So it runs from the regulator board (Day 11, `fig-tb6612-regulator` by xref), and her drawing `towerProPowering.png` shows it: the servo's power lead to the board's 5V pin, its ground to the shared ground rail, never Vin (4). The leads: center is power, the darker outer lead is ground, the other is the signal (colours per follow-up 6b); the signal lead goes to PA7 (D11). Unplug everything before wiring; USB first, then the adapter (Day 11's order). The wiring itself is tomorrow (3) |
 | — | 5 | tell | **Close.** Tomorrow: the servo on 5 V, and two ADC channels. Thursday's reading is the photocell. (Homework: question 8.) Presenter note: bring the servo, the regulator board and its adapter, and your multimeter tomorrow |
 
 Total: 3+2+10+8+20+10+45+7+5 = **110**.
@@ -142,11 +143,13 @@ design exists to prevent).
 1. **Part 2**: STM32C031 datasheet **Table 12, "Pin assignment and
    description"** — the three pins that carry `TIM14_CH1` (PA4, PA7, PB1),
    read the way Day 7 and Day 11 read it.
-2. **The reading**: the servo datasheet (`external/datasheets/Servosg90_datasheet.pdf`)
-   — its specification table (speed, torque in kg-cm, voltage), the wiring
-   figure (orange/red/brown), the 1–2 ms / 20 ms timing figure and the
-   ±90° convention. The dead band and current figures are hers (question 1)
-   and the plan's Part 3 does not rest on the number.
+2. **The reading**: the SG92R datasheet
+   (`external/datasheets/C17481_SG92R_datasheet.pdf`) — dead band 1 µs, stall
+   torque 2.5 kg/cm at 4.8 V, 0.1 s/60°, POM and carbon-fiber gears — and the
+   SG90 sheet (`external/datasheets/Servosg90_datasheet.pdf`) for the wiring
+   figure (orange/red/brown), the 1–2 ms / 20 ms timing figure and the ±90°
+   convention. The current figure is hers (follow-up 1b); Part 3's reveal
+   rests on the gear train and the sourced dead band.
 3. **Part 4**: RM0490 §18 exists (TIM16/TIM17, p. 493) — named, not walked; the
    registers used are the ones Day 8 used on TIM14.
 
