@@ -54,7 +54,14 @@ same register-level C as the real board. Drop a `<sim>` into the source:
 <sim starter="blinkySlowToFast"/>   <!-- assets/sim-starters/<name>.c -->
 <sim example="blinky"/>             <!-- a built-in example -->
 <sim starter="…" height="720"/>     <!-- taller frame (default 660) -->
+<sim starter="…" coolterm="yes"/>   <!-- serial terminal open from the start -->
 ```
+
+`coolterm="yes"` is for UART exercises: it opens the simulator's serial
+terminal (the panel labeled *CoolTerm*, where `printf` output arrives and
+keystrokes go back to the board) immediately, instead of leaving it closed
+until the program transmits its first byte. Give those a taller frame, 740 or
+so, since the terminal takes its height from the editor's.
 
 Starter code is a plain `.c` file in `assets/sim-starters/` — no registration
 step, no tool: create the file, name it in `starter=`, done. Put a `<sim>`

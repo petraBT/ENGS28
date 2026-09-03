@@ -262,6 +262,13 @@
                                            verbatim (escape hatch; resolved
                                            against the simulator's document)
        <sim starter="…" height="720"/>     taller iframe
+       <sim starter="…" coolterm="yes"/>   open the simulator's serial terminal
+                                           (the "CoolTerm" panel, where printf
+                                           output arrives) from the start, for a
+                                           UART exercise. Without it the panel
+                                           stays closed until the program
+                                           transmits its first byte, which is
+                                           what a GPIO exercise wants.
 
      With none of the three, the simulator opens on its own default program.
      Precedence when more than one is given follows the tool's own: src >
@@ -297,6 +304,9 @@
                 <xsl:value-of select="@example"/>
             </xsl:when>
         </xsl:choose>
+        <xsl:if test="@coolterm = 'yes'">
+            <xsl:text>&amp;coolterm=1</xsl:text>
+        </xsl:if>
     </xsl:variable>
     <!-- The same URL without ?embed=1, for the "open in a new tab" link: a
          full-window simulator wants its full-window layout. -->
@@ -318,6 +328,18 @@
                 <xsl:value-of select="@example"/>
             </xsl:when>
         </xsl:choose>
+        <!-- This URL has no ?embed=1 to hang the terminal flag off, so it is
+             the first query parameter when there is no starter or example. -->
+        <xsl:if test="@coolterm = 'yes'">
+            <xsl:choose>
+                <xsl:when test="@src != '' or @starter != '' or @example != ''">
+                    <xsl:text>&amp;coolterm=1</xsl:text>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:text>?coolterm=1</xsl:text>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:if>
     </xsl:variable>
     <!-- Emitted once per <sim>; duplicates on a page are harmless and this
          keeps the whole feature inside one template, with no extra CSS file to
