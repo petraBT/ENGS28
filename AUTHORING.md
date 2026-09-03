@@ -63,6 +63,25 @@ keystrokes go back to the board) immediately, instead of leaving it closed
 until the program transmits its first byte. Give those a taller frame, 740 or
 so, since the terminal takes its height from the editor's.
 
+**The instructor builds get the instructor simulator, automatically.** The
+simulator's examples dropdown lists only code the students have been given;
+its solutions and demos are separate. Any target with `book.solutions=render`
+— the instructor book and the deck you teach from — hands every `<sim>` a
+side-car file of those extras, so the dropdown there gains an *Instructor
+only* group and a red INSTRUCTOR badge. Student targets pass nothing, and the
+file is not in their output to be found. Nothing to write per `<sim>`: it
+follows the same switch that renders `<instructor>` blocks.
+
+The file is `instructor-only/sim-examples.json`, written by
+`scripts/sync-board-sim.sh` and installed into an instructor target's output
+*after* the build by `scripts/install-instructor-sim.sh`, which every script
+that builds an instructor target calls. It cannot live under `assets/`, since
+PreTeXt copies that into every target's `external/` including the deployed one
+— `instructor-only/README.md` explains, and `build.sh` refuses to finish the
+deployable `web` target if any of it turns up there. Miss the install step and
+the instructor book simply shows the student dropdown, with a line in the
+simulator's status bar saying so.
+
 Starter code is a plain `.c` file in `assets/sim-starters/` — no registration
 step, no tool: create the file, name it in `starter=`, done. Put a `<sim>`
 inside a `<slide>` to project the live simulator in class (a *demo* slide);

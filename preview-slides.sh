@@ -65,8 +65,9 @@ python3 scripts/make_deck_index.py
 
 # Same macOS permission workaround as build.sh: shutil.copy2 preserves source
 # permissions, which can leave the copies read-only and break the next build.
-rm -rf output/web-deck-instructor/external/
-pretext build web-deck-instructor
+# build-deck-instructor.sh owns the pairing of the PreTeXt build with the
+# simulator's instructor examples, so the watcher below can run the same thing.
+./scripts/build-deck-instructor.sh
 
 # Everything this script starts goes in here and is torn down together.
 STARTED=()
@@ -111,7 +112,7 @@ fi
 # Rebuilds on every .ptx save, so an edit made in your editor - or in place on
 # a slide - shows up after a refresh instead of needing a manual build.
 if [ "$WATCH" = "yes" ]; then
-  python3 watch.py web-deck-instructor &
+  python3 watch.py --command ./scripts/build-deck-instructor.sh &
   STARTED+=($!)
   echo "  - file watcher (rebuilds on save)"
 else

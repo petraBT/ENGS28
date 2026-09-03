@@ -39,4 +39,10 @@ for t in "${TARGETS[@]}"; do
     # read-only; deleting avoids "Permission denied" on subsequent builds.)
     rm -rf "output/$t/external/"
     pretext build "$t" "$@"
+    # The instructor book also gets the simulator's instructor examples; they
+    # are installed after the build because they must not live under assets/
+    # (see instructor-only/README.md).
+    case "$t" in
+        *instructor*) ./scripts/install-instructor-sim.sh "$t" ;;
+    esac
 done

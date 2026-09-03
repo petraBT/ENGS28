@@ -59,7 +59,13 @@ Before every commit:
 python3 scripts/check_rules.py --quiet source/*.ptx
 python3 scripts/check_deck.py assets/decks/*.json
 python3 scripts/check_starters.py
+python3 scripts/check_instructor_only.py
 ```
+
+`check_instructor_only.py` guards the deploy path: instructor-only files must
+live in `instructor-only/`, never under `assets/`, which PreTeXt copies into
+every target's `external/` including the published one. `build.sh` checks its
+own output too, but `pretext deploy` builds on its own and never runs it.
 
 ---
 

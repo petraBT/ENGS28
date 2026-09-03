@@ -1,0 +1,34 @@
+{
+  "marker": "engs28-sim-instructor-examples",
+  "examples": [
+    {
+      "id": "uart-keyboard",
+      "label": "Solution: Day 5 keyboard-controlled counter (RXNE)",
+      "needs": "Click the CoolTerm panel, then press u, d or r.",
+      "code": "#include \"ES28.h\"\n#include <stdio.h>\n#include \"uart.h\"\n\n// Non-blocking receive: if a byte is waiting, read it and act on it; if not,\n// skip straight to the print. Calling uart2_read() here instead would block\n// until a key arrived and freeze the 500 ms loop.\n\nint main(void) {\n    int count = 0;\n\n    uart2_init();\n    printf(\"Keyboard-controlled counter\\r\\n\");\n\n    while (1) {\n        if (USART2->ISR & USART_ISR_RXNE_RXFNE) {\n            char key = USART2->RDR & 0xFF;\n            if      (key == 'u' || key == 'U') count++;\n            else if (key == 'd' || key == 'D') count--;\n            else if (key == 'r' || key == 'R') count = 0;\n        }\n        printf(\"count = %d\\r\\n\", count);\n        delay_ms(500);\n    }\n    return 0;\n}\n"
+    },
+    {
+      "id": "external-led-d4",
+      "label": "Solution: Day 2 external LED on D4 (PB10)",
+      "needs": "Add an LED to header pin D4.",
+      "code": "#include \"ES28.h\"\n\n// D4 is PB10 on the Nucleo header.\n#define GPIOBEN  (1U << 1)        // RCC->IOPENR bit 1 = GPIOB clock\n#define LED_PIN  (1U << 10)       // PB10\n\nint main(void) {\n    RCC->IOPENR  |= GPIOBEN;\n    GPIOB->MODER |= (1U << 20);   // PB10: MODER bits 20,21\n    GPIOB->MODER &= ~(1U << 21);  // -> output (01)\n\n    while (1) {\n        GPIOB->ODR |= LED_PIN;\n        delay_ms(500);\n        GPIOB->ODR &= ~LED_PIN;\n        delay_ms(500);\n    }\n    return 0;\n}\n"
+    },
+    {
+      "id": "button-onboard",
+      "label": "Demo: on-board button (PC13) lights PA5",
+      "code": "#include \"ES28.h\"\n\n#define LED_PIN  (1U << 5)        // PA5, on-board LED\n#define BTN_PIN  (1U << 13)       // PC13, on-board B1 button (active-low)\n\nint main(void) {\n    RCC->IOPENR  |= (1U << 0);    // GPIOA clock\n    RCC->IOPENR  |= (1U << 2);    // GPIOC clock\n\n    GPIOA->MODER |= (1U << 10);   // PA5 output\n    GPIOA->MODER &= ~(1U << 11);\n    GPIOC->MODER &= ~(3U << 26);  // PC13 input (B1 has an external pull-up)\n\n    while (1) {\n        if ((GPIOC->IDR & BTN_PIN) == 0)  // pressed reads 0\n            GPIOA->ODR |= LED_PIN;        // LED on\n        else\n            GPIOA->ODR &= ~LED_PIN;       // LED off\n    }\n    return 0;\n}\n"
+    },
+    {
+      "id": "printf-baud",
+      "label": "Demo: Day 5 baud mismatch (set CoolTerm to 4800)",
+      "needs": "Run it, then set the CoolTerm panel to 4800 baud and watch.",
+      "code": "#include \"ES28.h\"\n#include <stdio.h>\n#include \"uart.h\"\n\n// The board transmits at 9600 baud: BRR = 12000000 / 9600 = 1250.\n// Nothing in the frame says so - the receiver has to be told the same rate.\n// Change the CoolTerm panel above to 4800 or 19200 and run this again.\n\nint main(void) {\n    uart2_init();\n\n    while (1) {\n        printf(\"Hello from USART2 at 9600 baud\\r\\n\");\n        delay_ms(1000);\n    }\n    return 0;\n}\n"
+    },
+    {
+      "id": "uart-init-registers",
+      "label": "Demo: uart2_init at the register level",
+      "needs": "Step through it and watch USART2 appear in the register panel.",
+      "code": "#include \"ES28.h\"\n#include <stdio.h>\n\n// What uart2_init() does inside, written out: pins, clock, baud rate, enable.\n// Step through it and watch GPIOA->AFR[0], RCC->APBENR1, USART2->BRR and\n// USART2->CR1 change in the register panel.\n\n#define SYS_FREQ   12000000U      // 12 MHz HSI\n#define BAUD_RATE  9600U\n\nvoid uart2_init(void) {\n    // Step 1: GPIOA clock, or every GPIOA write below is discarded.\n    RCC->IOPENR |= RCC_IOPENR_GPIOAEN;\n\n    // Step 2: PA2 (TX) and PA3 (RX) to alternate-function mode.\n    GPIOA->MODER &= ~GPIO_MODER_MODE2_Msk;\n    GPIOA->MODER |= (GPIO_ALTERNATE << GPIO_MODER_MODE2_Pos);\n    GPIOA->MODER &= ~GPIO_MODER_MODE3_Msk;\n    GPIOA->MODER |= (GPIO_ALTERNATE << GPIO_MODER_MODE3_Pos);\n\n    // Step 3: select AF1 (USART2) for both pins in AFRL.\n    GPIOA->AFR[0] &= ~GPIO_AFRL_AFSEL2_Msk;\n    GPIOA->AFR[0] |= (GPIO_AF1 << GPIO_AFRL_AFSEL2_Pos);\n    GPIOA->AFR[0] &= ~GPIO_AFRL_AFSEL3_Msk;\n    GPIOA->AFR[0] |= (GPIO_AF1 << GPIO_AFRL_AFSEL3_Pos);\n\n    // Step 4: USART2 clock, on APB1.\n    RCC->APBENR1 |= RCC_APBENR1_USART2EN;\n\n    // Step 5: baud rate, BEFORE enabling the USART.\n    USART2->BRR = (SYS_FREQ + (BAUD_RATE / 2U)) / BAUD_RATE;   // 1250\n\n    // Step 6: transmitter and receiver first, then the USART itself.\n    USART2->CR1 = USART_CR1_RE | USART_CR1_TE;\n    USART2->CR1 |= USART_CR1_UE;\n}\n\n// printf reaches the terminal through this: __io_putchar is a weak symbol in\n// the ARM C library, and defining it here overrides the library's version.\nint __io_putchar(int ch) {\n    while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {}\n    USART2->TDR = (ch & 0xFF);\n    return ch;\n}\n\nint main(void) {\n    uart2_init();\n\n    printf(\"Driver written by hand, printf routed through __io_putchar\\r\\n\");\n    printf(\"MODER = 0x%08lx\\r\\n\", GPIOA->MODER);\n\n    while (1) {\n        delay_ms(1000);\n    }\n    return 0;\n}\n"
+    }
+  ]
+}

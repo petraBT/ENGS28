@@ -54,6 +54,15 @@ if grep -rq "engs28-sim-instructor-examples" dist/; then
     exit 1
 fi
 
+# The instructor examples (solutions and demos) travel as a small JSON
+# side-car rather than a second bundle. It goes to instructor-only/, NOT to
+# assets/, because assets/ is copied into every target including the deployed
+# one; scripts/install-instructor-sim.sh puts it into the instructor targets
+# after they build. See instructor-only/README.md.
+echo "Building the instructor examples side-car ..."
+npm run build:instructor >/dev/null
+cp dist-instructor/instructor-examples.json "$BOOK_DIR/instructor-only/sim-examples.json"
+
 # --delete so the previous build's content-hashed assets/*.js don't pile up.
 echo "Copying dist/ -> assets/board-sim/ ..."
 mkdir -p "$DEST"

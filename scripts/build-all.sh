@@ -53,6 +53,11 @@ for t in "${TARGETS[@]}"; do
     # See build.sh: stale external/ copies can be read-only and break the copy.
     rm -rf "output/$t/external/"
     pretext build "$t"
+    # Instructor targets get the board simulator's instructor examples, which
+    # deliberately do not live under assets/ (see instructor-only/README.md).
+    case "$t" in
+        *instructor*) ./scripts/install-instructor-sim.sh "$t" ;;
+    esac
 done
 
 echo ""

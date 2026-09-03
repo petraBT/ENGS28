@@ -246,6 +246,21 @@
      external/sim-starters/ — a sibling of external/board-sim/. -->
 <xsl:param name="sim.starters" select="'../sim-starters/'"/>
 
+<!-- The board simulator's INSTRUCTOR examples (solutions and demos), as a path
+     relative to the SIMULATOR's document, like sim.starters above. The file is
+     installed into an instructor target's external/ after the build by
+     scripts/install-instructor-sim.sh, and deliberately does not live under
+     assets/, which PreTeXt copies into every target including the deployed
+     one. See instructor-only/README.md.
+
+     Every <sim> in a target with book.solutions=render - the instructor book
+     and the deck you teach from - hands the simulator this file, and its
+     examples dropdown gains an "Instructor only" group with an INSTRUCTOR
+     badge beside it. Student targets pass nothing and the file is not there to
+     be found. If the install step has not run, the simulator says so in its
+     status bar and the student examples still work. -->
+<xsl:param name="sim.instructor-examples" select="'../sim-examples-instructor.json'"/>
+
 <!-- Default iframe height in px. The simulator's ?embed=1 layout stacks the
      editor over the board; below ~560 the board starts to clip. Override per
      element with height="…". -->
@@ -312,6 +327,12 @@
         <xsl:if test="@coolterm = 'yes'">
             <xsl:text>&amp;coolterm=1</xsl:text>
         </xsl:if>
+        <!-- Instructor targets get the solutions in the dropdown, from the
+             same switch that renders <instructor> blocks. -->
+        <xsl:if test="$book.solutions = 'render'">
+            <xsl:text>&amp;examples=</xsl:text>
+            <xsl:value-of select="$sim.instructor-examples"/>
+        </xsl:if>
     </xsl:variable>
     <!-- The same URL without ?embed=1, for the "open in a new tab" link: a
          full-window simulator wants its full-window layout. -->
@@ -344,6 +365,17 @@
                     <xsl:text>?coolterm=1</xsl:text>
                 </xsl:otherwise>
             </xsl:choose>
+        </xsl:if>
+        <xsl:if test="$book.solutions = 'render'">
+            <xsl:choose>
+                <xsl:when test="@src != '' or @starter != '' or @example != '' or @coolterm = 'yes'">
+                    <xsl:text>&amp;examples=</xsl:text>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:text>?examples=</xsl:text>
+                </xsl:otherwise>
+            </xsl:choose>
+            <xsl:value-of select="$sim.instructor-examples"/>
         </xsl:if>
     </xsl:variable>
     <!-- Emitted once per <sim>; duplicates on a page are harmless and this
