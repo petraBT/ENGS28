@@ -35,7 +35,24 @@ fi
 echo "Building the simulator in $SIM_REPO ..."
 cd "$SIM_REPO"
 [ -d node_modules ] || npm install
+# `npm run build` is the STUDENT build: its examples dropdown lists only code
+# the students have been given. The simulator also has an instructor build
+# (`npm run build:instructor`, into dist-instructor/) whose dropdown adds the
+# solution programs. That one is local only - preview it from the Launchpad -
+# and it must never be what the book carries, since assets/ is copied into
+# every target's external/, including the one that gets deployed.
 npm run build
+
+# Belt and braces: the instructor examples live in a module the student build
+# drops entirely, and this is where a mis-set VITE_SIM_AUDIENCE would surface.
+# Fail loudly rather than sync answers into the book.
+if grep -rq "engs28-sim-instructor-examples" dist/; then
+    echo "error: dist/ contains the INSTRUCTOR examples (solution programs)." >&2
+    echo "       That is the instructor build, not the student one. Run" >&2
+    echo "       'npm run build' in $SIM_REPO with VITE_SIM_AUDIENCE unset," >&2
+    echo "       then sync again." >&2
+    exit 1
+fi
 
 # --delete so the previous build's content-hashed assets/*.js don't pile up.
 echo "Copying dist/ -> assets/board-sim/ ..."
