@@ -43,8 +43,9 @@ Order of work:
    students' own work — never shown); her wiring exports `towerProPowering.png`
    and `towerProPot.png` are the figures (the A0 re-export of the second is
    coming). The kit's SG92R leads are brown / red / yellow (ground / power at
-   the center / signal). Still open: **1b** (the current figure), **4**,
-   **6**'s endpoints (what students see at 1 ms and 2 ms), **7**, **8**. Where
+   the center / signal). No homework is due Thursday. Still open: **1b** (the current figure),
+   **6**'s endpoints (what students see at 1 ms and 2 ms), and where the
+   two-channel ADC read was taught (Day 15x's business, not Day 15's). Where
    an answer is
    still open, write the sentence that is true either way and mark the spot
    with a comment naming the follow-up.

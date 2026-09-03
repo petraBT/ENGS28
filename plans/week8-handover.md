@@ -114,10 +114,16 @@ power at the center, signal). She is re-exporting `towerProPot.png` with the
 pot on A0 (same file name — overwrite); its legend, and `towerProPowering`'s,
 read "Orange → power" and should say red.
 
+**Her third message (2026-09-03) closed 4, 7 and 8:** two-channel reads have
+been taught earlier in the term (Day 15x Part 3 is now a five-minute recall
+and Part 2 a 34-minute work session; the plan's "addition" is withdrawn); the
+feedback loop is their lab work, begun in class (Day 16's crucial step stays
+"designed"); no homework is due Thursday. Both wiring exports are replaced
+(pot on A0, legend "Red/Orange → power").
+
 **Still open (ground truth §9):** 1b the current figure (hers unless she
-prefers none); 4 the two-channel route and whether Wednesday teaches it; 6
-what students see at 1 ms and 2 ms; 7 whether Thursday ends with the loop
-designed or running; 8 any homework due Thursday.
+prefers none); 4's one remaining line — *where* the two-channel read was
+taught, so the book can point at it; 6 what students see at 1 ms and 2 ms.
 
 **Lesson for every later week:** a slide whose extracted picture ends a wire
 at nothing has lost a layered picture. Look at her composite (render the
@@ -132,7 +138,8 @@ status rows at the end of every session.
 
 ## Ask-Petra list, standing
 
-The open items above (1b, 4, 6's endpoints, 7, 8). Plus, for whenever she
+The open items above (1b, where the two-channel read was taught, 6's
+endpoints). Plus, for whenever she
 next touches Lab 8 (hers, not the book's): `OCR1A` → `CCR1`; "page 133 of
 Williams"; `V_AVR_PCx` in Figure 1.
 

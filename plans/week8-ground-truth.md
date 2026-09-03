@@ -337,7 +337,7 @@ mechanism. (Lab 8 instead says to use `milliseconds()` for the interval T — th
 plan's Day 15 stretch is exactly that substitution, which also makes the Lab
 8 controller's `T` a `#define`.)
 
-### §2c Reading two ADC channels — needed by Lab 8, taught nowhere, not "easy" as written
+### §2c Reading two ADC channels — needed by Lab 8; **taught earlier in the term (Petra, 2026-09-03: "we have taught 2-channel reads")** — the notes below record what the repo shows and are superseded by her answer; the book recalls, it does not teach (where, is a follow-up)
 
 Lab 8 Part 1: *"Write a program to measure the two sensor voltages… This
 should be an easy two-channel modification of the earlier A/D + potentiometer
@@ -774,6 +774,13 @@ two answered items at the top of this file are not re-asked.
 - **Q9 → answered.** A lab already had students split their ADC code into a
   library; each student has their own `adc.c`/`adc.h`. Day 15 Part 5's split
   beat is withdrawn; her fallback line stays as one clause.
+
+**Answered 2026-09-03, second round:** **Q4** — two-channel reads have been
+taught (recall only; the book needs to know *where* — which lab or day — to
+point at it, so that stays as a one-line follow-up); **Q7** — "the feedback
+loop is on them - they can get started, but it's their lab work" (Day 16's
+crucial step is the loop designed; Part 6 is a start on their work; the
+stretch runs it); **Q8** — no homework due Thursday.
 
 **Follow-ups of 2026-09-03 — all three answered the same day:**
 

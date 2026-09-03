@@ -21,22 +21,22 @@ Day 15x is an x-day → Wednesday, **50 min**. Day 16 is even → Thursday,
 | Topic | Servomotors | Servos, continued | Photosensors and the solar tracker |
 | Chapter | `ch-servos.ptx` | `ch-servos.ptx` | `ch-photosensors.ptx` |
 | Pre-class reading | yes — what a servo is, its internal feedback loop, the pulse-width command, the power rule | **none — x-day** | yes — the photocell, resistance-based sensors, the divider interface, the datasheet tour |
-| New machinery | a second design of TIM14's period (50 Hz, sized by the dead band); TIM16 as a periodic tick; the pot→pulse map with bounds | the servo on the regulator's 5 V; **reading two ADC channels** (new code, ours — see below) | a resistive sensor in a divider; the geometric-mean rule; a feedback loop *we* write (the update rule, K, T, bounds) |
-| Students **build** | their own pot-controlled 1–2 ms pulse train on PA7, verified on the AD2 against their own prediction | the servo following the pot; a two-channel readout | two photocell dividers on the tracker arm, both channels printing, the pot retired, the loop designed |
+| New machinery | a second design of TIM14's period (50 Hz, sized by the dead band); TIM16 as a periodic tick; the pot→pulse map with bounds | the servo on the regulator's 5 V (the two-channel ADC read is recall — taught earlier in the term, Petra 2026-09-03) | a resistive sensor in a divider; the geometric-mean rule; a feedback loop *we* design and the students write in the lab (the update rule, K, T, bounds) |
+| Students **build** | their own pot-controlled 1–2 ms pulse train on PA7, verified on the AD2 against their own prediction | the servo following the pot | two photocell dividers on the tracker arm, both channels printing, the pot retired, the loop designed and begun |
 | Load lands on | design arithmetic, then a long build | wiring and hands-on | the lab's Part 1 in class, then design |
 | Inherits from | Days 11/11x (TIM14 PWM, whole), Day 7 (ADC), Day 8 (periodic interrupt) | Day 15, Day 11 (the regulator), Day 7 (CHSELR) | Days 15/15x entirely; Day 7 (the divider, the ADC); Day 12 (`milliseconds()`) |
 
 **Her ordering, and where the week deviates.** Day 15 and 16 follow her decks
 slide for slide (ground truth §1). Day 15x is, in her deck, a pure work
-session of Tuesday's last four slides; the plan keeps that as its first two
-Parts (Part 2 opens on finishing Tuesday, which is what her x-hour is for)
-and **adds one taught beat of ours** — reading two ADC channels — because
-Lab 8 calls that "an easy two-channel modification" and nothing in the course
-has done it (ground truth §2c, question 4). Day 16's Parts 5 and 6 are the
-other addition: her deck ends on one slide, "discuss at your table how you
-might implement the feedback loop", and the plan expands it into three
-commits in Lab 8 §4's own notation plus the start of the build (question 7).
-Both additions are named for `checker-arc-fidelity`.
+session of Tuesday's last four slides; the plan keeps that as a work session
+(Part 2 opens on finishing Tuesday, which is what her x-hour is for) plus a
+five-minute recall of the two-channel ADC read, which the class has done
+before (Petra, 2026-09-03 — the plan's earlier "taught beat of ours" is
+withdrawn). Day 16's Parts 5 and 6 are the week's one addition: her deck
+ends on one slide, "discuss at your table how you might implement the
+feedback loop", and the plan expands it into three commits in Lab 8 §4's own
+notation plus a start on the build, which is their lab work (her ruling,
+2026-09-03). Named for `checker-arc-fidelity`.
 
 ### The arc in three sentences
 
@@ -57,14 +57,13 @@ this week become one feedback system that the students design themselves.
   sweeps from 1 ms to 2 ms as they turn the potentiometer, verified with the
   AD2.
 - **Day 15x** — every student's servo, powered from the regulator's 5 V pin,
-  follows the potentiometer smoothly, and every student has read two ADC
-  channels in one program.
+  follows the potentiometer smoothly.
 - **Day 16** — every student's tracker arm carries two working photocell
   dividers whose two channels (A0 and A1) print on their screen, the servo is
   still wired on its 5 V from Wednesday with the pot out (her end state, and
   her answer of 2026-09-03), and the student has written down the loop's
-  update rule with its sign, its bounds and its two tuning numbers (pending
-  question 7).
+  update rule with its sign, its bounds and its two tuning numbers (question 7 answered: the loop is their lab work, begun in
+  class).
 
 Lab 8's servo section "repeats the class activity from Day 15" — so Day 15's
 and 15x's crucial steps are literally the lab's §3, and Day 16's is the lab's
@@ -142,9 +141,9 @@ text, caption or screenshot.
    picture that media extraction drops). Her `towerProPowering.png` is the
    figure; `week8FullLabSetup.png` is Day 16's. Still needed: the pot-on-A0
    re-export of `towerProPot.png` (in progress).
-3. **Two-channel ADC is ours, not hers** (question 4). If she would rather it
-   were the lab's, Day 15x Part 3 becomes a longer work session and Day 16
-   Part 2 gains a taught beat.
+3. ~~**Two-channel ADC is ours, not hers**~~ — **withdrawn 2026-09-03**:
+   the class has done two-channel reads before; Day 15x Part 3 is a
+   five-minute recall and Part 2 is the work session her x-hour is.
 4. **Day 15's design exercise "takes students a LONG time"** (her note). Part 5
    has 45 minutes and a checkpoint; Day 15x is the overflow by design.
 5. **Unverified specs** (question 1): dead band 1 µs, moving current, stall
@@ -176,10 +175,10 @@ Part 2; Day 16 Parts 2 and 5 (the lab's §2 and the design of §4).
 | 1 | ~~answered~~ — SG92R, `C17481_SG92R_datasheet.pdf`; dead band 1 µs sourced | **1b** the current figure stays hers ("a few hundred mA while moving") unless she prefers no number |
 | 2 | ~~answered~~ — the three files are in `assets/starters/`; `tim.c` fixed to Day 11x's convention at her request (2026-09-03) | — |
 | 3 | ~~answered~~ — pot on A0 on Day 15 (A0 re-export of `towerProPot.png` coming); pot out on Thursday, photocells on A0/A1, `week8FullLabSetup.png` delivered | — |
-| 4 | Day 15x Part 3, Day 16 Part 2 | route (A) or (B) for two channels; Wednesday or lab |
+| 4 | ~~answered~~ — two-channel reads were taught earlier in the term; recall only | where (which lab or day), so the book can point to it |
 | 5 | ~~withdrawn~~ — extraction artifact; `towerProPowering.png` is the figure | — |
 | 6 | ~~lead colours answered~~ — brown / red / yellow: ground / power (center) / signal | what students see at 1 ms and 2 ms (still open) |
-| 7 | Day 16 Parts 5/6 | does Thursday end with the loop designed, or running |
-| 8 | Day 15 close | any homework due Thursday |
+| 7 | ~~answered~~ — the loop is their lab work; they can get started in class | — |
+| 8 | ~~answered~~ — no homework due Thursday | — |
 | 9 | ~~answered~~ — each student has their own `adc.c`/`adc.h` from a lab | — |
 | — | Day 16 Part 5 | the two-loops figure (her slide 8 beside Lab 8 Figure 6) does not exist — hand-author before the Day 16 book |
