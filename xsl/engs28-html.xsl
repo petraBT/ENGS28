@@ -255,9 +255,14 @@
 
        <sim starter="blinkySlowToFast"/>   assets/sim-starters/<name>.c
        <sim example="blinky"/>             a built-in example shipped with the
-                                           simulator (blinky, blinky-delay,
-                                           external-led-d4, button-onboard,
-                                           button-external)
+                                           simulator: blinky, blinky-delay,
+                                           button-external, printf-counter.
+                                           Those are the STUDENT examples,
+                                           which is all the
+                                           book's copy of the simulator has;
+                                           the instructor build's solutions and
+                                           demos are not addressable from here
+                                           (see the simulator's README).
        <sim src="…"/>                      an explicit URL, passed through
                                            verbatim (escape hatch; resolved
                                            against the simulator's document)

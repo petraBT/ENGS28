@@ -4,7 +4,16 @@
  * The counter from Part 1, printing over
  * USART2 into the CoolTerm panel below
  * the editor. Press Run to see it, then
- * click the CoolTerm panel and type.
+ * click the CoolTerm panel and type: the
+ * panel says "typing goes to the board"
+ * once it has the focus, and names each
+ * key it sends.
+ *
+ * The keys reach USART2->RDR whether or
+ * not your program looks at them, so
+ * until you write the read below, typing
+ * changes nothing on screen. That is the
+ * exercise.
  *
  * Your job: make the count respond to
  * the keyboard.
