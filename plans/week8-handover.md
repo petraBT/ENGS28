@@ -121,9 +121,12 @@ feedback loop is their lab work, begun in class (Day 16's crucial step stays
 "designed"); no homework is due Thursday. Both wiring exports are replaced
 (pot on A0, legend "Red/Orange → power").
 
+**Fourth message:** the two-channel read was part of **Lab 5**, which is also
+where students developed their `adc.c`/`adc.h` library — recorded in the
+ground truth and the plans; the book points at Lab 5.
+
 **Still open (ground truth §9):** 1b the current figure (hers unless she
-prefers none); 4's one remaining line — *where* the two-channel read was
-taught, so the book can point at it; 6 what students see at 1 ms and 2 ms.
+prefers none); 6 what students see at 1 ms and 2 ms.
 
 **Lesson for every later week:** a slide whose extracted picture ends a wire
 at nothing has lost a layered picture. Look at her composite (render the
@@ -138,8 +141,7 @@ status rows at the end of every session.
 
 ## Ask-Petra list, standing
 
-The open items above (1b, where the two-channel read was taught, 6's
-endpoints). Plus, for whenever she
+The open items above (1b, 6's endpoints). Plus, for whenever she
 next touches Lab 8 (hers, not the book's): `OCR1A` → `CCR1`; "page 133 of
 Williams"; `V_AVR_PCx` in Figure 1.
 

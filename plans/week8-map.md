@@ -21,7 +21,7 @@ Day 15x is an x-day → Wednesday, **50 min**. Day 16 is even → Thursday,
 | Topic | Servomotors | Servos, continued | Photosensors and the solar tracker |
 | Chapter | `ch-servos.ptx` | `ch-servos.ptx` | `ch-photosensors.ptx` |
 | Pre-class reading | yes — what a servo is, its internal feedback loop, the pulse-width command, the power rule | **none — x-day** | yes — the photocell, resistance-based sensors, the divider interface, the datasheet tour |
-| New machinery | a second design of TIM14's period (50 Hz, sized by the dead band); TIM16 as a periodic tick; the pot→pulse map with bounds | the servo on the regulator's 5 V (the two-channel ADC read is recall — taught earlier in the term, Petra 2026-09-03) | a resistive sensor in a divider; the geometric-mean rule; a feedback loop *we* design and the students write in the lab (the update rule, K, T, bounds) |
+| New machinery | a second design of TIM14's period (50 Hz, sized by the dead band); TIM16 as a periodic tick; the pot→pulse map with bounds | the servo on the regulator's 5 V (the two-channel ADC read is recall — Lab 5's, Petra 2026-09-03) | a resistive sensor in a divider; the geometric-mean rule; a feedback loop *we* design and the students write in the lab (the update rule, K, T, bounds) |
 | Students **build** | their own pot-controlled 1–2 ms pulse train on PA7, verified on the AD2 against their own prediction | the servo following the pot | two photocell dividers on the tracker arm, both channels printing, the pot retired, the loop designed and begun |
 | Load lands on | design arithmetic, then a long build | wiring and hands-on | the lab's Part 1 in class, then design |
 | Inherits from | Days 11/11x (TIM14 PWM, whole), Day 7 (ADC), Day 8 (periodic interrupt) | Day 15, Day 11 (the regulator), Day 7 (CHSELR) | Days 15/15x entirely; Day 7 (the divider, the ADC); Day 12 (`milliseconds()`) |
@@ -129,9 +129,8 @@ text, caption or screenshot.
 
 ## Week-level risks and their costs
 
-0. ~~`adc.c`/`adc.h`~~ — **resolved 2026-09-03**: a lab already had
-   students split their ADC code; each has their own `adc.c`/`adc.h` in
-   `mylib`. Day 15 Part 5 assumes it, with her one-clause fallback.
+0. ~~`adc.c`/`adc.h`~~ — **resolved 2026-09-03**: Lab 5 had students
+   build their ADC library; each has their own `adc.c`/`adc.h` in `mylib`. Day 15 Part 5 assumes it, with her one-clause fallback.
 1. ~~**The files**~~ — **resolved 2026-09-03**: all three are in
    `assets/starters/`. `tim.c`'s off-by-one convention differs from Day 11x's
    driver **on purpose, and the book teaches the difference** (follow-up 2b
@@ -175,7 +174,7 @@ Part 2; Day 16 Parts 2 and 5 (the lab's §2 and the design of §4).
 | 1 | ~~answered~~ — SG92R, `C17481_SG92R_datasheet.pdf`; dead band 1 µs sourced | **1b** the current figure stays hers ("a few hundred mA while moving") unless she prefers no number |
 | 2 | ~~answered~~ — the three files are in `assets/starters/`; `tim.c` fixed to Day 11x's convention at her request (2026-09-03) | — |
 | 3 | ~~answered~~ — pot on A0 on Day 15 (A0 re-export of `towerProPot.png` coming); pot out on Thursday, photocells on A0/A1, `week8FullLabSetup.png` delivered | — |
-| 4 | ~~answered~~ — two-channel reads were taught earlier in the term; recall only | where (which lab or day), so the book can point to it |
+| 4 | ~~answered~~ — two-channel reads were taught in Lab 5 (with the `adc.c`/`adc.h` library); recall only | — |
 | 5 | ~~withdrawn~~ — extraction artifact; `towerProPowering.png` is the figure | — |
 | 6 | ~~lead colours answered~~ — brown / red / yellow: ground / power (center) / signal | what students see at 1 ms and 2 ms (still open) |
 | 7 | ~~answered~~ — the loop is their lab work; they can get started in class | — |

@@ -48,8 +48,8 @@ Scaffolding (P-2):
   adapter comes out again before any lead is added.
 - Nothing new is written for the servo: yesterday's program is still on the
   board (her slide 30).
-- The two-channel read is recall (Petra, 2026-09-03: "we have taught
-  2-channel reads"), so Part 3 is five minutes of pointing, not teaching.
+- The two-channel read is recall — Lab 5's (Petra, 2026-09-03) — so Part 3
+  is five minutes of pointing, not teaching.
 - **Checkpoint at minute 40** (end of Part 2), a ladder: no motion with the
   pulse re-verified → power (5 V at the pin? shared ground?) or the signal
   lead on the wrong pin; twitching and a board that resets → the brown-out,
@@ -82,7 +82,7 @@ and how far is that from the datasheet's ±90° (question 6)?
 | 0 | 1 | tell | Announcements |
 | 1 | 3 | tell | **Where we are.** Yesterday: the pulse, verified. Today: the servo on its own supply, wired as Tuesday's figure and lead map say (her `towerProPowering.png`: red center lead to the regulator's 5V pin, brown to the shared ground rail, yellow to PA7) — a pointer, not a retelling (2). The order of checks from Day 12: power first, then ground, then the signal path (1) |
 | 2 | 34 | do | **Finish Tuesday, then wire — CRUCIAL.** Finish Tuesday's design exercise first: the four `#define`s, the map, the verified pulse — her x-hour's premise, with Tuesday's ladder (10). Everything unplugged: the regulator board on the breadboard as in her drawing (`towerProPot.png`, pot on A0 — follow-up 3b for the export), its GND to the ground rail the Nucleo already shares (4). Adapter in, multimeter on the 5V pin: 5 V before anything is connected to it — if it is not, the fault is upstream and you find it with nothing else attached (3). **Adapter out** before the next wire (1). Servo leads: red (center) to the regulator's 5V pin, brown to the ground rail; the yellow signal lead not yet (3). USB in, AD2 on PA7: the pulse is still 1–2 ms — everyone, and a student still in Tuesday's template does Tuesday's Part 5 here instead (2). USB out; signal lead to PA7 (D11); wiring checked; USB, then adapter; the servo follows the knob (5). You predicted this yesterday — watch it happen, `room="yes"` for a sentence each: it holds where you leave the knob; push the arm gently and it pushes back; the 1.5 ms knob position centers the arm (3). Checkpoint minute 40, the ladder above (3) |
-| 3 | 5 | tell | **Two channels, recalled.** Thursday's photocells are two voltages on two pins, A0 and A1. You have read two ADC channels in one program before; that program, with a photocell divider's node on each channel, is Thursday's first program — nothing to write today (3). Where the two numbers will go: into a loop you design on Thursday and write in the lab (2) |
+| 3 | 5 | tell | **Two channels, recalled.** Thursday's photocells are two voltages on two pins, A0 and A1. You read two ADC channels in one program in Lab 5; that program, with a photocell divider's node on each channel, is Thursday's first program — nothing to write today (3). Where the two numbers will go: into a loop you design on Thursday and write in the lab (2) |
 | — | 5 | tell | **Close.** Tomorrow: photocells replace the pot, on the arm of this servo. The reading is the photocell and its datasheet — read the datasheet's table, not just the page (2). Leave the servo wired. Presenter note: bring the tracker fixture, the photocells and the alligator clips from your kit (3) |
 
 Total: 2+1+3+34+5+5 = **50**.
@@ -108,5 +108,5 @@ x-hour is for finishing it).
 tour). Nothing to submit (question 8).
 
 **Day 16 needs from here:** the servo wired on 5 V and following the pot; the
-two-channel program from earlier in the term at hand; the tracker fixture,
+two-channel program from Lab 5 at hand; the tracker fixture,
 photocells and clips in hand.
