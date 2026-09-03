@@ -60,10 +60,11 @@ this week become one feedback system that the students design themselves.
   follows the potentiometer smoothly, and every student has read two ADC
   channels in one program.
 - **Day 16** — every student's tracker arm carries two working photocell
-  dividers whose two channels print on their screen, the servo was confirmed
-  following the pot before the pot came out (her slide 14's end state has no
-  pot), and the student has written down the loop's update rule with its
-  sign, its bounds and its two tuning numbers (pending question 7).
+  dividers whose two channels (A0 and A1) print on their screen, the servo is
+  still wired on its 5 V from Wednesday with the pot out (her end state, and
+  her answer of 2026-09-03), and the student has written down the loop's
+  update rule with its sign, its bounds and its two tuning numbers (pending
+  question 7).
 
 Lab 8's servo section "repeats the class activity from Day 15" — so Day 15's
 and 15x's crucial steps are literally the lab's §3, and Day 16's is the lab's
@@ -139,8 +140,8 @@ text, caption or screenshot.
 2. ~~**Every wiring drawing is wrong the same way**~~ — **withdrawn
    2026-09-03**: an extraction artifact (the regulator board is a layered
    picture that media extraction drops). Her `towerProPowering.png` is the
-   figure. Still needed: the pot-on-A0 export and the Day 16 end-state export
-   (follow-up 3b).
+   figure; `week8FullLabSetup.png` is Day 16's. Still needed: the pot-on-A0
+   re-export of `towerProPot.png` (in progress).
 3. **Two-channel ADC is ours, not hers** (question 4). If she would rather it
    were the lab's, Day 15x Part 3 becomes a longer work session and Day 16
    Part 2 gains a taught beat.
@@ -173,11 +174,11 @@ Part 2; Day 16 Parts 2 and 5 (the lab's §2 and the design of §4).
 | # | Blocks | Question (ground truth §9) |
 |---|---|---|
 | 1 | ~~answered~~ — SG92R, `C17481_SG92R_datasheet.pdf`; dead band 1 µs sourced | **1b** the current figure stays hers ("a few hundred mA while moving") unless she prefers no number |
-| 2 | ~~answered~~ — the three files are in `assets/starters/`; teach the difference | **2b** Day 15 Part 4: what the difference is meant to teach (ground truth §2a) |
-| 3 | ~~answered for Day 15~~ — pot on A0 (her export shows A3; the A0 export is coming); the lab moves it to A3 as the students' own work | **3b** Day 16 Parts 2 and 4: which pins the photocells and the pot use on Thursday; the two Fritzing exports |
+| 2 | ~~answered~~ — the three files are in `assets/starters/`; `tim.c` fixed to Day 11x's convention at her request (2026-09-03) | — |
+| 3 | ~~answered~~ — pot on A0 on Day 15 (A0 re-export of `towerProPot.png` coming); pot out on Thursday, photocells on A0/A1, `week8FullLabSetup.png` delivered | — |
 | 4 | Day 15x Part 3, Day 16 Part 2 | route (A) or (B) for two channels; Wednesday or lab |
 | 5 | ~~withdrawn~~ — extraction artifact; `towerProPowering.png` is the figure | — |
-| 6 | Day 15 reading, Day 15x observation | **6b** lead colours (her legend vs the SG92R photo vs the SG90 sheet); what students see at 1 ms and 2 ms |
+| 6 | ~~lead colours answered~~ — brown / red / yellow: ground / power (center) / signal | what students see at 1 ms and 2 ms (still open) |
 | 7 | Day 16 Parts 5/6 | does Thursday end with the loop designed, or running |
 | 8 | Day 15 close | any homework due Thursday |
 | 9 | ~~answered~~ — each student has their own `adc.c`/`adc.h` from a lab | — |

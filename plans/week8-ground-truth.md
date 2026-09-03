@@ -308,14 +308,12 @@ against these files in `scripts/check_starters.py` when they exist.
    and `CCR1 = value-1` (a `SERVO_MID` of 300 gives 299 counts HIGH). Neither
    is wrong enough to matter to a servo, but a student who reads both files —
    and Lab 8 §3 sends them back to their Day 15 program — sees two answers to
-   a question the course made a point of. **Petra, 2026-09-03: "tim.c is
-   updated on purpose from the previous version, so teach the difference."**
-   So Part 4 teaches it, honestly: with `ARR = timerMax` the counter runs
-   0..4000, a period of 4001 counts (20.005 ms); with `CCR1 = value-1` and PWM
-   mode 1 (HIGH while CNT < CCR1) the pin is HIGH for value−1 counts, one
-   5 µs step short of the number in mind. Follow-up 2b asks whether that is
-   the lesson she intends, since the honest version says the new file is one
-   count off in both places.
+   a question the course made a point of. **Resolved 2026-09-03: Petra asked
+   for the fix** ("so that we go for 4000 counts not 4001") — `tim.c` in
+   `assets/starters/` now writes `ARR = timerMax-1` and `CCR1 = value`, the
+   Day 11x convention, with comments saying why. Nothing to re-teach: Part 4's
+   "what changed since Wednesday's driver" is the two parameters and the
+   moved limit only. The deck text above (§2) is superseded by the file.
 2. **`tim14_pwm_set()` has lost its limit.** The Day 11x version limits the
    value to `PWM_TIMER_MAX-1` before writing `CCR1`; the servo version does
    not, because the limiting moved up into `updateServo()`, where it is
@@ -614,18 +612,19 @@ shapes are noted.
 | 16/7 | Divider schematic (R_sens over R_M, V_M formula) | **Use raw** — the interface figure; note Lab 8 Figure 1 draws the same circuit with R1/R2 |
 | 16/8 | Lab 8 Figure 1 + two formula images | Lab figures — **do not reproduce the deliverable text**; the divider drawing may be used once (16/7 is better) |
 | 16/9 | Lab 8 Figure 2 Fritzing (two dividers to A0/A1) | **Use raw** — it draws the 3V3 rail correctly for the dividers (no servo) |
-| 16/10 | = 15/30 + regulator | `towerProPot.png` (A3) or its A0 re-export — whichever Thursday's pin plan says (follow-up 3b) |
+| 16/10 | = 15/30 + regulator | Thursday's review beat only; the pot comes out at the start of Thursday's lab work (Petra, 2026-09-03), so the figure that matters is 16/14's export |
 | 16/11 | Photocell in the cup, "Photocell" arrow (Lab App. A photo) | **Use raw** |
 | 16/12 | Alligator clips on the arm (Lab App. A photo) | **Use raw** |
-| 16/13 | = 15/30 with "Physically located in the cups" callout | rebuild with `pptx_annotate.py` over her export once the pins are settled (follow-up 3b) |
-| 16/14 | Full Fritzing — **two dividers and the servo, no potentiometer** (corrected at Gate 1: this is her end state; the pot comes out once the servo is confirmed, her slide 13). Its regulator board is a layered picture dropped by extraction, as on 15/29 | ask for her export of this slide too (follow-up 3b); the extracted version is not usable |
+| 16/13 | = 15/30 with "Physically located in the cups" callout | the callout goes on `week8FullLabSetup.png` (below) as a caption or a `pptx_annotate`-style overlay if wanted; the extracted base is not used |
+| 16/14 | Full Fritzing — **two dividers and the servo, no potentiometer**: her end state | **Delivered 2026-09-03: `assets/images/Day16-Photosensors/week8FullLabSetup.png`** — two photocell dividers (10 kΩ each) with their nodes on **A0 (blue) and A1 (purple)**, the 3.3 V and ground rails from the Nucleo, the servo's power lead to the regulator board's 5V pin, its ground to the rail, its signal to D11, the board's GND to the rail. The Day 16 wiring figure |
 | 16/16 | Survey QR | **Drop** |
 | all/1 | Logo slides | **Drop** |
 
 **Figures that do not exist and are needed:** (a) ~~the servo-on-the-regulator
-wiring drawing~~ — **delivered**: `towerProPowering.png`; the pot-on-A0
-version of `towerProPot.png` and the Day 16 end-state export are asked for
-(follow-up 3b); (b) the two-loops picture for the week map (the servo's
+wiring drawing~~ — **delivered**: `towerProPowering.png` (servo) and
+`week8FullLabSetup.png` (Day 16 end state); the pot-on-A0 version of
+`towerProPot.png` is being re-exported (she asked what to name it: overwrite
+`towerProPot.png` — the book never shows the A3 version); (b) the two-loops picture for the week map (the servo's
 internal loop, from her slide 8, next to the tracker loop, Lab 8 Figure 6) —
 hand-author, both halves exist; (c) a blank-then-filled version of her two
 tables, which are text and need no image.
@@ -760,11 +759,13 @@ two answered items at the top of this file are not re-asked.
 - **Q2 → answered.** `Day15_servo_template.c`, `tim.c`, `tim.h` are in
   `assets/starters/`. "tim.c is updated on purpose from the previous version,
   so teach the difference." **Follow-up 2b** (below).
-- **Q3 → answered for Day 15.** The pot is on **A0** on Day 15 (her
-  `towerProPot.png` shows A3 and she is re-exporting for A0 unless the book
-  can); in the lab students work out the move to A3 themselves — **so the
-  book never shows the pot on A3 or walks that change** (protected). Open for
-  Thursday: **follow-up 3b**.
+- **Q3 → answered.** The pot is on **A0** on Day 15 (her `towerProPot.png`
+  shows A3 and she is re-exporting for A0); in the lab students work out the
+  move to A3 themselves — **so the book never shows the pot on A3 or walks
+  that change** (protected). **Thursday (2026-09-03): "They take the
+  potentiometer out and follow the lab instructions on Thursday, so the
+  photocells go on A0 and A1."** So Day 16 opens its lab work with the pot
+  out, and the servo confirmation is Wednesday's, not Thursday's.
 - **Q5 → moot, and mine to withdraw.** Nowhere in her slides is the servo
   powered from the Nucleo. The extracted Fritzings had lost the regulator
   board (a separate picture on the slide), so the orange lead ended at an
@@ -774,27 +775,19 @@ two answered items at the top of this file are not re-asked.
   library; each student has their own `adc.c`/`adc.h`. Day 15 Part 5's split
   beat is withdrawn; her fallback line stays as one clause.
 
-**Follow-ups (2026-09-03), narrow:**
+**Follow-ups of 2026-09-03 — all three answered the same day:**
 
-- **2b. What "teach the difference" should say.** Against `TTmotor_ramp.c`,
-  `tim.c` writes `ARR = timerMax` (the counter runs 0..4000, so the period is
-  4001 counts, 20.005 ms) and `CCR1 = value-1` (PWM mode 1 is HIGH while
-  CNT < CCR1, so the pin is HIGH for value−1 counts, one 5 µs step short).
-  Is the lesson "two conventions, know which one your file uses" — in which
-  case the book says both are one count off the number in mind — or is
-  there a reason for the new version I should teach instead?
-- **3b. Thursday's pins, and two exports.** On Day 16 the photocells go on
-  A0 and A1 (Lab 8 Figure 2) while the pot is still on A0 from Tuesday until
-  the lab moves it. Which pins do the photocells use in class on Thursday,
-  and is the pot still on A0 when the servo is re-confirmed (Part 4)? And two
-  Fritzing exports, if you have them: `towerProPot` with the pot on A0, and
-  the Day 16 "Ultimate Setup" slide (two dividers, servo, no pot) with the
-  regulator board in it — the extracted versions lost the board.
-- **6b. Lead colours, sharpened.** Your legend says orange → power, yellow →
-  PWM; the SG92R product photo shows brown/red/orange leads, and the SG90
-  sheet says red = power, orange = PWM. The book will teach Lab 8's rule
-  (center = power, darker outer = ground, the other = signal) and name the
-  colours of the kit's servos — which are they?
+- **2b → answered: fix it.** "Please fix (so that we go for 4000 counts not
+  4001 - I misunderstood your question). So no re-teaching necessary." Done in
+  `assets/starters/tim.c` (§2a).
+- **3b → answered.** Pot out on Thursday; photocells on A0 and A1;
+  `week8FullLabSetup.png` delivered (§6). The A0 re-export of `towerProPot`
+  is in progress — overwrite the file, same name.
+- **6b → answered.** "Students have the Tower-Pro SG92R with the brown, red
+  and yellow wires, just like the one in the slides on day 15." So: **brown =
+  ground, red = power (the center lead), yellow = signal.** One thing to fix
+  in her two Day 15 exports when she re-exports: their legend reads "Orange →
+  power"; the kit's power lead is red (flagged to her 2026-09-03).
 
 The original list, for the record:
 

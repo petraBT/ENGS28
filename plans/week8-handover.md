@@ -104,16 +104,20 @@ lead ended at an empty column and the 3.3 V rail (the pot's) was misread as
 the servo's supply. Her exports show the lead going to the regulator's 5V
 pin. Ground truth §6 and §9, the map, and the three plans are corrected.
 
-**Still open (ground truth §9, follow-ups):** 1b the current figure (hers
-unless she prefers none); **2b what "teach the difference" should say** —
-`ARR = timerMax` makes the period 4001 counts and `CCR1 = value-1` makes the
-pulse one count short, so the honest lesson is "two conventions, one count
-off each way", unless she has a reason to teach; **3b Thursday's pins** (the
-photocells on A0/A1 while the pot is still on A0) and two Fritzing exports
-(`towerProPot` with the pot on A0; the Day 16 "Ultimate Setup" with the
-regulator board in it); 4 the two-channel route; 6b the kit servo's lead
-colours (her legend says orange → power, the SG92R photo and SG90 sheet say
-red); 7; 8.
+**Her second message, same day, closed the three follow-ups:** `tim.c` is
+**fixed** at her request (`ARR = timerMax-1`, `CCR1 = value` — 4000 counts,
+Day 11x's convention; "no re-teaching necessary"); on Thursday the pot comes
+out and the photocells go on **A0 and A1**, and her
+`assets/images/Day16-Photosensors/week8FullLabSetup.png` is the Day 16
+wiring figure; the kit's SG92R has **brown, red and yellow** leads (ground,
+power at the center, signal). She is re-exporting `towerProPot.png` with the
+pot on A0 (same file name — overwrite); its legend, and `towerProPowering`'s,
+read "Orange → power" and should say red.
+
+**Still open (ground truth §9):** 1b the current figure (hers unless she
+prefers none); 4 the two-channel route and whether Wednesday teaches it; 6
+what students see at 1 ms and 2 ms; 7 whether Thursday ends with the loop
+designed or running; 8 any homework due Thursday.
 
 **Lesson for every later week:** a slide whose extracted picture ends a wire
 at nothing has lost a layered picture. Look at her composite (render the
@@ -128,7 +132,7 @@ status rows at the end of every session.
 
 ## Ask-Petra list, standing
 
-The open follow-ups above (1b, 2b, 3b, 4, 6b, 7, 8). Plus, for whenever she
+The open items above (1b, 4, 6's endpoints, 7, 8). Plus, for whenever she
 next touches Lab 8 (hers, not the book's): `OCR1A` → `CCR1`; "page 133 of
 Williams"; `V_AVR_PCx` in Figure 1.
 

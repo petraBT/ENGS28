@@ -30,7 +30,8 @@ void tim16_ms_interrupt_init(int milliseconds) {
 }
 
 void tim14_pwm_set(uint16_t value) {
-	TIM14->CCR1 = value-1;
+	// PWM mode 1: pin is HIGH while CNT < CCR1, i.e. for exactly 'value' counts
+	TIM14->CCR1 = value;
 }
 
 void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
@@ -51,8 +52,8 @@ void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
 	// Set prescaler
 	TIM14->PSC = prescaleFactor-1;
 
-	// Set autoreload value
-	TIM14->ARR = timerMax;
+	// Set autoreload value (counter runs 0..timerMax-1: timerMax counts per period)
+	TIM14->ARR = timerMax-1;
 
 	// Set the compare register value - start with a speed of 0
 	TIM14->CCR1 = 0;
