@@ -67,12 +67,20 @@ session after that. Keep that shape.
    `plans/week5-map.md`: the arc across the three days, what each day builds,
    what hands off to what, where the lab's three sections land.
 3. **The question list, sent to Petra** — everything the repo cannot
-   establish. Known holes already: there is **no servo datasheet and no
-   photocell datasheet in `assets/datasheets/`** — which exact servo and which
-   photocell do students have, and can she supply the datasheets? What does
-   the external 5 V servo supply physically look like in their kit? Ask about
-   anything else the decks and lab leave open. Four questions now beat forty
-   corrections later.
+   establish. Ask about anything the decks and lab leave open. Four questions
+   now beat forty corrections later. Two are already answered — do not
+   re-ask:
+   - **The parts and their datasheets** (added 2026-09-02): the servo is the
+     **SG90** (`assets/datasheets/Servosg90_datasheet.pdf`), the photocell the
+     **PDV-P8001 CdS cell** (`CdS-photocell-PDV-P8001.pdf`, with
+     `Adafruit-photocells.pdf` as the guide). Verify every placeholder number
+     against these.
+   - **The servo's 5 V supply** (Petra, 2026-09-02): *"We are using the same
+     voltage regulator as we did for motors - we're not using the battery
+     pack."* That is the regulator board from `ch-motors.ptx` — the 6–12 V
+     wall adapter into the barrel connector, a steady 5 V out on the header —
+     with `fig-tb6612-regulator` and her wording already in the book. Reuse
+     both; never write "battery pack".
 4. **Gate 1, at week level** — three one-page day plans plus outlines
    (`plans/day15.md`, `plans/day15x.md`, `plans/day16.md`), reviewed together
    by the Gate 1 panel (roster in `.claude/agents/README.md`), report to
