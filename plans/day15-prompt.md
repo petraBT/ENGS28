@@ -36,14 +36,16 @@ Order of work:
 
 1. **Re-check the ground truth against what Petra has answered.** As of
    2026-09-03: the part is the SG92R and its sheet is hosted; the three
-   starter files are in `assets/starters/`; `tim.c` differs from Day 11x's
-   driver on purpose and the book teaches the difference; each student has
+   starter files are in `assets/starters/`; `tim.c` now follows Day 11x's
+   ARR/CCR1 convention (fixed at her request 2026-09-03 — nothing to
+   re-teach; Part 4 covers the parameters and the moved limit); each student has
    their own `adc.c`/`adc.h`; the pot is on A0 (the lab moves it to A3 as the
    students' own work — never shown); her wiring exports `towerProPowering.png`
    and `towerProPot.png` are the figures (the A0 re-export of the second is
-   coming). Still open: **1b** (the current figure), **2b** (what the off-by-one
-   difference is meant to teach), **3b** (Thursday's pins; not Day 15's
-   problem), **4**, **6b** (lead colours), **7**, **8**. Where an answer is
+   coming). The kit's SG92R leads are brown / red / yellow (ground / power at
+   the center / signal). Still open: **1b** (the current figure), **4**,
+   **6**'s endpoints (what students see at 1 ms and 2 ms), **7**, **8**. Where
+   an answer is
    still open, write the sentence that is true either way and mark the spot
    with a comment naming the follow-up.
 2. **Rewrite `ch-servos.ptx` from the outline up.** Keep the file and its
@@ -71,18 +73,19 @@ Order of work:
    `<instructor>`), `tim.c` and `tim.h` exactly as `assets/starters/` has them
    (B-6, B-13 — the book's listing may compress comments, never code).
    Register the template and `tim.c` in `scripts/check_starters.py` in the
-   same commit as their first listing. Part 4 teaches what changed from
-   `TTmotor_ramp.c` as a difference, per ground truth §2a; if follow-up 2b is
-   still open, state the two off-by-ones as facts about the two files and
-   leave the "why" for her.
+   same commit as their first listing. Part 4's "what changed from
+   `TTmotor_ramp.c`" is the two parameters and the limit that moved into
+   `updateServo()` — the ARR/CCR1 convention is the same (ground truth §2a).
 6. **Figures**, from the manifest (§6): reuse by xref everything Day 11x
    owns; rebuild 15/15 with `pptx_annotate.py --max-text 200`; her pulse
    figure, cutaway, feedback diagram, captures and pinout raw. **The wiring
    figures are her exports** in `assets/images/Day15-Servos/`:
    `towerProPowering.png` (Part 6 — servo power lead to the regulator's 5V
-   pin, ground shared, signal to D11, her colour legend) and `towerProPot.png`
-   once she re-exports it with the pot on A0 (its current pot is on A3, the
-   lab's channel — do not use that one for Day 15). The extracted deck
+   pin, ground shared, signal to D11) and `towerProPot.png` once she
+   re-exports it with the pot on A0 (check the file's date; the old export
+   has the pot on A3, the lab's channel). Their legends say "Orange → power";
+   the kit's lead is red — if the legend is still orange when you write the
+   caption, the caption says red and the legend is flagged to her. The extracted deck
    Fritzings lost the regulator board and are not to be used. The reading
    xrefs the regulator figure. Commit `assets/book.css` with any new figure.
 7. Mechanical checks, then **Gate 2** with the standing core plus the
