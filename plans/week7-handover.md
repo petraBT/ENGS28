@@ -1,6 +1,36 @@
 # Week 7 handover — where things stand after session 9 (updated 2026-09-02)
 
-## Session 9 (2026-09-02): her pass-4 comments applied — 9 deck, 12 book, mirrored both ways
+## Session 9 addendum (2026-09-02 evening): pass-5, five corrections — two of pass-4's fixes had misread her circles
+
+She confirmed pass-4 misplaced a few of her annotations; five comments
+this round, three of them corrections to pass-4's own edits, all
+locations verified with the caretRangeFromPoint technique before
+touching anything.
+
+The round() bullet: pass-4's "casting straight to an int truncates.
+You therefore need to cast..." had a dangling "therefore" (it hung off
+the truncation sentence, which is circular) and had lost "toward zero"
+in the over-wide delete. Restored and re-chained: "...truncates toward
+zero. round() returns a double, and you therefore need to cast its
+result for printing" — the therefore now hangs off the prototype's
+double return, which is what her pass-3 "give the prototype so they
+understand why the cast is necessary" wanted all along. Slide and book
+both. The book paragraph's closer "That is what you want for an angle
+headed to a display." is replaced with her wording: "This is how to
+display the calculated angles on your screen." The float-cost sentence:
+pass-4 had put "In addition" at the start of the slower-plus-flash
+sentence; her circles actually split it — "This is slower than integer
+arithmetic, and in addition, the library code takes up flash memory."
+(slower is the direct consequence of software emulation; flash is the
+additional cost). Slide and book both. And one comment landed on
+ch-debugging (Day 7x): she replaced the debug-perspective capture
+(slide15_img2.png, the file that had been sitting modified in the
+working tree) with one whose halted-line highlight is blue, and circled
+the caption's "green" — all five highlight-color mentions in
+ch-debugging.ptx are now "blue" (the green Run button mentions are
+correct and stay), and her new capture is committed with the text.
+
+Rebuild, all four checks pass, every touched surface verified rendered.
 
 21 comments this round: 9 on deck slides, 12 directly on book pages. Same
 instruction as session 8: apply slide fixes to the matching book
