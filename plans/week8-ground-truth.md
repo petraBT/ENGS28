@@ -796,6 +796,36 @@ stretch runs it); **Q8** — no homework due Thursday.
   in her two Day 15 exports when she re-exports: their legend reads "Orange →
   power"; the kit's power lead is red (flagged to her 2026-09-03).
 
+**Day 15 Gate 2 follow-ups (2026-09-03, `reviews/day15-gate2.md`):**
+
+- **1b, again — the current draw.** The book uses your slide 28's "about
+  250 mA while moving, and much more when it is stalled" in four places
+  (reading, `rq-servo-supply`, Part 6, Reference). Keep it, or no number?
+- **`towerProPowering.png` re-export.** The Nucleo's 3V3 and GND wires leave
+  the top edge with no visible origin, so the shared ground's Nucleo half is not
+  in the picture; the 3.3 V rail feed is for a pot that is not wired until
+  Wednesday; the legend says Red/Orange while the servo's ground lead is drawn
+  black; and the pin labels are 0.6 % of the image width, illegible at every
+  size. A frame that reaches the POWER header, or a second zoomed view of the
+  header and the board's pins, would fix all four.
+- **The two Waveforms captures** (`slide22`, `slide23`): the cursor digits are
+  0.7 % of the width. A tighter capture, or your agreement to crop the window
+  (keeping the time base, trigger, the three cursors and the two ΔX rows).
+- **`Day15_servo_template.c`**: (a) `pot_value` and `pwm_value` are
+  `int16_t` and are passed to `uint16_t` parameters; should they be
+  `uint16_t`, as `adc_read()` returns? (b) the ISR clears UIF with
+  `&= ~TIM_SR_UIF` where Day 8 teaches assigning the mask; the book now says
+  so beside the listing. Change the starter to `TIM16->SR = ~TIM_SR_UIF;`?
+- **`slide10` pulse figure**: a doubled closing parenthesis, "full CCW))".
+- **LF count** on a Tuesday, for the Part 5 checkpoint (B-11c).
+- **"TowerPro" or "Tower Pro"**: the book uses TowerPro (your answer, Lab 8);
+  the product label reads "Tower Pro".
+- **Stall torque conversions**: the book has 2.5 kgf-cm; want N·cm or oz-in
+  stated too?
+- **The 3.3 V signal level**: `rq-servo-supply`'s feedback says the servo
+  reads PA7's 3.3 V pulse fine; the SG90 sheet's drawing labels the signal
+  4.8 V. True on our hardware; confirm or hedge.
+
 The original list, for the record:
 
 1. **Which servo, and where do dead band and current come from.** Deck, Lab 8

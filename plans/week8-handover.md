@@ -132,7 +132,88 @@ prefers none); 6 what students see at 1 ms and 2 ms.
 at nothing has lost a layered picture. Look at her composite (render the
 slide, or ask for the export) before calling her drawing wrong.
 
-## Next session: `plans/day15-prompt.md` — the Day 15 book, delivery 1
+## Session 2 (2026-09-03): the Day 15 book, delivery 1 — through Gate 2, awaiting Petra's pass 1
+
+Delivered, committed on `main`:
+
+- `source/ch-servos.ptx`, rewritten from the outline up: the chapter
+  introduction and objectives; the Before Class reading (what is inside a
+  servo, what it does, the SG92R and its datasheet, the command pulse, the
+  power rule) with five reading questions; Day 15 in-class Parts 1–6 with
+  eleven activities and ten `<instructor>` blocks (the filled tables, the four
+  constants and the map, the completed template, the checkpoint ladder, the
+  stretch answers); and the Reference section (the pulse convention, the timer
+  arithmetic, `tim.c` whole, integer scaling). No `<slide>` blocks, no deck.
+  Day 15x's section is a marker comment naming what it owes.
+- Figures settled: her cutaway, feedback diagram, pulse figure, pinout, two
+  captures and stand-and-arm photo raw; slide 15 rebuilt with its two callouts
+  (`fig-servo-pulse-resolution.svg`); her export `towerProPowering.png` as the
+  wiring figure; Day 11x's timer figures and `fig-tb6612-regulator` by xref.
+  `assets/book.css` regenerated.
+- `Day15_servo_template.c` and `tim.c` registered in `check_starters.py`
+  (the template whole, `tim.c` whole in the Reference plus two Part 4
+  fragments).
+- Gate 1.5 ran on the reading's first subsection and was applied before the
+  Parts were written. Gate 2: seventeen invocations (the core of ten with
+  `checker-technical-accuracy` scoped three ways plus a self-contradiction
+  read, and four rotators), all in `reviews/day15-gate2.md`, the synthesizer's
+  28-item list applied and verified phrase by phrase. The big ones: the
+  template has five `#define` blanks, not four; the 12 MHz is the system
+  clock, not the oscillator; Table 12 lists five TIM14_CH1 pins and carries no
+  AF numbers; the resolution reveal contradicted itself on prescaler 240 and
+  overstated the dead band; `fig-servo-leads` had the wrong photograph; the
+  crucial build now carries a student-visible symptom list (no numbers) ahead
+  of the instructor ladder; the `tim.c` cross-check moved from Part 3 to
+  Part 4 (Part 3 = 18, Part 4 = 12); Part 6 no longer repeats the reading.
+- `plans/day15.md` carries the rebudget and the book's Part titles;
+  `ch-motors.ptx:1130` no longer attributes AF4 to Table 12.
+
+**Known state to say plainly:** `check_deck.py` reports nine `NOT PROJECTED`
+instructor blocks (`inst-day15-*`). That is the delivery-1 state: the blocks
+exist and no deck refs them until delivery 2. Every other check is clean.
+
+### Ask-Petra, from Gate 2 (also in ground truth §9)
+
+1. The current draw (1b): the book uses her slide 28's "about 250 mA while
+   moving, and much more when it is stalled" in four places. Keep, or no
+   number?
+2. `towerProPowering.png`: a re-export whose frame reaches the Nucleo's POWER
+   header (the 3V3 and GND wires leave the top edge), with or without the
+   3.3 V rail feed the pot does not need until Wednesday, and readable pin
+   labels (they are 0.6 % of the width).
+3. The two Waveforms captures: a tighter capture or leave to crop (keeping
+   the time base, trigger, three cursors and the ΔX rows).
+4. The template: `int16_t` for `pot_value`/`pwm_value` against `uint16_t`
+   parameters; and the ISR's `&= ~TIM_SR_UIF` against Day 8's assignment.
+   The book states the rc_w0 fact beside the listing; the code is hers.
+5. The doubled parenthesis in her slide 10 pulse art.
+6. The LF count on a Tuesday (the Part 5 checkpoint).
+7. "TowerPro" (used) vs the label's "Tower Pro".
+8. Whether to state her stall-torque conversions (N·cm, oz-in).
+9. The 3.3 V signal level against the SG90 sheet's 4.8 V drawing.
+10. Still open from session 1: 6's endpoints (what students see at 1 ms and
+    2 ms); the reading states the convention and her "don't go all that far".
+
+### Follow-ups for other days
+
+- `ch-motors.ptx` Day 12 prose (awaiting her pass 1): one clause where the
+  polling loop is described, saying why `milliseconds() - last_sample` is
+  the safe form when the count wraps, then an xref from
+  `task-day15-stretch-millis`.
+- Delivery 2 candidates: a two-axis figure for the integer map; a shaded
+  dead band on `fig-servo-pulse-resolution.svg`; the pinout figure cropped to
+  the header columns; the captures on image-dominant slides; the
+  `refPage` recall slides the section comment lists.
+
+## Next session: her pass 1, then the Day 15 deck (delivery 2)
+
+Start from her edits (`git log -- source/ch-servos.ptx`), condense the
+in-class Parts only, ref the ten `inst-day15-*` blocks directly with
+`"instructor": true` (which clears `check_deck.py`), and run the fit check per
+`AUTHORING-slides.md`. Then the Day 15x book (no reading), from the OWES
+comment in `ch-servos.ptx` and `plans/day15x.md`.
+
+## Superseded: `plans/day15-prompt.md` — the Day 15 book, delivery 1
 
 Then, in order, each session starting from this file: her pass → Day 15
 deck → Day 15x book (no reading — x-day) → her pass → Day 15x deck → Day 16
