@@ -3,538 +3,1343 @@
     <title>Servomotors</title>
     <introduction>
         <p>
-            A <term>servomotor</term> provides precise position control rather than
-            continuous rotation.  It contains a DC motor, a gear train, a position-sensing
-            potentiometer, and a built-in feedback controller, all in one compact package.
-            Commanding a servo requires only a single PWM signal, making it straightforward
-            to integrate with the STM32.  This chapter revisits TIM14 PWM configuration,
-            explores the servo's internal closed-loop mechanism, and covers the external
-            power supply considerations needed for reliable servo operation.
+            The goal of this chapter is to control the position of a servomotor from
+            the STM32C031C6.  A servomotor is a motor that goes to the angle we ask for
+            and holds it there, rather than turning continuously.  Inside it are a DC
+            motor, a gear train, a potentiometer and a control circuit, and all we
+            supply as a command is one signal: a pulse whose width carries the
+            position we want.  To produce that pulse we'll use
+            TIM14's PWM (pulse-width modulation) output again, as we did for the motor,
+            but this time the period is about 20 ms rather than the fast switching a
+            motor's speed needed.  We'll read the position we want from a potentiometer
+            with the ADC (analog-to-digital converter), as we did in the ADC chapter.
+        </p>
+        <p>
+            This chapter covers two class days.  On the first we'll design the timer
+            for the servo's pulse and check on the AD2 oscilloscope that the pulse is
+            the one we designed.  On the
+            second we'll connect the servo to its own 5 V supply and watch it follow the
+            potentiometer.  In Lab 8 this servo carries the arm of a solar tracker.
+            <xref ref="sec-servo-reference"/> collects the pulse convention, the timer
+            arithmetic and the driver for looking up later.
         </p>
         <objectives>
             <ul>
-                <li>Explain how a servomotor uses internal feedback to maintain a commanded position.</li>
-                <li>Calculate TIM14 PSC/ARR/CCR1 values to produce a 50 Hz servo PWM signal.</li>
-                <li>Wire a servo with an appropriate external power supply.</li>
-                <li>Write firmware to sweep a servo through its full travel range.</li>
+                <li>Explain what is inside a servomotor and how its built-in feedback loop takes the shaft to a commanded position and holds it there.</li>
+                <li>State how a hobby servo is commanded, and say how that differs from the way PWM set a motor's speed.</li>
+                <li>Design TIM14 for a 50 Hz pulse: choose a prescaler and an auto-reload value that fit the 16-bit register, and judge the resulting resolution against what the servo can use.</li>
+                <li>Compute the compare values for 1 ms, 1.5 ms and 2 ms pulses, and map a 12-bit ADC reading onto that range in integer arithmetic.</li>
+                <li>Build and verify, on the AD2 oscilloscope, a potentiometer-controlled pulse train on PA7 (D11).</li>
+                <li>Wire and power a servo from the regulator board, and say why it is never powered from the Nucleo.</li>
             </ul>
         </objectives>
     </introduction>
 
-    <!-- ============================================================
-         CANVAS QUIZ QUESTIONS (Before-Class)
-         Q1. A servo is commanded with a 1.3 ms pulse. What happens?
-             A) The motor spins at a speed proportional to 1.3 ms
-             B) The shaft moves to approximately -54° and holds there (CORRECT)
-             C) The servo ignores the pulse because it is shorter than 1.5 ms
-             D) The servo oscillates between -90° and +90°
-             Explanation: Pulse width maps linearly to angle. 1 ms = −90°, 2 ms = +90°,
-             so 1.3 ms ≈ −54°. The servo moves there and holds.
-
-         Q2. You press the servo arm toward full left while the PWM command is centered
-             (1.5 ms). What does the servo do?
-             A) It moves with your hand and stays at the new position
-             B) It resists and pushes back toward the commanded center (CORRECT)
-             C) The motor burns out because of the external torque
-             D) The servo switches to open-loop mode
-             Explanation: The closed-loop feedback detects the position error and drives
-             the motor to return to the commanded angle.
-
-         Q3. In the DC motor chapter, PWM duty cycle controlled motor speed by setting
-             average voltage. How does the servo use the PWM signal differently?
-             A) The servo also uses duty cycle to control shaft speed
-             B) The servo measures the absolute pulse width (how long the signal is HIGH
-                each cycle) to determine the commanded angle (CORRECT)
-             C) The servo counts the number of pulses per second
-             D) The servo uses the PWM frequency to determine position
-             Explanation: The servo decoder measures the duration of the HIGH pulse —
-             not the ratio of high to low time. 1 ms, 1.5 ms, or 2 ms map to fixed angles.
-
-         Q4. Why must you connect the servo's power (red) wire to an external 5 V supply
-             rather than the Nucleo's 3.3 V GPIO pin?
-             A) The servo requires 5 V logic levels for the PWM signal
-             B) Servos draw up to 700 mA — far beyond what a GPIO pin can supply,
-                and above the Nucleo's 3.3 V rail (CORRECT)
-             C) 3.3 V would make the servo spin in the wrong direction
-             D) The servo only accepts 5 V PWM signals
-             Explanation: At stall, the servo draws up to 700 mA. A GPIO pin is limited
-             to ~8 mA. The power (red) wire must go to a 5 V rail that can supply this
-             current; only the signal (yellow) wire connects to the GPIO.
-
-         Q5. A hobby servo is described as a "closed-loop" system. What does the feedback
-             loop consist of?
-             A) The PWM signal feeding back from the STM32 to the servo controller
-             B) A potentiometer on the output shaft whose voltage is compared to the
-                commanded position; the motor runs until the error reaches zero (CORRECT)
-             C) The gear train feeding torque back into the motor to slow it down
-             D) Software running on the STM32 that reads the servo position and adjusts CCR1
-             Explanation: Inside the servo, a potentiometer on the output shaft produces
-             a voltage proportional to angle. The internal controller compares this to the
-             decoded PWM command and drives the motor until the two match.
-         ============================================================ -->
-
-    <section xml:id="sec-servo-concepts">
-        <title>Before Class: Servo Motor Concepts</title>
+    <!-- ============================================================ -->
+    <section xml:id="sec-servo-before-class">
+        <title>Before Class: What a Servomotor Is and How It Is Commanded</title>
         <introduction>
             <p>
-                In the DC motors chapter you learned how to spin a motor continuously and control
-                its speed with PWM.  A <term>servomotor</term> adds a layer on top of that: instead
-                of setting a speed, you specify an angle, and the servo moves there and holds it.
-                Everything you need (motor, gearing, position sensor, and feedback controller)
-                is built into one small package.  This section covers what makes a servo different
-                from a plain DC motor, how the internal feedback loop works, and how the PWM
-                signal encodes position.
+                In the motor chapter we set a DC motor's direction and its speed.  A
+                <term>servomotor</term> does a different job: we tell it an angle, and
+                its own electronics take the shaft there and hold it.  This reading covers what is
+                inside a servomotor, what it does, how we command it with a pulse, and
+                where its power comes from.  In class we'll design that pulse and
+                produce it.
             </p>
         </introduction>
 
-        <subsection xml:id="subsec-servo-vs-dc-motor">
-            <title>Position Control vs. Speed Control</title>
+        <subsection xml:id="subsec-servo-inside">
+            <title>What Is Inside a Servomotor</title>
             <p>
-                A plain DC motor is an <em>open-loop</em> actuator: apply voltage, it spins; remove
-                voltage, it coasts to a stop.  PWM lets you control average voltage and therefore
-                average speed, but nothing stops the motor from drifting if the load changes.  If
-                you want the shaft at a particular angle, you have to sense the position yourself
-                and run a control loop in your own code.
+                <xref ref="fig-servo-cutaway"/> shows what is inside a hobby servomotor like
+                yours.  There
+                is a DC motor that is connected to a little circuit board, which
+                includes an H-bridge (the four-switch circuit from the motor chapter
+                that can drive a motor in either direction).  The motor shaft goes
+                through a gear train that gears it way down to the output shaft, which
+                is not turning very fast.  A potentiometer is attached to that output
+                shaft, and it gives you the angular position of the shaft.
+                Corresponding to that angular position the potentiometer puts out a
+                voltage, and that voltage is fed into the control circuit, which adjusts
+                the motor's speed and direction through the H-bridge.
             </p>
-            <p>
-                A servo handles all of that internally.  You send a single PWM signal that says
-                "go to this angle," and the servo moves there and <em>stays</em>, resisting any
-                external force that tries to push it away.  There is no motor-speed control, no
-                direction control, and no position sensing to wire up.  This simplicity makes
-                servos the default choice wherever you need repeatable positioning: robot joints,
-                camera gimbals, RC steering linkages, and control surface actuators.
-            </p>
-        </subsection>
-
-        <subsection xml:id="subsec-closed-loop-concept">
-            <title>How the Internal Feedback Loop Works</title>
-            <p>
-                Inside every servomotor are three subsystems working together.  A small DC motor
-                drives a multi-stage gear train that converts the motor's high speed and low torque
-                into low speed and high torque at the output shaft.  A <term>potentiometer</term>,
-                a variable resistor whose resistance changes with rotation, is connected directly
-                to the output shaft and converts the current angle into a voltage.
-            </p>
-
-            <figure xml:id="fig-servo-internals">
-                <caption>Internal components of a servomotor.  The DC motor drives a plastic
-                gear train (typically four to six stages).  The final gear meshes directly with
-                the output shaft and also turns the feedback potentiometer.  A small PCB provides
-                the error amplifier, PWM decoder, and H-bridge motor driver.</caption>
-                <image source="images/Day15-Servos/slide06_d84321e4.png" width="70%"/>
-            </figure>
-
-            <p>
-                A control circuit on a tiny PCB inside the servo compares two voltages: the angle
-                the shaft <em>is at</em> (from the potentiometer) and the angle you
-                <em>commanded</em> (decoded from the PWM signal).  The difference between them
-                is the <term>error</term>.  As long as there is a nonzero error, the controller
-                drives the motor in the direction that reduces it.  When the shaft reaches the
-                commanded angle, the error reaches zero and the motor drive reduces to zero,
-                but the feedback loop remains active and will restart the motor the instant
-                a disturbance pushes the shaft away.  This continuous
-                comparison is what makes the system <term>closed-loop</term>: the output (shaft
-                position) is constantly fed back to the input and compared against the command.
-            </p>
-            <p>
-                The key practical consequence: if something pushes on the servo arm while it is
-                holding a commanded position, the controller detects the resulting position error
-                and fights back.  A servo actively resists disturbances; a plain DC motor with
-                no feedback would simply move wherever the external force pushed it.
-            </p>
-
-            <figure xml:id="fig-servo-feedback-block">
-                <caption>Servo closed-loop block diagram.  The input PWM pulse width is decoded
-                to a reference voltage <m>V_{ref}</m>.  The potentiometer produces <m>V_{pot}</m>
-                proportional to shaft angle.  The error amplifier drives the motor with a voltage
-                proportional to <m>V_{ref} - V_{pot}</m>, rotating the shaft until the error
-                reaches zero.  The result is a position servo that resists external disturbances.</caption>
-                <image source="images/Day15-Servos/slide08_095020b6.png" width="75%"/>
+            <!-- P-15: the picture's labels (high speed / low torque in, 60 rpm / high
+                 torque out) are the GIVEN of Part 1's commit, which asks where the
+                 extra torque comes from.  The answer (power is conserved through the
+                 gear train) is not in this figure or in this reading on purpose. -->
+            <figure xml:id="fig-servo-cutaway">
+                <caption>Inside a hobby servomotor: the DC motor, the gear train
+                (labeled gearbox), the potentiometer on the output shaft, and the
+                control circuit with its integrated H-bridge.  The horn on top, the
+                plastic piece that bolts onto the output shaft, is what a load is
+                attached to.  The picture also gives what goes into the gear train and
+                what comes out of it: high speed and low torque at the motor, 60 rpm and
+                high torque at the output shaft.  Image from
+                <url href="https://howtomechatronics.com/how-it-works/how-servo-motors-work-how-to-control-servos-using-arduino/">howtomechatronics.com</url>.</caption>
+                <image source="images/Day15-Servos/slide06_d84321e4.png" width="75%"/>
             </figure>
         </subsection>
 
-        <subsection xml:id="subsec-servo-pwm-intro">
-            <title>PWM as a Position Command</title>
+        <subsection xml:id="subsec-servo-holds">
+            <title>What a Servomotor Does</title>
             <p>
-                You already know PWM from the motors chapter, where duty cycle controlled motor
-                speed by setting the average voltage seen by the motor.  Servo PWM works
-                differently: the servo's internal decoder measures the <em>absolute duration</em>
-                of the HIGH pulse each cycle, not the ratio of high to low time.
+                A servomotor provides precise position control, and it does this by
+                feedback (<xref ref="fig-servo-feedback"/>).  The command position input
+                is a voltage.  The potentiometer, turned by the motor, outputs a voltage
+                proportional to the position of the output shaft.  The controller
+                compares the two voltages, and their difference is the position error.
+                The controller drives the motor until the position error is zero.  How
+                exactly the controller does this is something you can study in ENGS 26.
+                Our servomotors have the controller built in; we'll look below at the
+                signal that carries the command position into it.
             </p>
+            <figure xml:id="fig-servo-feedback">
+                <caption>How a servomotor works: the feedback loop inside it.  The
+                command position enters at the left, and the potentiometer's
+                measurement of the output position is subtracted from it.  The
+                difference is the error.  The controller drives the motor, the motor
+                turns the gears, and the gears turn both the output shaft and the
+                potentiometer, which closes the loop.</caption>
+                <image source="images/Day15-Servos/slide08_095020b6.png" width="95%"/>
+            </figure>
             <p>
-                The hobby servo standard specifies a 50 Hz signal (one pulse every 20 ms).  The
-                pulse width encodes the commanded angle:
+                It is the ability to go to precisely some place that is the really
+                valuable feature, and servomotors are used wherever that is needed:
+                robot joints, aircraft control surfaces (both hobby and full scale),
+                camera auto-focus, conveyor belts, solar trackers, computer-numerical-control (CNC) tools for metal and wood, antenna positioning in azimuth and elevation, and opening and
+                closing doors, vents and valves.  In Lab 8 you will build a solar
+                tracker.
             </p>
-            <tabular halign="left">
-                <row><cell>1 ms pulse</cell><cell>full left (approximately −90°)</cell></row>
-                <row><cell>1.5 ms pulse</cell><cell>center (0°)</cell></row>
-                <row><cell>2 ms pulse</cell><cell>full right (approximately +90°)</cell></row>
-            </tabular>
-            <p>
-                Any pulse width between 1 ms and 2 ms maps linearly to an intermediate angle.
-                The decoder inside the servo measures how long the signal stays HIGH and uses
-                that time as the position command.  Your code simply writes a value to the CCR1
-                register that sets the pulse duration; the servo does the rest.
-            </p>
-            <insight>
-                <p>
-                    For DC motor PWM, what matters is the <em>fraction</em> of time the signal
-                    is HIGH (the duty cycle).  For servo PWM, what matters is the <em>absolute
-                    length</em> of the HIGH pulse in microseconds.  The 20 ms period is mostly
-                    dead time: the servo only looks at the first 1–2 ms of each cycle.
-                </p>
-            </insight>
-
         </subsection>
 
-        <reading-questions xml:id="rq-servo-concepts">
-            <exercise xml:id="rq-servo-position-encoding">
+        <subsection xml:id="subsec-servo-ours">
+            <title>Our Servomotor and Its Datasheet</title>
+            <p>
+                Our servomotor is the TowerPro SG92R micro servo
+                (<xref ref="fig-servo-sg92r"/>).  Its
+                <url href="external/datasheets/C17481_SG92R_datasheet.pdf">datasheet</url>
+                is one page, so look through the whole of it.  The relevant specs are the
+                stall torque, 2.5 kgf-cm at 4.8 V, which is the torque the servo puts out
+                if you try to resist its turning; the operating speed, 0.1 s per 60°; the
+                operating voltage, 4.8 V (the SG90 sheet gives 4.8 to 6 V, which is why the
+                regulator board's 5 V suits it); the gear material, POM (a hard plastic)
+                with a carbon-fiber gear; and a dead band width of 1 µs, the smallest change
+                in pulse width the servo's controller can actually notice, which we'll use
+                in class when we decide how finely to divide the pulse.  A kgf
+                (kilogram-force) is the gravity exerted on 1 kg of mass, so kgf-cm, which
+                the sheet writes as kg/cm, is still force times distance.  Please do not
+                try to force a servo's horn around by hand.
+            </p>
+            <!-- Question 1b (ground truth §9) is still open: no sheet carries a current
+                 figure.  "about 250 mA while moving, and much more when it is stalled" is
+                 Petra's slide 28 number, used in the reading, rq-servo-supply, Part 6 and
+                 the Reference; all four change together if she prefers none. -->
+            <figure xml:id="fig-servo-sg92r">
+                <caption>The TowerPro SG92R micro servo in the manufacturer's photograph,
+                with a horn fitted to the output shaft.  The three leads leave at the left;
+                their colors here are not the kit's, which are brown, red and
+                yellow.</caption>
+                <image source="images/Day15-Servos/slide09_7ead9cea.png" width="45%"/>
+            </figure>
+            <p>
+                The
+                <url href="external/datasheets/Servosg90_datasheet.pdf">SG90 datasheet</url>
+                describes the same family of servo, and it carries two drawings the
+                SG92R sheet does not: one of the three leads and one of the command
+                pulse.  We'll refer to both below.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-servo-command">
+            <title>How a Servomotor Is Commanded</title>
+            <p>
+                The microcontroller has only digital outputs, so how do we get a command
+                voltage to the servo?  The servo's controller electronics convert a
+                pulse width into the control voltage.  We send pulses between 1 ms and
+                2 ms wide, repeated regularly, roughly every 20 ms (so at 50 Hz).  The
+                width of the pulse is conveying information to the controller on how far
+                to turn the motor (<xref ref="fig-servo-pulses"/>).  This is a different
+                use of a PWM (pulse-width modulation) signal from the motor chapter:
+                there the motor responded to the average voltage, and here the servo's
+                controller measures the width of the pulse itself.
+            </p>
+            <figure xml:id="fig-servo-pulses">
+                <caption>The command pulse.  Each row is one pulse width, 1 ms, 1.5 ms
+                and 2 ms, repeated about every 20 ms.  The angles and the turn directions are the convention described below, and
+                the drawing is not to scale.</caption>
+                <image source="images/Day15-Servos/slide10_3c7eff36.png" width="95%"/>
+            </figure>
+            <!-- Question 6 (ground truth §9) is still open: what students actually see
+                 at 1 ms and 2 ms.  The paragraph below states the convention and her
+                 "don't go all that far" caveat, which is true either way. -->
+            <p>
+                Servos do not have an I2C interface.  The technology is fairly old, and
+                this pulse is the historic way to control them.  By convention, a
+                1.5 ms pulse brings the servo to the middle, a zero angle; 1 ms turns it
+                to −90 degrees and 2 ms turns it to +90 degrees.  Those endpoints are
+                hypothetical: the SG90 datasheet says the servo rotates approximately
+                180 degrees, and our servos do not go all that far.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-servo-power">
+            <title>Where the Servo's Power Comes From</title>
+            <p>
+                The servo runs on 4.8 to 6 V and draws about 250 mA while moving, and much
+                more if it is stalled.  Because of that current draw, the servo is powered from a separate supply and never from
+                the Nucleo's 3.3 V or 5 V pin.  We use the same regulator board as we
+                did for the motor (<xref ref="fig-tb6612-regulator"/>): the servo's
+                power lead goes to the board's 5V pin, and the board and the Nucleo share
+                a ground, because the pulse from PA7 is a voltage measured against the
+                Nucleo's 0 V and without a shared ground the servo has nothing to measure
+                it against.  Only the signal lead goes to the STM32C031C6, at PA7 (D11).
+            </p>
+            <p>
+                The servo has three leads.  The SG90 datasheet's wiring drawing colors
+                them brown for ground, red for power and orange for the signal; on the
+                SG92R in your kit the signal lead is yellow.  On a hobby servo the center lead is power, the darker of the two outer leads is ground, and
+                the remaining lead is the signal.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-servo">
+            <exercise xml:id="rq-servo-width">
                 <statement>
-                    <p>You want to command a servo to its center position (0°).  The servo
-                    standard specifies 1 ms = −90°, 1.5 ms = 0°, 2 ms = +90°.  What pulse
-                    width should your PWM signal produce each cycle?</p>
+                    <p>The servo's controller reads a position command out of the pulse
+                    train we send it.  Which property of that signal carries the
+                    command?</p>
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>1.5 ms</p></statement>
-                        <feedback><p>Correct.  The servo decoder measures the HIGH pulse
-                        duration; 1.5 ms maps to the center position.  The remaining 18.5 ms
-                        of the 20 ms period is LOW and carries no position information.</p></feedback>
+                        <statement><p>The width of the HIGH pulse, between 1 ms and 2 ms.</p></statement>
+                        <feedback><p>Correct.  The controller measures how long the
+                        signal stays HIGH in each period and converts that width into
+                        its command voltage.  The width is the command, and the pulses
+                        have to keep coming.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>50% duty cycle (10 ms HIGH, 10 ms LOW)</p></statement>
-                        <feedback><p>That is how a DC motor would be controlled to half speed,
-                        but a servo looks at absolute pulse duration, not duty cycle.  A 10 ms
-                        HIGH pulse is far outside the 1–2 ms range the servo expects.</p></feedback>
+                        <statement><p>The duty cycle, the fraction of each period the signal is HIGH.</p></statement>
+                        <feedback><p>That is what set the motor's speed in the motor
+                        chapter.  A 1 ms pulse every 20 ms is a 5% duty cycle, but the
+                        servo reads the 1 ms, not the 5%: at a different period the same
+                        duty cycle would be a different width and a different
+                        position.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>0 ms (no pulse)</p></statement>
-                        <feedback><p>Without a pulse, the servo receives no command and may
-                        twitch or go limp depending on the model.  The center command is
-                        1.5 ms, not silence.</p></feedback>
+                        <statement><p>The frequency of the pulses.</p></statement>
+                        <feedback><p>The frequency is fixed at about 50 Hz and is the
+                        same for every position.  It carries no command.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>3 ms (midpoint of a 0–6 ms range)</p></statement>
-                        <feedback><p>The hobby servo standard uses a 1–2 ms range.  The
-                        center of that range is 1.5 ms.  A 3 ms pulse would be interpreted
-                        as outside the valid range and the servo behavior would be undefined.</p></feedback>
+                        <statement><p>The voltage level of the pulse.</p></statement>
+                        <feedback><p>The pulse is a logic level, 3.3 V from our pin,
+                        and it is the same for every position.  The command is in the
+                        pulse's width.</p></feedback>
                     </choice>
                 </choices>
             </exercise>
 
-            <exercise xml:id="rq-servo-holds-position">
+            <exercise xml:id="rq-servo-leads">
                 <statement>
-                    <p>You command a servo to hold at 0° (center), then press the arm
-                    toward −90° with your finger.  What happens?</p>
+                    <p>The SG90 datasheet's wiring drawing shows the servo's three
+                    leads.  Which lead is which?</p>
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>The servo resists and pushes back toward center.</p></statement>
-                        <feedback><p>Correct.  The potentiometer reports an angle other than
-                        0°, creating a nonzero error.  The controller drives the motor to
-                        eliminate that error, which means pushing back against your finger.</p></feedback>
+                        <statement><p>The center lead is power, the brown lead is ground, and the orange lead (yellow on the SG92R) is the signal.</p></statement>
+                        <feedback><p>Correct.  The center lead is power on every hobby
+                        servo, the darker outer lead is ground, and the other outer
+                        lead carries the pulse.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>The servo moves with your finger and holds the new
-                        position.</p></statement>
-                        <feedback><p>This would describe an open-loop motor with no feedback.
-                        The servo's closed-loop controller keeps comparing actual position to
-                        the commanded position and corrects any deviation.</p></feedback>
+                        <statement><p>The center lead is the signal, and the two outer leads are power and ground.</p></statement>
+                        <feedback><p>The center lead is power.  Wiring the pulse pin
+                        to it puts a 3.3 V logic output on the servo's supply rail, and
+                        ties the 5 V supply to the signal lead instead.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>The servo cuts power to the motor to avoid damage.</p></statement>
-                        <feedback><p>Servo controllers do not cut power when disturbed,
-                        since doing so would mean they could not hold position under load.  The
-                        motor increases its effort to resist the disturbance.</p></feedback>
+                        <statement><p>The red lead is the signal, because red marks the pin the microcontroller drives.</p></statement>
+                        <feedback><p>Red is power on the datasheet's drawing, as it is
+                        on most hobby servos.  The signal lead is orange on the drawing
+                        and yellow on our servo.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>The servo rotates all the way to +90° to compensate.</p></statement>
-                        <feedback><p>The controller minimizes the difference between commanded
-                        and actual position.  It does not overshoot to the opposite extreme.</p></feedback>
+                        <statement><p>The brown lead is power, because it is the darkest.</p></statement>
+                        <feedback><p>The darker outer lead is ground, not power.  Power
+                        is the center lead.</p></feedback>
                     </choice>
                 </choices>
             </exercise>
 
-            <exercise xml:id="rq-servo-power">
+            <exercise xml:id="rq-servo-supply">
                 <statement>
-                    <p>Why should the servo's power (red) wire be connected to an external
-                    5 V supply rather than directly to a Nucleo GPIO pin?</p>
+                    <p>Why is the servo's power lead connected to the regulator board's
+                    5V pin rather than to a pin on the Nucleo?</p>
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>The servo can draw up to 700 mA at stall, far more
-                        than a GPIO pin can supply.</p></statement>
-                        <feedback><p>Correct.  A GPIO pin on the STM32 is rated for
-                        approximately 8 mA.  The servo's DC motor needs tens to hundreds of
-                        milliamps to move under load.  Only the signal (yellow) wire connects
-                        to the GPIO; power must come from a dedicated 5 V rail.</p></feedback>
+                        <statement><p>The servo draws about 250 mA while moving and much more when stalled, which is more than the Nucleo's supply should be asked for.</p></statement>
+                        <feedback><p>Correct.  The regulator board supplies the servo's
+                        current from the wall adapter, and only the signal lead goes to
+                        the STM32C031C6.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>The servo needs 5 V logic levels on the signal wire
-                        to decode the PWM correctly.</p></statement>
-                        <feedback><p>The signal wire (yellow) carries the PWM pulse from
-                        the GPIO pin and a 3.3 V HIGH level is sufficient for most servos.
-                        The issue is current on the power wire, not voltage on the signal wire.</p></feedback>
+                        <statement><p>The servo needs a 5 V signal on its pulse lead, and the Nucleo's pins are 3.3 V.</p></statement>
+                        <feedback><p>The pulse from PA7 is 3.3 V and the servo reads it
+                        fine.  The reason is the current on the power lead, not the
+                        voltage on the signal lead.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>GPIO pins can only source current, not sink it,
-                        so they cannot power the motor in both directions.</p></statement>
-                        <feedback><p>STM32 GPIO pins can both source and sink current,
-                        but the fundamental issue is the <em>amount</em> of current: the
-                        servo's motor draws far more than any GPIO pin can safely provide.</p></feedback>
+                        <statement><p>Powered from 3.3 V the servo would turn in the wrong direction.</p></statement>
+                        <feedback><p>The direction the servo turns is decided by its
+                        controller from the pulse width.  The supply voltage sets how
+                        much current the servo can draw and how hard it can push, not
+                        which way.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>3.3 V would make the servo spin in the wrong
-                        direction.</p></statement>
-                        <feedback><p>Voltage polarity determines direction in a DC motor,
-                        not the logic-level voltage.  The real constraint is current capacity:
-                        a GPIO pin cannot supply enough current to drive the motor.</p></feedback>
+                        <statement><p>The Nucleo cannot produce a 50 Hz signal.</p></statement>
+                        <feedback><p>It can, and TIM14 will produce it.  The signal
+                        comes from the Nucleo; only the servo's power comes from the
+                        regulator board.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-servo-speed">
+                <statement>
+                    <p>The SG92R datasheet gives the operating speed as 0.1 s per 60°
+                    at 4.8 V.  About how long does the servo take to swing from one end
+                    of its travel to the other, its nominal 180°?</p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>About 0.3 s.</p></statement>
+                        <feedback><p>Correct.  180° is three times 60°, so three times
+                        0.1 s.  This is the number that matters when a program has to wait for the arm to
+                        arrive before it takes its next reading.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>About 0.1 s.</p></statement>
+                        <feedback><p>0.1 s is the time for 60°, a third of the
+                        travel.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>About 3 s.</p></statement>
+                        <feedback><p>That is ten times too long.  The datasheet's
+                        0.1 s per 60° gives 0.3 s for 180°.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>It depends on the pulse width we send.</p></statement>
+                        <feedback><p>The pulse width sets where the arm goes, not how
+                        fast it gets there.  The speed is a property of the servo,
+                        and the datasheet gives it.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-servo-error">
+                <statement>
+                    <p>In the feedback diagram in <xref ref="fig-servo-feedback"/>, the
+                    error is a difference.  A difference of what two quantities?</p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>The commanded position and the potentiometer's measurement of the output position.</p></statement>
+                        <feedback><p>Correct.  Both are voltages inside the servo, and
+                        the controller drives the motor until they are
+                        equal.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The pulse width and the pulse period.</p></statement>
+                        <feedback><p>Those describe the command signal we send in.
+                        The error is formed inside the servo, between the command and
+                        the measured position.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The motor's speed and its torque.</p></statement>
+                        <feedback><p>Speed and torque are what the motor produces on
+                        the way to the position.  The error is about position, not
+                        about either of them.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>The supply voltage and the motor's back-EMF.</p></statement>
+                        <feedback><p>That difference sets the current through a DC
+                        motor, from Day 11.  The servo's error compares positions,
+                        not voltages across the motor.</p></feedback>
                     </choice>
                 </choices>
             </exercise>
         </reading-questions>
     </section>
 
-    <section xml:id="sec-servo-internals">
-        <title>Inside a Servomotor</title>
-        <p>
-            A servomotor is a self-contained closed-loop position controller.  Three internal
-            components work together: a DC motor turns a multi-stage gear train that amplifies
-            torque and reduces shaft speed; a potentiometer coupled to the output shaft converts
-            angular position to a voltage; and a small analog controller circuit compares the
-            potentiometer voltage to a reference derived from the incoming PWM signal.
-            Whenever the two voltages differ, the controller drives the motor to close the gap.
-        </p>
-
-        <figure xml:id="fig-servo-sg92r">
-            <caption>TowerPro SG92R micro-servo used in ENGS 28 labs.  Key specs: supply
-            voltage 4.8–6 V; stall torque 2.5 kgf·cm; no-load speed 0.1 s/60°.  Three
-            wires emerge from the housing: brown (GND), red (power 4–6 V), and yellow
-            (PWM signal).</caption>
-            <sidebyside widths="45% 45%" margins="5%">
-                <image source="images/Day15-Servos/slide09_7ead9cea.png"/>
-                <image source="images/Day15-Servos/slide09_a204d4b1.jpg"/>
-            </sidebyside>
-        </figure>
-    </section>
-
-    <section xml:id="sec-servo-pwm">
-        <title>Generating the Servo PWM Signal</title>
+    <!-- ============================================================ -->
+    <!-- Day 15 In-Class.  Tuesday, 110 min (plans/day15.md, Gate 1 applied).
+         Budget, for the deck (delivery 2): settle 3, announcements 2, Part 1 = 10
+         (2+4+4), Part 2 = 8 (5+3), Part 3 = 18 (2+5+7+4), Part 4 = 12 (3+1+2+2+4),
+         Part 5 = 45 (5+8+4+5+18+5, the checkpoint falling inside the 18-minute
+         build at about minute 78), Part 6 = 7 (4+3), close 5.  Total 110.
+         OWES (delivery 2): refPage recall slides for subsec-day11-actuator-chain
+         (Part 1), fig-tim14-block-full (Part 3), subsec-day11x-driver and
+         fig-tim14-register-map (Part 4).
+         Cut order if a part overruns: Part 6 to its first beat, then Part 1's
+         push-the-arm beat to one sentence, then Part 4's TIM16 beat to "read it
+         tonight".  Never cut Part 3 or Part 5's verification. -->
+    <section xml:id="sec-servo-day15">
+        <title>Day 15 In-Class: Commanding a Servomotor</title>
         <introduction>
-        <p>
-            The hobby servo standard specifies a 50 Hz signal (20 ms period) with pulse width
-            varying from 1 ms (full left, approximately −90°) to 2 ms (full right, approximately
-            +90°).  The center position (0°) corresponds to a 1.5 ms pulse.
-        </p>
-
-        <figure xml:id="fig-servo-pwm-diagram">
-            <caption>Servo PWM timing.  The period is fixed at 20 ms.  Only the pulse width,
-            the high time at the beginning of each cycle, encodes the commanded angle.  The
-            servo samples the pulse width on every cycle; changing it mid-operation rotates
-            the arm to the new position and holds it there.</caption>
-            <image source="images/Day15-Servos/slide10_3c7eff36.png" width="75%"/>
-        </figure>
+            <p>
+                Today we'll design the signal that commands a servomotor, and we'll
+                produce it on the STM32C031C6.  We'll start with what is inside the
+                servo and what its feedback loop does, then work out how TIM14 has to be
+                set up for a 50 Hz pulse, and then build a program that turns the
+                potentiometer's position into a pulse width and check that pulse on the
+                AD2 oscilloscope.  At the end we'll look at how the servo is powered; we'll
+                wire it up tomorrow.
+            </p>
         </introduction>
 
-        <subsection xml:id="subsec-servo-timer-registers">
-            <title>TIM14 Register Values</title>
+        <!-- Part 1: 10 min = 2 (recall) + 4 (gears commit and reveal) + 4 (push commit and reveal) -->
+        <subsection xml:id="subsec-day15-loop">
+            <title>Part 1: A Motor with a Loop Inside It</title>
             <p>
-                The servo reuses the TIM14 PWM output on PA7 (CH1, AF4).  The key change from
-                motor PWM is the timer period: instead of the audio-inaudible 20 kHz frequency
-                used for motors, the servo needs exactly 50 Hz.
+                Inside the servo is a DC permanent-magnet motor, the same motor we
+                studied in the motor chapter (<xref ref="subsec-day11-actuator-chain"/>),
+                and one fact from that chapter is the key fact we need going forward:
+                the torque a motor produces is proportional to the current through it.
+                Now we'll add on to it.
             </p>
+            <activity xml:id="act-day15-gears">
+                <title>Why all the gears?</title>
+                <statement>
+                    <p>The cutaway (<xref ref="fig-servo-cutaway"/>) labels what goes into
+                    the gear train high speed and low torque, and what comes out of it
+                    60 rpm and high torque.  The motor turns fast and the horn turns slowly.
+                    Why put a gear train in the way, and where does the extra torque at the
+                    output shaft come from?  Work it out on your own first, then compare
+                    with your table.</p>
+                </statement>
+            </activity>
+            <p>
+                Power is the product of torque and angular velocity.  Through the gear
+                train the speed going in is much higher than the speed going out.
+                Since power is (except for friction) preserved,
+                <m>\tau_\text{in}\, \omega_\text{in} \approx \tau_\text{out}\, \omega_\text{out}</m>,
+                the torque going out is much higher than the torque going in.  In goes a
+                high speed motor with not a lot of torque, and out comes a low speed
+                with a large amount of torque.
+            </p>
+            <p>
+                The potentiometer on the output shaft closes the loop
+                (<xref ref="fig-servo-feedback"/>).
+            </p>
+            <activity xml:id="act-day15-push">
+                <title>Push on the horn</title>
+                <statement>
+                    <p>Suppose the servo has reached its commanded position and is
+                    holding it, and you push on the horn with your finger.  What does
+                    the servo do, and what inside it makes that happen?</p>
+                </statement>
+            </activity>
+            <p>
+                Once in its position, if you try to turn the servo by hand the
+                potentiometer is going to sense that, and the controller is going to
+                counteract that error.  So the servo will strongly resist.  You never
+                take a servo all the way around: if you do, you break it.  That is also
+                why the position can be measured with a potentiometer, which only turns
+                part of a revolution.  You'll feel this tomorrow, with the servo in your
+                hand.
+            </p>
+        </subsection>
 
-            <figure xml:id="fig-servo-tim14-block">
-                <caption>TIM14 block diagram showing PSC, CNT, ARR, and CCR1.  The counter
-                increments at the post-prescaler rate.  When CNT reaches ARR it resets
-                (end of period); when CNT reaches CCR1 the output goes low (end of pulse).</caption>
-                <image source="images/Day15-Servos/slide13_c7cc76e1.png" width="65%"/>
+        <!-- Part 2: 8 min = 5 (between-pulses commit, reveal, dead band) + 3 (Table 12) -->
+        <subsection xml:id="subsec-day15-command">
+            <title>Part 2: How We Command the Servo</title>
+            <p>
+                The signal that commands the servo's position is a pulse, and today we'll
+                design that pulse and produce it.  It is the pulse from the reading (<xref ref="fig-servo-pulses"/>):
+                1 ms to 2 ms wide, repeated every 20 ms.
+            </p>
+            <activity xml:id="act-day15-between-pulses">
+                <title>Between the pulses</title>
+                <statement>
+                    <p>The pulse is at most 2 ms wide and the period is 20 ms, so for
+                    most of every period the signal is LOW.  What does the servo do
+                    between two pulses?  And what happens if the pulses stop
+                    coming?</p>
+                </statement>
+            </activity>
+            <p>
+                As long as the same pulse keeps arriving at the servo, it stays at that one position and is held there.  If you shut the signal down there is no
+                power on the motor.  So a servo spins to the correct position and then
+                sticks there as long as you apply the same pulses.  The signal is a
+                position signal, and you have to keep sending it.  That makes this a
+                different use of PWM from the motor's: there the duty cycle set an
+                average voltage that went to the motor, and here we are using PWM as a
+                way to communicate with the controller rather than sending it to the
+                motor directly.
+            </p>
+            <p>
+                The controller also has a limit to what it can resolve.  The SG92R
+                datasheet lists a <term>dead band width</term> of 1 µs: a change in
+                pulse width smaller than that produces no change in the commanded position.  We'll need that number when we choose how finely to
+                divide the pulse.
+            </p>
+            <p>
+                Almost every pin on the Nucleo is capable of PWM, driven by one timer or
+                another (<xref ref="fig-servo-pwm-pins"/>).  We look up which timer drives a given pin, and which alternate function to
+                select, in the datasheet.
+            </p>
+            <figure xml:id="fig-servo-pwm-pins">
+                <caption>The Nucleo-C031C6's headers, with each pin marked by what it
+                can do.  Almost every pin can carry a PWM output, driven by one timer or
+                another; Table 12 of the STM32C031C6 datasheet, <em>Pin assignment and
+                description</em>, says which timer and which alternate function for
+                each pin.</caption>
+                <image source="images/Day15-Servos/slide14_ef97f387.png" width="90%"/>
             </figure>
+            <activity xml:id="act-day15-tim14-pins">
+                <title>Which pins can TIM14 drive?</title>
+                <introduction>
+                    <p>Open the
+                    <url href="external/stm32c031_datasheet.pdf">STM32C031C6 datasheet</url>
+                    at Table 12, <em>Pin assignment and description</em>, on page 30, and at
+                    the alternate-function tables that follow it on pages 36 to 39, which give
+                    the AF number for each pin.</p>
+                </introduction>
+                <task xml:id="task-day15-pins-find">
+                    <statement><p>Which pins can TIM14's channel 1 reach, and under
+                    which alternate function on each?</p></statement>
+                </task>
+                <task xml:id="task-day15-pins-choose">
+                    <statement><p>One of them carried the motor's PWM in the motor
+                    chapter.  Which is it, what is its name on the Arduino header, and
+                    what does choosing it save us today?</p></statement>
+                </task>
+            </activity>
+            <instructor xml:id="inst-day15-tim14-pins">
+                <p>Table 12 lists TIM14_CH1 on five pins: PF0, PA4, PA7, PB1 and PA8.  The
+                alternate-function tables give the number for each: PA4 and PA7 are AF4,
+                PB1 is AF0, PA8 is AF13, and PF0 is AF2.  Neither PA8 nor PF0 reaches the
+                Arduino header (PF0 is an oscillator pin), so the real choice is PA4, PA7
+                and PB1.  PA7 is D11 on the Arduino header, and it is where the motor's PWM
+                was, so the pin configuration in the driver, alternate-function mode and
+                AF4, is exactly the one we read on Day 11x and nothing about the pin setup
+                changes today.  PA4 and PB1 are also A2 and A3 on the analog header, which
+                is another reason to leave them alone.</p>
+            </instructor>
+        </subsection>
 
-            <figure xml:id="fig-servo-nucleo-pins">
-                <caption>Nucleo-C031C6 PWM-capable pins.  PA7 (TIM14 CH1 AF4) is brought
-                out to the Arduino connector D11 header, making it easy to reach with a
-                jumper wire to the servo yellow wire.</caption>
-                <image source="images/Day15-Servos/slide14_ef97f387.png" width="65%"/>
+        <!-- Part 3: 18 min = 2 (callback and 16-bit recall) + 5 (commit 1) + 7 (commit 2) + 4 (commit 3) -->
+        <subsection xml:id="subsec-day15-timer-design">
+            <title>Part 3: Designing the Timer for the Servo's Pulse</title>
+            <p>
+                On Day 11x we worked out what the prescaler and the auto-reload value would
+                have to be for a 50 Hz PWM
+                (<xref ref="task-day11x-stretch-50hz"/>): 12 MHz into 50 Hz is 240,000
+                counts per period, and the two registers split those counts between
+                them.  Today we'll run that search again, for the servo, with a new
+                constraint: the servo only uses pulse widths between 1 ms and 2 ms, and
+                its dead band sets the finest change in width it can use.  The numbers we settle here become the five <c>#define</c> lines of the program we'll build afterwards.
+            </p>
+            <p>
+                Recall how TIM14 makes the pulse (<xref ref="fig-tim14-block-full"/>):
+                the prescaler divides the 12 MHz clock down, the counter counts the divided pulses up to the auto-reload value ARR and
+                starts again.  ARR is a 16-bit register, so the largest count it can hold is 65,535.
+            </p>
+            <p>
+                We need a 50 Hz PWM frequency, which is pretty small compared to the
+                12 MHz clock.  So the counter needs to take 20 ms to count from 0 to its
+                auto-reload value.  There are lots of ways to accomplish this.
+            </p>
+            <activity xml:id="act-day15-prescaler-table">
+                <title>Which of these are usable?</title>
+                <statement>
+                    <p>Fill in the table on your own.  For each prescaler, what does
+                    the counter's clock become, and how many counts does it take to make
+                    20 ms?  Then decide which rows are usable, and why the others are
+                    not.</p>
+                    <tabular halign="center" top="major" bottom="major" left="minor" right="minor">
+                        <col width="30%"/>
+                        <col width="35%"/>
+                        <col width="35%"/>
+                        <row bottom="major">
+                            <cell>Prescaler</cell>
+                            <cell>Timer clock</cell>
+                            <cell>Counts for 20 ms (must fit)</cell>
+                        </row>
+                        <row bottom="minor"><cell>1</cell><cell></cell><cell></cell></row>
+                        <row bottom="minor"><cell>2</cell><cell></cell><cell></cell></row>
+                        <row bottom="minor"><cell>6</cell><cell></cell><cell></cell></row>
+                        <row bottom="minor"><cell>60</cell><cell></cell><cell></cell></row>
+                        <row><cell>240</cell><cell></cell><cell></cell></row>
+                    </tabular>
+                </statement>
+            </activity>
+            <instructor xml:id="inst-day15-prescaler-table">
+                <p>Down the rows: prescaler 1 gives a 12 MHz timer clock and 240,000
+                counts for 20 ms; 2 gives 6 MHz and 120,000; 6 gives 2 MHz and 40,000;
+                60 gives 200 kHz and 4,000; 240 gives 50 kHz and 1,000.  The first two
+                rows are unusable: 240,000 and 120,000 do not fit in a 16-bit
+                auto-reload register, whose largest value is 65,535.  The other three
+                fit, and the next activity chooses between them.</p>
+            </instructor>
+            <p>
+                A 50 Hz frequency gives a pulse period of <m>T_p = 1/(50\text{ Hz}) =
+                20\text{ ms}</m>, and the counter divides that period into ARR + 1
+                bins (<xref ref="fig-servo-pulse-resolution"/>).  So 20 ms/(ARR + 1)
+                is the smallest pulse width the timer can produce, <m>T_0</m>, and it
+                is also the smallest change in pulse width it can make.  All useful
+                angles occur between a pulse width of 1 ms and 2 ms, so the number of
+                steps between 1 ms and 2 ms is the resolution of your servo, and 180°
+                divided by that number of steps, using the ±90° convention from the
+                reading, is the nominal angle per step.  Putting a number in: on the table's
+                first row the period is divided into 240,000 bins, so <m>T_0</m> would be
+                20 ms/240,000, about 83 ns.
+            </p>
+            <figure xml:id="fig-servo-pulse-resolution">
+                <caption>The pulse period <m>T_p</m> and the smallest pulse width
+                <m>T_0</m>.  The counter divides each period into MAXCOUNT bins, where
+                MAXCOUNT is ARR + 1, so <m>T_0 = T_p/\text{MAXCOUNT}</m> is both the
+                narrowest pulse the timer can make and the step between one pulse
+                width and the next.</caption>
+                <image source="images/Day15-Servos/fig-servo-pulse-resolution.svg" width="95%"/>
             </figure>
+            <activity xml:id="act-day15-resolution-table">
+                <title>Which one do you like best?</title>
+                <statement>
+                    <p>For the three usable rows, fill in the smallest pulse width, the
+                    number of steps between 1 ms and 2 ms, and the angle per step.
+                    Then choose a row and write down why.  Keep in mind the servo's dead band of 1 µs, and what its gears are made of.</p>
+                    <tabular halign="center" top="major" bottom="major" left="minor" right="minor">
+                        <col width="16%"/>
+                        <col width="16%"/>
+                        <col width="24%"/>
+                        <col width="22%"/>
+                        <col width="22%"/>
+                        <row bottom="major">
+                            <cell>Prescaler</cell>
+                            <cell>ARR + 1</cell>
+                            <cell><m>T_0 = 20\text{ ms}/(\text{ARR}+1)</m></cell>
+                            <cell>Steps, 1 ms to 2 ms</cell>
+                            <cell>Angle per step</cell>
+                        </row>
+                        <row bottom="minor"><cell>6</cell><cell></cell><cell></cell><cell></cell><cell></cell></row>
+                        <row bottom="minor"><cell>60</cell><cell></cell><cell></cell><cell></cell><cell></cell></row>
+                        <row><cell>240</cell><cell></cell><cell></cell><cell></cell><cell></cell></row>
+                    </tabular>
+                </statement>
+            </activity>
+            <instructor xml:id="inst-day15-resolution-table">
+                <p>Lead with the chosen row.  A prescaler of 60 gives a 200 kHz timer
+                clock and ARR + 1 = 4000, so <m>T_0</m> = 20 ms/4000 = 5 µs; the 1000 µs
+                of pulse range between 1 ms and 2 ms is 1000/5 = 200 steps; and 180°/200
+                = 0.9° per step.  That is the one.</p>
+                <p>Then we'll look at the two we did not choose.  A prescaler of 6 gives
+                ARR + 1 = 40,000, <m>T_0</m> = 0.5 µs, 2000 steps and 0.09° per step.
+                Amazing angular resolution!  But this thing is made out of plastic.  So, is
+                that worth it?  Each step is half the servo's 1 µs dead band, so the servo
+                cannot resolve a single step and the controller acts on every second one at
+                best, and a plastic gear train has backlash well beyond what 0.09° would
+                buy.  That is more finely grained than is worth doing.  A prescaler of 240
+                gives ARR + 1 = 1000, <m>T_0</m> = 20 µs, 50 steps and 3.6° per step, four
+                times coarser than the row we chose.  So a prescaler of 60 is great, and
+                240 would be fine too.</p>
+            </instructor>
+            <p>
+                Timer 14 will count continuously from 0 to the value stored in
+                <c>TIM14_ARR</c>.  It will drive the connected pin HIGH while the counter is
+                below the value stored in <c>TIM14_CCR1</c>, and drive the pin LOW while
+                the counter is between <c>TIM14_CCR1</c> and <c>TIM14_ARR</c>.  Going from
+                a pulse width to a count is a division: on the 240 row, where one count is
+                20 µs, a 1 ms pulse is 1000 µs ÷ 20 µs = 50 counts.  Now that we have
+                chosen a row, we can work out the numbers the program needs.
+            </p>
+            <activity xml:id="act-day15-fill-in">
+                <title>Choosing TIM14_ARR and TIM14_CCR1</title>
+                <introduction>
+                    <p>Write all of these down before we compare.  The names in capitals are
+                    the <c>#define</c> lines of the program we'll build next.</p>
+                </introduction>
+                <task xml:id="task-day15-fill-clock">
+                    <statement><p>By default the STM32C031C6's system clock runs at ____ MHz.  With the prescaler you chose it slows the clock down to
+                    ____.  What value should we choose for ARR + 1?  That number is
+                    <c>PWM_TIMER_MAX</c>, and the prescaler is
+                    <c>PWM_PSC_FACTOR</c>.</p></statement>
+                </task>
+                <task xml:id="task-day15-fill-ccr1">
+                    <statement><p>What value of CCR1 will yield a pulse of 1 ms?  That
+                    is <c>SERVO_MIN</c>.  Of 1.5 ms?  That is <c>SERVO_MID</c>.  Of
+                    2 ms?  That is <c>SERVO_MAX</c>.</p></statement>
+                </task>
+                
+            </activity>
+            <instructor xml:id="inst-day15-fill-in">
+                <p>The system clock runs at 12 MHz; a prescaler of 60 slows it to
+                200 kHz; ARR + 1 = 4000 = <c>PWM_TIMER_MAX</c>.  At 200 kHz one count is
+                5 µs, so 1 ms is 200 counts = <c>SERVO_MIN</c>, 1.5 ms is 300 =
+                <c>SERVO_MID</c>, and 2 ms is 400 = <c>SERVO_MAX</c>.  Important to know
+                <c>SERVO_MIN</c> and <c>SERVO_MAX</c>, since you HAVE to stay between
+                those to not damage the servo.</p>
+                </instructor>
+        </subsection>
 
-            <figure xml:id="fig-servo-tim14-design">
-                <caption>Timer design calculation.  With SYSCLK = 12 MHz, setting
-                PSC = 11 gives a 1 MHz counter clock (tick = 1 µs).  ARR = 19999 makes
-                the period 20000 µs = 20 ms = 50 Hz.  CCR1 sweeps from 1000 to 2000
-                to produce 1–2 ms pulse widths corresponding to the full servo range.</caption>
-                <image source="images/Day15-Servos/slide15_1c9741db.png" width="70%"/>
-            </figure>
-
-            <figure xml:id="fig-servo-ccmr1">
-                <caption>CCMR1 register configuration for PWM Mode 1 on CH1.  Bits OC1M
-                (positions 4–6) are set to 0b110 (value 6); bit OC1PE (position 3) enables
-                output compare preload.  CCER bit CC1E enables the channel output.</caption>
-                <image source="images/Day15-Servos/slide16_bf19665c.png" width="70%"/>
-            </figure>
-
-            <figure xml:id="fig-servo-ccr1-arr">
-                <caption>CCR1, ARR, and PSC in context.  PSC = 11 divides 12 MHz to 1 MHz.
-                ARR = 19999 gives the 20 ms period.  CCR1 = 1000, 1500, or 2000 maps to
-                1 ms, 1.5 ms, and 2 ms pulses (left, center, right).</caption>
-                <image source="images/Day15-Servos/slide18_3bbcf4ae.png" width="70%"/>
-            </figure>
-
+        <!-- Part 4: 12 min = 3 (the files and the driver's two changes) + 1 (TIM16) + 2 (what reaches CCR1) + 2 (map mechanic) + 4 (map commit and reveal) -->
+        <subsection xml:id="subsec-day15-program">
+            <title>Part 4: Reading the Program</title>
+            <p>
+                The program is <c>Day15_servo_template.c</c>, and it comes with a timer
+                driver in two files, <c>tim.c</c> and <c>tim.h</c>.  It also uses your
+                own ADC driver, the <c>adc.c</c> and <c>adc.h</c> you built in Lab 5.
+                The template is complete except for the five <c>#define</c> lines whose values we just chose and one line in the loop, the map from the potentiometer's reading to a pulse width.  Here is the header, <c>tim.h</c>, and the three functions it declares:
+            </p>
             <program language="c"><code><![CDATA[
-/* Servo PWM constants for TIM14 CH1 on PA7 at 12 MHz SYSCLK */
-#define SERVO_PSC     11      // 12 MHz / 12 = 1 MHz (1 tick = 1 µs)
-#define SERVO_ARR     19999   // 1 MHz / 20000 = 50 Hz period
-#define SERVO_MIN     1000    // 1 ms -> full left (~-90°)
-#define SERVO_CENTER  1500    // 1.5 ms -> center (0°)
-#define SERVO_MAX     2000    // 2 ms -> full right (~+90°)
+#ifndef TIM_H_
+#define TIM_H_
 
-void servo_init(void) {
-    RCC->APBENR2 |= RCC_APBENR2_TIM14EN;
-    RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;
+#include <stdint.h>
 
-    /* PA7 -> AF4 (TIM14 CH1) */
-    GPIOA->MODER  &= ~(3U << 14);
-    GPIOA->MODER  |=  (2U << 14);   // Alternate function
-    GPIOA->AFR[0] &= ~(0xFU << 28);
-    GPIOA->AFR[0] |=  (4U  << 28);  // AF4
+void tim16_ms_interrupt_init(int milliseconds);
+void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax);
+void tim14_pwm_set(uint16_t pulse);
 
-    TIM14->PSC   = SERVO_PSC;
-    TIM14->ARR   = SERVO_ARR;
-    TIM14->CCR1  = SERVO_CENTER;
+#endif /* TIM_H_ */
+]]></code></program>
+            <p>
+                The driver is the one we read on Day 11x
+                (<xref ref="subsec-day11x-driver"/>), with two changes.  The prescale
+                factor and the counter's top value are now parameters, passed in from
+                the program, rather than <c>#define</c> lines at the top of the driver.
+                And the limit on the value moved.  On Day 11x <c>tim14_pwm_set()</c>
+                limited what it was given to the range the counter can represent
+                before writing it to <c>CCR1</c>; here it writes what it is given, and
+                the limit is in the program, in <c>updateServo()</c>, where it is
+                <c>SERVO_MIN</c> to <c>SERVO_MAX</c>.  Every register write in the
+                initialization is the same as before, so open <c>tim.c</c> beside
+                <xref ref="fig-tim14-register-map"/> if you want to check.  The whole
+                file is printed in <xref ref="subsec-servo-ref-driver"/>.
+            </p>
+            <program language="c"><code><![CDATA[
+void tim14_pwm_set(uint16_t value) {
+	// PWM mode 1: pin is HIGH while CNT < CCR1, i.e. for exactly 'value' counts
+	TIM14->CCR1 = value;
+}
+]]></code></program>
+            <activity xml:id="act-day15-timc-check">
+                <title>What reaches CCR1</title>
+                <statement>
+                    <p>Look at <c>tim14_pa7_pwm_init()</c> and <c>tim14_pwm_set()</c> in
+                    <xref ref="subsec-servo-ref-driver"/>.  What does the initialization
+                    write into <c>ARR</c> from the number it is given, and what does
+                    <c>tim14_pwm_set()</c> write into <c>CCR1</c>?  If the program called
+                    <c>tim14_pwm_set(SERVO_MID)</c>, what number would end up in
+                    <c>CCR1</c>, and for how many counts of each period would the pin be
+                    HIGH?</p>
+                </statement>
+            </activity>
+            <instructor xml:id="inst-day15-timc-check">
+                <p>In <c>tim.c</c>, <c>tim14_pa7_pwm_init()</c> writes
+                <c>TIM14->ARR = timerMax-1</c>, so 4000 gives 4000 counts, 20 ms.
+                <c>tim14_pwm_set()</c> writes <c>TIM14->CCR1 = value</c>, so
+                <c>SERVO_MID</c> would put 300 in CCR1 and the pin would be HIGH for 300
+                counts, 1.5 ms.  Same convention as <c>TTmotor_ramp.c</c> on Day 11x, so a
+                student who reads both files sees one answer.  <c>SERVO_MID</c> is not used
+                by the loop; it is the middle of the range, the number that parks the horn
+                at its center.</p>
+            </instructor>
+            <program language="c"><code><![CDATA[
+void updateServo(uint16_t value) {
+	if (value>SERVO_MAX)
+		value = SERVO_MAX;
+	else if (value < SERVO_MIN)
+		value = SERVO_MIN;
+	tim14_pwm_set(value);
+}
+]]></code></program>
+            <p>
+                The driver knows the timer, so on Day 11x the limit it applied was the
+                timer's.  The program knows the servo, and the servo's safe range, 1 ms to
+                2 ms (outside it the servo drives against its own mechanical stops), is
+                much narrower than the range the timer can produce, so the program is where
+                that limit belongs.
+            </p>
+            <p>
+                The program reads the potentiometer twice a second, and TIM14 is busy
+                making the pulse, so the timing tick comes from a second timer, TIM16
+                (Reference Manual §18, <em>General-purpose timers (TIM16/TIM17)</em>).
+                <c>tim16_ms_interrupt_init()</c> is the periodic-interrupt recipe from
+                Day 8 (<xref ref="subsec-day8-interrupt-prog"/>) on a different timer, with
+                the period as a parameter; the listing below is that recipe line for line.
+                TIM16's interrupt is position 21 in the vector table
+                (<xref ref="subsec-timers-ref-family"/>), and the startup file's name for
+                that slot is <c>TIM16_IRQHandler()</c>.  The handler raises
+                <c>timerFlag</c>, and the main loop takes one reading and lowers it again.
+                One note on the handler as printed: UIF is an rc_w0 flag, so clearing it
+                with <c>&amp;= ~TIM_SR_UIF</c> does work here, but when you write a handler
+                yourself, use Day 8's assignment of the mask, which is correct for both
+                polarities.</p>
+            <program language="c"><code><![CDATA[
+void tim16_ms_interrupt_init(int milliseconds) {
+	/* enable clock access to timer 16 (on APB bus) */
+	RCC->APBENR2 |= RCC_APBENR2_TIM16EN;
 
-    TIM14->CCMR1 = (6U << TIM_CCMR1_OC1M_Pos) | TIM_CCMR1_OC1PE;
-    TIM14->CCER |= TIM_CCER_CC1E;
-    TIM14->EGR  |= TIM_EGR_UG;
-    TIM14->CR1  |= TIM_CR1_CEN;
+	/* Set prescaler value */
+	TIM16->PSC = TIM16_PSC_FACTOR - 1; // starts counting at 0
+
+	/* Set auto-reload value */
+	TIM16->ARR = milliseconds - 1;
+
+	/* Clear counter */
+	TIM16->CNT = 0;
+
+	/* Enable update interrupt */
+	TIM16->DIER |= TIM_DIER_UIE;
+
+	/* Enable timer interrupt in NVIC */
+	NVIC_EnableIRQ(TIM16_IRQn);
+
+	/* Enable timer */
+	TIM16->CR1 |= TIM_CR1_CEN;
+}
+]]></code></program>
+            <p>
+                The last blank is the map from a potentiometer reading, 0 to 4095, onto a
+                pulse width just about spanning <c>SERVO_MIN</c> to <c>SERVO_MAX</c>.  Take a smaller version first: map a number <m>x</m> that runs from 0 to 10
+                onto a range that runs from 100 to 200.  The offset is 100, and each step of
+                <m>x</m> is worth 100/10 = 10, so the value is <m>100 + x \times 100/10</m>.
+                With integers, the order of the multiplication and the division matters:
+                <c>/</c> on two integers discards the remainder, so <c>x/10</c> is 0 for
+                every <m>x</m> below 10, and <c>100 + (x/10)*100</c> would give 100 for
+                every reading but the last.  At <m>x = 5</m> it gives 100, where
+                <c>100 + x*100/10</c> gives 150.  Multiply first, then divide, and note that
+                the divisor is the number of steps, not the largest <m>x</m>.
+            </p>
+            <activity xml:id="act-day15-map">
+                <title>Map the potentiometer onto the pulse</title>
+                <statement>
+                    <p>Write the expression that maps <c>pot_value</c> onto <c>pwm_value</c>,
+                    using the names in the template (<c>MAXADC</c> is 4096).  Then check it: what does it give
+                    for readings of 0, 2048 and 4095, and are all three inside the
+                    servo's safe range?</p>
+                </statement>
+            </activity>
+            <instructor xml:id="inst-day15-map">
+                <p>The line is
+                <c>pwm_value = SERVO_MIN + pot_value*(SERVO_MAX-SERVO_MIN)/MAXADC;</c>.
+                A reading of 0 gives 200; 2048 gives 200 + 2048 × 200/4096 = 300; and
+                4095 gives 200 + 819,000/4096 = 200 + 199 = 399, so the map never quite
+                reaches <c>SERVO_MAX</c>.  That is not a defect; it is what dividing by
+                4096 rather than 4095 does, and the top step is one count.</p>
+                <p>Two arithmetic notes.  <c>pot_value</c> is an <c>int16_t</c>, and the
+                product is computed in <c>int</c>; see <xref ref="subsec-servo-ref-map"/>.
+                And <c>updateServo()</c> limits every value the map computes to
+                <c>SERVO_MIN</c> through <c>SERVO_MAX</c> before it reaches CCR1, so a slip
+                in the map cannot send the servo past its range.  (The initialization is
+                the exception: it parks <c>CCR1</c> at 0, so nothing is commanded until the
+                first reading.)</p>
+            </instructor>
+            <p>
+                Here is the whole program as you download it.
+            </p>
+            <program language="c"><code><![CDATA[
+/* servo.c -- Control a servo motor with a potentiometer
+ * Potentiometer:  	Analog channel PA0
+ * Servo PWM input:	PA7
+ */
+
+#include <stdio.h>
+#include "ES28.h"
+#include "uart.h"
+#include "adc.h"
+#include "tim.h"
+
+/* Clock runs at 12MHz */
+#define PWM_PSC_FACTOR			// prescaler
+#define PWM_TIMER_MAX			// 20 ms
+#define SERVO_MIN 				// 1 ms
+#define SERVO_MID				// 1.5 ms
+#define SERVO_MAX				// 2 ms
+
+#define MAXADC 		4096		// 12-bit converter
+
+volatile uint8_t timerFlag = 0;		// Do not forget the volatile!
+
+void updateServo(uint16_t value);
+
+// Main program
+int main(void) {
+  int16_t pot_value = 0;
+  int16_t pwm_value = SERVO_MIN;
+
+  uart2_init();
+  tim14_pa7_pwm_init(PWM_PSC_FACTOR, PWM_TIMER_MAX);
+  pa0_adc_init();
+
+  printf("Potentiometer-controlled servo\n\r");
+
+  timerFlag = 0;
+  tim16_ms_interrupt_init(500);
+
+  while(1) {
+ 	if(timerFlag==1) {
+	    start_conversion();
+	    pot_value = adc_read();	 // Pot value (0 to MAXADC-1)
+
+/*******************/
+		pwm_value =	     		// Map pot_value to pwm_value
+/*******************/
+
+		updateServo(pwm_value);		// Update the PWM
+		printf("pot_value=%d, \tpwm_value=%d\n\r", pot_value, pwm_value);
+ 		timerFlag=0;					// Put the flag down
+	}
+	// Processor could sleep here
+  }
+  return 0;                            // never reached
+}
+void updateServo(uint16_t value) {
+	if (value>SERVO_MAX)
+		value = SERVO_MAX;
+	else if (value < SERVO_MIN)
+		value = SERVO_MIN;
+	tim14_pwm_set(value);
 }
 
-/* Set servo position; pulse_us in range [SERVO_MIN, SERVO_MAX] */
-void servo_set(uint16_t pulse_us) {
-    TIM14->CCR1 = pulse_us;
+void TIM16_IRQHandler(void) {
+	__disable_irq();
+	/* Clear UIF in status register */
+	TIM16->SR &= ~TIM_SR_UIF;
+	timerFlag = 1;
+	__enable_irq();
 }
 ]]></code></program>
         </subsection>
 
-        <subsection xml:id="subsec-servo-verify-scope">
-            <title>Verifying the Signal with an Oscilloscope</title>
+        <!-- Part 5: 45 min = 5 (project) + 8 (fill the blanks) + 4 (wire) + 5 (predict) + 18 (build, run, capture; checkpoint at about minute 78, mid-beat) + 5 (center the knob, finish demos) -->
+        <subsection xml:id="subsec-day15-build">
+            <title>Part 5: Design Exercise, Verifying the Pulse on the Oscilloscope</title>
+            <p>
+                Now we'll build it.  We'll verify the pulse on the oscilloscope before the
+                servo is ever attached: that is your safety check, so that you won't break
+                the servo.
+            </p>
+            <activity xml:id="act-day15-build">
+                <title>A potentiometer-controlled pulse on PA7</title>
+                <introduction>
+                    <p>Work through these in order.  The servo stays unplugged until tomorrow.</p>
+                </introduction>
+                <task xml:id="task-day15-build-project">
+                    <statement><p>Copy your <c>TemplateProject</c> to a new project
+                    named <c>Servo</c>.  Download <c>Day15_servo_template.c</c>,
+                    <c>tim.c</c> and <c>tim.h</c> from Canvas; the two <c>.c</c> files
+                    go into <c>Src</c> and <c>tim.h</c> into <c>Inc</c>.  You'll also
+                    need your ADC code.  If you have previously added your <c>adc.c</c>
+                    and <c>adc.h</c> from Lab 5 to the <c>mylib</c> folder you are good
+                    to go; otherwise copy <c>adc.c</c> into <c>Src</c> and <c>adc.h</c>
+                    into <c>Inc</c>.</p></statement>
+                </task>
+                <task xml:id="task-day15-build-blanks">
+                    <statement><p>Complete the five <c>#define</c> lines with the numbers
+                    you chose earlier today (the prescaler factor, the counter's top value,
+                    and the three compare values for a 1 ms, a 1.5 ms and a 2 ms pulse) and
+                    the map line.  If your ADC functions have different names from
+                    <c>pa0_adc_init()</c>, <c>start_conversion()</c> and <c>adc_read()</c>,
+                    adjust those three calls to your own names.</p></statement>
+                </task>
+                <task xml:id="task-day15-build-wire">
+                    <statement><p>Wire the potentiometer to A0 (PA0) exactly as in the ADC
+                    chapter (<xref ref="fig-adc-test-circuit"/>): the outer terminals to
+                    3.3 V and GND, the wiper to A0.  Connect the AD2's channel 1, the
+                    orange lead, to PA7 (D11), and channel 1's ground lead, the one with
+                    the white stripe, to a GND pin.  Nothing else is connected to
+                    PA7.</p></statement>
+                </task>
+                <task xml:id="task-day15-build-predict">
+                    <statement><p>Before you capture anything, write down three
+                    things: the time base that shows one full 20 ms period on the
+                    screen; the trigger you will use; and the <c>pwm_value</c> your
+                    program will print with the knob at one end, in the middle, and at
+                    the other end.</p></statement>
+                </task>
+                <task xml:id="task-day15-build-run">
+                    <statement><p>Build, run, and open a terminal.  Turn the knob from
+                    one end to the other: <c>pot_value</c> should run from 0 to 4095,
+                    and <c>pwm_value</c> between the numbers you predicted.  On the
+                    oscilloscope, trigger on the rising edge and measure the pulse
+                    width and the period at each end of the knob.
+                    Check what you measure against the prediction you wrote down.
+                    <xref ref="fig-servo-scope-1ms"/> and <xref ref="fig-servo-scope-2ms"/>
+                    show the time base and the trigger a good capture uses.</p></statement>
+                </task>
+                <task xml:id="task-day15-build-center">
+                    <statement><p>Find the knob position that gives a 1.5 ms pulse.  Remove and
+                    reattach the knob, if necessary, so that it is at the midway
+                    position.</p></statement>
+                </task>
+            </activity>
             <figure xml:id="fig-servo-scope-1ms">
-                <caption>AD2 oscilloscope trace with CCR1 = 1000 (1 ms pulse, servo at
-                full left).  The high-time cursor measures 1 ms.  The 20 ms period is
-                visible between the rising edges of consecutive pulses.</caption>
-                <image source="images/Day15-Servos/slide22_0bd6d3c6.png" width="75%"/>
+                <caption>The pulse on PA7 with the knob at one end, captured on the AD2
+                at 5 ms/div with a rising-edge trigger on channel 1.  The cursors
+                measure the pulse width at 1.0056 ms and the period at 19.91 ms, which
+                the cursor table reports as 50.2 Hz.</caption>
+                <image source="images/Day15-Servos/slide22_0bd6d3c6.png" width="100%"/>
             </figure>
-
             <figure xml:id="fig-servo-scope-2ms">
-                <caption>Trace with CCR1 = 2000 (2 ms pulse, servo at full right).  The
-                servo arm has rotated approximately 180° from the previous trace, and the
-                pulse width has doubled to 2 ms.</caption>
-                <image source="images/Day15-Servos/slide23_535a10d2.png" width="75%"/>
+                <caption>The same capture with the knob at the other end.  The pulse is now 2.008 ms wide, and the period is unchanged at 19.93 ms,
+                still 20 ms to within the cursors' placement.</caption>
+                <image source="images/Day15-Servos/slide23_535a10d2.png" width="100%"/>
             </figure>
+            <p>
+                <term>Nothing on the screen, or not what you predicted?</term>  Work down
+                this list, since each symptom points somewhere different.
+            </p>
+            <ol>
+                <li><term>The project will not build.</term>  Look at the <c>#define</c>
+                lines first: a blank one puts nothing where the compiler expects a number,
+                and the error is reported at the line that uses the name rather than at the
+                blank itself.  Then check that <c>tim.c</c> and your <c>adc.c</c> are in the
+                project, and that there is exactly one <c>main()</c> in it.</li>
+                <li><term>No pulse at all.</term>  The fault is in the wiring or the build.
+                PA7 is D11, and channel 1's ground lead has to be on a GND pin.</li>
+                <li><term>A pulse of the wrong width or period.</term>  One of the
+                <c>#define</c> values is off.  <c>PWM_PSC_FACTOR</c> and
+                <c>PWM_TIMER_MAX</c> set the period; <c>SERVO_MIN</c> and <c>SERVO_MAX</c>
+                set the width at the two ends of the knob.</li>
+                <li><term>A pulse that does not move with the knob.</term>  The fault is in
+                the ADC or the map.  Look at <c>pot_value</c> in the printout: if it is not
+                changing, the fault is before the map; if it is changing and
+                <c>pwm_value</c> is not, the fault is in the map.</li>
+            </ol>
+            <instructor xml:id="inst-day15-template-complete">
+                <p>The completed template.  It differs from the download in exactly two places: the five <c>#define</c> values and the map line.</p>
+                <program language="c"><code><![CDATA[
+/* Clock runs at 12MHz */
+#define PWM_PSC_FACTOR	60			// prescaler: 12 MHz / 60 = 200 kHz
+#define PWM_TIMER_MAX	4000		// 20 ms: 200 kHz / 4000 = 50 Hz
+#define SERVO_MIN 		200			// 1 ms
+#define SERVO_MID		300			// 1.5 ms
+#define SERVO_MAX		400			// 2 ms
+
+#define MAXADC 		4096		// 12-bit converter
+
+	...
+
+	    start_conversion();
+	    pot_value = adc_read();	 // Pot value (0 to MAXADC-1)
+
+		pwm_value = SERVO_MIN + pot_value*(SERVO_MAX-SERVO_MIN)/MAXADC;
+
+		updateServo(pwm_value);		// Update the PWM
+]]></code></program>
+                <p>Have each student demonstrate the sweeping pulse and say, without looking
+                at their table, why they picked their prescaler and what CCR1 value
+                <c>SERVO_MID</c> produces.  A student may go on to the stretch as soon as
+                their own capture matches the reference captures; instructor and LF time in
+                this block is for the symptom list and the ladder.  The time-base answer: 5 ms/div puts a
+                whole period on the screen (her captures); 1 ms/div shows the pulse
+                but not the period.  Trigger: rising edge on channel 1.</p>
+            </instructor>
+            <instructor xml:id="inst-day15-checkpoint">
+                <p>This exercise takes students a LONG time; lots of troubleshooting
+                to do.  Checkpoint at about minute 78, mid-exercise.  Triage in this
+                order, by symptom:</p>
+                <ul>
+                    <li>No pulse at all: wiring or build.  PA7 is D11; the AD2's ground
+                    lead is on a GND pin; the build picked up <c>tim.c</c> and
+                    <c>adc.c</c>; exactly one <c>main()</c> in the project.</li>
+                    <li>A pulse of the wrong width or period: a <c>#define</c>.
+                    <c>PWM_PSC_FACTOR</c> and <c>PWM_TIMER_MAX</c> set the period;
+                    <c>SERVO_MIN</c> and <c>SERVO_MAX</c> set the width at the two
+                    ends.</li>
+                    <li>A pulse that does not move with the knob: the ADC or the map.
+                    Is <c>pot_value</c> changing in the printout?  If not, the wiper is
+                    not on A0 or the ADC calls are not their own.  If it is and
+                    <c>pwm_value</c> is stuck at <c>SERVO_MIN</c>, the map divides
+                    before it multiplies.</li>
+                </ul>
+                <p>The x-hour is the overflow by design: a student still here at the
+                end of class finishes tomorrow, before wiring the servo.  Part 6's first
+                beat and the close still fit at minute 100; the wiring itself is
+                Wednesday's.  Point a stuck student at the symptom list in the text first;
+                the ladder above is the part that needs you.</p>
+            </instructor>
+
+            <activity xml:id="act-day15-stretch">
+                <title>Going further</title>
+                <introduction>
+                    <p>These are optional, for when your pulse is verified.</p>
+                </introduction>
+                <task xml:id="task-day15-stretch-millis">
+                    <statement><p>Replace the TIM16 interrupt with
+                    <c>milliseconds()</c> from Day 12
+                    (<xref ref="subsec-day12-main-loop"/>): rewrite the loop so that
+                    the sampling interval is a <c>#define</c> and no interrupt of your own is needed.  Nothing else about the program changes.  In Lab 8 you are
+                    asked to keep track of the sampling interval this way.</p></statement>
+                </task>
+                <task xml:id="task-day15-stretch-finer">
+                    <statement><p>The map turns 4096 potentiometer readings into 200 timer
+                    counts.  How many readings share one timer count, and what does that
+                    mean for how the knob feels as you turn it?  Then: if you wanted one
+                    timer count per reading, what would <c>PWM_TIMER_MAX</c> have to be, and
+                    what would go wrong with the pulse period?</p></statement>
+                </task>
+            </activity>
+            <instructor xml:id="inst-day15-stretch">
+                <p><term>The millisecond tick.</term>  Keep the time of the last
+                reading and compare against it, the way the Day 12 main loop does:</p>
+                <program language="c"><code><![CDATA[
+#define SAMPLE_MS	500
+
+  uint32_t last_sample = milliseconds();
+
+  while(1) {
+	if (milliseconds() - last_sample >= SAMPLE_MS) {
+		last_sample = milliseconds();
+		start_conversion();
+		pot_value = adc_read();
+		pwm_value = SERVO_MIN + pot_value*(SERVO_MAX-SERVO_MIN)/MAXADC;
+		updateServo(pwm_value);
+		printf("pot_value=%d, \tpwm_value=%d\n\r", pot_value, pwm_value);
+	}
+  }
+]]></code></program>
+                <p>The <c>tim16_ms_interrupt_init(500)</c> call, the flag and the
+                handler come out.  This is the shape Lab 8 asks for, with
+                <c>T</c> as the <c>#define</c>.</p>
+                <p><term>One count per reading.</term>  4096/200 is about 20 readings to a
+                count, so roughly 20 codes of knob travel go by before the horn moves, which
+                is what a student who turns the knob slowly and watches <c>pwm_value</c>
+                will notice.  For one count per reading you would need 4096 counts across
+                the 1 ms window, so <m>T_0</m> = 244 ns and ARR + 1 for a 20 ms period would
+                be 81,920, which a 16-bit register cannot hold.  And 244 ns is far below the
+                servo's 1 µs dead band, so the servo could not act on a single step even if
+                the register could.</p>
+            </instructor>
         </subsection>
 
-        <reading-questions xml:id="rq-servo-pwm">
-            <exercise xml:id="rq-servo-ccr1-center">
-                <statement><p>TIM14 runs at 1 MHz (PSC = 11, 12 MHz input clock).  What
-                CCR1 value positions the servo at center (0°)?</p></statement>
-                <choices randomize="yes">
-                    <choice correct="yes"><statement><p>1500</p></statement>
-                    <feedback><p>Correct: at 1 MHz the counter increments once per microsecond,
-                    so CCR1 = 1500 gives exactly 1500 µs = 1.5 ms, the center pulse width.</p></feedback></choice>
-                    <choice><statement><p>750</p></statement>
-                    <feedback><p>750 µs = 0.75 ms is below the servo's minimum pulse width (1 ms);
-                    the servo would not respond predictably.</p></feedback></choice>
-                    <choice><statement><p>15000</p></statement>
-                    <feedback><p>15000 µs = 15 ms is far beyond the 2 ms maximum pulse width.
-                    Remember that at 1 MHz, CCR1 counts in microseconds, not milliseconds.</p></feedback></choice>
-                    <choice><statement><p>1500000</p></statement>
-                    <feedback><p>That is 1.5 seconds, orders of magnitude too large.  The counter
-                    would wrap around long before reaching that value.</p></feedback></choice>
-                </choices>
-            </exercise>
-            <exercise xml:id="rq-servo-freq">
-                <statement><p>Why does servo control use 50 Hz rather than the ~20 kHz used
-                for motor PWM?</p></statement>
-                <choices randomize="yes">
-                    <choice correct="yes"><statement><p>The servo's internal controller decodes
-                    the pulse width directly; it needs time between pulses to read the signal.
-                    Also, 20 kHz would require CCR1 values of 20–40 ticks, giving very coarse
-                    position resolution.</p></statement>
-                    <feedback><p>Correct: the servo samples one pulse per cycle.  A 50 Hz rate
-                    gives 20 ms between updates, more than enough.  Higher frequencies shrink
-                    the resolution window.</p></feedback></choice>
-                    <choice><statement><p>The STM32 cannot generate 20 kHz with a 50-Hz-derived
-                    timer base.</p></statement>
-                    <feedback><p>The STM32 can generate any frequency the timer supports.  The
-                    constraint is the servo hardware, not the microcontroller.</p></feedback></choice>
-                    <choice><statement><p>50 Hz matches the AC mains frequency, simplifying
-                    power supply design.</p></statement>
-                    <feedback><p>The servo operates from DC; mains frequency is irrelevant here.</p></feedback></choice>
-                </choices>
-            </exercise>
-        </reading-questions>
+        <!-- Part 6: 7 min = 4 (the why, the regulator, the drawing) + 3 (the leads and the order) -->
+        <subsection xml:id="subsec-day15-power">
+            <title>Part 6: Powering the Servo</title>
+            <p>
+                The reading said the servo is powered from a separate supply and never from
+                the Nucleo.  Here is the number behind that: the servo may draw about
+                250 mA while moving, and much more if it is stalled, while your laptop's
+                USB port supplies at most 500 mA for the whole board and everything on it.
+                High current draw by the servo can starve the Nucleo, causing it to brown
+                out and reset itself.  So we power it from the same regulator board we used
+                for the motor (<xref ref="fig-tb6612-regulator"/>), and
+                <xref ref="fig-servo-powering"/> shows how the servo connects to it.
+            </p>
+            <figure xml:id="fig-servo-powering">
+                <caption>How the servo is powered.  The servo's center lead, its power
+                lead, is the orange jumper here (the legend says Red/Orange because the
+                color varies between servos; on the kit's SG92R it is red), and it goes to
+                the regulator board's 5V pin.  Its darker outer lead goes to the ground
+                rail, which the Nucleo's GND and the board's GND pin share, and its yellow
+                lead carries the pulse from D11 (PA7).  The red and black pair leaving the
+                top of the frame is the Nucleo's 3.3 V and GND feeding the breadboard's
+                rails, for tomorrow's potentiometer.</caption>
+                <image source="images/Day15-Servos/towerProPowering.png" width="95%"/>
+            </figure>
+            <p>
+                On the SG92R in your kit the three leads are brown, red and yellow
+                (<xref ref="fig-servo-leads"/>), and <xref ref="fig-servo-powering"/> shows
+                where each one goes.  Unplug everything, the USB cable and the adapter,
+                before you make any change to the wiring.  After the wiring has been
+                checked, the order is the one from the motor chapter: USB first, for the
+                Nucleo, then the adapter.  We'll do the wiring tomorrow.
+            </p>
+            <figure xml:id="fig-servo-leads">
+                <caption>The SG92R on its stand, with the solar tracker's arm bolted to
+                its horn.  The three leads leave at the right.</caption>
+                <image source="images/Day15-Servos/slide09_a204d4b1.jpg" width="70%"/>
+            </figure>
+            <p>
+                Tomorrow we'll connect the servo to its 5 V and watch it follow the
+                potentiometer.  On Thursday we'll replace the potentiometer with two photocells and start
+                on the solar tracker.  Thursday's reading is about the photocell.
+            </p>
+            <!-- Close, 5 min.  Presenter note for the deck (delivery 2): bring the
+                 servo, the regulator board and its adapter, and your multimeter
+                 tomorrow.  No homework is due Thursday (Petra, 2026-09-03). -->
+        </subsection>
     </section>
 
-    <section xml:id="sec-servo-wiring-power">
-        <title>Wiring and Power Supply</title>
-        <p>
-            The servo draws substantially more current than the STM32 GPIO pin can supply:
-            up to 700 mA at stall.  The servo must be powered from an external rail, with only
-            the signal wire connected to the microcontroller GPIO.
-        </p>
+    <!-- ============================================================ -->
+    <!-- Day 15x In-Class: the session after Petra's pass on Day 15 (plans/day15x.md).
+         OWES: sec-servo-day15x with Part 1 (recall of the leads and the power rule,
+         pointer only), Part 2 (universal re-verification of the pulse, then the servo
+         on the regulator's 5 V following the pot: fig-servo-pot-wiring from
+         assets/images/Day15-Servos/towerProPot.png, pot on A0), Part 3 (the
+         two-channel ADC read as Lab 5 recall), the three-branch checkpoint ladder in
+         an <instructor>, and the close with Thursday's bring-list as a presenter note.
+         The chapter introduction's "on the second we'll connect the servo to its own
+         5 V supply" is a promise this section has yet to keep. -->
 
-        <figure xml:id="fig-servo-wiring">
-            <caption>Servo breadboard wiring.  Brown wire to GND; red wire to the 5 V power
-            rail (not the Nucleo 3.3 V pin); yellow wire to the TIM14 CH1 PWM pin (PA7).
-            GND of the servo and GND of the Nucleo must share a common reference.</caption>
-            <image source="images/Day15-Servos/slide27_8afc6953.png" width="65%"/>
-        </figure>
+    <!-- ============================================================ -->
+    <section xml:id="sec-servo-reference">
+        <title>Reference: The Servo Command, the Timer Arithmetic, and the Driver</title>
+        <introduction>
+            <p>
+                Lookup material for the servo.  Nothing here is new; it is the same
+                information arranged for a quick look-up.
+            </p>
+        </introduction>
 
-        <figure xml:id="fig-servo-power-options">
-            <caption>Two external power options for the servo.  Left: use the 5 V output
-            available on the Nucleo's USB power header (sufficient for light loads and lab
-            demonstrations).  Right: use a regulated 5 V line from a wall-wart through the
-            power board (required for stall conditions or when multiple servos are used).</caption>
-            <image source="images/Day15-Servos/slide28_caf486ef.png" width="48%"/>
-            <image source="images/Day15-Servos/slide28_5fdbb22f.png" width="48%"/>
-        </figure>
+        <subsection xml:id="subsec-servo-ref-command">
+            <title>The Command Pulse</title>
+            <p>
+                A hobby servo is commanded by a pulse repeated about every 20 ms
+                (50 Hz).  The width of the HIGH pulse is the position command, and the
+                servo holds the position only as long as the pulses keep coming; with
+                no signal there is no power on the motor.  The convention:
+            </p>
+            <tabular halign="left">
+                <row header="yes" bottom="minor">
+                    <cell>Pulse width</cell>
+                    <cell>Position</cell>
+                </row>
+                <row><cell>1 ms</cell><cell>−90°, one end of the travel</cell></row>
+                <row><cell>1.5 ms</cell><cell>0°, the middle</cell></row>
+                <row><cell>2 ms</cell><cell>+90°, the other end of the travel</cell></row>
+            </tabular>
+            <p>
+                The endpoints are the convention, and a given servo does not
+                necessarily reach them; the SG90 datasheet says approximately 180° of
+                rotation.  Pulse widths outside 1 ms to 2 ms can drive the servo against
+                its own stops, which is why the program limits every value it computes to
+                <c>SERVO_MIN</c> through <c>SERVO_MAX</c> before writing <c>CCR1</c>.  The
+                initialization is the one exception: <c>tim14_pa7_pwm_init()</c> parks
+                <c>CCR1</c> at 0, so until the first potentiometer reading arrives there
+                is no pulse at all and the servo is not commanded anywhere.
+                The SG92R's dead band width is 1 µs: a change in pulse width smaller
+                than that has no effect.  Its other specs, from the
+                <url href="external/datasheets/C17481_SG92R_datasheet.pdf">datasheet</url>:
+                stall torque 2.5 kgf-cm at 4.8 V, operating speed 0.1 s per 60°, operating
+                voltage 4.8 V, POM and carbon-fiber gears.  It draws about 250 mA while
+                moving, and much more when it is stalled.
+            </p>
+        </subsection>
 
-        <figure xml:id="fig-servo-power-board">
-            <caption>Power board wiring for reliable servo operation.  The wall-wart supplies
-            regulated 5 V to the power board.  The servo red wire connects to the 5 V rail;
-            the servo brown and Nucleo GND connect to the same GND rail.  The signal jumper
-            (yellow) runs from PA7 to the servo connector.</caption>
-            <image source="images/Day15-Servos/slide29_73642840.png" width="65%"/>
-        </figure>
+        <subsection xml:id="subsec-servo-ref-timer">
+            <title>The Timer Arithmetic</title>
+            <p>
+                For a pulse period <m>T_p</m>, the counter divides each period into
+                ARR + 1 counts, so the smallest pulse width, and the smallest change in
+                pulse width, is <m>T_0 = T_p/(\text{ARR}+1)</m>.  The prescaler and the
+                auto-reload value have to satisfy
+                <m>\text{prescaleFactor} \times (\text{ARR}+1) = 12\text{ MHz} \times T_p</m>, with
+                ARR at most 65,535.  The number of steps between 1 ms and 2 ms is
+                <m>1\text{ ms}/T_0</m>, the servo's resolution counted in steps rather than
+                in microseconds (<xref ref="subsec-day11x-resolution"/> measures it the
+                other way), and the nominal angle per step is 180° divided by that number.  A step finer than the servo's dead band, or than its gear train's backlash,
+                is more finely grained than is worth doing.  What is written into the registers is each
+                number minus one, because the prescaler and the counter both start
+                counting at 0: <c>TIM14->PSC = prescaleFactor-1</c> and
+                <c>TIM14->ARR = timerMax-1</c>.  In PWM mode 1 the pin is HIGH while
+                the counter is below <c>CCR1</c>, so <c>CCR1</c> is the number of
+                counts the pin is HIGH.
+            </p>
+            <p>
+                A program that needs a periodic tick while TIM14 is busy making a PWM
+                signal uses a second timer.  TIM16 (Reference Manual §18,
+                <em>General-purpose timers (TIM16/TIM17)</em>) has the same prescaler,
+                counter and auto-reload core, its interrupt is position 21 in the
+                vector table, and its handler is <c>TIM16_IRQHandler()</c>.  The initialization is the one from Day 8 on a different timer, with the
+                period as a parameter.
+            </p>
+        </subsection>
 
-        <figure xml:id="fig-servo-complete-setup">
-            <caption>Complete lab 7 hardware setup.  The breadboard holds the power board,
-            Nucleo, and servo connector.  The oscilloscope probe on PA7 allows verification
-            of the PWM signal before connecting the servo arm.</caption>
-            <image source="images/Day15-Servos/slide30_c3071959.png" width="70%"/>
-        </figure>
-    </section>
+        <subsection xml:id="subsec-servo-ref-driver">
+            <title>The Driver: tim.c</title>
+            <p>
+                The whole of <c>tim.c</c>, with its comments shortened.  <c>tim14_pa7_pwm_init()</c> is the Day 11x
+                driver with the two timer numbers as parameters, and its register
+                writes are explained line by line in <xref ref="subsec-day11x-driver"/>.
+            </p>
+            <program language="c"><code><![CDATA[
+#include "tim.h"
+#include "ES28.h"
 
-    <section xml:id="sec-servo-lab">
-        <title>Lab 7: Servo Sweep</title>
-        <exercises>
-            <exercise xml:id="ex-servo-sweep">
-                <title>Servo Position Sweep</title>
-                <statement>
-                    <p>Wire the TowerPro SG92R servo to your breadboard with an appropriate
-                    5 V supply.  Then write firmware that:</p>
-                    <ol>
-                        <li>Calls <c>servo_init()</c> to configure TIM14 CH1 at 50 Hz.</li>
-                        <li>Slowly sweeps the servo from SERVO_MIN to SERVO_MAX and back,
-                        updating CCR1 in steps of 10 µs with a 10 ms delay between steps.</li>
-                        <li>Verifies the signal on the AD2 oscilloscope before connecting the servo.</li>
-                        <li>Measures the actual travel angle of your servo arm and compares it to
-                        the theoretical ±90°.</li>
-                    </ol>
-                    <p>Document the minimum and maximum pulse widths that achieve full travel
-                    on your specific servo (individual units vary).</p>
-                </statement>
-            </exercise>
-        </exercises>
+// Clock runs at 12MHz
+#define TIM16_PSC_FACTOR	12000		// 12 MHz / 12000 = 1 kHz
+
+void tim16_ms_interrupt_init(int milliseconds) {
+	RCC->APBENR2 |= RCC_APBENR2_TIM16EN;	// clock access to timer 16
+	TIM16->PSC = TIM16_PSC_FACTOR - 1;		// starts counting at 0
+	TIM16->ARR = milliseconds - 1;
+	TIM16->CNT = 0;
+	TIM16->DIER |= TIM_DIER_UIE;			// update interrupt
+	NVIC_EnableIRQ(TIM16_IRQn);
+	TIM16->CR1 |= TIM_CR1_CEN;
+}
+
+void tim14_pwm_set(uint16_t value) {
+	// PWM mode 1: pin is HIGH while CNT < CCR1, i.e. for exactly 'value' counts
+	TIM14->CCR1 = value;
+}
+
+void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
+	// Enable clock access to GPIOA
+	RCC->IOPENR |=  RCC_IOPENR_GPIOAEN;
+
+	// Set PA7 in alternate function mode (10)
+	GPIOA->MODER &= ~GPIO_MODER_MODE7_Msk;
+	GPIOA->MODER |= GPIO_ALTERNATE << GPIO_MODER_MODE7_Pos;
+
+	// Set PA7 alternate function type (AF4, 0100)
+	GPIOA->AFR[0] &= ~GPIO_AFRL_AFSEL7_Msk;
+	GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
+
+	// Enable clock access to Timer 14
+	RCC->APBENR2 |= RCC_APBENR2_TIM14EN;
+
+	// Set prescaler
+	TIM14->PSC = prescaleFactor-1;
+
+	// Set autoreload value (counter runs 0..timerMax-1: timerMax counts per period)
+	TIM14->ARR = timerMax-1;
+
+	// Set the compare register value - start with a speed of 0
+	TIM14->CCR1 = 0;
+
+	// Set pwm mode 1 (0110): pin is high up to capture value, then goes low
+	TIM14->CCMR1 &= ~TIM_CCMR1_OC1M_Msk;
+	TIM14->CCMR1 |= TIM_OC1_PWM1 << TIM_CCMR1_OC1M_Pos;
+
+	// Make sure timer is in output mode; this is default value
+	TIM14->CCMR1 &= ~TIM_CCMR1_CC1S_Msk;
+	TIM14->CCMR1 |= TIM_CC1_OUTPUT << TIM_CCMR1_CC1S_Pos;
+
+	// Enable TIM14_CH1 in output mode
+	TIM14->CCER |= TIM_CCER_CC1E;
+
+	// Generate an update event - this clears counter, prescaler counter, updates registers
+	TIM14->EGR |= TIM_EGR_UG;
+
+	// Enable timer
+	TIM14->CR1 |= TIM_CR1_CEN;
+}
+]]></code></program>
+        </subsection>
+
+        <subsection xml:id="subsec-servo-ref-map">
+            <title>Scaling One Integer Range onto Another</title>
+            <p>
+                To map a reading <m>x</m> that runs from 0 to <m>N-1</m> onto a range
+                from <m>a</m> to <m>b</m>, the value is <m>a + x \times (b - a)/N</m>.
+                In C with integer variables, write the multiplication before the
+                division: <c>/</c> on two integers discards the remainder, so
+                <c>x/N</c> is 0 for every <m>x</m> below <m>N</m> and the whole map
+                collapses to <m>a</m>.  Written multiplication first, the product <m>x \times (b-a)</m> is computed
+                in <c>int</c>, which is 32 bits on the STM32C031C6.  That is a C-language
+                fact worth knowing: 4095 × 200 = 819,000 is far more than an
+                <c>int16_t</c> holds, and fits in an <c>int</c> with room to spare.  With <m>N</m> one more than the largest reading (4096 for a
+                12-bit converter whose top reading is 4095), the map never quite reaches
+                <m>b</m>; the top value is one step short, which is usually fine and is
+                worth knowing.
+            </p>
+        </subsection>
     </section>
 
 </chapter>

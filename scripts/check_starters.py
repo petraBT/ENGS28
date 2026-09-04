@@ -56,6 +56,16 @@ STARTERS = [
     # Day 14 Part 5 reads accel_test.c whole before running it.
     ("assets/starters/accel_test.c", "source/ch-accelerometers.ptx",
      "accel_raw_x=%x"),
+    # Day 15 Part 4 prints Petra's servo template whole, with its five blank
+    # #define lines and its blank map line;
+    # the completed version is an <instructor> excerpt and matches no marker
+    # below.  The marker is the blank map line (tabs, then the comment).
+    ("assets/starters/Day15_servo_template.c", "source/ch-servos.ptx",
+     "pwm_value =\t     \t\t// Map pot_value to pwm_value"),
+    # Day 15's Reference section prints tim.c whole (comments compressed in the
+    # tim16 function); Part 4 prints two of its functions, which are FRAGMENTS.
+    ("assets/starters/tim.c", "source/ch-servos.ptx",
+     "// Set autoreload value (counter runs 0..timerMax-1: timerMax counts per period)"),
 ]
 
 # (starter file, function name in it, chapter, marker in the <program> block)
@@ -104,6 +114,14 @@ FRAGMENTS = [
     ("assets/starters/lsm303agr_partial.c", "lsm303_AccelInit",
      "source/ch-accelerometers.ptx",
      "// Check the WHOAMI register"),
+    # Day 15's timer driver, tim.c (Petra, 2026-09-03; ARR/CCR1 convention fixed
+    # at her request the same day).  Part 4 prints tim14_pwm_set() and
+    # tim16_ms_interrupt_init(); the Reference section prints the whole file,
+    # as a STARTERS pair above; the two Part 4 functions are checked here.
+    ("assets/starters/tim.c", "tim14_pwm_set", "source/ch-servos.ptx",
+     "// PWM mode 1: pin is HIGH while CNT < CCR1, i.e. for exactly 'value' counts"),
+    ("assets/starters/tim.c", "tim16_ms_interrupt_init", "source/ch-servos.ptx",
+     "/* Enable timer interrupt in NVIC */"),
 ]
 
 
