@@ -65,7 +65,7 @@ STARTERS = [
     # Day 15's Reference section prints tim.c whole (comments compressed in the
     # tim16 function); Part 4 prints two of its functions, which are FRAGMENTS.
     ("assets/starters/tim.c", "source/ch-servos.ptx",
-     "// Set autoreload value (counter runs 0..timerMax-1: timerMax counts per period)"),
+     "#define TIM16_PSC_FACTOR"),
 ]
 
 # (starter file, function name in it, chapter, marker in the <program> block)

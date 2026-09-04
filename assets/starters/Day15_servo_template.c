@@ -33,8 +33,8 @@ void updateServo(uint16_t value);
 
 // Main program
 int main(void) {
-  int16_t pot_value = 0;
-  int16_t pwm_value = SERVO_MIN;
+  uint16_t pot_value = 0;
+  uint16_t pwm_value = SERVO_MIN;
 
   uart2_init();
   tim14_pa7_pwm_init(PWM_PSC_FACTOR, PWM_TIMER_MAX);
@@ -73,7 +73,7 @@ void updateServo(uint16_t value) {
 void TIM16_IRQHandler(void) {
 	__disable_irq();
 	/* Clear UIF in status register */
-	TIM16->SR &= ~TIM_SR_UIF;
+	TIM16->SR = ~TIM_SR_UIF;
 	timerFlag = 1;
 	__enable_irq();
 }

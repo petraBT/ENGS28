@@ -205,7 +205,30 @@ exist and no deck refs them until delivery 2. Every other check is clean.
   the header columns; the captures on image-dominant slides; the
   `refPage` recall slides the section comment lists.
 
-## Next session: her pass 1, then the Day 15 deck (delivery 2)
+## Session 3 (2026-09-04): Petra's pass 1 on the Day 15 book, applied
+
+Her 46 review comments (archived in `reviews/slide-comments-archive.jsonl`)
+and her answers to the Gate 2 questions are applied. What changed that the
+deck must follow: Part 1 lost the gears commit (her power-conservation note
+is now in the reading; Part 1 = 6 min); the push-the-horn commit is
+hypothetical and never done on a servo; Part 4 lost the `tim.c` cross-check
+(the code is consistent, so nothing to check; Part 4 = 10) and the map's
+round-number mechanic ("don't give it away"); Part 5 = 51; the Table 12
+activity is a fill-in table (pin, AF, header name) with a sentence on which
+document holds what; the fill-in is a two-column table with room to write;
+`fig-servo-pulse-resolution.svg` has real subscripts and ARR + 1; the two
+captures are cropped (`fig-servo-scope-*.png`); `fig-servo-pulses.png` has
+the parenthesis fixed; the servo photo is her `towerPro.jpg`; both wiring
+exports are hers, re-done, with the lead colours brown / red (middle) /
+orange (yellowish), and the book says orange for the signal lead everywhere.
+The starter `Day15_servo_template.c` is fixed (`uint16_t`, `SR = ~UIF`) and
+the book says nothing about it. "Tower Pro". The current draw stays 250 mA.
+
+Not done by her choice: torque conversions (either way; left as kgf-cm).
+Standing rule from this pass: [memory] a starter's defects are fixed in the
+file, never explained; LF counts are hers and appear nowhere.
+
+## Next session: the Day 15 deck (delivery 2)
 
 Start from her edits (`git log -- source/ch-servos.ptx`), condense the
 in-class Parts only, ref the ten `inst-day15-*` blocks directly with

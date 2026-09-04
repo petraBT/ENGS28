@@ -796,7 +796,7 @@ stretch runs it); **Q8** — no homework due Thursday.
   in her two Day 15 exports when she re-exports: their legend reads "Orange →
   power"; the kit's power lead is red (flagged to her 2026-09-03).
 
-**Day 15 Gate 2 follow-ups (2026-09-03, `reviews/day15-gate2.md`):**
+**Day 15 Gate 2 follow-ups (2026-09-03, `reviews/day15-gate2.md`) — all answered 2026-09-04 (pass 1):** keep 250 mA; both wiring exports re-done with the Nucleo header in frame and the legend Brown → GND, Red (middle) → power, Orange (yellowish) → PWM, and `towerPro.jpg` (Adafruit) as the servo photo; crop the captures (done); fix the code (`uint16_t`, `SR = ~TIM_SR_UIF`, done) and never explain to students that given code is wrong; parenthesis fixed in `fig-servo-pulses.png`; the LF count is hers and is mentioned nowhere; "Tower Pro"; torque conversions either way (left as kgf-cm); students see slightly lesser angles, and it depends on their servo (in the reading). The list as sent:
 
 - **1b, again — the current draw.** The book uses your slide 28's "about
   250 mA while moving, and much more when it is stalled" in four places
