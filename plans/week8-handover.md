@@ -228,7 +228,28 @@ Not done by her choice: torque conversions (either way; left as kgf-cm).
 Standing rule from this pass: [memory] a starter's defects are fixed in the
 file, never explained; LF counts are hers and appear nowhere.
 
-## Next session: the Day 15 deck (delivery 2)
+## Session 4 (2026-09-04): the Day 15 deck, delivery 2, through Gate 3
+
+`assets/decks/day15.json` (55 entries, 43 refs, 10 instructor-only) and 27
+`<slide>` blocks beside the in-class prose she passed. Every student-facing
+slide fits at 1600×900 (measured with the crossfade killed, notes off); the
+two instructor listings overflow, which is allowed; every figure slide looked
+at. Gate 3 ran seven reviewers (`reviews/day15-gate3.md`); the synthesizer's
+list is applied and recorded there. Day 11x's two timer figures reach the
+room by refPage (the block diagram on the recall slide, the register map on
+the "What Timer 14 will do" slide); the resolution and template slides are
+split; the symptom list's rung 2 is terminal-first in both the book and the
+slide; a minute mark on every deck entry reconciles each Part (6 + 8 + 17 +
+10 + 51 + 7, one minute of slack). Petra's rules honoured: no staffing
+anywhere, "Tower Pro", the map not drawn, the starter fixed and not annotated.
+
+Ask-Petra (deck): the `towerProPowering.png` re-export (legend over the ground
+jumper; the power jumper drawn orange; the regulator graphic off its columns)
+and two zoom exports of it; the Vin warning in the servo text or not;
+`towerProPot.png` for Day 15 with a zoom for 15x; the symptom list's bold
+leads.
+
+## Next session: her pass 2 on the deck, then the Day 15x book (no reading)
 
 Start from her edits (`git log -- source/ch-servos.ptx`), condense the
 in-class Parts only, ref the ten `inst-day15-*` blocks directly with
