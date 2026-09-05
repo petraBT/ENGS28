@@ -308,3 +308,65 @@ Williams"; `V_AVR_PCx` in Figure 1.
 - Her Day 16 slide 14 ("Ultimate Setup") has **no potentiometer**; the pot
   comes out after the servo is confirmed (slide 13). Ground truth §6 was
   corrected at Gate 1.
+
+## Session 6 (2026-09-05): the Day 15x book, delivery 1, through Gate 2 — awaiting Petra's pass 1
+
+Delivered, committed on `main`:
+
+- `source/ch-servos.ptx`, `sec-servo-day15x` (no reading, x-day): the
+  introduction; Part 1 (the pointer to `fig-servo-powering`, the
+  unplug-before-rewiring rule and the USB-then-adapter order, both moved here
+  from Day 15 by Petra on 2026-09-05, with their reasons); Part 2 (her slide 2
+  first; `fig-servo-pot-wiring` from her `towerProPot.png`; the five-task
+  build in Lab 8 §3's order: the board and its ground, the 5 V at the pin's
+  row with nothing attached, the pulse re-verified by everyone, the three
+  leads, USB then the adapter; a four-item student symptom list; the
+  observations: the 1.5 ms center, the travel against the 180° convention,
+  the step size; the stretch: the 5 V under load, the arm with the pulses
+  stopped in software); Part 3 (Lab 5's `adc_setChannel()` made twice, Table
+  12's channel numbers, a paper plan of yesterday's loop). Four `<instructor>`
+  blocks: the checkpoint ladder, the observations, the stretch, the
+  two-channel plan (with the CCRDY caution).
+- Gate 0 as verification and questions 10–13 appended to
+  `plans/week8-ground-truth.md`; `plans/day15x.md` carries the Gate 1
+  re-check (which findings are live, applied, void or superseded by her Day
+  15 passes) and the revised Part table (2+1+3+34+5+5, Part 2's beats
+  4+3+10+5+7+5, the checkpoint inside the follow beat at about minute 34).
+- Gate 1.5 ran on the introduction and Part 1 (ten findings applied before
+  Parts 2–3 were written). Gate 2: twelve invocations (the core of ten plus
+  `learner-weak-circuits` and `expert-rigor-hawk`), all in
+  `reviews/day15x-gate2.md`, the synthesizer's twenty-item list applied and
+  verified phrase by phrase. The big ones: her drawing runs the signal lead
+  straight to D11, so the invented breadboard row (for the AD2 to stay on the
+  signal) came out of the caption, the task, the symptom list and the
+  stretch; "one row over on Vin" was wrong (5V, GND, Vin: Vin is two over);
+  Part 1's power-up rule was refuted by the 5 V check's adapter-only step
+  ("Whenever the servo is connected, …"); "the damage happens immediately"
+  overclaimed; the lead map was stated four times in 50 minutes and is now a
+  pointer plus one full statement on Day 15; the two paths ("finish Tuesday
+  first" vs "re-check whether or not") are one; a "still does not move" branch
+  and the buzzing servo reached the student list. Rejected under B-18 and her
+  no-zoom ruling: a Part 2 build-order table (three reviewers; the dissent is
+  recorded with the recovery) and a re-crop of her figure.
+- `assets/book.css` regenerated for the new figure. `check_deck.py` reports
+  the four `inst-day15x-*` blocks as NOT PROJECTED: the delivery-1 state, as
+  on Day 15. Every other check is clean. `build-all.sh` lost the web-edit race
+  to the watcher again; the other four targets were built one by one.
+
+### Ask-Petra (book), also in ground truth §9
+
+10. Is the tracker arm bolted to the horn on Wednesday (the observation tasks
+    say "the arm")?
+11./13. Your drawing runs the signal lead straight to D11, so the AD2 leaves
+    the signal when the servo goes on; the stretch moves channel 1 to the 5V
+    pin's row. Fine, or a breadboard row on the signal so the scope stays on?
+12. The observation task and its instructor answer commit to "less than 180°,
+    and different from one servo to the next". OK?
+
+### Next session
+
+Her pass 1 on the Day 15x book → apply → the Day 15x deck
+(`assets/decks/day15x.json`; refPage recalls of `sl-day15-powering`,
+`sl-day15-leads`, `fig-adc-test-circuit`, `fig-servo-pulses`; the four
+instructor blocks ref'd directly) → Gate 3 → fit check → deliver. Then the Day
+16 book.

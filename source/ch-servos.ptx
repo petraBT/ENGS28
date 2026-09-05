@@ -1387,7 +1387,8 @@ void TIM16_IRQHandler(void) {
          The UNPLUG-before-rewiring rule and the power-up order (USB first, then
          the adapter) are stated HERE, not on Day 15 (Petra, 2026-09-05).
          OWES (delivery 2): refPage recalls of sl-day15-powering and sl-day15-leads
-         (Part 1) and of fig-adc-test-circuit (Part 2); the close's presenter note
+         (Part 1), of fig-adc-test-circuit (Part 2) and of fig-servo-pulses at
+         task-day15x-observe-center (the 180° convention); the close's presenter note
          (bring the tracker fixture, the photocells and the alligator clips).
          Cut order if Part 2 overruns: Part 3 to one sentence in the close, then
          the close to two sentences.  Never cut Part 2. -->
@@ -1395,46 +1396,47 @@ void TIM16_IRQHandler(void) {
         <title>Day 15x In-Class: The Servo on Its Own Supply</title>
         <introduction>
             <p>
-                Today we'll connect the servo and watch it follow the potentiometer:
-                its power from the regulator board's 5V pin, its ground shared with
-                the Nucleo, and its signal lead to PA7 (D11).  Yesterday we designed
-                its command pulse and checked it on the AD2 oscilloscope with no servo
-                attached; today the servo is on the end of that signal.  The program
-                does not change: it is the <c>Day15_servo_template.c</c> you completed
-                yesterday, and it is still on your Nucleo, so you should see the servo
-                rotate, smoothly, as you adjust the potentiometer.  At the end we'll
-                recall how your ADC library reads two channels, and on Thursday we'll
-                use it to read two photocells.
+                Today we'll connect the servo and watch it follow the potentiometer.
+                Its power comes from the regulator board's 5V pin, its ground is shared
+                with the Nucleo, and its signal lead goes to PA7 (D11).  Yesterday we
+                designed its command pulse and checked it on the AD2 oscilloscope with
+                no servo attached, and today we'll put the servo on the end of that
+                signal.  The program does not change: it is the
+                <c>Day15_servo_template.c</c> you completed yesterday, and it is still
+                on your Nucleo, so you should see the servo rotate, smoothly, as you
+                adjust the potentiometer.  At the end we'll recall how your ADC library
+                reads two channels, and on Thursday we'll use it to read two
+                photocells.
             </p>
         </introduction>
 
         <!-- Part 1: 3 min = 1 (the pointer to Tuesday's figure) + 2 (the two rules).
-             The lead map is Day 15 Part 6's, by xref here and by refPage in the deck. -->
+             The lead map is Day 15 Part 6's, by xref here and by refPage in the deck;
+             it is stated in full once in this chapter (fig-servo-powering), not here. -->
         <subsection xml:id="subsec-day15x-rules">
             <title>Part 1: Wiring the Servo and Powering It Up</title>
             <p>
                 <xref ref="fig-servo-powering"/> shows where each of the servo's three
-                leads goes: the red center lead to the row of the regulator board's 5V
-                pin, the brown lead to the ground rail that the board's GND pin and the
-                Nucleo's GND also feed, and the orange signal lead to D11 (PA7), the pin
-                TIM14 drives.
+                leads goes.  The signal lead goes to D11 (PA7), the pin TIM14 drives.
             </p>
             <p>
-                We unplug power before we change any wiring: no USB cable in the
+                Unplug power before making any changes to wiring: no USB cable in the
                 Nucleo and no adapter in the regulator board while a wire is being
                 moved.  The reason is that a wire which lands on the wrong row while the
-                5 V supply is live connects that supply to whatever else is in the row,
-                and the damage happens immediately.  With nothing powered, a wire in
-                the wrong row does no damage, and it can be corrected when your wiring
-                is checked.
+                5 V supply is live connects that supply to whatever else is in the row.
+                On a GPIO pin that is an overvoltage the pin cannot survive; on Vin or
+                on ground the outcome depends on the part, and either way you find out
+                only after it is done.  With nothing powered, a wire in the wrong row is
+                only a wrong wire, and it can be corrected when your wiring is checked.
             </p>
             <p>
-                When we power the circuit back up, the USB cable goes in first and then
+                Whenever the servo is connected, the USB cable goes in first and then
                 the adapter, as we did for the motor.  With USB connected first the
-                STM32C031C6 is running and PA7 is being driven by TIM14 before the servo
-                has any power, so the servo's signal lead is never left floating while
-                its supply is live.  If it were, the voltage on that lead would not be
-                defined, and the servo's controller may respond to it unpredictably.
+                STM32C031C6 is running and PA7 is being driven LOW by TIM14, whose
+                compare value is 0 until the first reading, before the servo has any
+                power, so the servo's signal lead is never left floating while its
+                supply is live.  If it were not, the voltage on that lead would not be
+                defined, and the servo's controller might respond to it unpredictably.
                 We remove power in the opposite order: the adapter out first, then the
                 USB cable.
             </p>
@@ -1444,71 +1446,73 @@ void TIM16_IRQHandler(void) {
              out) + 10 (the pulse re-verified by everyone; a student still in Tuesday's
              exercise finishes it here) + 5 (the three leads, the wiring check) + 7
              (USB, then the adapter; the servo follows the knob; the checkpoint inside
-             this beat at about minute 34) + 5 (the observations). -->
+             this beat at about minute 34) + 5 (the observations).
+             Her drawing runs the signal lead straight to D11, so the AD2 leaves the
+             signal when the servo goes on; no breadboard row is invented for it. -->
         <subsection xml:id="subsec-day15x-build">
             <title>Part 2: Design Exercise, the Servo Follows the Potentiometer</title>
             <p>
+                If you didn't finish Tuesday's design exercise you need to complete
+                that first, before moving on to the next exercise.
                 <xref ref="fig-servo-pot-wiring"/> is today's circuit.  The potentiometer
                 is where it was yesterday, on A0 (PA0), and the servo is wired as in
-                <xref ref="fig-servo-powering"/>.  We'll build it in an order that tests
-                each supply before anything is connected to it, the way the motor
-                chapter's build-order table does (<xref ref="table-day12-build-order"/>):
-                the regulator board's 5 V is measured with nothing attached to it, the
-                pulse on PA7 is checked again with no servo attached, and only then do
-                the servo's leads go on.
+                <xref ref="fig-servo-powering"/>.  We'll build it in the order of the
+                motor chapter's build-order table (<xref ref="table-day12-build-order"/>):
+                we'll measure the regulator board's 5 V first, then check the pulse on
+                PA7 again, and connect the servo's leads last.
             </p>
             <figure xml:id="fig-servo-pot-wiring">
-                <caption>Today's circuit: the potentiometer and the servo together.  The
-                potentiometer's outer legs go to the 3.3 V and ground rails and its wiper
-                to A0 (PA0), as in the ADC chapter's test circuit.  The servo's red
-                center lead goes to the row of the regulator board's 5V pin, its brown
-                lead (drawn black here) to the ground rail, and its orange signal lead
-                (drawn yellow) to D11 (PA7) through a breadboard row.  The board's GND pin
-                is wired to the same ground rail, so the servo, the board, the
-                potentiometer and the Nucleo share one ground.</caption>
+                <caption>Today's circuit: yesterday's servo wiring with the
+                potentiometer on A0 (PA0), its wiper on the rightmost pin of the AIN
+                header, and one ground shared by the servo, the regulator board, the
+                potentiometer and the Nucleo.  The servo's brown lead is drawn black
+                here, and its orange signal lead is drawn yellow.</caption>
                 <image source="images/Day15-Servos/towerProPot.png" width="95%"/>
             </figure>
             <activity xml:id="act-day15x-wire">
                 <title>Wire the servo and bring it up</title>
                 <introduction>
-                    <p>If you did not finish Tuesday's design exercise, the pulse
-                    verified on the oscilloscope, complete that first, before moving on
-                    to this one.  Work through these in order.  Nothing is powered while
-                    a wire is moved.</p>
+                    <p>Work through these in order.  Nothing is powered while a wire is
+                    moved.</p>
                 </introduction>
                 <task xml:id="task-day15x-board">
                     <statement><p>With nothing powered, plug the regulator board into the
-                    breadboard as in today's circuit drawing, and run a wire
-                    from the row of its GND pin to the ground rail, the rail the Nucleo's
-                    GND already feeds.  Leave the row of its 5V pin empty for
-                    now.</p></statement>
+                    breadboard, and run a wire from the row of its GND pin to the ground
+                    rail, the rail the Nucleo's GND already feeds.  Leave the row of its
+                    5V pin empty for now.</p></statement>
                 </task>
                 <task xml:id="task-day15x-5v">
                     <statement><p>Plug the adapter into the regulator board, and nothing
                     else.  With the multimeter on DC volts, the black probe on the ground
                     rail and the red probe in the row of the board's 5V pin, you should
-                    read 5 V.  This measurement comes before the servo is connected: if
-                    it does not read 5 V, the fault is upstream of that pin,
-                    in the adapter, the board or its ground wire, and you find it now with
-                    nothing attached to the 5 V.  Then unplug the adapter.</p></statement>
+                    read 5 V.  The black probe goes on the rail, not on the board's own
+                    GND pin, so that the wire you just ran is tested too.  We measure
+                    before the servo is connected.  A reading of 0 V means nothing is
+                    reaching the board, so check the adapter and how it is seated.  A
+                    reading near the adapter's own voltage means the 5V and Vin rows are
+                    swapped or the regulator has failed, and the servo does not go on
+                    until that is resolved.  Then unplug the adapter.</p></statement>
                 </task>
                 <task xml:id="task-day15x-pulse">
                     <statement><p>Connect the Nucleo over USB, with the AD2's channel 1
                     on PA7 (D11) as it was yesterday, and turn the knob from one end to
                     the other: the pulse still sweeps from 1 ms to 2 ms and the period is
-                    still 20 ms.  Do this whether or not your pulse was verified
-                    yesterday.  Then disconnect the USB cable.</p></statement>
+                    still 20 ms.  Everyone does this, whether or not the pulse was
+                    verified yesterday.  If it does not, work down Tuesday's symptom list
+                    and finish that exercise here, before any servo lead goes on.  Then
+                    disconnect the USB cable.</p></statement>
                 </task>
                 <task xml:id="task-day15x-leads">
                     <statement><p>With nothing powered, connect the servo's three leads:
                     the brown lead to the ground rail, the red center lead into the row of
-                    the board's 5V pin, and the orange signal lead into a breadboard row
-                    that a wire connects to D11 (PA7).  The AD2's channel 1 lead can
-                    share that row.  Then have your wiring checked.</p></statement>
+                    the board's 5V pin, not its GND or Vin pin, and the orange signal
+                    lead to D11 (PA7).  Then check your wiring with an
+                    instructor.</p></statement>
                 </task>
                 <task xml:id="task-day15x-power">
                     <statement><p>Connect the USB cable first, then plug in the adapter.
-                    Turn the knob: the servo follows it.</p></statement>
+                    Turn the knob, and you should see the servo rotate, smoothly, as you
+                    adjust the potentiometer.</p></statement>
                 </task>
             </activity>
             <p>
@@ -1520,39 +1524,46 @@ void TIM16_IRQHandler(void) {
                 verified.</term>  The fault is in power or ground before it is in the
                 signal.  Measure the row of the board's 5V pin again, with the servo
                 connected; check the wire from the board's GND pin to the ground rail,
-                and check that the red lead is in the 5V row and not in the GND or Vin
-                row beside it.  Then the signal: the orange lead and the wire to D11
-                (PA7) in the same row.</li>
+                and check that the red lead is in the 5V row.  Then the signal: the
+                orange lead on D11 (PA7).  If all of that is right and the arm still
+                does not move, say so when your wiring is checked; the servo itself may
+                have been damaged.</li>
                 <li><term>The servo twitches, or the terminal's printout starts over
-                from its first line.</term>  The Nucleo is resetting.  The servo is
-                drawing its current from the Nucleo: its red lead is on the 3.3 V rail
-                or on a Nucleo pin instead of the row of the regulator board's 5V pin.
-                Remove power, the adapter first and then the USB cable, and move the
-                lead.</li>
+                from its first line.</term>  The Nucleo is resetting.  The restarting
+                printout is the proof of the reset; a twitch on its own is also
+                consistent with supply noise.  The servo is drawing its current from the
+                Nucleo: its red lead is on the 3.3 V rail or on a Nucleo pin instead of
+                the row of the regulator board's 5V pin.  Remove power, the adapter
+                first and then the USB cable, and move the lead.</li>
                 <li><term>The servo moves but does not follow the knob, or holds one
                 end.</term>  Look at the terminal.  If <c>pot_value</c> is not
                 changing, the wiper has come off A0 or the potentiometer's outer legs are
                 off their rails.  If <c>pot_value</c> is changing and the servo is not
                 following it, the program on the board is not yesterday's completed
                 template; build and flash it again.</li>
+                <li><term>The servo buzzes at one end of the knob's travel.</term>  That
+                servo's travel is shorter than the convention's, and it is holding
+                against its own stop.  Turn the knob a little toward the center.</li>
             </ol>
             <instructor xml:id="inst-day15x-checkpoint">
                 <p>Checkpoint at about minute 34, inside the follow beat and before the
-                observations.  Her x-hour exists so that Tuesday's exercise gets
-                finished: a student still in Tuesday's template is on Tuesday's ladder
-                (<c>inst-day15-checkpoint</c>), and wires the servo when the pulse is
-                verified, not before.  For everyone else the symptom list in the text
-                is the first stop; the causes below are the part that needs you.</p>
+                observations.  This x-hour exists so that Tuesday's exercise gets
+                finished: a student still in Tuesday's template works down the Day 15
+                checkpoint list (<c>inst-day15-checkpoint</c>), and wires the servo when
+                the pulse is verified, not before.  For everyone else the symptom list
+                in the text is the first stop; the causes below are the part that needs
+                you.</p>
                 <ul>
                     <li>No motion, pulse verified, 5 V present at the row: the ground.
                     If the wire from the board's GND pin to the rail is missing, the
                     meter still reads 5 V when its black probe is on the board's own GND
                     pin; the task puts the black probe on the rail so that this wire is
                     tested too.  Repeat the measurement that way.</li>
-                    <li>No motion and the red lead is one row over, on Vin: the servo has
-                    the adapter's raw input voltage on it.  Adapter out at once, then
-                    move the lead; the servo may or may not have survived.</li>
-                    <li>Twitching and a restarting printout: the brown-out from
+                    <li>No motion and the red lead is one pin over, on GND (no motion,
+                    no damage), or two over, on Vin: on Vin the servo has the adapter's
+                    raw input voltage on it.  Adapter out at once, then move the lead;
+                    the servo may have been damaged.</li>
+                    <li>Twitching and a restarting printout: the brown out from
                     Tuesday's Part 6, the red lead on the Nucleo's 3.3 V or 5V pin.
                     Power down in order (adapter, then USB), move the lead, power up in
                     order.</li>
@@ -1560,10 +1571,6 @@ void TIM16_IRQHandler(void) {
                     board is running something other than the completed template, for
                     example if the flash went to a different project.  Build and flash
                     again from the <c>Servo</c> project.</li>
-                    <li>A servo that buzzes at one end of its travel with the pulse at
-                    1 ms or 2 ms: that servo's travel is shorter than the convention's,
-                    which the reading said to expect.  It is holding against its own
-                    stop; turn the knob a little toward the center.</li>
                 </ul>
             </instructor>
             <activity xml:id="act-day15x-observe">
@@ -1588,10 +1595,9 @@ void TIM16_IRQHandler(void) {
                     one timer count.</p></statement>
                 </task>
                 <task xml:id="task-day15x-observe-scope">
-                    <statement><p>Look at the AD2 while the servo moves.  Has anything
-                    about the pulse changed since yesterday, now that the servo is
-                    connected to it?  Say what the servo is loading, and what it is
-                    not.</p></statement>
+                    <statement><p>The AD2's channel 1 came off D11 when the servo's signal
+                    lead went on.  Say which supply the servo is loading, and whether it
+                    draws any appreciable current from the signal pin.</p></statement>
                 </task>
             </activity>
             <instructor xml:id="inst-day15x-observe">
@@ -1599,15 +1605,16 @@ void TIM16_IRQHandler(void) {
                 middle of its travel, and how near depends on the servo.  The travel:
                 less than 180°, and different from one servo to the next; the reading
                 said the endpoints are the convention and that our servos do not go that
-                far.  The steps: the arm moves in steps of one timer count, 5 µs of pulse width
-                and 0.9° by the design's arithmetic, so a change of 1 in
-                <c>pwm_value</c> moves it; and since 4096 readings map onto 200 counts,
-                about 20 counts of <c>pot_value</c> go by before <c>pwm_value</c>
-                changes, which is why a very slow turn of the knob moves the arm in
-                visible steps.  The scope: the pulse is unchanged, the same width and
-                period as yesterday.  The servo loads the regulator's 5 V supply, not the
-                signal; the signal lead is an input to the servo's controller and draws
-                a negligible current from PA7.</p>
+                far.  The steps: the arm moves in steps of one timer count, 5 µs of pulse
+                width and 0.9° by the design's arithmetic on a servo that turns the full
+                180°, and less on a shorter-travel servo; and since 4096 readings map
+                onto 200 counts, about 20 codes of <c>pot_value</c> go by before
+                <c>pwm_value</c> changes, which is why a very slow turn of the knob
+                moves the arm in visible steps.  The signal: the servo loads the
+                regulator's 5 V supply, not the signal; the signal lead is an input to
+                the servo's controller and draws well under the pin's 20 mA rating,
+                while the servo draws about 250 mA from the 5 V lead while it
+                moves.</p>
             </instructor>
             <activity xml:id="act-day15x-stretch">
                 <title>Going further</title>
@@ -1615,18 +1622,18 @@ void TIM16_IRQHandler(void) {
                     <p>Optional, for when your servo follows the knob.</p>
                 </introduction>
                 <task xml:id="task-day15x-stretch-supply">
-                    <statement><p>Put the AD2's channel 2, the blue lead, on the row of
+                    <statement><p>Move the AD2's channel 1 lead from D11 to the row of
                     the regulator board's 5V pin, with its striped ground lead on the
-                    ground rail, and leave channel 1 on the signal.  Predict what the
-                    5 V trace will do while the servo is moving and while it is holding
-                    still.  Then sweep the knob and look.</p></statement>
+                    ground rail.  Predict what the 5 V trace will do while the servo is
+                    moving and while it is holding still.  Then sweep the knob and
+                    look.</p></statement>
                 </task>
                 <task xml:id="task-day15x-stretch-hold">
                     <statement><p>Stop turning the knob.  The pulse is still there, and
-                    the arm holds.  From what the reading said about the command signal,
-                    what would the arm do if the pulses stopped while the 5 V stayed on,
-                    and how would you show that without breaking the power-down
-                    order?</p></statement>
+                    the arm holds.  From what we said on Tuesday about the command
+                    signal, what would the arm do if the pulses stopped while the 5 V
+                    stayed on, and how would you show that without breaking the
+                    power-down order?</p></statement>
                 </task>
             </activity>
             <instructor xml:id="inst-day15x-stretch">
@@ -1635,16 +1642,17 @@ void TIM16_IRQHandler(void) {
                 and it recovers when the arm arrives and holds.  This is the current
                 draw that Tuesday's Part 6 gave as the reason for the separate supply,
                 made visible.  The hold: with no pulses there is no power on the motor
-                (the reading's "no signal, no power on the motor"), so the arm is no
-                longer held at its position.  To show it without unplugging the USB
-                cable while the adapter is in, stop the pulses in software: in PWM
-                mode 1 a compare value of 0 keeps PA7 LOW for the whole period, which is
-                a defined level and no pulse, so <c>tim14_pwm_set(0)</c> in place of
-                <c>updateServo(pwm_value)</c> when the knob is at one end (for example
-                <c>if (pot_value &lt; 100)</c>) lets the arm go free at that end of the
-                knob and return to the commanded position as soon as the knob leaves it.
-                Nobody pushes the arm to find out; with no pulse the servo does not
-                resist, and that is visible from the horn.</p>
+                (Tuesday's Part 2: if you shut the signal down there is no power on the
+                motor), so the arm is no longer held at its position.  To show it
+                without unplugging the USB cable while the adapter is in, stop the
+                pulses in software: in PWM mode 1 a compare value of 0 keeps PA7 LOW for
+                the whole period, so <c>tim14_pwm_set(0)</c> is called directly in
+                place of <c>updateServo(pwm_value)</c> when the knob is at one end (for
+                example <c>if (pot_value &lt; 100)</c>), since <c>updateServo()</c>
+                would limit 0 up to <c>SERVO_MIN</c>.  The arm goes free at that end of
+                the knob and returns to the commanded position as soon as the knob
+                leaves it.  Do not have students push on the arm to find out; with no
+                pulse the servo does not resist, and that is visible from the horn.</p>
             </instructor>
         </subsection>
 
@@ -1654,13 +1662,14 @@ void TIM16_IRQHandler(void) {
             <p>
                 On Thursday the potentiometer comes out and two photocells go onto the
                 arm of this servo, each in a voltage divider whose output is a voltage on
-                an analog pin: A0 (PA0) for one and A1 (PA1) for the other.  A program
-                that reads both is one you have already written.  In Lab 5 your ADC
-                library gained a function that selects the channel, and you used it to
-                move between the potentiometer and the temperature sensor.  Reading two
-                channels in every sampling interval is that call made twice: select one
-                channel and convert, then select the other and convert.  The ADC
-                channel number of each analog pin comes from Table 12 of the
+                an analog pin: A0 (PA0) for one and A1 (PA1) for the other.  You have
+                already written a program that reads two channels.  In Lab 5 you added
+                a function to your ADC library that selects the channel, and you used it
+                to move between the potentiometer and the temperature sensor.  To read
+                two channels in every sampling interval (each time the flag is raised)
+                we call that function twice: select one channel and convert, then
+                select the other and convert.  The ADC channel number of each analog pin
+                comes from Table 12 of the
                 <url href="external/stm32c031_datasheet.pdf">STM32C031C6 datasheet</url>,
                 <em>Pin assignment and description</em>, as it did in the ADC chapter:
                 A0 is PA0, ADC_IN0, and A1 is PA1, ADC_IN1.
@@ -1668,12 +1677,13 @@ void TIM16_IRQHandler(void) {
             <activity xml:id="act-day15x-two-channels">
                 <title>Two channels in yesterday's loop</title>
                 <statement>
-                    <p>On paper, change the body of yesterday's loop, the part inside
-                    <c>if(timerFlag==1)</c>, so that every time the flag is raised it
-                    reads A0 and then A1, using the functions of your own ADC library and
-                    their names.  Which functions are called, in what order, and which
-                    variable holds each reading?  There is nothing to build today; on
-                    Thursday this loop gets its two photocells.</p>
+                    <p>Nothing here needs a working servo.  On paper, with your Lab 5
+                    <c>adc.c</c> open, change the body of yesterday's loop, the part
+                    inside <c>if(timerFlag==1)</c>, so that every time the flag is raised
+                    it reads A0 and then A1.  Which of your functions are called, in what
+                    order, and which variable holds each reading?  There is nothing to
+                    build today; on Thursday we'll give this loop its two
+                    photocells.</p>
                 </statement>
             </activity>
             <instructor xml:id="inst-day15x-two-channels">
@@ -1684,15 +1694,21 @@ void TIM16_IRQHandler(void) {
                 each conversion follows its own channel selection, so the order is
                 select, convert, select, convert and not select, select, convert,
                 convert; the channel numbers are the ADC's, 0 and 1, and not the pin
-                numbers; and the two readings are the two inputs to the loop we'll
-                design on Thursday, so they are kept in two variables rather than
-                printed and discarded.  A student whose library selects the channel
-                inside its read function makes two calls instead of four; that is
-                fine.</p>
+                numbers, which coincide on A0 and A1 but not in general (A3 is PB1 and
+                ADC_IN18, as in the ADC chapter's homework); and the two readings are
+                the two inputs to the loop we'll design on Thursday, so they are kept in
+                two variables rather than printed and discarded.  A student whose
+                library selects the channel inside its read function makes two calls
+                instead of four; that is fine.  One caution for a library that writes
+                CHSELR and starts a conversion at once: the Reference Manual, §14,
+                requires waiting for CCRDY after writing CHSELR and before ADSTART, and
+                a read function that does not wait can return the previous channel's
+                value with no error.  If a student's two readings track each other,
+                look here.</p>
             </instructor>
             <p>
-                Tomorrow we'll put two photocells on the arm of this servo and start the
-                solar tracker, so leave the servo wired.  Thursday's reading is the
+                On Thursday we'll put two photocells on the arm of this servo and start
+                the solar tracker, so leave the servo wired.  Thursday's reading is the
                 photocell and its datasheet.
             </p>
             <!-- Close, 5 min.  Presenter note for the deck (delivery 2): bring the
@@ -1700,7 +1716,6 @@ void TIM16_IRQHandler(void) {
                  tomorrow. -->
         </subsection>
     </section>
-
 
     <!-- ============================================================ -->
     <section xml:id="sec-servo-reference">

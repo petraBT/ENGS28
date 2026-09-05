@@ -940,3 +940,9 @@ then the adapter) to Day 15x, where the wiring happens.
 - **12.** The observation task asks students to estimate the angle between
   the 1 ms and 2 ms positions against the ±90° convention; the instructor
   answer says less than 180°, and that it varies from servo to servo. OK?
+- **13.** Your drawing runs the servo's signal lead straight to the D11
+  header pin, so the AD2's channel 1 comes off the signal when the servo goes
+  on; the stretch then moves channel 1 to the row of the regulator's 5V pin
+  (this supersedes question 11's "channel 2"). The book follows the drawing.
+  Fine, or should the signal lead go through a breadboard row so the scope
+  can stay on it?
