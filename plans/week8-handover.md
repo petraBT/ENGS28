@@ -249,13 +249,39 @@ and two zoom exports of it; the Vin warning in the servo text or not;
 `towerProPot.png` for Day 15 with a zoom for 15x; the symptom list's bold
 leads.
 
-## Next session: her pass 2 on the deck, then the Day 15x book (no reading)
+## Session 5 (2026-09-05): Petra's pass 2 on the Day 15 deck, applied
 
-Start from her edits (`git log -- source/ch-servos.ptx`), condense the
-in-class Parts only, ref the ten `inst-day15-*` blocks directly with
-`"instructor": true` (which clears `check_deck.py`), and run the fit check per
-`AUTHORING-slides.md`. Then the Day 15x book (no reading), from the OWES
-comment in `ch-servos.ptx` and `plans/day15x.md`.
+Her 51 slide comments applied (archived in `reviews/slide-comments-archive.jsonl`),
+each mirrored into the book paragraph the slide condenses. The rulings that
+became standing rules: **precise scientific language, no anthropomorphized
+hardware or code, no baby or spoken language** ("the driver knows", "busy
+making", "write down", "on your own", "recipe", "sticks there", "nominal"
+all struck); the 5V-not-Vin warning is now in the reading, Part 6 and the
+power slide; the powering figure (her replaced `towerProPowering.png`) is
+described in words, no zoom exports (students reason the wiring out from the
+figure on the screen at their table); the symptom list's `<term>` leads stay
+italic. Structural changes: `tim.c` is projected whole on two slides
+(`sl-day15-tim-c-1`/`-2`; one slide overflowed by 468 px at projection size)
+before the driver's two changes; the range-check slide is retitled "Ensuring
+pwm values are in a safe range"; the measure activity gained a scope task
+(`task-day15-build-scope`); the fill-in table's answer column is wider on
+the slide (an activity table ignores `<col>` widths on a slide, so its blank
+cells carry a run of non-breaking spaces). `Day15_servo_template.c` is
+reindented with spaces and aligned comments (her "fix indenting and
+tabbing"); `check_starters.py` re-registered (template marker, the Reference
+`tim.c` by a comment only it carries, the second tim.c slide as a FRAGMENTS
+pair). Deck 57 entries; Parts 6 + 8 + 17 + 12 + 49 + 7. All student slides fit;
+the two instructor listings overflow, as allowed.
+
+Note for the build: a `watch.py --command ./scripts/build-edit.sh` process
+(the preview-edit stack) rebuilds `output/web-edit` on every save and races
+`build-all.sh`'s `rm -rf output/web-edit/external`. Build the other targets
+one by one and leave web-edit to the watcher.
+
+## Next session: the Day 15x book (no reading)
+
+The Day 15 deck awaits her pass 3, if any. Then the Day 15x book (no
+reading), from the OWES comment in `ch-servos.ptx` and `plans/day15x.md`.
 
 ## Superseded: `plans/day15-prompt.md` — the Day 15 book, delivery 1
 

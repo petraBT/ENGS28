@@ -61,11 +61,15 @@ STARTERS = [
     # the completed version is an <instructor> excerpt and matches no marker
     # below.  The marker is the blank map line (tabs, then the comment).
     ("assets/starters/Day15_servo_template.c", "source/ch-servos.ptx",
-     "pwm_value =\t     \t\t// Map pot_value to pwm_value"),
+     "pwm_value =                     // Map pot_value to pwm_value"),
     # Day 15's Reference section prints tim.c whole (comments compressed in the
     # tim16 function); Part 4 prints two of its functions, which are FRAGMENTS.
+    # The marker is a comment only the Reference listing carries: the deck
+    # projects the file whole in two halves (sl-day15-tim-c-1/-2, Petra,
+    # 2026-09-05: "the whole picture rather than these bits and pieces"), and
+    # the second half is a FRAGMENTS pair below.
     ("assets/starters/tim.c", "source/ch-servos.ptx",
-     "#define TIM16_PSC_FACTOR"),
+     "// Set PA7 in alternate function mode (10)"),
 ]
 
 # (starter file, function name in it, chapter, marker in the <program> block)
@@ -122,6 +126,9 @@ FRAGMENTS = [
      "// PWM mode 1: pin is HIGH while CNT < CCR1, i.e. for exactly 'value' counts"),
     ("assets/starters/tim.c", "tim16_ms_interrupt_init", "source/ch-servos.ptx",
      "/* Enable timer interrupt in NVIC */"),
+    # sl-day15-tim-c-2 projects tim14_pa7_pwm_init() whole, comments stripped.
+    ("assets/starters/tim.c", "tim14_pa7_pwm_init", "source/ch-servos.ptx",
+     "// tim.c, second half: tim14_pa7_pwm_init() whole"),
 ]
 
 
