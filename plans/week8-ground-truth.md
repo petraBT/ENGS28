@@ -899,3 +899,44 @@ Lab 8 fixes that are yours, not the book's, noted for whenever you next touch
 it: `OCR1A` → `CCR1` (§4, "before writing to OCR1A"); "page 133 of Williams";
 `V_AVR_PCx` in Figure 1. ("Analog channel 3" is correct for the lab — the
 pot moves there as the students' own work.)
+
+### Day 15x Gate 0, as verification (2026-09-05)
+
+Checked against the passed Day 15 text and the starters, not re-mined: the
+part is the Tower Pro SG92R with brown / red (center) / orange leads (the
+reading, `fig-servo-sg92r`, Part 6); the servo's power is the regulator
+board's 5V pin and never Vin (reading, Part 6, `fig-servo-powering`, the
+Reference); 250 mA moving, more stalled, is hers and stays (pass 1); the
+prescaler 60, ARR + 1 = 4000 and CCR1 200 / 300 / 400 appear only in
+`inst-day15-fill-in`, `inst-day15-resolution-table` and
+`inst-day15-template-complete`; the potentiometer is on A0 (PA0)
+(`task-day15-build-wire`); the two-channel read is Lab 5's, where the
+library gained `adc_setChannel(chNum)` beside `adc_getValue()` (Lab 5
+§3.2, page 4, pasted) and students moved between the potentiometer and the
+TMP235 with it, so Day 15x Part 3 is a recall of that call made twice.
+The structural convention holds: no Before Class section for an x-day
+(`ch-debugging.ptx`, `ch-io-datasheets.ptx`, `sec-accel-day13x`).
+Lab 8 §3's own order (page 6, pasted): the 5 V confirmed with the voltmeter,
+the Nucleo unplugged while the servo is wired, the pot removed only after
+the servo follows it.
+
+Petra's pass 1 on Day 15 (2026-09-04) settles two things the 15x plan had
+open: the push against the horn is never done on a servo (so Wednesday's
+"push the arm, it pushes back" observation and the stretch's "load the
+arm" are gone), and what students see at 1 ms and 2 ms is "slightly lesser
+angles, and it depends on their servo" (so question 6 is closed and the
+endpoints are an observation task, not a claim). Her pass 2 (2026-09-05)
+moved the UNPLUG-before-rewiring rule and the power-up order (USB first,
+then the adapter) to Day 15x, where the wiring happens.
+
+**Open for Day 15x, asked 2026-09-05:**
+
+- **10.** On Wednesday, is the tracker arm already bolted to the servo's
+  horn on its stand (as in `fig-servo-leads`), or a bare horn? The
+  observation tasks say "the arm".
+- **11.** The stretch puts the AD2's channel 2 (blue) on the row of the
+  regulator board's 5V pin while the servo moves, to watch the supply while
+  the motor draws current. Fine, or keep the AD2 on PA7 only?
+- **12.** The observation task asks students to estimate the angle between
+  the 1 ms and 2 ms positions against the ±90° convention; the instructor
+  answer says less than 180°, and that it varies from servo to servo. OK?
