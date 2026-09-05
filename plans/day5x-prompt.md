@@ -58,7 +58,13 @@ So this is the "reworking an existing unit" path, run as **both deliveries**:
 5. After her pass 1: apply it, then condense the deck from the passed text,
    Gate 3, fit-check every student slide at 1600×900, deliver the deck.
 
-Do not restructure the day unless Gate 1 finds a reason; the worksheet and the
-share-out are her design and they work. Do not add a pre-class reading. Update
+**Day 5x is open to redesign (Petra, 2026-09-05).** The worksheet and the
+share-out are her design, and they are the starting point, not a constraint:
+Gate 1 decides the shape of the day. Whatever the shape, keep what the day is
+for, students reading a real datasheet for a part they will use, and what it
+feeds, the datasheet moments of every later day (P-13). Put any redesign in
+`plans/day5x.md` as options with a recommendation, and put the choice in the
+Gate 0 question list so she decides it before the prose is written. Do not add
+a pre-class reading. Update
 `CHAPTER_PROCESS.md`'s status row and write a `plans/week3-handover.md` (or
 append to the Day 5x entry if one exists) at the end of every session.
