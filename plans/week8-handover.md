@@ -416,3 +416,9 @@ the two rules are their own slide before the activity, and the symptom
 list is two slides (`sl-day15-servo-symptoms`, `-b`; an id ending in `-2`
 collides with PreTeXt's auto-id for the first slide's list, which the player
 then finds instead). `day15.json` 63 entries, `day15x.json` 9. All fit.
+Her third set (four comments, 2026-09-06): the symptom lead line's second
+sentence ("work down this list…") struck for good; "likely cause",
+"accidentally"; and the Day 15 recap now says, at her request, that a
+student whose servo follows the pot is done and need not come to the x-hour,
+and that otherwise the x-hour is for completing these steps (the book's
+close says the same; her ruling overrides S-25 for this one line).
