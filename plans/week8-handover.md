@@ -370,3 +370,30 @@ Her pass 1 on the Day 15x book → apply → the Day 15x deck
 `sl-day15-leads`, `fig-adc-test-circuit`, `fig-servo-pulses`; the four
 instructor blocks ref'd directly) → Gate 3 → fit check → deliver. Then the Day
 16 book.
+
+## Session 7 (2026-09-06): Petra's pass 1 on Day 15x — the day restructured
+
+Her ruling (recorded in ground truth §9 and memory): the first draft was busy
+work; the x-hour is a work session for whoever did not finish Tuesday;
+finishers wire the servo on Tuesday and skip it; no two-channel recall, no
+restated rules. Applied, committed on `main`:
+
+- `source/ch-servos.ptx`: Day 15 Part 6 now carries the two rules (once),
+  `fig-servo-pot-wiring`, the four-task `act-day15-servo-wire` (remove the
+  AD2; the board and its ground; 5 V at the pin's row before the servo, her
+  boldface; the three leads; USB then the power adapter into the regulator
+  board), the servo symptom list with her edits ("it should be 5 V", "let
+  us know") and `inst-day15-servo-checkpoint`; the `fig-servo-powering`
+  caption per her two comments; the close with her Thursday sentence.
+  `sec-servo-day15x` is one subsection: her slide 2, the order of the work by
+  xref, `sl-day15x-finish`, `inst-day15x-session` (her slide 31).
+- `assets/decks/day15.json` (62 entries: five new in Part 6, the recap and
+  three presenter notes changed); `assets/decks/day15x.json` (8 entries, all
+  refPage recalls but the first); `index.json` regenerated.
+- Plans: `plans/day15x.md` rewritten; `plans/day15.md` Part 6 row;
+  `plans/day16.md` (some arms already carry the photocells). Her 19 comments
+  archived. Questions 10–13 withdrawn.
+- Memory: two standing rules (an x-day that is a work session stays one;
+  never "write").
+
+Next: her look at Day 15 Part 6 and the two decks; then the Day 16 book.

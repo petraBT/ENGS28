@@ -946,3 +946,23 @@ then the adapter) to Day 15x, where the wiring happens.
   (this supersedes question 11's "channel 2"). The book follows the drawing.
   Fine, or should the signal lead go through a breadboard row so the scope
   can stay on it?
+
+### Petra's pass 1 on the Day 15x book (2026-09-06): the day is a work session
+
+*"This entire day feels like busy work… For students who get the things
+right on Tuesday, they can power their servo on Tuesday and get to skip
+class on Wednesday. For those who don't get it done they come on Wednesday
+and we review what they need to do… when they have the correct signal on
+the AD2, they remove the AD2 and connect and power the servo. The
+two-channel recall is unnecessary. The two wiring rules don't need to be
+harped on over and over."* Applied: the servo wiring is Day 15 Part 6's
+(`act-day15-servo-wire`), the two rules are stated once there, Day 15x is
+her slide 2 plus refPage recalls, and questions 10–13 above are withdrawn
+(10: her `fig-servo-leads` shows the arm on the horn and nobody asked
+again; 11–13: no observation or stretch tasks remain). Her 19 comments are
+in `reviews/slide-comments-archive.jsonl`; her wording taken verbatim:
+"When you are ready to power up, plug in the USB cable first", "let us
+know", "On Thursday, we'll remove the potentiometer from the setup and add
+two photocells to the servo's arm", the bold on the 5 V-before-the-servo
+sentence, "never say they should write". **For Day 16:** some arms already
+carry the photocells in their cups; others have to put theirs in.

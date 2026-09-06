@@ -229,3 +229,24 @@ Ask-Petra: questions 10–12 (the arm on the horn; a single AD2 channel on the 5
 # Applied (2026-09-05)
 
 All twenty items applied and verified phrase by phrase against the finished file; see the commit after `ac46bde`. Item 16's attribution corrected to Day 15 Part 2 (`sl-day15-between-reveal`'s paragraph), where the sentence actually is.
+
+# Petra's pass 1 (2026-09-06): the day restructured
+
+Her message: the whole day was busy work; students who finish on Tuesday
+power the servo on Tuesday and skip the x-hour; the others come and
+complete it; the AD2 comes off and the servo goes on; the two-channel
+recall is unnecessary; the wiring rules are not restated. Applied: the
+wiring activity, the two rules (once), the circuit figure, the symptom
+list and the instructor ladder are Day 15 Part 6's; Day 15x is her slide 2
+plus pointers, with `day15x.json` as refPage recalls. Her 19 comments
+(archived) were applied where their target survived: the `fig-servo-powering`
+caption ("regulator board's 5V pin… and also never to the Nucleo's 3.3 V or
+5V pin"), "When you are ready to power up, plug in the USB cable first", the
+5 V sentence in bold with "we do not want to connect the servo until…",
+"before connecting the servo" and the "Everyone does this" sentence
+deleted, "the power adapter into the regulator board", "it should be 5 V",
+"let us know", her Thursday sentence. Comments on Part 3 and the
+observation tasks are moot with those parts gone; "never say they should
+write" is a standing rule (memory). The committee's findings on Parts 2–3
+of the first draft are void with the parts; items 1–14 that concerned the
+wiring tasks and the symptom list carried over into Day 15 Part 6.

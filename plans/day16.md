@@ -49,6 +49,10 @@ By the end of class a student can:
 
 Scaffolding (P-2):
 
+- **Petra, 2026-09-06:** some students' servo arms already carry the
+  photocells in their cups; others have to put theirs in. The assembly beat
+  says so and is short for the first group.
+
 - The divider is built on the breadboard first (Lab 8 Figure 2, her slide 9),
   with the AD2 voltmeter on both nodes before any code runs — so a wrong
   reading is separable into circuit vs program. **Two checkpoints in Part 2:**
