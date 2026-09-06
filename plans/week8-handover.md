@@ -397,3 +397,22 @@ restated rules. Applied, committed on `main`:
   never "write").
 
 Next: her look at Day 15 Part 6 and the two decks; then the Day 16 book.
+
+**Session 7, second pass (2026-09-06):** her twelve further comments applied
+and archived. Her ordering question ("some students may have already powered
+everything up by the time we get to this activity"): answered by an
+instruction where the powering talk starts ("Do not connect the servo yet:
+the order … is the activity below", in the paragraph, on the why slide and
+in the powering slide's caption) and by folding the two rules into the
+activity's introduction, so the rules slide is gone (day15.json 61 entries).
+Every bare "board" in Part 6 now says breadboard or regulator board; the
+brown-out symptom says plainly that the wiring is wrong; "CoolTerm"; the
+symptom lead line and the Day 15x paragraph and slide in complete sentences;
+"Then unplug the adapter" in bold; the recap's repeated item cut.
+Fit at 1600×900 (crossfade killed, notes off) after her wording went in:
+the why slide, the activity and the symptom list overflowed (90, 32, 63 px);
+the "do not wire it yet" instruction is the powering slide's title (Rule 7),
+the two rules are their own slide before the activity, and the symptom
+list is two slides (`sl-day15-servo-symptoms`, `-b`; an id ending in `-2`
+collides with PreTeXt's auto-id for the first slide's list, which the player
+then finds instead). `day15.json` 63 entries, `day15x.json` 9. All fit.
