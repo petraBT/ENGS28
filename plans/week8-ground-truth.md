@@ -1038,3 +1038,11 @@ loop in class (her answer of 2026-09-03: "they can get started, but it's
 their lab work"), stays or the class ends on the discussion; how a dark
 reading is taken in a lit room for Deliverable 2 (the book says "covered"
 and invents no technique).
+
+**Day 16 Gate 2 questions (2026-09-07), sent with the book:** Part 6 stays or
+the class ends on the discussion; cells already in the cups against a
+two-cell kit (the book routes them through the clips for the study); D1's
+rows in the instructor build; six power-sequence instructions; the sensor
+family in the reading; R_sens/R_M against the lab's R_1/R_2/V_1; D10 as
+final-touches credit; a paper handout; the dark reading; zoom exports of the
+two Fritzings for the deck.

@@ -442,3 +442,82 @@ wording) are mirrored into the book (`2794e32`). Rules from the week's
 failures: B-19 in `AUTHORING-book.md`, "What Day 15x taught us" in
 `CHAPTER_PROCESS.md`, four memory files. Next unit: Day 16, from
 `plans/day16-prompt.md`.
+
+## Session 8 (2026-09-07): the Day 16 book, delivery 1, through Gate 2 — awaiting Petra's pass 1
+
+Delivered, committed on `main`:
+
+- `source/ch-photosensors.ptx`, rewritten from the outline up: the
+  introduction and objectives; the Before Class reading (the photocell in
+  her and Adafruit's sentences, the resistance-based family, the divider as
+  the interface with the formula only, the datasheet tour that never prints
+  the dark and illuminated resistance rows, what a solar tracker is) with
+  five reading questions; Day 16 Parts 1–6 (the direction commit, Lab 8 §2
+  done in class opening on the servo check and the pot's removal, the sensor
+  family with the rise/fall and 20 ms frame bound on T, the cups and clips,
+  her "discuss at your table" as three questions in Lab 8 §4's notation, a
+  start on the loop); four `<instructor>` blocks (the two-channel loop with
+  the CCRDY note, the Part 2 checkpoints, the arm checkpoint, the worked
+  tracker loop with the sign and bounds left to the student); the Reference
+  (the divider and the geometric mean with an invented pair, the two-channel
+  read against RM0490, the update rule and the dead zone). No `<slide>`
+  blocks, no deck.
+- Figures: `fig-photocell-divider.svg` (her slide 7 redrawn in the Day 7
+  style), her slide images raw, `week8FullLabSetup.png` with her slide 13
+  callout in the caption, Lab 8 Figure 6 extracted beside her servo loop as
+  two stacked figures. `assets/book.css` regenerated.
+- Gate 0 as verification (ground truth, end of §9): the PDV-P8001 numbers
+  the book may and may not cite, Lab 8 §2/§4 wording, A0 purple / A1 blue
+  (the manifest had them reversed), Lab 5's `adc_setChannel()`, what Day 15
+  Part 6 settled. Gate 1 re-check in `plans/day16.md` (which rulings are
+  live, superseded or void), rebudget 3+2+10+38+5+14+22+11+5.
+- Gate 1.5 on the introduction and the first subsection (ten findings, the
+  personified sensors and Adafruit's sentences) applied before the rest was
+  written. Gate 2: fourteen invocations in `reviews/day16-gate2.md`, the
+  synthesizer's 28-item list applied and verified. The big ones: eight
+  technical claims the chapter's own pages refuted (the CCRDY consequence,
+  the gain-conversion direction, "a float K removes the dead zone", the
+  sensitivity row's test condition, the potentiometer needing a fixed
+  resistor, the servo's slew rate as a command-rate bound, the settling
+  over-claims, Lab 8 Figure 1's node label); the D9 update line in the
+  Reference (a protected-list leak); the servo check now carries the sign
+  observation Day 15 never asked for and the lifeline that the study does
+  not depend on the servo; eight verbless paragraph openings in her
+  register; Parts 1 and 2 rebudgeted 10 and 38.
+
+**Known state:** `check_deck.py` reports the four `inst-day16-*` blocks as
+NOT PROJECTED (delivery 1, as on Days 15 and 15x). Every other check is
+clean. `build-all.sh` was not used (the web-edit watcher); web and
+web-instructor were built one by one.
+
+### Ask-Petra (book), also in ground truth §9
+
+1. Part 6 (a start on the loop in class, 11 min) stays, or the class ends on
+   the discussion?
+2. Some arms already carry their photocells (your 2026-09-06 note) but the
+   kit has two cells: the book has those students bring the cups' leads to
+   the breadboard through the clips for the study. Right?
+3. May the instructor build carry Deliverable 1's two datasheet rows (in
+   `inst-day16-two-channel`, stripped from every student target)?
+4. Six power-sequence instructions at six power transitions in 110 minutes:
+   right, or harping?
+5. The sensor family is taught in the reading and recalled in Part 3 (your
+   slide 6 taught it in class). Keep, or move it back to class?
+6. R_sens/R_M in the book, R_1/R_2/V_1 in Lab 8's blanks: two sets, or
+   standardize on the lab's?
+7. Deliverable 10 is "final touches credit" in the lab; the book names it
+   beside Deliverable 9 without saying so. Say so?
+8. A paper handout with the answer spaces, or the deliverables on the slides
+   as your deck had them?
+9. The dark reading for Deliverable 2: "covered" is all the book says.
+10. For the deck (not now): the two Fritzings project at under 1% of slide
+    height; zoom exports (breadboard half, header half), and the A0/A1
+    silkscreen is under the blue and purple wire bends.
+
+### Next session
+
+Her pass 1 on the Day 16 book → apply → the Day 16 deck
+(`assets/decks/day16.json`; refPage recalls of `fig-servo-powering` and the
+reading's divider and log-log figures; the four instructor blocks ref'd
+directly; her slide 13 callout as an on-image overlay for the wall) → Gate
+3 → fit check at 1600×900 with the crossfade killed → deliver.
