@@ -422,3 +422,15 @@ sentence ("work down this list…") struck for good; "likely cause",
 student whose servo follows the pot is done and need not come to the x-hour,
 and that otherwise the x-hour is for completing these steps (the book's
 close says the same; her ruling overrides S-25 for this one line).
+
+**Correction, 2026-09-07.** My recap edits of 2026-09-06 had landed on the
+wrong slide: `day15.json` has two `recap` entries, and selecting the first
+one overwrote the opening "Where we are" slide with the x-hour lines, twice,
+while the closing "Looking ahead" slide, which her "we just did that"
+comment was about, never changed. Restored the opening recap (her slide 2's
+list, now with the servo, the regulator board and the multimeter needed
+today; "and then wire the servo"), put the x-hour and Thursday lines on the
+closing recap, and swept the book for the three stale "tomorrow" lines the
+restructure had left (the Day 15 introduction, the build activity's
+introduction, `inst-day15-checkpoint`). Rule for the next edit of a deck:
+select entries by `slide` id or `title`, never by type.
