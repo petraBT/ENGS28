@@ -616,7 +616,7 @@ shapes are noted.
 | 16/11 | Photocell in the cup, "Photocell" arrow (Lab App. A photo) | **Use raw** |
 | 16/12 | Alligator clips on the arm (Lab App. A photo) | **Use raw** |
 | 16/13 | = 15/30 with "Physically located in the cups" callout | the callout goes on `week8FullLabSetup.png` (below) as a caption or a `pptx_annotate`-style overlay if wanted; the extracted base is not used |
-| 16/14 | Full Fritzing — **two dividers and the servo, no potentiometer**: her end state | **Delivered 2026-09-03: `assets/images/Day16-Photosensors/week8FullLabSetup.png`** — two photocell dividers (10 kΩ each) with their nodes on **A0 (blue) and A1 (purple)**, the 3.3 V and ground rails from the Nucleo, the servo's power lead to the regulator board's 5V pin, its ground to the rail, its signal to D11, the board's GND to the rail. The Day 16 wiring figure |
+| 16/14 | Full Fritzing — **two dividers and the servo, no potentiometer**: her end state | **Delivered 2026-09-03: `assets/images/Day16-Photosensors/week8FullLabSetup.png`** — two photocell dividers (10 kΩ each) with their nodes on **A0 (purple, the right-hand cell) and A1 (blue, the left-hand cell)** (corrected 2026-09-07 by zooming the header: A0 is the rightmost AIN pin, as on `towerProPot.png`), the 3.3 V and ground rails from the Nucleo, the servo's power lead to the regulator board's 5V pin, its ground to the rail, its signal to D11, the board's GND to the rail. The Day 16 wiring figure |
 | 16/16 | Survey QR | **Drop** |
 | all/1 | Logo slides | **Drop** |
 
@@ -966,3 +966,75 @@ know", "On Thursday, we'll remove the potentiometer from the setup and add
 two photocells to the servo's arm", the bold on the 5 V-before-the-servo
 sentence, "never say they should write". **For Day 16:** some arms already
 carry the photocells in their cups; others have to put theirs in.
+
+### Day 16 Gate 0, as verification (2026-09-07)
+
+Checked against the files, not re-mined, before the Day 16 book was written.
+
+- **The PDV-P8001 sheet** (`assets/datasheets/CdS-photocell-PDV-P8001.pdf`,
+  pasted again): the numbers the book may cite are the sensitivity, typ
+  **0.6**, defined as [log(R100) − log(R10)] / [log(E100) − log(E10)] with
+  R100/R10 the resistances at 100 and 10 lux and E100/E10 the illuminances,
+  both at 2856 K (her slide 5 writes the slope as −0.6); the spectral range
+  **400 to 700 nm** and peak **520 nm**; rise time **55 ms** and fall time
+  **20 ms**, both at 10 lux; the absolute maximum ratings (150 V, 100 mW/°C
+  as printed, −30 to +75 °C); "available in a wide range of resistance
+  values"; the two-lead ceramic header. The numbers the book may **not**
+  print, in any form: the dark resistance minimum and the illuminated
+  resistance range (Lab 8 Deliverable 1). The Adafruit guide's "200 kΩ dark
+  to 10 kΩ at 10 lux" is the same leak one step removed and is not quoted
+  either; her log-log family (slide 4) is the guide's generic family and is
+  used with a caption that says so.
+- **Lab 8 §2 and §4**, pasted above in §4, are what the in-class Parts 2 and
+  5 use; the book describes the study and never its answers, and Part 5 uses
+  §4's own notation (V0, V1, e = V1 − V0, PWM(t + T) = PWM(t) ± Δ, PWM(t + T)
+  = PWM(t) + K e(t), T, K "on the order of 0.01", bounds before CCR1,
+  ±60° of center, `milliseconds()` for T). The lab's §2 wires the photocell
+  on top (from V_cc) and the fixed resistor to ground, output V1 (Figure 1,
+  labelled R1, R2), which is the same orientation as her slide 7 (R_sens
+  over R_M, V_M).
+- **A0 = PA0 = ADC_IN0, A1 = PA1 = ADC_IN1** (datasheet Table 12, §2c). Her
+  `week8FullLabSetup.png`, zoomed at the header: the purple wire is on A0
+  (the rightmost AIN pin) and the blue on A1; the right-hand photocell's node
+  is A0 and the left-hand one's A1. Each divider is the photocell from the
+  3.3 V rail to a node, the 10 kΩ from the node to the ground rail. The
+  servo's red lead goes to the row of the regulator board's 5V pin (drawn
+  green), its brown lead to the ground rail, its orange lead to D11 (drawn
+  yellow); the regulator board's GND pin is wired to the ground rail. No
+  potentiometer.
+- **Lab 5's library** (`assets/Labs/Lab5_ES28.pdf` §3.2, page 4, pasted):
+  `adc_init()`, `adc_setChannel(unsigned int chNum)`, `adc_setWidth(int
+  widthCode)`, `adc_getValue()` in `ADC.c`/`ADC.h`; students moved between
+  the potentiometer and the TMP235 with `adc_setChannel()`. The Day 15
+  template calls `pa0_adc_init()`, `start_conversion()` and `adc_read()` and
+  its task says to adjust those names to your own. So the two-channel
+  program is recall: `adc_setChannel()` before each read, in the students'
+  own names.
+- **What Day 15 Part 6 settled** (`subsec-day15-power`, passed): the servo is
+  wired per `fig-servo-powering` (red to the regulator board's 5V row, brown
+  to the ground rail, orange to D11), the potentiometer is on A0 as in Day
+  7's test circuit, the two rules (unplug before rewiring; USB first, then
+  the adapter) are stated once there, and the close promises "On Thursday
+  we'll remove the potentiometer from the setup, add two photocells to the
+  servo's arm, and start on the solar tracker." No homework is due Thursday.
+  Day 16 therefore opens its lab work by confirming the servo follows the
+  knob (a check, seconds), then the pot comes out and its channel, A0,
+  becomes a photocell's.
+- **The structural convention** holds: a Thursday has a Before Class
+  reading (`ch-adc.ptx`, `ch-motors.ptx` Day 12, `ch-servos.ptx` Day 15).
+- **Petra, 2026-09-06:** some arms already carry the photocells in their
+  cups; the assembly step is short for them.
+- **Figures that exist:** her slide images in `assets/images/Day16-Photosensors/`
+  (slide 3 the Adafruit photo, slide 4 the log-log family, slide 7 the
+  divider at 283 × 313 px, slides 11 and 12 the cup and clip photos, slide 9
+  Lab 8 Figure 2) and `week8FullLabSetup.png`. Her slide 6's image is the
+  same divider drawing as slide 7 (the sensor family is text). The divider
+  is redrawn as an SVG (hers is too small to project) with her labels; Lab 8
+  Figure 6 is extracted from the lab PDF for the two-loops figure beside her
+  slide 8 diagram.
+
+**Open for Day 16 (asked with the book):** whether Part 6, a start on the
+loop in class (her answer of 2026-09-03: "they can get started, but it's
+their lab work"), stays or the class ends on the discussion; how a dark
+reading is taken in a lit room for Deliverable 2 (the book says "covered"
+and invents no technique).
