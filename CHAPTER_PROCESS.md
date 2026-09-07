@@ -622,7 +622,7 @@ is done when both are true.
 | ch-i2c.ptx | Day09X, Day10 | Days 9x and 10 through Gate 2 (Petra pending) |
 | ch-motors.ptx | Day11, Day11x, Day12 | **Day 11 done** (book + deck, Petra passed 2026-08-18); **Day 11x through Gate 3, list applied, awaiting her pass 2** — the pilot of Steps 3′/4′, see `plans/day11x-handover.md`; **Day 12 through Gate 2′, list applied, awaiting her pass 1** — reading + skeleton + deck, no in-class prose yet, see `plans/day12-handover.md`. The chapter's `Reference:` section is still unwritten; its shape is fixed in `plans/day12.md` |
 | ch-accelerometers.ptx | Day13, Day13x, Day14 | **Day 13 awaiting Petra's pass 2; Day 13x awaiting her book read; Day 14's book and deck both delivered, her pass-1 through pass-4 comments applied (2026-09-02), connecting prose complete — awaiting her next look**: the reading, the in-class Parts 2–10 with full connecting prose (no DELIVERY-2 markers remain), the Reference section (now with a differential-capacitor figure, subscript notation throughout), and the 50-slide `day14.json`, fit-swept at 1600×900; two committee gates plus four comment passes applied and verified item by item; four listings registered in `check_starters.py`; ask-Petra list in `plans/week7-handover.md` (plain-view CoolTerm shot — reminder standing, no accelerometer set up currently, and when it arrives the two control-register readouts need blurring, same reason as the Part 2 reveal; negative-raw-print question and the padding-bits check, both waiting on hardware; Part 7 chart-view minutes in class); Q3 still open |
-| ch-servos.ptx | Day15, Day15x | **Day 15 book passed by Petra (pass 1, 2026-09-04, 49 comments applied); Day 15 deck through Gate 3 and her pass 2 (2026-09-05, 51 comments applied, `assets/decks/day15.json`, 57 entries; `reviews/day15-gate3.md`)**. Book history:: introduction, reading with five questions, Parts 1–6 with activities and ten `<instructor>` blocks, Reference; figures settled (her exports, one `pptx_annotate` rebuild); `Day15_servo_template.c` and `tim.c` registered in `check_starters.py`; seventeen Gate 2 reports and the synthesizer's list in `reviews/day15-gate2.md`; ask-Petra list in `plans/week8-handover.md`. No deck yet, so `check_deck.py` reports the nine `inst-day15-*` blocks as unprojected. **Day 15x restructured at Petra's pass 1 (2026-09-06) into the work session her deck is**: the servo wiring (`act-day15-servo-wire`, the two rules once, `fig-servo-pot-wiring`, the servo symptom list, `inst-day15-servo-checkpoint`) moved to **Day 15 Part 6**, with five new Day 15 deck entries in `day15.json` (62 entries); `sec-servo-day15x` is her slide 2 plus pointers, `day15x.json` is 8 entries of refPage recalls; her 19 comments applied and archived; first-draft Gate 2 in `reviews/day15x-gate2.md`; awaiting her look at the Day 15 Part 6 changes and the two decks |
+| ch-servos.ptx | Day15, Day15x | **Day 15 book passed by Petra (pass 1, 2026-09-04, 49 comments applied); Day 15 deck through Gate 3 and her pass 2 (2026-09-05, 51 comments applied, `assets/decks/day15.json`, 57 entries; `reviews/day15-gate3.md`)**. Book history:: introduction, reading with five questions, Parts 1–6 with activities and ten `<instructor>` blocks, Reference; figures settled (her exports, one `pptx_annotate` rebuild); `Day15_servo_template.c` and `tim.c` registered in `check_starters.py`; seventeen Gate 2 reports and the synthesizer's list in `reviews/day15-gate2.md`; ask-Petra list in `plans/week8-handover.md`. No deck yet, so `check_deck.py` reports the nine `inst-day15-*` blocks as unprojected. **Day 15 and 15x done through her three passes of 2026-09-06/07** (her own deck edits mirrored into the book, commit `2794e32`): the servo wiring is Day 15 Part 6's, `sec-servo-day15x` is the work session her deck is, `day15.json` 63 entries and `day15x.json` 9; lessons in "What Day 15x taught us" below and B-19 |
 | ch-photosensors.ptx | Day16 | **Week 8 session 1 done (2026-09-02): Day 16 plan through Gate 1**, same ground truth and map; the placeholder prints Lab 8 deliverables and is condemned in ground truth §7. Book follows Days 15/15x |
 | ch-ble.ptx | Day17 | rough |
 | ch-power.ptx | Day17x | rough |
@@ -632,6 +632,37 @@ unannotated images, invented code, and no in-class structure. Assume nothing in 
 rough chapter is correct until checked against Step 0 ground truth.
 
 ---
+
+## What Day 15x taught us (2026-09-05 to 09-07)
+
+Four failures reached Petra in three days, none of them caught by a gate.
+
+1. **An x-day was invented.** See B-19. The plan, Gate 1 and Gate 2 all
+   reviewed a 50-minute lesson against a deck that was six re-shows; the
+   committee found load, order and wording faults and never asked whether
+   the day should exist. When her deck for a day is re-shows, the plan says
+   "work session" and the section is pointers. Ask her before adding a Part.
+2. **A comment was applied to the wrong slide, twice.** `day15.json` has two
+   `recap` entries; a script that took the first overwrote the opening slide
+   with the closing slide's lines, and both deliveries reported the fix as
+   done. **Select deck entries by `slide` id or exact title, assert the match
+   is unique, and open the changed slide in the player (or grep the built
+   page for the new text) before reporting it.**
+3. **Comments were interpreted from anchors and bounding boxes instead of
+   rendered.** "should be", "let us know", "we just did that" were guessed
+   at; one guess landed on the wrong slide. `CLAUDE.md` says to render the
+   comment's URL and crop the bbox. Do that, or ask what a one-word comment
+   refers to; never apply a guess and report it as applied.
+4. **A restructure left stale text behind.** Moving the wiring from
+   Wednesday to Tuesday left "we'll wire it tomorrow", "the servo stays
+   unplugged until tomorrow", "no servo yet" and "the wiring itself is
+   Wednesday's" in the book and the deck. After any move, grep the chapter,
+   the deck JSON and the presenter notes for the words the old structure
+   used, and fix every hit in the same commit.
+
+And one that is a rule already and was broken anyway: "write a sentence
+about each" a day after "write down" was struck. When she strikes a word,
+grep the draft for it before delivering.
 
 ## What Day 11 taught us
 

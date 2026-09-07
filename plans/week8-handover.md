@@ -434,3 +434,11 @@ closing recap, and swept the book for the three stale "tomorrow" lines the
 restructure had left (the Day 15 introduction, the build activity's
 introduction, `inst-day15-checkpoint`). Rule for the next edit of a deck:
 select entries by `slide` id or `title`, never by type.
+
+**Session 7 close (2026-09-07):** her own edits to the Day 15 deck (the
+safety slide's title, the leads slide's second bullet removed, symptom 1's
+"check this first / check if power and ground are okay", the closing recap's
+wording) are mirrored into the book (`2794e32`). Rules from the week's
+failures: B-19 in `AUTHORING-book.md`, "What Day 15x taught us" in
+`CHAPTER_PROCESS.md`, four memory files. Next unit: Day 16, from
+`plans/day16-prompt.md`.

@@ -529,6 +529,40 @@ steps", count the subsections — this drifts every time content is added or mer
 Lookup material that students will return to (bit twiddling, register tables) lives in
 a `Reference:` section at the end of the chapter, not inline in the teaching flow.
 
+### B-19 An x-day whose deck is re-shows is a work session, and a rule is stated once
+
+Petra, 2026-09-06, rejecting the first Day 15x draft whole: *"this entire
+day feels like busy work… For students who get the things right on Tuesday,
+they can power their servo on Tuesday and get to skip class on Wednesday. For
+those who don't get it done they come on Wednesday and we review what they
+need to do. All of the other stuff feels like a complete waste of time… The
+two-channel recall is unnecessary. The two wiring rules don't need to be
+harped on over and over."*
+
+Her Day 15x deck was six slides, all re-shows of Day 15's last four. The
+draft had turned that into three Parts: a rules recap, a 34-minute build with
+a universal re-check and three observation tasks, a stretch, and a five-minute
+Lab 5 recall — every one of them defensible at Gate 1 and Gate 2, and all of
+it invention. Two rules:
+
+- **A re-show deck is a schedule, not a lesson.** The main day carries the
+  hands-on step in full, and students who finish do it there. The x-day
+  section is her "finish first" sentence plus pointers (`<xref>` in the book,
+  refPage in the deck) to the main day's activity and symptom lists. Nothing
+  is added to fill the hour.
+  ~~Day 15x Parts 1–3, 26 paragraphs~~ → `sec-servo-day15x`, one paragraph.
+- **State a rule once, where the action happens.** The unplug rule and the
+  power-up order appeared in Part 1, the figure caption, a task and the
+  symptom list; the census called it four statements in fifty minutes and
+  she called it harping. ~~Part 1's two rule paragraphs + the caption's
+  repeat + the task's repeat~~ → one paragraph immediately before the
+  activity that needs it.
+
+Ground truth §1 had recorded *"her x-hour is a work session with no new
+content. Whatever the plan adds to it is ours, and must be named as such"* —
+which named the invention and then licensed it. Naming an addition is not a
+reason for it.
+
 ### B-18 A committee change list needs a length budget
 
 Seven reviewers each asking for one more clause produced a Day 12 in-class
