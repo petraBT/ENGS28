@@ -3,475 +3,1102 @@
     <title>Photosensors and the Solar Tracker</title>
     <introduction>
         <p>
-            Resistance-based sensors convert a physical quantity (light intensity, temperature,
-            force, or humidity) directly into a resistance change.  Paired with a fixed resistor
-            in a voltage divider, they produce an analog voltage that the STM32 ADC can measure.
-            This chapter covers the cadmium sulfide (CdS) photocell, builds a two-sensor solar
-            tracker, and closes the loop by combining the ADC driver from Chapter 5 with the
-            servo driver from Chapter 11.
+            The goal of this chapter is to build a solar tracker: a servomotor that
+            turns an arm carrying two light sensors until the arm points at a light
+            source, and that keeps following the source as it moves.  The sensor is a
+            photocell, a resistor whose resistance falls as more light falls on it.
+            The ADC (analog-to-digital converter) measures voltages and not
+            resistances, so the first job is an interface: a voltage divider that
+            turns the photocell's resistance into a voltage on an ADC pin.  With two
+            photocells on the servo's arm, one on each side, the difference between
+            their two voltages depends on which side the light is on, and a program we
+            write turns that difference into a change in the servo's command pulse.
+            That program is a feedback loop.  The servo has its own feedback loop
+            inside it, and the tracker closes a second loop around the servo.
+        </p>
+        <p>
+            This chapter covers one class day.  Before class, the reading introduces
+            the photocell, the family of sensors that work the same way, the divider,
+            and the photocell's datasheet.  In class we'll predict which way the
+            divider's voltage moves as the light changes, do the photocell study from
+            Lab 8, mount the photocells on the arm, and design the tracker's feedback
+            loop in the notation used in Lab 8.  The loop itself is your work in
+            Lab 8.  <xref ref="sec-photo-reference"/> collects the divider formula,
+            the two-channel ADC read and the loop's update rule for looking up later.
         </p>
         <objectives>
             <ul>
-                <li>Describe the physics of a light-dependent resistor and its nonlinear response.</li>
-                <li>Design a voltage divider with a photocell and compute the expected ADC codes.</li>
-                <li>Build a two-photocell light detector that produces a signed error signal.</li>
-                <li>Implement a proportional feedback loop to drive a servo toward a light source.</li>
+                <li>Explain what a CdS photocell is: a resistor whose resistance falls as more light falls on it, inexpensive, nonlinear, and so variable from unit to unit that it is used to compare light levels rather than to measure them.</li>
+                <li>Put a resistive sensor into a voltage divider, state the divider's formula, and predict which way its output moves as the sensor's resistance changes.</li>
+                <li>Read the photocell's datasheet for what the tracker needs: the sensitivity as the slope of a log-log plot, the rise and fall times as a bound on how fast to sample, and the test conditions behind every number.</li>
+                <li>Recognize the same divider interface across a family of resistance-based sensors, and say which sensors need more than a divider.</li>
+                <li>Mount two photocells on the servo's arm, wire both dividers to two ADC channels, and print both readings.</li>
+                <li>Design the tracker's control loop from Lab 8's description: the error, the update rule, its sign, its bounds, the sampling interval, and what a gain of 0.01 means in integer arithmetic.</li>
             </ul>
         </objectives>
     </introduction>
 
-    <!-- ============================================================
-         CANVAS QUIZ QUESTIONS (Before-Class)
-         Q1. A CdS photocell is placed in a dark room. What happens to its resistance?
-             A) It decreases to near zero
-             B) It increases to several megaohms (CORRECT)
-             C) It stays the same — resistance is fixed
-             D) It oscillates between high and low values
-             Explanation: The photoconductive effect requires photons to free electrons.
-             With no light, conductivity is very low and resistance is very high —
-             typically several megaohms for a CdS cell in complete darkness.
-
-         Q2. You have a photocell (top element) and a 10 kΩ fixed resistor (bottom element)
-             forming a voltage divider from 3.3 V to GND. A bright flashlight is shone on
-             the photocell. What happens to the voltage at the midpoint?
-             A) It decreases toward 0 V
-             B) It increases toward 3.3 V (CORRECT)
-             C) It stays at 1.65 V
-             D) It becomes negative
-             Explanation: Bright light lowers the photocell's resistance. With a smaller
-             top resistor and the same 10 kΩ on the bottom, more of the 3.3 V appears
-             across the bottom resistor. The midpoint voltage rises toward 3.3 V.
-
-         Q3. Why must you use a voltage divider to read a photocell with an ADC — why not
-             connect the photocell directly between 3.3 V and the ADC pin?
-             A) The photocell would be damaged by direct connection to 3.3 V
-             B) An ADC measures voltage, not resistance; without a second resistor there
-                is no complete circuit and no midpoint voltage to measure (CORRECT)
-             C) The ADC input impedance is too high to sense resistance changes
-             D) The photocell needs AC current to function correctly
-             Explanation: The ADC converts a voltage to a digital number. A resistor
-             alone between 3.3 V and the input pin has no return path to GND and produces
-             no voltage division. Adding a fixed resistor to GND creates a divider whose
-             midpoint voltage changes with the photocell resistance.
-
-         Q4. A solar tracker uses two identical photocell voltage dividers pointing in
-             slightly different directions. Both sensors see exactly the same light level.
-             What is the error signal (left ADC reading minus right ADC reading)?
-             A) A large positive number indicating the light source is to the left
-             B) Zero — the two readings are equal so no correction is needed (CORRECT)
-             C) A large negative number indicating the light source is to the right
-             D) Undefined — the sensors cannot be balanced
-             Explanation: When both sensors see equal illumination their resistances are
-             equal, their voltage dividers produce the same output, and the difference is
-             zero. The servo holds its current position.
-
-         Q5. Which of the following sensors uses the same voltage-divider interface as
-             a photocell to convert a physical quantity into a voltage for an ADC?
-             A) A servo motor
-             B) An I2C accelerometer
-             C) A thermistor (temperature sensor) (CORRECT)
-             D) A UART transmitter
-             Explanation: A thermistor is a resistance-based sensor whose resistance
-             changes with temperature. Wired in a voltage divider with a fixed resistor,
-             it produces a voltage the ADC can read — exactly the same circuit as the
-             photocell divider.
-         ============================================================ -->
-
-    <section xml:id="sec-photosensors-concepts">
-        <title>Before Class: Sensors as Resistors</title>
+    <!-- ============================================================ -->
+    <section xml:id="sec-photo-before-class">
+        <title>Before Class: The Photocell and the Voltage Divider</title>
         <introduction>
             <p>
-                You already know how to read an analog voltage with the ADC, and how
-                to control a servo with a PWM pulse width.  This chapter combines both
-                skills, but first introduces a new kind of sensor: one that does not
-                output a voltage directly.  Instead, it changes its <em>resistance</em>
-                in response to a physical quantity.  A two-resistor circuit called a
-                <term>voltage divider</term> converts that resistance change into a voltage
-                the ADC can measure.  The same circuit works for an entire family of
-                physical sensors, not just light.
+                In the ADC chapter we measured a voltage from a potentiometer, and in the
+                servo chapter we turned that voltage into a position.  The solar tracker
+                replaces the potentiometer with a sensor that responds to light.  This
+                reading covers what that sensor is, the family of sensors that work the
+                same way, how a resistance becomes a voltage the ADC can measure, what the
+                sensor's datasheet says, and what a solar tracker is.  In class we'll
+                build the circuit and design the loop.
             </p>
         </introduction>
 
-        <subsection xml:id="subsec-resistance-sensors">
-            <title>Physical Quantities as Resistance</title>
+        <subsection xml:id="subsec-photo-cell">
+            <title>What a Photocell Is</title>
             <p>
-                Many sensor types work by varying resistance.  A
-                <term>thermistor</term> changes resistance with temperature; a
-                <term>strain gauge</term> changes resistance when bent or compressed; a
-                <term>hygristor</term> changes resistance with humidity; and a
-                <term>light-dependent resistor</term> (LDR) changes resistance with
-                illumination.  The underlying physics differs, but the electrical
-                interface is identical for all of them: pair the sensor with a fixed
-                resistor in a voltage divider and connect the midpoint to an ADC input.
-                You only need to learn the circuit once.
+                A <term>photocell</term> is a resistor whose resistance depends on how
+                much light falls on its face (<xref ref="fig-photocell-photo"/>).  It is
+                also called a CdS cell, after the cadmium sulfide it is made of, a
+                <term>light-dependent resistor</term> (LDR), or a photoresistor.
+                Cadmium sulfide's resistivity decreases with increasing light exposure.
+                A photocell is made of semiconductor material with a high resistance,
+                because very few of its electrons are free to move: the vast majority are
+                locked into the crystal lattice and cannot move.  As light falls on the
+                semiconductor, photons are absorbed by the lattice and some of their
+                energy is transferred to the electrons.  The amount of energy transferred
+                gives some of the electrons sufficient energy to break free from the
+                crystal lattice, so that they can then conduct electricity, and the
+                resistance of the photocell falls.  The process is progressive: as more
+                light shines on the photocell, more electrons are released, and the
+                resistance falls further.
             </p>
-
-            <figure xml:id="fig-resistance-based-sensors">
-                <caption>A family of resistance-based sensors.  Thermistors, strain gauges,
-                hygristors, and LDRs all convert a physical quantity into a resistance
-                change.  All can be read using the same voltage-divider plus ADC circuit.</caption>
-                <image source="images/Day16-Photosensors/slide06_8ac89c13.png" width="65%"/>
+            <figure xml:id="fig-photocell-photo">
+                <caption>A CdS photocell.  The face is the cadmium sulfide, laid down in
+                a winding track between the two electrodes to make the light-sensitive
+                path long; the two leads are the resistor's two terminals, and there is
+                no polarity.  Image from
+                <url href="https://www.adafruit.com/product/161">Adafruit</url>.</caption>
+                <image source="images/Day16-Photosensors/slide03_img1.png" width="55%"/>
             </figure>
-        </subsection>
-
-        <subsection xml:id="subsec-ldr-basics">
-            <title>Light-Dependent Resistors</title>
             <p>
-                The sensor used in this chapter is a <term>cadmium sulfide (CdS)
-                photocell</term>.  Its resistance depends on light intensity through the
-                <term>photoconductive effect</term>: photons with enough energy knock
-                electrons into the conduction band of the CdS crystal, increasing
-                conductivity and lowering resistance.  Remove the light and the electrons
-                settle back, resistance rises again.
-            </p>
-            <p>
-                The resistance range is dramatic: several megaohms in complete darkness,
-                falling to a few kilohms under bright light.  The response is also
-                nonlinear: resistance drops roughly as a power of illuminance rather than
-                linearly.  For the solar tracker in this chapter, that nonlinearity does
-                not matter because we only look at the <em>difference</em> between two
-                photocells; any systematic distortion cancels out.
-            </p>
-            <p>
-                CdS photocells also vary considerably from unit to unit: two cells of the
-                same part number can differ by a factor of two or more in resistance under
-                identical lighting conditions.  This makes them unsuitable for any
-                quantitative light measurement.  They are best treated as purely qualitative
-                sensors: good for detecting <em>more light versus less light</em> in one
-                direction compared to another, not for measuring how many lumens are
-                actually present.
-            </p>
-
-            <figure xml:id="fig-cds-photo">
-                <caption>A CdS photocell.  The meandering conductive pattern on the face
-                maximizes the length of the photoconductive channel in a small package.
-                The device has two leads and no polarity: it behaves like a
-                light-controlled resistor.</caption>
-                <image source="images/Day16-Photosensors/slide03_img1.png" width="50%"/>
-            </figure>
-        </subsection>
-
-        <subsection xml:id="subsec-divider-interface">
-            <title>The Voltage Divider Interface</title>
-            <p>
-                An ADC measures voltage, not resistance.  To read a photocell, place it
-                in series with a fixed resistor between the supply voltage and GND.  The
-                voltage at the midpoint, called <m>V_M</m>, is:
-            </p>
-            <md number="no">
-                V_M = V_{cc} \cdot \frac{R_M}{R_{sens} + R_M}
-            </md>
-            <p>
-                where <m>R_{sens}</m> is the photocell and <m>R_M</m> is the fixed
-                resistor.  As light increases, <m>R_{sens}</m> decreases, so <m>V_M</m>
-                increases.  Swapping the two positions reverses the direction, useful
-                if you need the voltage to go the other way.
-            </p>
-
-            <figure xml:id="fig-divider-schematic">
-                <caption>Generic voltage-divider interface for any resistance-based sensor.
-                The sensor (<m>R_{sens}</m>) and a fixed measurement resistor (<m>R_M</m>)
-                form a series circuit from <m>V_{cc}</m> to GND.  The midpoint voltage
-                <m>V_M</m> is read by the ADC.  Choosing <m>R_M</m> equal to the
-                mid-range resistance of the sensor maximizes sensitivity.</caption>
-                <image source="images/Day16-Photosensors/slide07_img1.png" width="45%"/>
-            </figure>
-
-            <p>
-                In this chapter you will build a simplified <term>solar tracker</term>, a
-                device that rotates a servo arm to face a light source.  Real industrial
-                solar trackers compute the sun's position from the date, time, and GPS
-                coordinates and drive the panel to that angle mathematically, no light
-                sensor required; in the two-photocell approach here you implement a feedback loop: your code reads both sensors, computes the difference, and
-                commands the servo to rotate in whichever direction reduces it.  The principle is simple:
-                two photocell voltage dividers are mounted at opposite ends of the
-                servo arm, and their ADC readings are subtracted.  When
-                both see equal light the difference is zero and the servo holds still.
-                When the light source shifts to one side, one photocell brightens and the
-                other dims, and the signed difference tells your code which way to rotate the servo.
+                Photocells are small, inexpensive, low-power, easy to use, and they do
+                not wear out.  For that reason they often appear in toys, gadgets and
+                appliances.  They are also very inaccurate.  Each photocell will act a
+                little differently from the next, even if the two are from the same
+                batch, and the variation can be really large, 50% or higher, so a
+                photocell should not be used to determine a precise light level in lux.
+                Instead, you can expect to be able to determine basic light changes, and
+                which of two photocells is receiving more light.  For the tracker that is
+                exactly what we need, and we will not use a photocell to measure how
+                bright the light is.  The
+                <url href="https://learn.adafruit.com/photocells">Adafruit guide to
+                photocells</url> covers the same ground and is worth reading.  Its
+                wiring examples use a different board; our circuit is in
+                <xref ref="subsec-photo-divider"/>.
             </p>
         </subsection>
 
-        <reading-questions xml:id="rq-photosensors-concepts">
-            <exercise xml:id="rq-ldr-resistance-change">
+        <subsection xml:id="subsec-photo-family">
+            <title>Sensors Based on Resistance</title>
+            <p>
+                Many sensors are based on a variable resistance.  A potentiometer, linear
+                or rotary, is one: its resistance from the wiper to either end depends on
+                position or angle, which is how it gave us a voltage in the ADC chapter.
+                A force-sensing resistor changes its resistance with the force pressing
+                on it.  A photoresistor changes its resistance with light.  A thermistor
+                changes its resistance with temperature.  All four are read with the same
+                circuit, the voltage divider of the next subsection, and one ADC channel
+                each.  A strain gage senses a tiny stretch or compression as a very small
+                change in resistance, and a load cell, which measures weight, is built
+                from strain gages; those two require more complex electronics than a
+                simple voltage divider, because the change to be measured is so small.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-photo-divider">
+            <title>The Voltage Divider as the Interface</title>
+            <p>
+                The ADC measures a voltage, and a photocell is a resistance.  The circuit
+                that turns one into the other is a <term>voltage divider</term>: the
+                sensor in series with a fixed resistor between the supply and ground,
+                with the node between them going to an ADC pin
+                (<xref ref="fig-photocell-divider"/>).  Call the sensor's resistance
+                <m>R_\text{sens}</m> and the fixed resistor <m>R_M</m>.  The voltage at
+                the node is
+                <md number="no">
+                    <mrow>V_M = V_{cc} \cdot \frac{R_M}{R_\text{sens} + R_M}</mrow>
+                </md>
+                which is the potentiometer's formula from the ADC chapter
+                (<xref ref="fig-adc-divider"/>) with the bottom resistor in the
+                numerator: there the two resistances were the two parts of one track,
+                and here they are two separate parts.  <m>V_{cc}</m> is the Nucleo's
+                3.3 V, because the ADC's reference is 3.3 V
+                (<xref ref="subsec-adc-quantization"/>), so a node fed from 3.3 V can use
+                the ADC's whole range and never exceeds it.  As the light changes,
+                <m>R_\text{sens}</m> changes and <m>V_M</m> changes with it; which way
+                <m>V_M</m> moves follows from the formula, and in class we'll work that
+                out before we build the circuit.  Lab 8 draws the same circuit in its
+                Figure 1 with the photocell named <m>R_1</m>, the fixed resistor
+                <m>R_2</m> and the node <m>V_1</m>.
+            </p>
+            <figure xml:id="fig-photocell-divider">
+                <caption>The voltage divider as the interface between a resistive
+                sensor and the ADC.  The sensor, <m>R_\text{sens}</m>, drawn as a
+                variable resistor, is connected from <m>V_{cc}</m> to the node, and
+                the fixed resistor <m>R_M</m> from the node to ground.  The node's
+                voltage <m>V_M</m> goes to an ADC pin, A0 or A1 on the Nucleo, and the
+                formula gives it in terms of the two resistances.</caption>
+                <image source="images/Day16-Photosensors/fig-photocell-divider.svg" width="70%"/>
+            </figure>
+        </subsection>
+
+        <subsection xml:id="subsec-photo-datasheet">
+            <title>The Photocell's Datasheet</title>
+            <p>
+                Our photocell is the PDV-P8001, and its
+                <url href="external/datasheets/CdS-photocell-PDV-P8001.pdf">datasheet</url>
+                is one page, so look through the whole of it.  The description says that
+                these light dependent resistors are available in a wide range of
+                resistance values and are packaged in a two-leaded plastic-coated
+                ceramic header; the package drawing gives the dimensions, and there is no
+                polarity to get wrong.  The <em>Absolute maximum rating</em> table gives
+                the applied voltage (150 V), the power dissipation and the temperature
+                range, none of which our 3.3 V circuit comes near.  The
+                <em>Electro-optical characteristics</em> table is the one the tracker
+                depends on, and every row of it carries a test condition: 10 lux from a
+                lamp at 2856 K (a tungsten lamp), and the whole table at 23 °C.  A
+                number from a datasheet means what it says only under its conditions.
+                The rows are the dark resistance and the illuminated resistance, which
+                Lab 8 asks you to look up; the sensitivity, which we'll read in class
+                against a plot; the spectral range, 400 to 700 nm, with the peak
+                response at 520 nm, in the green, near the middle of the range the eye
+                sees; and the rise time and fall time, 55 ms and 20 ms, which say how
+                long the resistance takes to settle after the light changes.
+            </p>
+            <p>
+                The light levels in the table are in <term>lux</term>, lumens per square
+                meter, which is not a unit most of us have a feel for.  The Adafruit
+                guide has a table of examples, and a few of its rows give the scale:
+            </p>
+            <tabular halign="left">
+                <row header="yes" bottom="minor">
+                    <cell>Illuminance</cell>
+                    <cell>Example</cell>
+                </row>
+                <row><cell>1 lux</cell><cell>full moon on a clear night</cell></row>
+                <row><cell>50 lux</cell><cell>a family living room</cell></row>
+                <row><cell>300 to 500 lux</cell><cell>a well-lit office</cell></row>
+                <row><cell>1,000 lux</cell><cell>an overcast day</cell></row>
+                <row><cell>10,000 to 25,000 lux</cell><cell>full daylight, not direct sun</cell></row>
+            </tabular>
+            <p>
+                The datasheet's 10 lux is a dark room, and a phone's flashlight held
+                close to the cell is far brighter than that.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-photo-tracker">
+            <title>What a Solar Tracker Is</title>
+            <p>
+                A solar tracker uses servomotors to keep a solar panel pointed at the sun
+                throughout the day.  Some trackers work by attaching photosensors at the
+                edges of the solar panel, and using the imbalance between the sensors
+                caused by oblique illumination to control servos in elevation as well as
+                in azimuth.  In Lab 8 we build a model of an azimuth-only system: the
+                servo from the servo chapter, with the arm bolted to its horn
+                (<xref ref="fig-servo-leads"/>), carries a photocell at each end, and
+                each photocell is set into a shielding cup that shades it from light
+                arriving from the other side.  When the arm points at the light, the
+                two photocells receive the same illumination; when it does not, the
+                photocell on the side nearer the light receives more.  A program reads
+                both photocells through the ADC and moves the servo, and in class we'll
+                work out from the lab's description how that program is designed.
+                Writing it is Lab 8's design challenge.
+            </p>
+        </subsection>
+
+        <reading-questions xml:id="rq-photo">
+            <exercise xml:id="rq-photo-resistance">
                 <statement>
-                    <p>A CdS photocell is sitting in a bright room.  Someone suddenly covers
-                    it with their hand.  What happens to the photocell's resistance?</p>
+                    <p>A photocell is in a lit room, and a hand is placed over it.  What
+                    happens to its resistance?</p>
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>It increases, possibly to several megaohms.</p></statement>
-                        <feedback><p>Correct.  With no light, no photons are available to
-                        excite electrons into the conduction band.  The CdS crystal returns
-                        to its high-resistance (low conductivity) state.</p></feedback>
+                        <statement><p>It rises, and it stays high for as long as the cell is covered.</p></statement>
+                        <feedback><p>Correct.  With less light, fewer electrons are freed
+                        from the lattice, so fewer are available to conduct and the
+                        resistance rises.  It stays high until light returns.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>It decreases toward zero.</p></statement>
-                        <feedback><p>Resistance decreases with <em>more</em> light, not less.
-                        Covering the photocell removes the photons that were keeping conductivity
-                        high, so resistance rises.</p></feedback>
+                        <statement><p>It falls, because the cell is no longer being driven by light.</p></statement>
+                        <feedback><p>Light is what frees the electrons that conduct.  Less
+                        light means fewer free electrons, which is a higher resistance,
+                        not a lower one.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>It stays the same, since resistance is a fixed property of
-                        the material.</p></statement>
-                        <feedback><p>The whole point of a light-dependent resistor is that its
-                        resistance changes with illumination.  It is not a fixed resistor.</p></feedback>
+                        <statement><p>It rises briefly and then returns to its lit value.</p></statement>
+                        <feedback><p>The resistance depends on the light falling on the
+                        cell at the time.  It does not return to a previous value while
+                        the cell stays covered.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>It briefly increases then returns to its original value.</p></statement>
-                        <feedback><p>The resistance change persists as long as the light level
-                        stays low.  It does not automatically reset to a previous state.</p></feedback>
+                        <statement><p>It does not change; resistance is a fixed property of the part.</p></statement>
+                        <feedback><p>For a plain resistor that is true.  A photocell is a
+                        resistor whose resistance depends on the light on its face, which
+                        is what makes it a sensor.</p></feedback>
                     </choice>
                 </choices>
             </exercise>
 
-            <exercise xml:id="rq-why-voltage-divider">
+            <exercise xml:id="rq-photo-variation">
                 <statement>
-                    <p>Why can't you connect a photocell directly between the 3.3 V pin and
-                    an ADC input pin to read its resistance?</p>
+                    <p>Two photocells of the same part number, from the same bag, are
+                    placed side by side under the same lamp, and their resistances differ
+                    by a third.  What is the most likely explanation?</p>
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>The ADC measures voltage, not resistance.  Without a second
-                        resistor to GND there is no voltage division: the input just sits at
-                        3.3 V regardless of the photocell's resistance.</p></statement>
-                        <feedback><p>Correct.  A single resistor connected to a supply with no
-                        return path to GND creates no voltage drop across anything the ADC can
-                        sense.  The fixed resistor to GND completes the divider.</p></feedback>
+                        <statement><p>Nothing is wrong: photocells vary from one unit to the next by that much, and the datasheet gives ranges rather than one value.</p></statement>
+                        <feedback><p>Correct.  The Adafruit guide puts the variation at
+                        50% or higher, even within a batch, and the datasheet says the
+                        part is available in a wide range of resistance values.  This is
+                        why the tracker compares two cells rather than trusting the value
+                        of either one.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>The photocell would be damaged by 3.3 V applied directly.</p></statement>
-                        <feedback><p>CdS photocells handle the voltages used in this circuit
-                        without damage.  The issue is not voltage rating but circuit function:
-                        you need a complete divider to get a meaningful voltage.</p></feedback>
+                        <statement><p>One of the two cells is defective.</p></statement>
+                        <feedback><p>A difference of a third is within the normal variation
+                        for these parts.  A defective cell would read open, or would not
+                        change with light at all.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>The STM32 ADC input impedance is too low to sense
-                        resistance changes.</p></statement>
-                        <feedback><p>STM32 ADC inputs have high impedance, but that is not the
-                        core issue.  Even with high impedance, a single-resistor connection to
-                        a supply produces no useful voltage variation for the ADC to measure.</p></feedback>
+                        <statement><p>The cells need a few minutes under the lamp before they agree.</p></statement>
+                        <feedback><p>The rise and fall times on the datasheet are tens of
+                        milliseconds, so both cells settle almost at once.  The difference
+                        is between the cells themselves.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>The photocell requires AC current to operate correctly.</p></statement>
-                        <feedback><p>CdS photocells work on DC.  The photoconductive effect is
-                        driven by light, not by the type of current flowing through the device.</p></feedback>
+                        <statement><p>The multimeter is inaccurate at these resistances.</p></statement>
+                        <feedback><p>A multimeter reads resistances in the kilohm range to
+                        within a percent or so.  The difference is in the parts.</p></feedback>
                     </choice>
                 </choices>
             </exercise>
 
-            <exercise xml:id="rq-equal-sensors">
+            <exercise xml:id="rq-photo-swapped">
                 <statement>
-                    <p>In the solar tracker, both photocell voltage dividers are pointed
-                    at a flashlight held exactly between them.  Assume both photocells
-                    have identical resistance-versus-light characteristics.  What ADC
-                    code difference does the microcontroller compute?</p>
+                    <p>Suppose the divider is wired the other way around from
+                    <xref ref="fig-photocell-divider"/>: the fixed resistor from
+                    <m>V_{cc}</m> to the node, and the photocell from the node to ground.
+                    When the light on the photocell gets brighter, what happens to
+                    <m>V_M</m>?</p>
                 </statement>
                 <choices randomize="yes">
                     <choice correct="yes">
-                        <statement><p>Zero: both sensors see equal light, so their output
-                        voltages are equal and the difference is zero.</p></statement>
-                        <feedback><p>Correct.  With matching cells and equal illumination,
-                        both dividers produce the same voltage and the difference is zero.
-                        The servo holds its current position: no error, no correction.</p></feedback>
+                        <statement><p>It falls.</p></statement>
+                        <feedback><p>Correct.  With the photocell at the bottom, the
+                        formula becomes <m>V_M = V_{cc} \cdot R_\text{sens}/(R_M +
+                        R_\text{sens})</m>: the photocell's resistance is now in the
+                        numerator as well as the denominator, and as it falls the
+                        fraction falls.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>A large positive value, because both sensors are
-                        receiving maximum light.</p></statement>
-                        <feedback><p>The tracker computes the <em>difference</em> between the
-                        two readings, not the sum.  Equal readings subtract to zero.</p></feedback>
+                        <statement><p>It rises.</p></statement>
+                        <feedback><p>Follow the formula with the two resistors exchanged.
+                        The photocell's resistance is now the numerator, and a smaller
+                        numerator over a sum that also gets smaller comes out
+                        smaller.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>An unpredictable value, because real photocells never
-                        match exactly.</p></statement>
-                        <feedback><p>Good instinct: as noted in the reading, CdS photocells
-                        do vary from unit to unit, which introduces a small residual offset
-                        in practice.  That is why the question specifies identical
-                        characteristics.  In a real build, the mismatch shows up as a
-                        pointing bias that proportional control alone cannot fully
-                        eliminate.</p></feedback>
+                        <statement><p>It does not change, because the same two resistors are in series either way.</p></statement>
+                        <feedback><p>The current through the two is the same either way,
+                        but <m>V_M</m> is the voltage across whichever resistor is at the
+                        bottom, and that has changed.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-photo-peak">
+                <statement>
+                    <p>From the PDV-P8001 datasheet, at what wavelength is the photocell's
+                    response strongest?</p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>520 nm, which is green light.</p></statement>
+                        <feedback><p>Correct.  The spectral application range is 400 to
+                        700 nm and the peak is at 520 nm, so the cell responds to the
+                        colors the eye sees best and hardly at all to infrared.</p></feedback>
                     </choice>
                     <choice>
-                        <statement><p>4095, the maximum ADC code, because both sensors
-                        are fully illuminated.</p></statement>
-                        <feedback><p>4095 would be the code for a single sensor reading 3.3 V.
-                        The tracker computes the signed difference between the two channels,
-                        which is zero when they are balanced.</p></feedback>
+                        <statement><p>400 nm, at the violet end of its range.</p></statement>
+                        <feedback><p>400 nm is the lower end of the spectral range.  The peak
+                        is a separate row.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>700 nm, at the red end of its range.</p></statement>
+                        <feedback><p>700 nm is the upper end of the spectral range.  The peak
+                        is a separate row.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>2856 nm, in the infrared.</p></statement>
+                        <feedback><p>2856 K is a temperature, not a wavelength: it is the
+                        color temperature of the lamp used for the table's test
+                        conditions.</p></feedback>
+                    </choice>
+                </choices>
+            </exercise>
+
+            <exercise xml:id="rq-photo-family">
+                <statement>
+                    <p>Which of these sensors needs more than a voltage divider and an ADC
+                    channel to be read?</p>
+                </statement>
+                <choices randomize="yes">
+                    <choice correct="yes">
+                        <statement><p>A strain gage.</p></statement>
+                        <feedback><p>Correct.  A strain gage's resistance changes by a very
+                        small fraction of its value, too small a change for a divider and
+                        our ADC to resolve, so strain gages and the load cells built from
+                        them require more complex electronics.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A thermistor.</p></statement>
+                        <feedback><p>A thermistor's resistance changes a great deal with
+                        temperature, and a divider reads it directly.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A force-sensing resistor.</p></statement>
+                        <feedback><p>A force-sensing resistor changes its resistance by a
+                        large factor with force, and a divider reads it directly.</p></feedback>
+                    </choice>
+                    <choice>
+                        <statement><p>A potentiometer.</p></statement>
+                        <feedback><p>A potentiometer is its own divider, which is how it gave
+                        the ADC a voltage in the ADC chapter.</p></feedback>
                     </choice>
                 </choices>
             </exercise>
         </reading-questions>
     </section>
 
-    <section xml:id="sec-photocell-physics">
-        <title>CdS Photocells</title>
-        <p>
-            A <term>cadmium sulfide photocell</term> (also called a light-dependent resistor or LDR)
-            exploits the photoconductive effect: photons with sufficient energy excite electrons from
-            the valence band to the conduction band in the CdS crystal, increasing conductivity.
-            The result is a two-terminal device whose resistance decreases with increasing illumination,
-            from several megaohms in complete darkness to a few kilohms in bright light.
-        </p>
+    <!-- ============================================================ -->
+    <section xml:id="sec-photo-day16">
+        <title>Day 16 In-Class: Photosensors and the Solar Tracker</title>
+        <introduction>
+            <p>
+                Today we'll put the photocell from the reading into a voltage divider and
+                predict which way its voltage moves as the light changes.  Then we'll do
+                the photocell study from Lab 8: the datasheet, the multimeter, the two
+                dividers on the breadboard, and a program that prints both channels.
+                The photocells then go into the cups on the servo's arm, and we'll design
+                the feedback loop that turns two readings into a servo command.  The loop
+                itself is your lab work, and there is time at the end to start on it.
+            </p>
+        </introduction>
 
-        <figure xml:id="fig-cds-photocell">
-            <caption>A CdS photocell.  The meandering conductor pattern on top maximizes
-            the effective length of the CdS photoconductive channel in a compact package.
-            The device is polarization-independent and responds to the visible spectrum
-            (peak sensitivity near 560 nm, similar to the human eye).</caption>
-            <image source="images/Day16-Photosensors/slide03_7dd4e562.png" width="55%"/>
-        </figure>
+        <!-- Part 1: 12 min = 1 (recall) + 5 (commit and reveal) + 1 (3.3 V) + 3 (log-log, sensitivity) + 2 (compare two) -->
+        <subsection xml:id="subsec-day16-divider">
+            <title>Part 1: The Photocell in the Divider</title>
+            <p>
+                From the reading: a photocell's resistance falls as more light falls on
+                it, and it is a resistance, which the ADC cannot measure directly.  The
+                circuit that turns a resistance into a voltage is the divider of
+                <xref ref="fig-photocell-divider"/>, and you have built one before.  The
+                potentiometer in the ADC chapter (<xref ref="fig-adc-divider"/>) was a
+                divider, <m>V_\text{wiper} = V_\text{supply} \cdot R_2/(R_1 + R_2)</m>,
+                the same formula with the bottom resistor in the numerator.  Today the top
+                resistor is the photocell and the bottom one is fixed.
+            </p>
+            <activity xml:id="act-day16-direction">
+                <title>As the light gets brighter</title>
+                <statement>
+                    <p>Discuss at your table: as the light gets brighter, does
+                    <m>V_M</m> increase or decrease?  Explain your answer from the
+                    formula in <xref ref="fig-photocell-divider"/>.</p>
+                </statement>
+            </activity>
+            <p>
+                <m>R_\text{sens}</m> is in the denominator.  As the light gets brighter
+                <m>R_\text{sens}</m> falls, the denominator <m>R_\text{sens} + R_M</m>
+                falls, and <m>V_M</m> rises.  With numbers that are not our photocell's:
+                <m>R_\text{sens}</m> at 20 kΩ over <m>R_M</m> at 10 kΩ, with
+                <m>V_{cc}</m> at 3.3 V, gives <m>V_M = 3.3 \times 10/30 = 1.1</m> V, and
+                if the light brightens until <m>R_\text{sens}</m> is 10 kΩ, then
+                <m>V_M = 3.3 \times 10/20 = 1.65</m> V.  More light gives more voltage.
+                With the two resistors exchanged, so that the photocell is at the bottom,
+                it goes the other way, by the same formula with <m>R_\text{sens}</m> in
+                the numerator, which was the reading's question.  <m>V_{cc}</m> is the
+                Nucleo's 3.3 V and not its 5 V because the ADC converts voltages up to
+                its 3.3 V reference: fed from 3.3 V, the node can use the ADC's whole
+                range and never exceeds it.
+            </p>
+            <p>
+                The photocell's resistance is not a linear function of the illumination
+                (<xref ref="fig-photocell-loglog"/>).  The figure is a log-log plot: both
+                axes are logarithmic, so each division of the grid is a factor of ten,
+                and a relationship of the form <m>R \propto E^{-S}</m>, with <m>E</m>
+                the illumination, is a straight line on these axes and only on these.
+                Each curve of the family is one type of cell.  The datasheet's
+                <em>Sensitivity</em> row is the slope of that line: the footnotes define
+                it as <m>[\log(R_{100}) - \log(R_{10})] / [\log(E_{100}) - \log(E_{10})]</m>,
+                with <m>R_{100}</m> and <m>R_{10}</m> the resistances at 100 lux and at
+                10 lux and <m>E_{100}</m> and <m>E_{10}</m> those two illuminances, and
+                gives 0.6 as the typical value.  So ten times the light divides the
+                resistance by <m>10^{0.6}</m>, about 4.  The sheet prints the magnitude;
+                on the plot the slope is negative, because <m>R</m> falls as <m>E</m>
+                rises, and the relationship reads
+                <m>\log_{10}(R_{100}) - \log_{10}(R_{10}) = -0.6\,[\log_{10}(E_{100}) - \log_{10}(E_{10})]</m>.
+                If we wanted a quantitative result in lux we would have to implement that
+                conversion; for a light-or-dark sensor, or for our tracker, we do not.
+            </p>
+            <figure xml:id="fig-photocell-loglog">
+                <caption>Resistance against illumination for a family of CdS photocells,
+                from the Adafruit guide, with one curve highlighted in red.  Both axes are
+                logarithmic, and each curve is close to a straight line on these axes:
+                resistance falls by roughly a constant factor for every factor of ten in
+                illumination.  This is the guide's generic family, not the PDV-P8001's
+                own curve.</caption>
+                <image source="images/Day16-Photosensors/slide04_0c98f286.png" width="70%"/>
+            </figure>
+            <p>
+                Each photocell is a bit different, even if two are "the same" part, which
+                is why the datasheet gives ranges rather than one number and says the
+                part is available in a wide range of resistance values.  What the tracker
+                relies on is not the resistance of either cell but a comparison of the
+                two.  When both cells receive the same illumination, two cells that share
+                the same curve give the same voltage, whatever the shape of that curve,
+                so the nonlinearity does not matter for finding the balance point.  What
+                the comparison does not cancel is the difference between the two cells
+                themselves: two cells that differ by tens of percent balance at a point
+                where the light is not quite centered on the arm.  We compare two cells,
+                and we never measure one.
+            </p>
+        </subsection>
 
-        <figure xml:id="fig-photocell-response">
-            <caption>CdS resistance versus illuminance on a log-log scale.  The response
-            spans six decades of resistance over five decades of illuminance.  The approximate
-            linear relationship on the log-log plot corresponds to a power-law model
-            <m>R \propto E^{-\gamma}</m>, with <m>\gamma \approx 0.7</m> for this type of cell.
-            For a solar tracker, we only need to compare two sensors, so the nonlinearity
-            cancels out.</caption>
-            <image source="images/Day16-Photosensors/slide04_0c98f286.png" width="65%"/>
-        </figure>
-
-    </section>
-
-    <section xml:id="sec-photocell-circuit">
-        <title>Voltage Divider Circuit</title>
-        <p>
-            To convert the photocell's resistance change to a voltage that the ADC can read,
-            place the photocell in series with a fixed resistor between 3.3 V and GND.  The
-            midpoint voltage is:
-            <md number="no">
-                V_{mid} = 3.3 \cdot \frac{R_{fixed}}{R_{photo} + R_{fixed}}
-            </md>
-            Choosing <m>R_{fixed} = 10\,\text{k}\Omega</m> places the midpoint in the
-            middle of the ADC range when illuminance is moderate, maximizing sensitivity.
-        </p>
-
-        <figure xml:id="fig-photocell-divider">
-            <caption>Photocell voltage divider.  The CdS photocell is connected between
-            3.3 V and the ADC input; the fixed 10 kΩ resistor connects from the ADC input
-            to GND.  As light increases, photocell resistance decreases, so <m>V_{mid}</m>
-            increases.  If you swap the positions the voltage decreases with light.</caption>
-            <image source="images/Day16-Photosensors/slide09_a9c74b15.png" width="60%"/>
-        </figure>
-
-        <reading-questions xml:id="rq-photocell">
-            <exercise xml:id="rq-divider-direction">
-                <statement><p>With the photocell as the top element (between 3.3 V and the
-                ADC pin) and a 10 kΩ resistor as the bottom element (to GND), what happens
-                to the ADC reading when the room lights are turned off?</p></statement>
-                <choices randomize="yes">
-                    <choice correct="yes"><statement><p>The ADC reading decreases toward 0 V.</p></statement>
-                    <feedback><p>Correct: in darkness the photocell resistance rises to megaohms,
-                    making the voltage divider heavily weighted toward GND.  The ADC sees a
-                    voltage near 0 V, giving a code near 0.</p></feedback></choice>
-                    <choice><statement><p>The ADC reading increases toward 3.3 V.</p></statement>
-                    <feedback><p>That would happen if the photocell were the bottom element
-                    and the fixed resistor the top element.  With the photocell on top, high
-                    resistance in darkness pulls the midpoint toward GND.</p></feedback></choice>
-                    <choice><statement><p>The ADC reading stays the same because the ratio
-                    is fixed.</p></statement>
-                    <feedback><p>The photocell resistance changes with light: that is the
-                    whole point.  The ratio is not fixed.</p></feedback></choice>
-                </choices>
-            </exercise>
-        </reading-questions>
-    </section>
-
-    <section xml:id="sec-solar-tracker">
-        <title>Solar Tracker</title>
-        <p>
-            A solar tracker keeps a panel (or in our case, a servo arm) pointed at the
-            brightest light source by comparing readings from two identical photocell
-            dividers aimed in slightly different directions.  When the source is directly
-            between them both sensors see equal intensity; any offset produces a signed
-            difference that drives the servo toward the brighter side.
-        </p>
-
-        <figure xml:id="fig-solar-tracker-mechanical">
-            <caption>Solar tracker assembly.  Two CdS photocells are mounted in small
-            cardboard shielding cups on the servo arm.  The cups prevent each sensor
-            from seeing the other's half of the scene, sharpening the directional sensitivity.
-            The servo arm rotates to balance the two readings.</caption>
-            <image source="images/Day16-Photosensors/slide11_324c26cf.png" width="65%"/>
-        </figure>
-
-        <figure xml:id="fig-solar-tracker-full1">
-            <caption>Solar tracker: breadboard layout.  The two photocell dividers feed
-            two ADC channels (PA0 and PA1).  The servo signal wire connects to PA7
-            (TIM14 CH1).  All three share a common GND with the power board.</caption>
-            <image source="images/Day16-Photosensors/slide12_a6a60c41.png" width="65%"/>
-        </figure>
-
-        <figure xml:id="fig-solar-tracker-full2">
-            <caption>Solar tracker: assembled side view.  The servo is fixed to a base
-            plate; the photocell arm extends horizontally so each sensor covers its
-            respective hemisphere.  Rotating the flashlight around the front of the assembly
-            causes the arm to follow.</caption>
-            <image source="images/Day16-Photosensors/slide13_136d5b90.png" width="65%"/>
-        </figure>
-
-        <figure xml:id="fig-solar-tracker-complete">
-            <caption>Complete solar tracker wiring.  Servo power (5 V) from power board;
-            servo signal from PA7; photocell left to PA0 ADC; photocell right to PA1 ADC;
-            all grounds tied together at the breadboard rail.</caption>
-            <image source="images/Day16-Photosensors/slide14_0b62a07e.png" width="75%"/>
-        </figure>
-
-        <program language="c"><code><![CDATA[
-/* Proportional solar tracker: two photocells on PA0 and PA1 -> servo on PA7 */
-#include <stdint.h>
-#include "stm32c0xx.h"
-
-/* Assumes adc_read_channel(ch) and servo_set(pulse_us) already implemented */
-#define GAIN  5    // proportional gain: servo steps per ADC-code difference
-
-void solar_tracker_update(void) {
-    int32_t left  = adc_read_channel(0);   // PA0 (left photocell)
-    int32_t right = adc_read_channel(1);   // PA1 (right photocell)
-    int32_t error = left - right;          // positive = more light on left
-
-    /* Map current CCR1 + proportional correction */
-    int32_t pulse = (int32_t)TIM14->CCR1 + GAIN * error;
-
-    /* Clamp to valid servo range */
-    if (pulse < SERVO_MIN) pulse = SERVO_MIN;
-    if (pulse > SERVO_MAX) pulse = SERVO_MAX;
-
-    servo_set((uint16_t)pulse);
-}
+        <!-- Part 2: 36 min = 3 (servo check, pot out) + 6 (D1-D3) + 7 (D4-D6) + 8 (the two
+             dividers, AD2 voltmeter) + 1 (checkpoint at minute 41) + 9 (the two-channel
+             program, D7-D8) + 2 (checkpoint at minute 53) -->
+        <subsection xml:id="subsec-day16-lab">
+            <title>Part 2: The Photocell Study from Lab 8</title>
+            <p>
+                Lab 8's section 2, <em>Technical Study – Photocells</em>, is done now, in
+                class, with the handout in front of you; the handout has a space for each
+                answer.  The order is the handout's: the datasheet, the multimeter, the
+                fixed resistor, the two dividers, the program.  Before the photocells go
+                on the breadboard the potentiometer comes off it, since its channel, A0
+                (PA0), is where the first photocell's divider goes; the servo stays wired
+                as it is.
+            </p>
+            <activity xml:id="act-day16-servo-check">
+                <title>Check the servo, then remove the potentiometer</title>
+                <task xml:id="task-day16-servo-follow">
+                    <statement><p>Plug in the USB cable first, then the power adapter into
+                    the regulator board, and turn the knob.  The servo rotates as you
+                    adjust the potentiometer, as it did at the end of the servo chapter
+                    (<xref ref="act-day15-servo-wire"/>).  If it does not, the symptom
+                    list in <xref ref="subsec-day15-power"/> says where to look.</p></statement>
+                </task>
+                <task xml:id="task-day16-pot-out">
+                    <statement><p>Unplug the adapter from the regulator board, then the
+                    USB cable from the Nucleo.  Take the potentiometer off the breadboard
+                    with its three wires.  Nothing else changes: the servo's three leads
+                    and the regulator board stay where they are.</p></statement>
+                </task>
+            </activity>
+            <p>
+                Now the datasheet and the multimeter.  Lab 8's Deliverable 4 asks for a
+                fixed resistor at the <term>geometric mean</term> of the photocell's dark
+                and illuminated resistances, <m>R_2 = \sqrt{R_\text{dark} \times
+                R_\text{illuminated}}</m>, computed from the values you measure.  The
+                Adafruit guide gives the same rule, and here is the reason for it.  A
+                fixed resistor much larger than the photocell in both states leaves
+                <m>V_M</m> near <m>V_{cc}</m> whether the cell is dark or lit; one much
+                smaller leaves <m>V_M</m> near 0 V in both states; either way the two
+                readings are close together on the ADC's scale.  The geometric mean puts
+                the dark resistance and the illuminated resistance the same factor above
+                and below <m>R_2</m>, and that is the value that puts the dark reading
+                and the lit reading as far apart as this photocell can put them.  The
+                kit has 10 kΩ resistors, so Deliverable 6 asks whether that value, rather
+                than the computed one, is a problem.
+            </p>
+            <activity xml:id="act-day16-study">
+                <title>Lab 8 section 2, Deliverables 1 to 6</title>
+                <introduction>
+                    <p>The first photocell of the two in your kit is <m>R_1</m> in Lab 8's
+                    Figure 1.</p>
+                </introduction>
+                <task xml:id="task-day16-d1">
+                    <statement><p>Deliverable 1: from the PDV-P8001
+                    <url href="external/datasheets/CdS-photocell-PDV-P8001.pdf">datasheet</url>,
+                    the minimum dark resistance and the minimum illuminated resistance.
+                    Both are rows of the <em>Electro-optical characteristics</em> table;
+                    note the test conditions beside each.</p></statement>
+                </task>
+                <task xml:id="task-day16-d2">
+                    <statement><p>Deliverables 2 and 3: with the multimeter set to
+                    resistance, measure the photocell covered and then lit by your
+                    flashlight, and explain why the measured values might disagree with
+                    the datasheet's.</p></statement>
+                </task>
+                <task xml:id="task-day16-d4">
+                    <statement><p>Deliverable 4: compute <m>R_2</m> from your two measured
+                    values.</p></statement>
+                </task>
+                <task xml:id="task-day16-d5">
+                    <statement><p>Deliverables 5 and 6: from the divider formula with
+                    <m>V_{cc} = 3.3</m> V and your measured values, the voltages you
+                    expect at <m>V_1</m> with the cell dark and lit, first with your
+                    computed <m>R_2</m> and then with the kit's 10 kΩ; and whether the
+                    10 kΩ is a problem.</p></statement>
+                </task>
+            </activity>
+            <p>
+                Now the circuit.  Lab 8's Figure 2 (<xref ref="fig-day16-lab-fig2"/>) is
+                the two dividers on the breadboard, each one a photocell from the 3.3 V
+                rail to a node and a 10 kΩ resistor from that node to the ground rail,
+                with one node wired to A0 (PA0) and the other to A1 (PA1).  A0 and A1 are
+                ADC channels 0 and 1, ADC_IN0 and ADC_IN1 in Table 12 of the STM32C031C6
+                datasheet, <em>Pin assignment and description</em>, the same lookup as in
+                the ADC chapter (<xref ref="subsec-adc-day7-datasheet"/>).  The AD2's
+                voltmeter, in Waveforms, reads both nodes at once, before any program
+                runs, so that a wrong reading can be traced to the circuit rather than to
+                the program.
+            </p>
+            <figure xml:id="fig-day16-lab-fig2">
+                <caption>Lab 8's Figure 2, the two photocell dividers on the breadboard.
+                Each photocell is connected from the 3.3 V rail, through the red jumper,
+                to a node row; the 10 kΩ resistor goes from that row to the ground rail;
+                and the node goes to an analog pin, A0 (PA0) for one divider and A1
+                (PA1) for the other.  The Nucleo's 3.3 V and GND feed the two
+                rails.</caption>
+                <image source="images/Day16-Photosensors/slide09_a9c74b15.png" width="55%"/>
+            </figure>
+            <activity xml:id="act-day16-dividers">
+                <title>Wire the two dividers</title>
+                <task xml:id="task-day16-wire-dividers">
+                    <statement><p>With nothing powered, wire the two photosensors and the
+                    two 10 kΩ resistors on your breadboard as in
+                    <xref ref="fig-day16-lab-fig2"/>: for each divider, the photocell from
+                    the 3.3 V rail to a node row and the resistor from that row to the
+                    ground rail, and a wire from the node row to A0 (PA0) for one divider
+                    and to A1 (PA1) for the other.</p></statement>
+                </task>
+                <task xml:id="task-day16-voltmeter">
+                    <statement><p>Connect the AD2's channel 1, the orange lead, to one
+                    node and channel 2, the blue lead, to the other, and both striped
+                    leads to the ground rail.  Plug in the USB cable, open Waveforms'
+                    voltmeter, and check both readings against the range you expected in
+                    Deliverable 6, with the cells lit by the room and then covered.  If
+                    a node reads the rail's own voltage, 3.3 V or 0 V, its photocell and
+                    its resistor do not share a row.</p></statement>
+                </task>
+            </activity>
+            <p>
+                Now the program.  Your ADC library from Lab 5 selects a channel with
+                <c>adc_setChannel()</c> and reads it with <c>adc_getValue()</c>, and in
+                Lab 5 you moved between the potentiometer and the temperature sensor
+                with exactly those two calls.  The two-channel program is the same thing
+                twice in a loop: select channel 0 and read, select channel 1 and read,
+                print both, once a second.  If your library uses other names for those
+                functions, use your own.  <xref ref="subsec-photo-ref-two-channel"/> has
+                what the Reference Manual says about changing the channel.
+            </p>
+            <activity xml:id="act-day16-two-channel">
+                <title>Print both channels, Deliverables 7 and 8</title>
+                <task xml:id="task-day16-program">
+                    <statement><p>Modify your Lab 5 program, or the ADC part of your servo
+                    program, to read channel 0 and then channel 1 with your library and
+                    print both values once a second.  Build, run, and open CoolTerm.</p></statement>
+                </task>
+                <task xml:id="task-day16-d7">
+                    <statement><p>Deliverable 7: compare each printed value, converted to a
+                    voltage, with the AD2's reading of the same node and with the range
+                    you expected.</p></statement>
+                </task>
+                <task xml:id="task-day16-d8">
+                    <statement><p>Deliverable 8: slowly sweep the flashlight beam across the
+                    two sensors and observe how the two voltages change.  Note the
+                    maximum and the minimum, and compare them with your theoretical
+                    maximum and minimum.</p></statement>
+                </task>
+            </activity>
+            <p>
+                <term>Both channels print the same number?</term>  Look at the AD2 first.
+                If the two nodes read differently on the voltmeter and the same in the
+                printout, the program is reading one channel twice: check that the
+                channel is set before each read, and that the two calls name different
+                channels.  If the two nodes also read the same on the voltmeter, the two
+                dividers share a node row on the breadboard.
+            </p>
+            <instructor xml:id="inst-day16-two-channel">
+                <p>The two-channel loop, with Lab 5's names.  The delay is fine for the
+                study; the tracker's loop replaces it with <c>milliseconds()</c>.</p>
+                <program language="c"><code><![CDATA[
+    while (1) {
+        adc_setChannel(0);
+        v0 = adc_getValue();          // the divider on A0 (PA0)
+        adc_setChannel(1);
+        v1 = adc_getValue();          // the divider on A1 (PA1)
+        printf("A0=%d  A1=%d\n\r", v0, v1);
+        delay_ms(1000);
+    }
 ]]></code></program>
+                <p>A library whose <c>adc_setChannel()</c> writes <c>CHSELR</c> without
+                waiting for <c>CCRDY</c> starts the first conversion after the change
+                on the old channel, so a student whose two values look swapped, or lag
+                the light by one sample, has that: the fix is the wait, in the
+                Reference section.  Deliverable 1's rows, for checking: dark resistance
+                0.2 MΩ minimum after 10 s at 10 lux; illuminated resistance 3 kΩ to
+                11 kΩ at 10 lux.</p>
+            </instructor>
+            <instructor xml:id="inst-day16-part2-checkpoint">
+                <p>Two checkpoints in this Part, about minute 41 (after the dividers are
+                wired and on the voltmeter) and minute 53 (after the program).  A student
+                whose servo did not follow the knob at the opening check goes on with the
+                study anyway: nothing in this Part or the next needs the servo, and the
+                arm's electrical work in Part 4 does not either.  The dark measurement
+                for Deliverable 2 is taken with the cell covered.</p>
+                <ul>
+                    <li>Minute 41.  A node at 3.3 V or 0 V: the photocell and its resistor
+                    are in different rows, or the jumper from the rail is in the wrong
+                    row.  A node that does not change when the cell is covered: the cell's
+                    leads are not both in the breadboard.  Two nodes that read the same:
+                    the two dividers share a row.</li>
+                    <li>Minute 53.  Two channels that print the same value while the
+                    voltmeter reads two different nodes: the channel is not being
+                    changed between reads, or the second call selects the same channel.
+                    Values that are swapped relative to the AD2: the wires to A0 and A1
+                    are exchanged, which does not matter for the tracker, or the missing
+                    CCRDY wait above.  A value stuck at 4095 or 0 with a sensible
+                    voltmeter reading: the program is reading a channel with nothing on
+                    it.</li>
+                </ul>
+            </instructor>
+        </subsection>
 
-        <insight>
+        <!-- Part 3: 5 min = 3 (the family) + 2 (rise and fall times, the servo's speed, against T) -->
+        <subsection xml:id="subsec-day16-family">
+            <title>Part 3: One Circuit for a Family of Sensors</title>
             <p>
-                The gain constant <c>GAIN</c> controls the tracker's responsiveness.  Too
-                small and the arm barely moves; too large and it oscillates past the target.
-                Proportional control alone will have a steady-state error whenever friction
-                is significant.  Adding an integral term (PI control) eliminates the offset
-                but is not required for this lab.
+                The circuit you just built reads any sensor whose resistance changes
+                with the quantity we want: a thermistor for temperature, a force-sensing
+                resistor for force, a photoresistor for light, and the potentiometer for
+                position or angle, each one in the same divider and each on one ADC
+                channel.  The one change from sensor to sensor is the fixed resistor,
+                chosen by the same geometric-mean reasoning from that sensor's own range.
+                A strain gage senses a tiny stretch or compression, and a load cell
+                measures weight with strain gages; the change in resistance is so small
+                that they require more complex electronics than a simple voltage
+                divider.
             </p>
-        </insight>
+            <p>
+                Two datasheet numbers say how fast the tracker can usefully read its
+                sensors.  The PDV-P8001's rise time is 55 ms and its fall time 20 ms,
+                both at 10 lux: after the light changes, the resistance takes tens of
+                milliseconds to settle.  The lab's one-second sampling for the study is
+                far slower than that, and so is any sampling interval we would choose
+                for the loop; a reading taken every tenth of a second is a settled
+                reading.  The other bound is the servo.  Its datasheet gives 0.1 s per
+                60°, so the arm cannot respond to commands that arrive much faster than
+                that, and sampling faster than the arm can move buys nothing.
+            </p>
+        </subsection>
 
-        <exercises>
-            <exercise xml:id="ex-tracker-build">
-                <title>Lab 8: Solar Tracker</title>
+        <!-- Part 4: 14 min = 7 (cups and clips) + 4 (both channels from the arm, the sweep)
+             + 3 (checkpoint at minute 72) -->
+        <subsection xml:id="subsec-day16-arm">
+            <title>Part 4: The Photocells on the Arm</title>
+            <p>
+                Now we'll add the photocells to the tracker arm of your servo.  The arm
+                has a shielding cup at each end, and a photocell is inserted into each
+                cup (<xref ref="fig-day16-cup"/>); some arms in the kits already carry
+                their photocells.  Alligator-to-breadboard clips make the electrical
+                connections between the leads of the photosensors and your breadboard
+                (<xref ref="fig-day16-clips"/>), and the clip leads go into the same
+                rows the photocells came out of, to recreate the photocell circuit from
+                earlier.  The end state is <xref ref="fig-day16-full-setup"/>: the two
+                dividers, the servo on the regulator board's 5 V, and no potentiometer.
+            </p>
+            <figure xml:id="fig-day16-cup">
+                <caption>A photocell in the shielding cup at one end of the tracker arm.
+                The cup shades the cell from light arriving from the other side of the
+                arm.</caption>
+                <image source="images/Day16-Photosensors/slide11_324c26cf.png" width="55%"/>
+            </figure>
+            <figure xml:id="fig-day16-clips">
+                <caption>Alligator-to-breadboard clips on the photocells' leads.  Each
+                photocell has two leads, and each lead gets one clip; the other end of
+                each clip is a pin that goes into the breadboard.</caption>
+                <image source="images/Day16-Photosensors/slide12_a6a60c41.png" width="70%"/>
+            </figure>
+            <figure xml:id="fig-day16-full-setup">
+                <caption>The complete tracker circuit.  The two photocells are drawn on
+                the breadboard, but they are physically in the cups of your tracker
+                arm, reached through the alligator clips.  Each divider is a photocell
+                from the 3.3 V rail to a node row and a 10 kΩ resistor from that row to
+                the ground rail; the right-hand node goes to A0 (PA0), the purple wire,
+                and the left-hand one to A1 (PA1), the blue wire.  The servo's red lead
+                goes to the row of the regulator board's 5V pin (drawn green), its brown
+                lead to the ground rail (drawn black), and its orange signal lead to
+                D11 (PA7) (drawn yellow); the regulator board's GND pin is wired to the
+                ground rail, and the Nucleo's 3.3 V and GND feed the two rails.  There
+                is no potentiometer.</caption>
+                <image source="images/Day16-Photosensors/week8FullLabSetup.png" width="100%"/>
+            </figure>
+            <activity xml:id="act-day16-arm">
+                <title>Solar tracker assembly</title>
+                <task xml:id="task-day16-cups">
+                    <statement><p>With nothing powered, remove your photocells from the
+                    breadboard and insert them into the shielding cups on the motor arm,
+                    as in <xref ref="fig-day16-cup"/>.  If your arm already carries its
+                    photocells, go on to the clips.</p></statement>
+                </task>
+                <task xml:id="task-day16-clips">
+                    <statement><p>Use alligator-to-breadboard clips to make the electrical
+                    connections between the leads of the photosensors and your
+                    breadboard, one clip per lead.</p></statement>
+                </task>
+                <task xml:id="task-day16-recreate">
+                    <statement><p>Connect the pins of the alligator clips to your
+                    breadboard to recreate the photocell circuit from earlier: each
+                    photocell's two clips go into the row of its red jumper from the
+                    3.3 V rail and the row of its node, as in
+                    <xref ref="fig-day16-full-setup"/>.</p></statement>
+                </task>
+                <task xml:id="task-day16-arm-print">
+                    <statement><p>Plug in the USB cable, then the adapter into the
+                    regulator board, and run your two-channel program.  Both channels
+                    print, now from the arm.  Then sweep the flashlight slowly across the
+                    arm from one side to the other and note which channel rises as the
+                    light moves toward which side of the arm.  Recall also, from the
+                    servo chapter, which way the arm turned as <c>pwm_value</c>
+                    increased.  Both facts are needed for the loop.</p></statement>
+                </task>
+            </activity>
+            <p>
+                <term>A channel changed when the clips went on?</term>  A channel that
+                now prints a rail value, 4095 or 0, or no longer changes with the light,
+                has a clip on the wrong row or a lead that is not held in its clip.  Two
+                channels that print the same value have their two clips in one row.
+            </p>
+            <instructor xml:id="inst-day16-arm-checkpoint">
+                <p>Checkpoint about minute 72.  The arm changes no electrical node, so
+                every fault here is a clip: on the wrong row, in a rail, or not gripping
+                the lead.  A channel at 4095 with its clip in the 3.3 V jumper's row and
+                nothing in the node row is the one to look for first.  A student whose
+                servo is not yet working still does this Part; the servo is not needed
+                until the loop runs.  The sign observation (which channel rises as the
+                light moves which way, and which way the arm turned with
+                <c>pwm_value</c> on Day 15) is what Part 5's first question uses; make
+                sure every table has both before moving on.</p>
+            </instructor>
+        </subsection>
+
+        <!-- Part 5: 22 min = 2 (the two loops) + 3 (read §4) + 4 (commit 1, the sign)
+             + 5 (commit 2, the integer step) + 3 (commit 3, K and T too large)
+             + 1 (the lab's tuning paragraph) + 4 (the bounds, milliseconds()) -->
+        <subsection xml:id="subsec-day16-loop">
+            <title>Part 5: The Feedback Loop We Write</title>
+            <p>
+                There are two feedback loops in the tracker
+                (<xref ref="fig-tracker-two-loops"/>).  The one inside the servo is the
+                servo chapter's: the command position goes in, the potentiometer on the
+                output shaft measures the position, and the servo's own controller drives
+                the motor until the error is zero.  We bought that loop.  The one around
+                the servo is Lab 8's Figure 6: the two sensors, the two ADC channels, a
+                controller, the PWM pulse, the servo, and the angle of the arm, which
+                sets what the two sensors receive and so closes the loop through the
+                light itself.  The controller in this loop is a program, and it is the
+                program you will write.
+            </p>
+            <figure xml:id="fig-tracker-two-loops">
+                <caption>The two loops.  Left, the loop inside the servo, from the servo
+                chapter: the command position, the error, the controller, the motor, the
+                gears, and the potentiometer that feeds the position back.  Right, Lab 8's
+                Figure 6, the loop around the servo: two sensors, two ADC conversions, the
+                controller we write, the PWM pulse, the servo, and the angle θ of the arm,
+                which feeds back to the sensors through the light.</caption>
+                <sidebyside widths="48% 48%" margins="1%" valign="middle">
+                    <image source="images/Day15-Servos/slide08_095020b6.png"/>
+                    <image source="images/Day16-Photosensors/lab8-fig6-tracker-loop.png"/>
+                </sidebyside>
+            </figure>
+            <activity xml:id="act-day16-read-tracker">
+                <title>Read "A Solar Tracker" in the lab handout</title>
                 <statement>
-                    <p>Build and demonstrate a one-axis solar tracker that follows a flashlight
-                    moved in an arc in front of the assembly.</p>
-                    <ol>
-                        <li>Wire two photocell voltage dividers to PA0 and PA1 ADC inputs.
-                        Verify both return reasonable codes (1000–3000) under room lighting.</li>
-                        <li>Mount the photocells on the servo arm with cardboard shielding cups
-                        so each covers roughly one half of the scene.</li>
-                        <li>Implement <c>solar_tracker_update()</c> and call it in the main loop
-                        with a 20 ms delay.</li>
-                        <li>Adjust the gain until the arm follows the flashlight smoothly without
-                        excessive oscillation.</li>
-                        <li>Measure and record the steady-state error angle when the flashlight is
-                        held 10 cm to the left of center.</li>
-                    </ol>
+                    <p>Read the start of Lab 8's section 4: the block diagram and the
+                    paragraph that begins "Here is the theory of operation", through the
+                    two equations for PWM(t + T).  Stop before the paragraph that begins
+                    "You, as the designer".</p>
                 </statement>
-            </exercise>
-        </exercises>
+            </activity>
+            <p>
+                In the lab's notation the two sensor voltages are <m>V_0</m> and
+                <m>V_1</m>, the ADC readings of the two channels; the error is
+                <m>e = V_1 - V_0</m>; and the controller updates the PWM value every
+                sampling interval <m>T</m>, either by a fixed step,
+                <m>\text{PWM}(t + T) = \text{PWM}(t) \pm \Delta</m>, or by a step
+                proportional to the error, <m>\text{PWM}(t + T) = \text{PWM}(t) + K\,e(t)</m>,
+                with <m>K</m> the gain.  Discuss at your table how you might implement
+                the feedback loop, in three steps.
+            </p>
+            <activity xml:id="act-day16-design">
+                <title>Discuss at your table how you might implement the feedback loop</title>
+                <task xml:id="task-day16-sign">
+                    <statement><p>Suppose <m>V_1</m> is larger than <m>V_0</m>, so that
+                    <m>e</m> is positive.  Which way should the arm turn, and should the
+                    PWM value increase or decrease to turn it that way?  What in your
+                    own build decides the answer?</p></statement>
+                </task>
+                <task xml:id="task-day16-integer">
+                    <statement><p>The lab suggests starting with <m>K</m> on the order of
+                    0.01, with <m>e</m> in ADC counts and the PWM value in timer counts.
+                    With <m>e = 50</m>, what step does the arithmetic give, in whole
+                    timer counts?  For which values of <m>e</m> is the step zero?</p></statement>
+                </task>
+                <task xml:id="task-day16-tuning">
+                    <statement><p>Predict what the arm does if <m>K</m> is much too large,
+                    and what it does if <m>T</m> is much too long.</p></statement>
+                </task>
+            </activity>
+            <p>
+                The sign first.  A positive error means the photocell on channel 1
+                receives more light than the one on channel 0, so the arm has to turn
+                toward channel 1's side.  Whether that is a larger or a smaller PWM value
+                depends on two things that are properties of your build and not of the
+                lab: which photocell is on A1, and which way the arm turns as the pulse
+                gets wider, which you saw on Day 15 as you turned the knob.  Both are
+                what you noted from your own sweep earlier today, so the sign of
+                <m>K</m> comes from your board and not from the book.  A loop with the
+                wrong sign drives the arm away from the light until it reaches a bound
+                and holds it there, so a wrong sign shows up as an arm pinned at one end
+                of its travel, not as an arm that hunts.
+            </p>
+            <p>
+                Then the size of the step.  The step <m>K e</m> has to be a whole number
+                of timer counts, because CCR1 holds an integer.  With <m>K = 0.01</m> and
+                <m>e = 50</m> the product is 0.5 counts, and integer arithmetic gives 0.
+                If <m>K</m> is declared as an <c>int</c>, 0.01 is already 0 before it is
+                multiplied by anything, and every step is 0.  Written as a division
+                instead, a step of <m>e/100</m>, the step becomes a whole count only once
+                <m>|e|</m> reaches 100: every error below 100 counts, which is about
+                0.08 V on the ADC's 3.3 V, 12-bit scale, produces no correction at all.
+                That band is a <term>dead zone</term>.  Inside it the loop does not
+                correct, and the arm rests wherever it is.  Keeping the arithmetic in
+                integers is a trade: a smaller and faster loop with no floating-point
+                library, at the price of a dead zone whose width is set by <m>K</m>.  A
+                <c>float</c> <m>K</m> removes the dead zone, and the STM32C031C6 can do
+                the arithmetic in software; the loop shown in Lab 8 uses the ADC counts
+                directly, and <xref ref="subsec-photo-ref-loop"/> says what the lab's
+                "lump VREF/4096 into K" means.
+            </p>
+            <p>
+                Then the two ways the loop misbehaves.  With <m>K</m> too large, each step
+                overshoots the balance point, the error changes sign, the next step
+                overshoots back, and the arm hunts around the light instead of settling
+                on it.  With <m>T</m> too long, the arm corrects only every <m>T</m>, and
+                a moving light is always ahead of it, so the arm lags.  Now read the
+                lab's next paragraph, the one that begins "You, as the designer": it says
+                the same in its own words, and it recommends starting cautiously with
+                <m>K</m> on the order of 0.01 and increasing it as you gain understanding
+                of the system's dynamics.
+            </p>
+            <p>
+                Two things the lab asks for, said once.  First, the bounds.  The lab asks
+                that upper and lower bounds be imposed on the PWM value before it is
+                written to CCR1, so that the servo is not driven beyond ±60° of center.
+                Your servo program from Day 15 already applies a limit in
+                <c>updateServo()</c> before every write; its <c>SERVO_MIN</c> and
+                <c>SERVO_MAX</c> are the 1 ms and 2 ms endpoints, and the lab's ±60° is
+                narrower than that, so the two numbers are yours to work out from the
+                pulse convention (<xref ref="subsec-servo-ref-command"/>).  Second, the
+                sampling interval.  The lab asks you to use <c>milliseconds()</c>, the
+                SysTick count from the motor chapter
+                (<xref ref="subsec-day12-main-loop"/>), to keep track of <m>T</m>.  The
+                loop then has the shape of the Day 12 main loop, and it takes two lines:
+            </p>
+            <program language="c"><code><![CDATA[
+    if (milliseconds() - last_update >= T_MS) {
+        last_update = milliseconds();
+        // read both channels, compute e, update the PWM value, bound it, write it
+    }
+]]></code></program>
+            <instructor xml:id="inst-day16-loop">
+                <p>A worked loop, in the shape the lab describes, with Day 15's
+                <c>updateServo()</c> and Lab 5's ADC names.  The sign of the step and
+                the two bound values are the student's; <c>K_DIV</c> of 100 is the
+                lab's K = 0.01 as a division.  <c>pwm</c> and <c>e</c> are signed,
+                because <c>e</c> is negative half the time.</p>
+                <program language="c"><code><![CDATA[
+#define T_MS        100         // sampling interval T, in ms
+#define K_DIV       100         // K = 1/K_DIV = 0.01
+#define PWM_LOWER   /* their value: 60 degrees below center */
+#define PWM_UPPER   /* their value: 60 degrees above center */
+
+    int32_t  v0, v1, e;
+    int32_t  pwm = SERVO_MID;
+    uint32_t last_update = milliseconds();
+
+    while (1) {
+        if (milliseconds() - last_update >= T_MS) {
+            last_update = milliseconds();
+            adc_setChannel(0);
+            v0 = adc_getValue();
+            adc_setChannel(1);
+            v1 = adc_getValue();
+            e = v1 - v0;
+            pwm = pwm + e / K_DIV;              // or pwm - e / K_DIV: the sign is found on the board
+            if (pwm > PWM_UPPER) pwm = PWM_UPPER;
+            if (pwm < PWM_LOWER) pwm = PWM_LOWER;
+            updateServo(pwm);
+        }
+    }
+]]></code></program>
+                <p>The fixed-step version replaces the update with
+                <c>if (e &gt; 0) pwm = pwm + STEP; else if (e &lt; 0) pwm = pwm - STEP;</c>,
+                which has no dead zone and hunts by one step when balanced.  What to
+                expect on the demo: with K_DIV of 100 the arm settles inside a band of
+                about 100 counts of error and stops; halving K_DIV halves the band and,
+                past some value, starts the hunting from commit 3.  A competing light,
+                the lab's warning, shows up as an arm that settles pointing between the
+                flashlight and a window or a laptop screen.</p>
+            </instructor>
+        </subsection>
+
+        <!-- Part 6: 11 min = 9 (start on the loop) + 2 (Deliverables 9 and 10) -->
+        <subsection xml:id="subsec-day16-start">
+            <title>Part 6: Starting the Tracker</title>
+            <p>
+                The rest of today is a start on Lab 8's design challenge, which is your
+                lab work.  The starting point is your servo program from Day 15: it
+                already sets up TIM14 for the pulse, reads the ADC, and limits the value
+                in <c>updateServo()</c> before every write.  What changes is that the
+                potentiometer read becomes two photocell reads, the map from the knob
+                becomes the update rule, and the TIM16 tick becomes <c>milliseconds()</c>
+                with <m>T</m> as a <c>#define</c>.
+            </p>
+            <activity xml:id="act-day16-start">
+                <title>Start on the loop</title>
+                <introduction>
+                    <p>Do these in order, and before you run anything predict whether the
+                    arm will hunt, lag, or track the light with the values you chose.</p>
+                </introduction>
+                <task xml:id="task-day16-plan">
+                    <statement><p>Plan the loop at your table in words before you change
+                    any code: what is read, what is computed from it, what is bounded,
+                    what is written, and how the loop waits for <m>T</m>.</p></statement>
+                </task>
+                <task xml:id="task-day16-fixed-step">
+                    <statement><p>Make the fixed-step version first, the lab's first
+                    equation, with a step of a few timer counts, and see whether the arm
+                    turns toward the light or away from it.  Then the proportional
+                    version, with <m>K</m> as the lab suggests.</p></statement>
+                </task>
+            </activity>
+            <p>
+                In Lab 8, Deliverable 9 is a demonstration of the working tracker, with a
+                log of your tuning of <m>K</m> and <m>T</m>, and Deliverable 10 puts the
+                seven-segment display back into the system to show the servo's angle.
+                When you test your system make sure that your flashlight is brighter than
+                any competing light source; a laptop screen, a lamp across the room and a
+                sunny window all attract the tracker.
+            </p>
+        </subsection>
+    </section>
+
+    <!-- ============================================================ -->
+    <section xml:id="sec-photo-reference">
+        <title>Reference: The Divider, the Two-Channel Read, and the Loop</title>
+        <introduction>
+            <p>
+                Lookup material for the photocell and the tracker.  Nothing here is new;
+                it is the same information arranged for a quick look-up.
+            </p>
+        </introduction>
+
+        <subsection xml:id="subsec-photo-ref-divider">
+            <title>The Divider and the Fixed Resistor</title>
+            <p>
+                With the sensor at the top, from <m>V_{cc}</m> to the node, and the
+                fixed resistor <m>R_M</m> from the node to ground,
+                <m>V_M = V_{cc} \cdot R_M/(R_\text{sens} + R_M)</m>, and <m>V_M</m> rises
+                as <m>R_\text{sens}</m> falls.  With the two exchanged,
+                <m>V_M = V_{cc} \cdot R_\text{sens}/(R_\text{sens} + R_M)</m>, and
+                <m>V_M</m> falls as <m>R_\text{sens}</m> falls.  On the STM32C031C6,
+                <m>V_{cc}</m> is 3.3 V and the 12-bit reading is
+                <m>4096 \times V_M / 3.3</m>, so one count is about 0.8 mV.
+            </p>
+            <p>
+                For a sensor whose resistance swings between <m>R_\text{low}</m> and
+                <m>R_\text{high}</m>, the fixed resistor that puts the two readings
+                farthest apart is their geometric mean,
+                <m>R_M = \sqrt{R_\text{low} \times R_\text{high}}</m>.  The swing in
+                <m>V_M</m> is
+                <m>V_{cc}\,[R_M/(R_\text{low} + R_M) - R_M/(R_\text{high} + R_M)]</m>,
+                which is small when <m>R_M</m> is far below both resistances (both terms
+                near 0) and when it is far above both (both terms near 1), and setting
+                its derivative with respect to <m>R_M</m> to zero gives the geometric
+                mean.  The Adafruit guide calls this the Axel Benz formula.  The nearest
+                standard value is what gets built, and the cost of a value away from the
+                mean is a smaller swing, not a wrong reading.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-photo-ref-two-channel">
+            <title>Reading Two Channels</title>
+            <p>
+                The ADC converts the channels selected in <c>ADC_CHSELR</c>, one bit per
+                channel (<xref ref="fig-adc-chselr"/>).  The Lab 5 library's
+                <c>adc_setChannel()</c> writes that register with a single channel's
+                bit, and a read that follows converts that channel.  The Reference Manual
+                adds one condition (RM0490 §14, the <c>ADC_CR</c> register description):
+                after writing to <c>ADC_CHSELR</c> it is mandatory to wait until the
+                <c>CCRDY</c> flag in <c>ADC_ISR</c> is set before setting
+                <c>ADSTART</c>, otherwise the write to <c>ADSTART</c> is ignored.  A
+                channel-select function that does not wait can therefore start its first
+                conversion on the previous channel.  The other way to read two channels
+                is to select both bits in <c>ADC_CHSELR</c> at once: in that case the
+                sequencer converts the selected channels in increasing channel order
+                (Reference Manual §14.4, <em>Channel selection</em>), the
+                <c>EOC</c> flag is set after each conversion with that channel's result
+                in <c>ADC_DR</c>, and the <c>EOS</c> flag is set after the last.
+            </p>
+        </subsection>
+
+        <subsection xml:id="subsec-photo-ref-loop">
+            <title>The Tracker's Update Rule</title>
+            <p>
+                In Lab 8's notation, with <m>V_0</m> and <m>V_1</m> the two ADC readings,
+                the error is <m>e = V_1 - V_0</m> and the proportional update is
+                <m>\text{PWM}(t + T) = \text{PWM}(t) + K\,e(t)</m>, evaluated every
+                <m>T</m> milliseconds and bounded before it is written to
+                <c>CCR1</c>.  The lab's remark that the proportionality constant
+                <m>V_\text{REF}/4096</m> can be lumped into <m>K</m> means this: an
+                ADC count is <m>3.3/4096</m> V, so an error in volts is the error in
+                counts times that constant, and a gain defined against volts is the gain
+                against counts times the same constant.  Since <m>K</m> is chosen by
+                experiment, there is no reason to convert to volts at all; the counts
+                are used directly and <m>K</m> is whatever works.
+            </p>
+            <p>
+                In integer arithmetic a gain below 1 is written as a division,
+                <c>pwm = pwm + e / K_DIV</c>, with <m>K = 1/\text{K\_DIV}</m>.  Because
+                <c>/</c> on integers discards the remainder, every error with
+                <m>|e| &lt; \text{K\_DIV}</m> produces a step of 0, a dead zone of
+                <m>\pm\text{K\_DIV}</m> counts around the balance point, about
+                <m>0.8\text{ mV} \times \text{K\_DIV}</m>.  A smaller <c>K_DIV</c> is a
+                larger gain and a narrower dead zone, and past some value the loop
+                overshoots and hunts.  The error can be negative, so <c>e</c> and the
+                PWM value are signed integers, <c>int32_t</c>, and the bounded value is
+                converted back to <c>uint16_t</c> only when it is written.  The sampling
+                interval <m>T</m> is kept with <c>milliseconds()</c>
+                (<xref ref="subsec-day12-main-loop"/>); the photocell's rise and fall
+                times, 55 ms and 20 ms, and the servo's 0.1 s per 60° put no useful
+                <m>T</m> below a few tens of milliseconds.
+            </p>
+        </subsection>
     </section>
 
 </chapter>
