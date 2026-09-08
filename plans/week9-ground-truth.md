@@ -404,9 +404,9 @@ imgN = raw media):
 | 11 (message board) | slide11_6e110f71.png (cork board clip art) | use in the reading beside the analogy if wanted; decorative — default: use, small |
 | 12 (module intro) | slide12_8534a837.png (composite = **Nucleo board photo, wrong picture**); slide12_img2 (Bluefruit photo), img3 (phone), img4 (app screenshot?) | do NOT use the composite; use slide08_img2 (Bluefruit photo) in the reading |
 | 17 (pinout) | slide17_bca63e06.png (flat Bluefruit photo, silkscreen pin names legible: MOD CTS TXO RXI VIN GND RTS DFU + UART/CMD switch) | **the reading's datasheet-tour figure** — use whole |
-| 18 (wiring photo) | slide18_img1.png (75 kB) | look before use: likely her wiring photo of Bluefruit on breadboard — candidate for the in-class connect step |
+| 18 (wiring photo) | slide18_img1.png — **looked at: an App Store screenshot of the Bluefruit LE Connect app (iTunes era)** | dated screenshot; do not carry into the book — the app is named in prose with the lab's link.  Deck: hers to keep if she likes |
 | 19 | slide19_img1.png = same as slide 17's photo | ref the one figure (Rule 8: never draw twice) |
-| 24 (paper design) | slide24_b49fb152.png (composite) | likely a paper-design example sheet; look before use; candidate for the in-class paper-design slide |
+| 24 (paper design) | slide24_b49fb152.png — **looked at: a Canvas/HiTA screenshot, the "Final Project Design" discussion activity with its goals** (the "Optional HiTA activity" callout) | project on the paper-design slide as-is if she still runs the HiTA activity — question 11; not book content |
 
 Day 17x (`assets/images/Day17x-Sleep Modes/` = composites,
 `Day17x-Sleep_Modes/` = raw):
@@ -418,7 +418,7 @@ Day 17x (`assets/images/Day17x-Sleep Modes/` = composites,
 | 8 | slide08_b3bf8fe4.png — RM Figure 7 transit diagram | use |
 | 9 | slide09_5eaa08d5.png — RM Table 19 screenshot | use (or re-set as a small PreTeXt table; decide at Step 3) |
 | 11 | slide11_04e7f671.png — RM Table 20 screenshot | use: it is the entry-mode table the code reads from |
-| 12 | slide12_075c21ef.png + slide12_92ad53d0.png (+2 raw) — PWR_CR1 and SCB_SCR register screenshots | look at all four at Step 3; carry the two register fields the code writes |
+| 12 | slide12_075c21ef.png + slide12_92ad53d0.png (+2 raw) — PWR_CR1 and SCB_SCR register screenshots.  Looked at: raw img1 = the PWR_CR1 bit diagram (FPD_SLP, FPD_STOP, LPMS[2:0]); raw img4 = **the LPMS[2:0] field description: 000 Stop, 011 Standby, 1XX Shutdown — her own slide's image confirms the slide-13 erratum** | carry the PWR_CR1 diagram and the LPMS description; look at the two composites at Step 3 |
 | 16 | slide16_64c824a1.png — her sleeping puppy photo | hers, the joke; use on the watchdog slide |
 | 21 | slide21_8bf192e3.png — another dog photo | hers; use on the stretch slide if room |
 
@@ -506,3 +506,6 @@ invention throughout both files: none survive.
     ("Helllllloooooooo! I have data from my ENGS 28 team's final
     project…") — carry it into the reading's GAP figure, or keep the
     reading plain?
+11. **HiTA.**  Your slide 24 projects the Canvas HiTA "Final Project
+    Design" activity as the optional paper-design helper.  Still running
+    it this year (the deck would keep that screenshot)?
