@@ -555,3 +555,12 @@ pin would do.
 
 Next: her look at the corrected book; then the deck, which is now her
 sixteen slides almost one to one.
+
+**Pass 2, same day (20 comments, `b267749`):** the servo check is out of
+Part 2 ("the technical study does not use the servo"); the sensor-family
+Part is deleted (it is the reading); Parts renumbered 1–5 (divider
+question and nonlinearity; Part 1 of Lab 8; her slides 10–14; her slide
+15; lab time); Lab 8 Figure 1 relabeled V_1 in the image; the swapped
+formula out of the Reference. Open: the potentiometer sits on A0 from Day
+15 and Lab 8's Figure 2 puts a divider on A0, so the book has the pot come
+off first, with nothing powered; asked.
