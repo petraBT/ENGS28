@@ -125,12 +125,15 @@ generalized — a swap of slides 6 and 7–9 only.
 
 Total: 3+2+10+38+5+14+22+11+5 = **110** (Gate 2 rebudget: Part 1's log-log identity and Part 2's geometric-mean reasoning moved to the Reference, their four minutes to the two first-time hardware steps in Part 2).
 
-**If a part overruns, cut in this order:** Part 6 to its two-sentence close
-(the lab has the build) → Part 3 to its datasheet beat only → Part 1's
-log-log beat to one sentence with the figure → Part 4's clip check done by
-the instructor walking the room rather than a full pause. **Never cut** Part
-2 (the lab's §2 is this class, her arc) or Part 5's three commits (the design
-is the only thing about D9 the class teaches).
+**If a part overruns, cut in this order (against the Parts as passed on
+2026-09-08, 1 to 5):** Part 5's opening to one sentence (the deliverables are
+on the slide and in the handout) → Part 4's discussion to the sign question
+only, with the other two read aloud from the instructor reveal → Part 3's
+checkpoint done by walking the room rather than a full pause → Part 1's
+log-log relation to its closing line with the figure up. **Never cut Part 2**:
+Part 1 of Lab 8 is this class, and it is her arc. (The table above is the
+Gate 2 plan; the passed structure and its budget, 3+2+10+38+17+20+15+5 = 110,
+are in the pass blocks at the end of this file.)
 
 ## Datasheet moments (P-11)
 

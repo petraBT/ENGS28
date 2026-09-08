@@ -564,3 +564,48 @@ question and nonlinearity; Part 1 of Lab 8; her slides 10–14; her slide
 formula out of the Reference. Open: the potentiometer sits on A0 from Day
 15 and Lab 8's Figure 2 puts a divider on A0, so the book has the pot come
 off first, with nothing powered; asked.
+
+## Session 10 (2026-09-08): Petra's pass 3 on the book, and the Day 16 deck through Gate 3
+
+- Her pass 3 (3 comments): the log-log plot credited and linked to the
+  Adafruit guide; "In the plot below".
+- The deck: sixteen `<slide>` blocks beside the passed prose,
+  `assets/decks/day16.json` (35 entries: title, "Where we are", agenda, five
+  sections, 25 refs of which 5 instructor-only, the closing line), the
+  index regenerated. Her sixteen slides one to one: 3 and 6 are the reading
+  (refPage for the divider figure), 16 dropped as course admin. Every
+  student slide fits at 1600×900 with the crossfade killed; the
+  instructor's worked loop overflows, as allowed; every figure slide looked
+  at.
+- Gate 3: seven reviewers in `reviews/day16-gate3.md`, the synthesizer's
+  list applied and recorded there. The big ones: the Adafruit curves have a
+  slope of about 0.85, so neither slide nor book may say the plotted line's
+  slope is the datasheet's 0.6 (reworded; asked); the player deleted
+  `\sqrt` from Lab 8's Deliverable 4 on the wall (fixed in `demath()`, and
+  `check_deck.py` now reports raw LaTeX in a projected `<m>`); five
+  `<xref>`s inside projected activities; the servo-review slide in the
+  present tense after the pot came off; the clock reconciled at the beat
+  level (Part 3 = 17, checkpoint about minute 70; Part 4 = 20).
+
+### Ask-Petra (deck)
+
+1. The log-log slide now says the 0.6 is the PDV-P8001's Sensitivity row
+   and that the guide's plotted curves are steeper (they measure about
+   0.85). Your sentence "In the plot below the slope of the line comes from
+   the datasheet" could not stand as written. OK, or do you have the
+   part's own plot?
+2. Exports only you can make, for the wall: the log-log plot at more than
+   500 px; Lab 8's Figure 2 with the A0/A1 labels not under the wires; the
+   ultimate setup as two views (Nucleo and dividers; servo and regulator),
+   and your slide 13's box-and-arrow annotation if you have it.
+3. The datasheet link on the projected Deliverable 1 stays (the lab's own
+   pointer). Confirm.
+4. The close is one line (Lab 8 next, nothing else due). Name Day 17's
+   reading, or bring back your survey slide, in those five minutes?
+5. A "what you need today" line in the opening recap (multimeter,
+   flashlight, AD2, the arm, the clips), as Day 15 has?
+
+### Next
+
+Her pass on the deck; then close the loop (the rules from this week are in
+memory: the in-class section is her slides; rebuild the preview yourself).

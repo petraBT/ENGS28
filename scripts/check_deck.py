@@ -38,12 +38,49 @@ def source_instructor_ids():
     return ids
 
 
+# LaTeX the player's demath() has no handler for is DELETED on the wall, not
+# shown raw: Day 16's Deliverable 4 projected "R2 = Rdark x Rilluminated" with
+# its \sqrt gone.  demath() handles \frac, \sqrt, \text, \mathrm, the Greek
+# letters and the operators listed in assets/class.html; anything else inside
+# an <m> of a projected block is a problem here, so it is caught before class.
+UNHANDLED = re.compile(r"\\(left|right|overline|underline|hat|vec|bar|dot|sum|int|prod|"
+                       r"dfrac|tfrac|binom|begin|end|mathbf|mathit|operatorname|"
+                       r"lim|infty|partial|nabla)\b")
+
+def projected_block(src, xml_id):
+    m = re.search(r'<(slide|activity|instructor|task)[^>]*xml:id="%s"' % re.escape(xml_id), src)
+    if not m:
+        return ""
+    tag = m.group(1)
+    end = src.find("</%s>" % tag, m.end())
+    return src[m.start():end if end > 0 else m.start() + 4000]
+
+def check_projected_math(deck, srcs):
+    bad = 0
+    for s in deck["slides"]:
+        if s.get("type") != "ref":
+            continue
+        for src in srcs:
+            block = projected_block(src, s["slide"])
+            if not block:
+                continue
+            for m_ in re.finditer(r"<m>(.*?)</m>", block, re.S):
+                hit = UNHANDLED.search(m_.group(1))
+                if hit:
+                    print(f"  RAW LATEX     {s['slide']}: <m>{m_.group(1).strip()[:60]}</m> uses \\{hit.group(1)},"
+                          f" which the player deletes (see demath() in assets/class.html)")
+                    bad += 1
+            break
+    return bad
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit("usage: check_deck.py <deck.json> [more.json ...]")
     bad = 0
     marked = source_instructor_ids()
     src_minutes = source_slide_minutes()
+    srcs = [open(f, encoding="utf-8").read() for f in glob.glob(os.path.join(REPO, "source", "ch-*.ptx"))]
     for deck_path in sys.argv[1:]:
         # index.json is the contents page's deck list, not a deck. It is in this
         # directory (and so in a *.json glob), but has no slides to check —
@@ -58,6 +95,7 @@ def main():
         refs = [s for s in deck["slides"] if s.get("type") == "ref"]
         print(f"\n{os.path.basename(deck_path)} — {len(deck['slides'])} slides, {len(refs)} refs")
         bad += check_part_minutes(deck, src_minutes)
+        bad += check_projected_math(deck, srcs)
         for s in refs:
             # The deck JSON and the source must agree about instructor-only.
             # They drive different halves: the JSON decides the player's badge
