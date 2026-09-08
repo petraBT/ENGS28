@@ -628,3 +628,13 @@ photographs beside the two steps); "we took"; "the position we command
 enters on the left"; K explained as the controller gain; "K · e". Deck 31
 entries. Rule confirmed twice today: any built-up math on a slide is an
 SVG, and a raw `^` or `10^0.6` in slide text is a defect she will circle.
+
+**Her second pass on the deck (7 comments):** "Why aren't you using pretext
+math here?" on the equation SVGs. The player now loads MathJax (the same
+CDN build the book pages use) and typesets every `<m>`/`<md>` on a slide;
+`demath()` is the fallback when the CDN is unreachable. The two equation
+SVGs are gone; the relationship and Lab 8's two formulas are PreTeXt
+display math in the slide blocks. S-6 and the slides guide say so. Also:
+"the servo's current position", "the error (the difference between the
+commanded and the actual position)" in the slide and the book paragraph,
+and the close reads "Keep working on Lab 8; it is the only homework due."

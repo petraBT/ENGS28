@@ -537,6 +537,7 @@
       #slideedit textarea { min-height: 15cqmin; }
       #slideedit input:focus, #slideedit textarea:focus { outline: 2px solid #256abf; outline-offset: -1px; border-color: #256abf; }
       #slideedit .ed-foot { display: flex; align-items: center; gap: .8em; margin-top: 1.4cqmin; }
+      #ref mjx-container[display="true"] { margin: .35em 0; }
       #slideedit button {
         font: inherit; font-size: 2cqmin; padding: .4em 1.1em; cursor: pointer;
         border: 1px solid #cbc9c0; border-radius: 5px; background: #f2f1ed; color: #1a1a19;
@@ -547,6 +548,19 @@
       #slideedit #se-status.ok { color: #2b8a3e; }
       #slideedit #se-status.err { color: #c92a2a; }
     </style>
+    <!-- MathJax, the same build the book pages load, so <m> and <md> on a slide
+         are typeset instead of flattened. demath() below is the fallback when the
+         CDN is unreachable (the flags are read by typesetMath). -->
+    <script>
+      window.__mjState = 'loading'
+      window.MathJax = {
+        tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+        options: { processHtmlClass: 'process-math', ignoreHtmlClass: 'tex2jax_ignore' },
+        startup: { typeset: false }
+      }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"
+            onload="window.__mjState = 'ok'" onerror="window.__mjState = 'failed'"></script>
   </head>
   <body>
     <!-- Table of contents, shown when class.html is opened with no ?deck. -->
@@ -824,6 +838,7 @@
                       rho: 'ρ', pi: 'π' }
         function demath(root) {
           ;[].forEach.call(root.querySelectorAll('.process-math'), function (el) {
+            el.classList.remove('process-math')
             var t = el.textContent
             t = t.replace(/\\[()\[\]]/g, '')                       // \( \) \[ \]
                  .replace(/\\text\s*\{([^{}]*)\}/g, '$1')          // \text{...}
@@ -870,6 +885,20 @@
            front of the character before the underscore. Code is skipped outright
            regardless. */
         var MATHVAR = /\b([A-Za-zΑ-Ωα-ω])_(\{[^}]{1,12}\}|[A-Za-z0-9]{1,12})/g
+        // MathJax typesets the .process-math spans PreTeXt emits for <m> and <md>.
+        // The script is deferred, so the first slide may render before it has
+        // loaded: poll for up to ~8 s, then fall back to demath() + mathify().
+        function typesetMath(root) {
+          var tries = 0
+          ;(function go() {
+            if (window.__mjState === 'ok' && window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise([root]).catch(function () { demath(root); mathify(root) })
+              return
+            }
+            if (window.__mjState === 'failed' || tries++ > 40) { demath(root); mathify(root); return }
+            setTimeout(go, 200)
+          })()
+        }
         function mathify(root) {
           if (!root) return
           var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -878,6 +907,7 @@
               for (var p = n.parentNode; p && p !== root; p = p.parentNode) {
                 var tag = p.nodeName
                 if (tag === 'CODE' || tag === 'PRE' || tag === 'SUB' || tag === 'SUP') return NodeFilter.FILTER_REJECT
+                if (tag.indexOf('MJX-') === 0 || (p.classList && p.classList.contains('process-math'))) return NodeFilter.FILTER_REJECT
               }
               return NodeFilter.FILTER_ACCEPT
             }
@@ -956,7 +986,7 @@
 
             var body = block.querySelector('.deck-slide-body') || block
             var bodyClone = body.cloneNode(true)
-            strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone); demath(bodyClone)
+            strip(bodyClone); absolutize(bodyClone, res.url); highlightBlocks(bodyClone)
             /* An <instructor> block is its own body — there is no
                .deck-slide-body to narrow to — so the clone still carries the
                book's "Instructor only" label and, if it has one, its caption.
@@ -1042,7 +1072,7 @@
             function placeCaption(container, url) {
               if (!capBlock) return
               var capClone = capBlock.cloneNode(true)
-              strip(capClone); absolutize(capClone, url); demath(capClone)
+              strip(capClone); absolutize(capClone, url)
               capClone.className = 'slide-caption'
               capClone.setAttribute('data-edit-origin', 'caption')
               capClone.setAttribute('data-edit-id', slide.slide)
@@ -1059,7 +1089,7 @@
                 // demath here too: a ref'd table (or a figure caption) can carry
                 // <m>, and without this it reached the projector as raw LaTeX --
                 // "\(R_{\text{lim}}\)" on the BJT-vs-MOSFET table.
-                strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone); demath(mediaClone)
+                strip(mediaClone); absolutize(mediaClone, res.url); highlightBlocks(mediaClone)
                 // Resolved from the BOOK (a figure, a table): its source is the
                 // reading, not this slide. Tagged so the authoring layer opens
                 // it read-only rather than offering to rewrite it.
@@ -1137,7 +1167,7 @@
             var noteBlock = notesOn && block.querySelector('.deck-slide-note')
             if (noteBlock) {
               var noteClone = noteBlock.cloneNode(true)
-              strip(noteClone); absolutize(noteClone, res.url); demath(noteClone)
+              strip(noteClone); absolutize(noteClone, res.url)
               refBody.appendChild(noteClone)
             }
             /* A note written on the DECK ENTRY rather than in the source. Until
@@ -1154,8 +1184,11 @@
             }
 
             // Last, once every piece of text is in place: typeset V_BE, h_FE,
-            // R_lim and friends as italic variables with real subscripts.
+            // R_lim and friends as italic variables with real subscripts, then
+            // hand the <m>/<md> math to MathJax (or flatten it if MathJax never
+            // arrived).
             mathify(refEl)
+            typesetMath(refEl)
             })
           })
         }

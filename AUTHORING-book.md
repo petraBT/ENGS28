@@ -833,8 +833,11 @@ These are the quality rules.
 - **S-5 Solutions and instructor cues are never student-facing.** Solutions are
   `"instructor": true`; how-to-solve-it hints are `<note>`; timing goes in
   `presenterNote`.
-- **S-6 Built-up math on a slide is a figure; inline math can be `<m>` or plain
-  text.** The player has no MathJax, so `<m>` is flattened by `demath()`. Since
+- **S-6 Math on a slide is `<m>` and `<md>`, typeset by MathJax in the player
+  (since 2026-09-08; before that, built-up math had to be a figure).** Petra, Day 16:
+  *"Why aren't you using pretext math here? This still looks weird."* on an
+  equation drawn as an SVG. The paragraph below describes the flattening the
+  player falls back to only when MathJax cannot load. The player has no MathJax, so `<m>` is flattened by `demath()`. Since
   2026-08-18 that covers the Greek and operators this book uses, so a one-line
   `<m>\tau = K_t\, i</m>` projects correctly — but **a fraction bar, a root or a
   stacked limit does not**, and Petra has twice rejected a flattened

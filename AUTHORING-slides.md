@@ -268,7 +268,7 @@ for **instructor solutions**: hidden from the reading book, projected on the sli
   book's outer sidebyside margins so the panels don't collapse.) If the reading
   already had them as two separate small figures with no xref, replace those with the
   one combined figure — it reads better in the book too. (Day 6 N/P-channel topologies.)
-- **`<m>` math in slides: inline yes, built-up no.** The player loads no MathJax,
+- **`<m>` and `<md>` math in slides are typeset (since 2026-09-08).** `assets/class.html` loads the same MathJax build the book pages do and typesets every `.process-math` span after a slide is placed, so a fraction, a root or a display equation on a slide renders as it does in the book; Petra: *"Why aren't you using pretext math here?"* on a hand-made equation SVG. `demath()` below is now only the fallback when the CDN is unreachable. The rest of this bullet describes that fallback. The player used to load no MathJax,
   so `<m>` arrives as raw LaTeX and `demath()` flattens it. Since 2026-08-18 it
   maps the Greek and operators this book actually uses (`\omega`, `\tau`,
   `\theta`, `\to`, `\propto`, the named functions, …), so a one-line
