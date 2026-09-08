@@ -255,3 +255,23 @@ divider figure; the datasheet's test conditions per row (illuminated under
 a row lists a range; "applied voltage" is the maximum that may be applied;
 the phone-flashlight sentence deleted; the guide linked; her tracker
 sentence, plus that real trackers compute the sun's position.
+
+## Petra's pass 2 (2026-09-08): 20 comments applied
+
+The servo check is gone from Part 2 ("the technical study of photocells
+does not use the servo"); Part 2 is one sentence plus the pot coming off
+A0 with nothing powered, then Lab 8's own deliverables. Part 3 (her slide
+6, the sensor family) is deleted: it is the reading. The Parts are now 1
+(the divider question and the nonlinearity), 2 (Part 1 of Lab 8), 3 (her
+slides 10-14: the servo test setup recalled in one sentence, cups, clips,
+the ultimate setup), 4 (her slide 15, read and discuss), 5 (lab time).
+Budget: 3+2+10+38+17+20+15+5 = 110. Lab 8 Figure 1 relabeled V_1 in the
+image. The reading: photocells age (no light-history claim), no "which of
+two cells receives more light" (contradicts the 50%), "contains", "one
+page long", "no polarity", "look at in class on a plot". Part 1: one intro
+sentence with the figure and the names; the nonlinearity in short
+sentences, the plot credited to the guide and the 0.6 to the datasheet's
+Sensitivity row, the "factor of 10 in light, factor of about 4 in
+resistance" sentence in words. Part 4: complete sentences, "the tracking
+loop, the one that points the arm at the light", "a controller gain K".
+Part 5: "may all attract". Reference: the swapped-divider formula removed.
