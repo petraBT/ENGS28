@@ -609,3 +609,22 @@ off first, with nothing powered; asked.
 
 Her pass on the deck; then close the loop (the rules from this week are in
 memory: the in-class section is her slides; rebuild the preview yourself).
+
+**Her pass on the deck (2026-09-08, 22 comments) and her answers:** the
+log-log rewording stands; no datasheet link on a projected slide (the
+deliverables are now a `<slide>` block, `sl-day16-study`, in the lab's words
+beside a small Lab 8 Figure 1 and its two formulas typeset as
+`eq-lab8.svg`); no survey slide and no next-reading line in the close; a
+"what you need today" line in the opening recap (Lab 8's equipment list);
+Lab 8's Figure 2 stays as it is; her own `loglog-plot.png` (1678 px)
+replaces the 500 px extract. Her slide comments: the recap's wording
+("drops", "along with a", two sentences, "introduced", "tracker's"); the
+multiplication dot centered on the fraction bar in `fig-photocell-divider.svg`;
+her slide 7 as one slide (figure and question, `sl-day16-divider-recall`
+with room); "logarithmic with base 10", "1 kΩ to 10 kΩ"; the relationship
+typeset as a figure (`eq-loglog.svg`) with R_100 etc. as subscripts and no
+raw exponents; her slides 11–13 as one slide (`sl-day16-assembly`, both
+photographs beside the two steps); "we took"; "the position we command
+enters on the left"; K explained as the controller gain; "K · e". Deck 31
+entries. Rule confirmed twice today: any built-up math on a slide is an
+SVG, and a raw `^` or `10^0.6` in slide text is a defect she will circle.
