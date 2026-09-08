@@ -403,8 +403,8 @@ imgN = raw media):
 | 7 (connection modes) | slide07_9b1c8200.png (= img1) | use: clean three-topology diagram (point-to-point / broadcast / mesh), no annotations lost |
 | 8 (central/peripheral) | slide08_31c95fb6.png (composite: the Central-and-devices icon art); slide08_img2.png (Bluefruit product photo); slide08_img3.png (phone icon) | use the central icon art in the reading; the Bluefruit photo appears once (slide 12's row below) |
 | 9 (GAP) | slide09_img1.png (Bluefruit photo again), img2 (phone) | the speech-bubble composite was not rebuilt; the bubbles are her joke text — carry in prose or ask; no figure needed |
-| 11 (message board) | slide11_6e110f71.png (cork board clip art) | use in the reading beside the analogy if wanted; decorative — default: use, small |
-| 12 (module intro) | slide12_8534a837.png (composite = **Nucleo board photo, wrong picture**); slide12_img2 (Bluefruit photo), img3 (phone), img4 (app screenshot?) | do NOT use the composite; use slide08_img2 (Bluefruit photo) in the reading |
+| 11 (message board) | slide11_6e110f71.png (cork board clip art) | **dropped at Gate 2** (arc-fidelity 2): a text-free empty corkboard, content-free; the analogy is carried in prose |
+| 12 (module intro) | slide12_8534a837.png (composite = **Nucleo board photo, wrong picture**); slide12_img2 (Bluefruit photo), img3 (phone), img4 (app screenshot?) | do NOT use the composite.  **Superseded at Gate 2** (arc-fidelity 6): the slide-17 flat photo serves both the module introduction and the pin tour (Rule 8, one figure); slide08_img2's silkscreen is unreadable |
 | 17 (pinout) | slide17_bca63e06.png (flat Bluefruit photo, silkscreen pin names legible: MOD CTS TXO RXI VIN GND RTS DFU + UART/CMD switch) | **the reading's datasheet-tour figure** — use whole |
 | 18 (wiring photo) | slide18_img1.png — **looked at: an App Store screenshot of the Bluefruit LE Connect app (iTunes era)** | dated screenshot; do not carry into the book — the app is named in prose with the lab's link.  Deck: hers to keep if she likes |
 | 19 | slide19_img1.png = same as slide 17's photo | ref the one figure (Rule 8: never draw twice) |
@@ -469,6 +469,17 @@ invention throughout both files: none survive.
   the only tables in play are RM screenshots, which are images).
 - The composite for Day 17 slide 12 picked the wrong picture (Nucleo, not
   Bluefruit) — known one-picture-per-slide trap; use the raw photo.
+- `Day17x-Sleep_Modes/slide06_img1.png` shares its basename with
+  `Day17-BLE/slide06_img1.png` (different directories).  A re-mining that
+  writes to the wrong day folder would silently swap a headphone photo
+  into the power chapter.
+- Gate 2 crops (2026-09-08), new files beside the raw extractions:
+  `Day17-BLE/fig-bluefruit-pinout.png` (the board alone, silkscreen
+  readable at width 100%; the loose header cropped out),
+  `Day17-BLE/fig-ble-central.png` (cropped to ink),
+  `Day17-BLE/fig-ble-topologies.png` (the unreadable baked-in label band
+  cropped; the caption names the panels).  The pad order on the board,
+  measured from the photo: DFU, GND, RTS, VIN, RXI, TXO, CTS, MOD.
 
 ## 9. Questions for Petra (2026-09-08)
 
