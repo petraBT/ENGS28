@@ -243,9 +243,11 @@ int main(void) {
 
 (Her slide's comment says execution resumes "at the top of the loop";
 strictly it resumes at the instruction after WFI — same thing in this
-loop.  PWR needs no RCC clock enable to write PWR_CR1?  **Unverified**;
-RCC_APBENR1 has a PWREN bit.  If the optional unit carries runnable
-stop-mode code, this needs checking on hardware or in the RM — flagged.)
+loop.  **PWREN resolved at Gate 1**: RM0490 §5.4's RCC register map
+(p. 143) shows RCC_APBENR1 carries PWREN, so the Stop-mode sequence
+gains `RCC->APBENR1 |= RCC_APBENR1_PWREN;` before the PWR_CR1 write —
+the course's clock-before-registers rule holds; plain Sleep mode
+touches no PWR register at all.)
 
 ### The USART2 driver (what students mimic; assets/images/Day05-UART/uart.c)
 
@@ -491,11 +493,16 @@ invention throughout both files: none survive.
    "stop mode", but RM0490 Table 20 says 011 + SLEEPDEEP enters Standby;
    Stop is LPMS = 000.  The book will teach the RM's table (Sleep needs
    no register write at all; Stop is SLEEPDEEP only).  OK?
-7. **Day 18 wall.**  What do you want projected while teams demo: the
-   share-projects format with your four vote categories (your Day 19
-   slide 4), Lab 9's Deliverable 6 checklist, a schedule, anything else?
-   And do the learning-objectives / where-to-go-from-here / last-things
-   slides carry over as they are?
+7. **Day 18 wall and format.**  What do you want projected while teams
+   demo: the share-projects format with your four vote categories (your
+   Day 19 slide 4), Lab 9's Deliverable 6 checklist, a schedule,
+   anything else?  Do the learning-objectives / where-to-go /
+   last-things slides carry over as they are?  And three format calls
+   from Gate 1: (a) with ~8 modules advertising at once in one room,
+   should tables demo in a stagger, or does the stationed partner drive
+   the connection on their own phone; (b) does the pair swap stay/walk
+   roles mid-block so both partners present; (c) are the graded demos
+   and the walk-around the same 70 minutes or two blocks?
 8. **Kit return.**  Your Day 17 slide says kits return Tuesday; your Day
    19 slide says return the kit after the demo.  With demos on Thursday
    this year, which is it (and does the Bluefruit go back separately)?

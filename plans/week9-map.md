@@ -31,7 +31,10 @@ format, and her wrap-up slides.
 USART1 pin/AF table, the paper design, the USART1 driver, the CMD-mode
 screenshot, the BLE startup function, the demo, the reflection — are
 answered nowhere in any student-facing target; the book never names a
-USART1 pin choice.
+USART1 pin choice.  One deliberate, bounded exception (Gate 1):
+`uart2_RxAvail()` is projected on her own slide 16 as the model to
+mimic; the USART1 version, the flow control and the pin choice stay
+theirs.
 
 **Structure decisions (from the shape Petra fixed before mining):**
 
@@ -57,7 +60,14 @@ USART1 pin choice.
    files are requested (Q4) but do not block prose.
 4. Kit-return day is contradictory between her two decks (Q8) — the Day
    17/18 closes carry a placeholder until she answers.
-5. Day 18's wall content is entirely hers to choose (Q7, Q9).
+5. Day 18's wall content and format are entirely hers to choose (Q7,
+   Q9) — Q7 now also carries the Gate 1 format risks: BLE congestion
+   with ~8 modules advertising at once, the partner swap, and whether
+   demos and the walk-around share the 70 minutes.
+6. Q3 (host the Adafruit guide PDF or link only), Q5 (return 0 vs the
+   course's return 1 in her listings) and Q11 (the HiTA paper-design
+   activity) are live; the plans currently link-only, follow B-14, and
+   carry the HiTA pointer, all pending her answers.
 
 **Cut order** (if a day runs long, in order): Day 17 — the CMD-mode
 walkthrough compresses to "the AT commands are in Lab 9 §4.3" (the lab

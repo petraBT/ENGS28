@@ -48,7 +48,31 @@ projected demo rubric (the lab's own words — named here as the one
 addition, since her old deck predates this lab revision), and a schedule
 slide only if she asks for one (Q7).
 
+**Format risks for Petra to settle (Gate 1; folded into Q7):**
+
+- **BLE congestion, the day's one blocker-class risk**: ~8 teams'
+  modules all advertising in one room for 70 minutes while walking
+  partners scan for one specific device — the failure her own Day 17
+  slide 19 warns about, at the moment grading depends on it, with no
+  quieter room to retreat to.  Mitigations are hers to pick: stagger
+  which tables are live, or have the stationed partner drive the
+  connection on their own phone.
+- **Partner swap**: the stay/walk format as written has half of each
+  pair never performing Deliverable 6's "explain the system"; a
+  mid-block swap resequences the same 70 minutes.
+- **Concurrent or sequential**: are the graded Deliverable 6 demos and
+  the peer walk-around the same 70 minutes, or two blocks?
+- The vote tally's stop-and-collect transition costs 2–3 minutes the
+  day's 2-minute slack cannot absorb; the named casualty is the wrap-up
+  (already the cut order).  The Deliverable 6 checklist and the vote
+  slide stay visually distinct in the deck.
+
+**If Q1 lands the microcontroller slides here**: her 17x slides 22–25
+merge into the 8-minute where-to-go beat, which already covers the same
+courses.
+
 **Open questions blocking the build:** Q7 (what on the wall during
-demos; do objectives / where-to-go / last-things carry over), Q8 (kit
-return day), Q1 (whether the microcontroller-ecosystems slides join this
-wrap-up).
+demos; the format risks above; do objectives / where-to-go /
+last-things carry over), Q8 (kit return day — and note Lab 9's stated
+due date, Tuesday March 10 2:15 PM, is after Thursday's demos), Q1
+(whether the microcontroller-ecosystems slides join this wrap-up).
