@@ -521,3 +521,37 @@ Her pass 1 on the Day 16 book → apply → the Day 16 deck
 reading's divider and log-log figures; the four instructor blocks ref'd
 directly; her slide 13 callout as an on-image overlay for the wall) → Gate
 3 → fit check at 1600×900 with the crossfade killed → deliver.
+
+## Session 9 (2026-09-08): Petra's pass 1 on the Day 16 book, applied
+
+Her verdict: "This is absolutely terrible and pretty much your worst work
+ever." 38 comments, all applied and archived. Two lessons, both already
+rules and both broken:
+
+1. **The in-class section is her slides.** Where her slide gives the class
+   time to work on the lab, the book gives them time, in one sentence, and
+   the lab's own wording for the work. The draft had re-taught the reading
+   in Part 1 ("delete this whole thing - it's in the pre-class reading"),
+   invented a reveal with round numbers, taught the geometric mean ("CRAP.
+   Just give them the work from the lab"), and written its own version of
+   the lab's wiring and program steps ("Stick to MY SLIDES. Don't make up
+   CRAP."). Every one of those passed Gate 1, Gate 1.5 and fourteen Gate 2
+   reviewers; the committee found faults in the invention and never asked
+   whether the invention should exist. Same failure as Day 15x (B-19), one
+   day later, on a main day.
+2. **The preview she reviews must be the current build.** The web-edit
+   watcher had stopped rebuilding; she reviewed the pre-Gate-2 text, so
+   several of her circles were on sentences already changed. Before a
+   delivery, rebuild web-edit and web-instructor with
+   `./scripts/build-edit.sh` and check the page's timestamp; never trust the
+   watcher.
+
+Also from her comments: "they do not wear out" (Adafruit's sentence) is
+wrong, photocells age; "the servo chapter's" is a document owning a loop
+and "We bought that loop" is spoken ("Making the chapter human again? We
+talked about this"); formulas go on their own lines with every symbol
+defined; a datasheet row lists a range; don't say A0 or A1 where any ADC
+pin would do.
+
+Next: her look at the corrected book; then the deck, which is now her
+sixteen slides almost one to one.

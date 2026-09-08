@@ -229,3 +229,29 @@ assembly is short for loaded cups): 3+2+12+**36**+**5**+**14**+22+**11**+5 =
 beats: 7+4+3 (checkpoint at 72); Part 5's beats: 2+3+4+5+3+1+4; Part 6's
 beats: 2+9. Gate 2 (2026-09-07) moved two minutes each from Part 1 and Part 2's
 paper beat to Part 2's two first-time hardware steps: 3+2+10+38+5+14+22+11+5.
+
+## Petra's pass 1 (2026-09-08): stick to her slides, give them lab time
+
+Her 38 comments (archived in `reviews/slide-comments-archive.jsonl`). The
+in-class section is now her deck and nothing else: Part 1 is her slide 7's
+question with a two-sentence reveal, her slides 4–5 on the nonlinearity
+(the log-log relationship on its own line, symbols defined) and one
+paragraph on comparing two cells that differ; Part 2 is one sentence ("We'll
+now give you some time to work through Part 1 of Lab 8"), the servo check
+with the lab's "you can remove the pot" clause, Lab 8's Figures 1 and 2 and
+its deliverables in the lab's own words; Part 3 is her slide 6; Part 4 is
+her slides 11–14; Part 5 is her slide 15 (read §4, discuss) with the three
+questions as the discussion's prompts and their answers in an instructor
+block; Part 6 is lab time with Deliverables 9 and 10 and the lab's
+competing-light sentence. The Part 1 recall, the round-number reveal, the
+geometric-mean teaching, the divider-wiring and two-channel prose, the
+invented sweep task and symptom paragraph, and the Part 5 reveal paragraphs
+are gone. Budget: 3+2+10+38+3+14+20+15+5 = 110 (Part 5's beats 3+5+12;
+Part 6 is lab-work time). The reading: "identify"; photocells age (the
+"do not wear out" claim was wrong); the sensor family as bullets; "is
+placed", "resembles", R_sens for R_1 and R_M for R_2; no A0/A1 on the
+divider figure; the datasheet's test conditions per row (illuminated under
+10 lux, dark 10 s after the light is removed, sensitivity 100 vs 10 lux),
+a row lists a range; "applied voltage" is the maximum that may be applied;
+the phone-flashlight sentence deleted; the guide linked; her tracker
+sentence, plus that real trackers compute the sun's position.
