@@ -69,7 +69,8 @@
                 small batteries.  A fitness tracker sends a heart-rate number in
                 short updates; a sensor node sends a temperature reading once a
                 minute.  Between bursts the radio is off and the device draws very
-                little current, which is how a coin cell lasts months.  A BLE
+                little current, which is how a coin cell can power such a device
+                and last months.  A BLE
                 device wakes up, sends a small amount of data, and goes back to sleep.
             </p>
             <figure xml:id="fig-ble-classic-vs-ble">
@@ -183,12 +184,13 @@
                 Here is a concrete example of that hierarchy.  Team 15's Bluefruit
                 device offers one service, which the team named <em>ENGS 28 Super
                 Cool Final Project</em>.  Inside it are two characteristics.  The
-                first is a temperature, whose value is 72 °F and whose property is
-                read, so the central can request the current value at any time.
-                The second is a motor speed, whose value is 65 rpm and whose
-                property is write, so the central can send a new value.  A third
-                property, notify, lets the peripheral push a new value to the
-                central whenever the value changes, without being asked.  Your own
+                first is a temperature, whose value could for example be 72 °F and
+                whose property is read, so the central can request the current
+                value at any time.  The second is a motor speed, whose value is
+                for example 65 rpm and whose property is write, so the central can
+                send a new value.  A third property, notify (not used in the
+                example), lets the peripheral push a new value to the central
+                whenever the value changes, without being asked.  Your own
                 project's data does not appear as its own service; it rides inside
                 the UART service's two characteristics
                 (<xref ref="subsec-ble-bluefruit"/>).
@@ -201,7 +203,7 @@
                 <row><cell>Device</cell><cell>Team 15's Bluefruit module</cell></row>
                 <row><cell>Service, a category of functionality</cell><cell><em>ENGS 28 Super Cool Final Project</em></cell></row>
                 <row><cell>Characteristic, one piece of data</cell><cell>Temperature: value 72 °F, property read</cell></row>
-                <row><cell>Characteristic</cell><cell>Motor speed: value 65 rpm, property write</cell></row>
+                <row><cell>Characteristic, another piece of data</cell><cell>Motor speed: value 65 rpm, property write</cell></row>
             </tabular>
             <p>
                 A message board is a good analogy for the rhythm of the exchange.
@@ -239,8 +241,8 @@
                 Bluefruit LE Connect, and the link to install it is in Lab 9.
             </p>
             <figure xml:id="fig-bluefruit-pinout">
-                <caption>The Adafruit Bluefruit LE UART Friend.  The silver can is
-                the radio module that runs the BLE stack.  The pads carry, by
+                <caption>The Adafruit Bluefruit LE UART Friend.  The silver metal
+                box is the radio module that runs the BLE stack.  The pads carry, by
                 silkscreen name, DFU (device firmware update), GND (ground), VIN
                 (the module's power supply, which we run at 3.3 V), RXI (UART
                 receive, from the microcontroller into the module), TXO (UART
@@ -256,23 +258,28 @@
                 The module has two operating modes, selected by the switch on the
                 board, or by a Nucleo GPIO pin driving MOD.  In <term>data
                 mode</term> (the switch position labeled UART) the module streams
-                raw data: every byte in on RXI goes out over the air, and every
-                byte from the air comes out on TXO.  UART is the switch's own
+                raw data: every byte that arrives on the board via RXI goes out
+                over the air, and every byte the module receives from the air gets
+                placed and sent out on TXO.  UART is the switch's own
                 label; Adafruit's documentation calls the mode Data Mode.  In
                 <term>command mode</term> (the switch position labeled CMD) the
-                module instead interprets what it receives as configuration
+                module instead interprets what it receives on RXI as configuration
                 commands, each beginning with the letters AT; you will use a few of
                 them in Lab 9 to reset the module and give your device its name.
                 The module also has two LEDs, labeled CONN and MODE on the
-                silkscreen; CONN indicates the connection state, which is useful
+                board; CONN indicates the connection state, which is useful
                 for debugging.
             </p>
             <p>
                 CTS (clear to send) is an input that gates the module's
                 transmissions: it is pulled high on the module by default, and it
                 must be brought low before the module will send data out of TXO.
-                We'll look in class at what CTS and RTS are for, and at how our
-                USART drives them.  The module's own documentation is the
+                In our wiring, the Nucleo's USART drives it low through its own
+                RTS (request to send) output whenever it is ready to receive, and
+                the module's RTS output does the same for us in the other
+                direction; a design that does not use flow control ties the
+                module's CTS to ground instead.  We'll look in class at how the
+                USART is configured to do this.  The module's own documentation is the
                 <url href="https://learn.adafruit.com/introducing-the-adafruit-bluefruit-le-uart-friend">Adafruit
                 guide</url>, linked in Lab 9; its pinout page is the one to read
                 before class.
@@ -469,10 +476,10 @@
             <p>
                 In the reading we introduced the Bluefruit module as a UART bridge.
                 On our board, the bridge runs through <term>USART1</term>: the
-                STM32C031C6 has two USARTs, USART2 is already carrying
-                <c>printf</c> to CoolTerm through the ST-LINK, and in Lab 9 §3's
-                words, the Bluefruit device requires the use of USART1 and the use
-                of hardware-based flow control.
+                STM32C031C6 has two USARTs, and USART2 is already carrying
+                <c>printf</c> to CoolTerm through the ST-LINK, so we'll use USART1
+                to connect the Bluefruit module to the Nucleo.  We'll also be
+                using hardware-based flow control, as described below.
             </p>
             <p>
                 <term>Hardware flow control</term> is two extra wires that carry
