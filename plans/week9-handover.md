@@ -109,9 +109,39 @@ written so the answer does not change the listing).
 - SLEEPDEEP lives in the Arm Cortex-M0+ Generic User Guide (Table
   4-14), not in RM0490 — the guide is not hosted in `assets/` (asked).
 
+## Session 2 (2026-09-09): her reading comments, and the Day 17 deck built deck-first
+
+Her ruling, applied: the in-class section needs activities mimicking her
+slides (nothing invented), and the deck comes before the in-class book
+refinement.  Delivered, committed on `main`:
+
+- Her 13 reading comments applied (every circle rendered in headless
+  Chrome against the current build before the edit; archived).  The
+  substantive ones: the data-mode sentence rebuilt in her words; the
+  circled CTS deferral answered in place (our RTS drives it; tie to
+  ground without flow control); Part 1's opener in her sentence; the
+  GATT example's values as examples; "silver can" → "silver metal box".
+- Seven `<activity>` blocks in her slides' own words (driver,
+  passthrough test, connect, UART mode, CMD mode, MOD-pin startup,
+  paper design), the wiring table numbered (`table-day17-wiring`, title
+  de-duplicated from the slide headline), nine `<slide>` blocks, and
+  `assets/decks/day17.json` (28 entries, 17 refs, 1 instructor-only;
+  groupings and kit-return placeholders pending Q8/Q9).  passthrough.c
+  split setup/loop to fit.  Fit-swept at 1600×900 (crossfade killed,
+  MathJax settled): all student slides fit; the instructor AF slide 6 px
+  over (allowed); figure slides looked at.
+- Gotcha learned: **PreTeXt silently drops section-level content that
+  trails the last subsection** — `inst-day17-af-options` rendered on no
+  page until moved inside `subsec-day17-usart1`.
+- Still open: the in-class PROSE refinement (her instruction: after the
+  deck) — the briefing paragraphs still sit beside the new activities
+  and will be trimmed once she passes the deck; Gate 3 runs then too.
+  The Day 17x deck follows the same pattern once this one is approved.
+
 ### Next session
 
-Her pass 1 on the two books → apply → the Day 17 deck
+Her pass on the Day 17 deck → refine the in-class book prose from the
+passed deck → Gate 3 → the Day 17x deck
 (`assets/decks/day17.json`; her slides one to one; the wiring table and
 GATT table as slides; refPage recalls of the reading's pinout figure)
 and the Day 17x deck (`day17x.json`; the optional unit's slides +
