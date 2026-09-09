@@ -511,6 +511,50 @@
                 four USART1 signals.  You will need to decide which physical pins
                 you will use, and that decision is Deliverable 1 of Lab 9.
             </p>
+            <slide xml:id="sl-day17-bridge" ref="fig-bluefruit-pinout">
+    <caption>The Bluefruit module from the reading: BLE on its own processor, a UART on its pads.  The switch selects UART (data) mode or CMD (command) mode.</caption>
+    <note>≈ 2 min.  The reading's pinout figure by refPage; a one-breath recall, not a re-teaching.</note>
+</slide>
+            <slide xml:id="sl-day17-usart1">
+    <ul>
+        <li>The Bluefruit connects to your Nucleo via USART: USART2 is already carrying <c>printf</c> to CoolTerm through the ST-LINK, so we'll use USART1 to connect the Bluefruit module to the Nucleo.  We'll also be using hardware-based flow control.</li>
+        <li>Read the details of USART1 in the Reference Manual (RM0490 §24.5.20) to understand how to enable this feature.</li>
+        <li>Once you understand how to enable it, examine the alternate function mappings in the STM32C031 datasheet (Tables 13 through 18).  You will need to decide which physical pins you will use for the four USART1 signals.  That decision is Deliverable 1 of Lab 9.</li>
+    </ul>
+    <note>≈ 3 min.  Her slide 13.  The lookups are theirs: name the documents, do not do them.</note>
+</slide>
+            <slide xml:id="sl-day17-flow">
+    <ul>
+        <li><term>Hardware flow control</term> is two extra wires that carry each side's ready-or-not state, so that neither side sends data faster than the other can take it in.</li>
+        <li>CTS (clear to send) is the input that allows a device to transmit: with flow control enabled, the transmitter checks its CTS input before sending each frame, and if that input is high the transmission does not occur.</li>
+        <li>RTS (request to send) is the same signal from the other side's point of view: a device holds its RTS output low while it is ready to receive, and raises it when it is not.</li>
+        <li>The two wires cross: our RTS output drives the module's CTS input, and the module's RTS output drives our CTS input.  A USART with flow control enabled and its CTS input left unconnected can stop transmitting entirely, with no error anywhere.</li>
+    </ul>
+    <note>≈ 3 min.  Part 1's mechanism; the RM citation is in the book paragraph.</note>
+</slide>
+    <instructor xml:id="inst-day17-af-options">
+            <p>The USART1 signal options from the datasheet's AF tables (Tables 13
+            through 18), for answering teams working on Deliverable 1.  The choice
+            is theirs; this table is not projected to students.</p>
+            <ul>
+                <li>USART1_TX: PA0 (AF4), PA9 (AF1), PB6 (AF0), PC14 (AF0).</li>
+                <li>USART1_RX: PA1 (AF4), PA8 (AF14), PA10 (AF1), PB2 (AF0), PB7 (AF0).</li>
+                <li>USART1_CTS: PA11 (AF1), PB4 (AF4), PB6 (AF5).</li>
+                <li>USART1_RTS: PA12 (AF1), PA14 (AF12, but PA14 is also SWCLK/BOOT0, and a team that uses it loses SWD flashing and debugging), PA15 (AF4), PB3 (AF4), PB6 (AF4).  The datasheet spells this signal USART1_RTS_DE_CK in the AF tables.</li>
+            </ul>
+            <p>Conflicts to steer teams around, depending on their project: PB6
+            and PB7 are D1 and D0, and are the Nucleo's default USART1 pins
+            (UM2953 Table 11), which is the most relevant fact for Deliverable 1;
+            PA2 and PA3 are USART2 to the ST-LINK; PA5 is the user LED; PC13 is
+            the user button; PB4 is D5, the course's external button; PA15 is D7,
+            the Day 12 photointerrupter; PA11 and PA12 carry CTS and RTS at AF1
+            and are A4 and A5 on CN8 by default (solder bridges SB8/SB9), so a
+            team using them gives up those analog inputs.  For a team whose
+            transmit works with flow control disabled and stops when CTSE is
+            enabled, the first thing to check is an unwired or miswired CTS: the
+            module's RTS must reach the USART1 CTS pin they chose, and both
+            flow-control wires cross rather than run straight.</p>
+        </instructor>
         </subsection>
 
         <!-- Part 2: 14 min = 4 (the driver brief) + 6 (passthrough.c) + 4 (the AD2 protocol test) -->
@@ -531,6 +575,31 @@
                 before, in the UART chapter's keyboard-counter exercise, where the
                 RXNE flag was read instead of calling <c>uart2_read()</c>.
             </p>
+            <activity xml:id="act-day17-driver">
+                <title>Write your USART1 driver</title>
+                <introduction>
+                    <p>This is Deliverable 3 of Lab 9, and it is the first thing to
+                    build during today's work time.</p>
+                </introduction>
+                <task xml:id="task-day17-init">
+                    <statement><p>Write <c>uart1_init()</c>.  You can start with
+                    <c>uart2_init()</c> and modify it to use the pins that you
+                    decided on previously.  Also remember that you need to enable
+                    hardware flow control.</p></statement>
+                </task>
+                <task xml:id="task-day17-rest">
+                    <statement><p>Write the rest of your USART1 driver, mimicking
+                    the USART2 driver.</p></statement>
+                </task>
+                <task xml:id="task-day17-rxavail">
+                    <statement><p>In the final system, you won't know which USART
+                    will transmit first, so you must devise a way to determine
+                    whether there are any characters in the receive data register.
+                    Do not use the existing read function unless you already know
+                    there is a byte waiting; otherwise, you may block
+                    indefinitely.</p></statement>
+                </task>
+            </activity>
             <p>
                 The program below tests a USART1 driver before the Bluefruit is
                 ever wired: if characters cross it in both directions, your
@@ -567,6 +636,43 @@ int main(void) {
     return 1;
 }
 ]]></code></program>
+            <slide xml:id="sl-day17-passthrough">
+    <program language="c"><code><![CDATA[
+/* passthrough.c */
+#include <stdio.h>
+#include "uart.h"
+#include "uart1.h"
+#include "ES28.h"
+
+int uart2_RxAvail(void);
+
+int main(void) {
+    uart1_init();
+    uart2_init();
+    printf("UART1-2 passthrough test.\r\n");
+    ...
+]]></code></program>
+    <caption>The setup: your USART1 driver's header and init beside the given USART2 driver's.  The prototype is there because uart2_RxAvail() is not declared in uart.h.</caption>
+    <note>≈ 1 min.  Her slide 16's listing, split over two slides to fit; this is the setup half.</note>
+</slide>
+            <slide xml:id="sl-day17-passthrough-loop">
+    <program language="c"><code><![CDATA[
+    while (1) {
+        if (uart1_RxAvail()) {
+            int c = uart1_read();
+            uart2_write(c);
+        }
+        if (uart2_RxAvail()) {
+            int c = uart2_read();
+            uart1_write(c);
+        }
+    }
+    return 1;
+}
+]]></code></program>
+    <caption>The loop: whatever arrives on one USART is transmitted out the other.  If characters cross in both directions, your transmit, receive and availability check work.</caption>
+    <note>≈ 2 min.  The loop half of her slide 16 (return 1 per B-14, pending Q5).</note>
+</slide>
             <p>
                 The functions declared in <c>uart1.h</c> are your driver.  The
                 prototype at the top of <c>passthrough.c</c> is there because
@@ -583,6 +689,19 @@ int uart2_RxAvail(void) {
     }
 }
 ]]></code></program>
+            <slide xml:id="sl-day17-rxavail">
+    <p>The availability check for USART2 is the model to mimic for USART1: it reads the flag and returns, without waiting.  Its prototype is at the top of <c>passthrough.c</c> because <c>uart2_RxAvail()</c> is not declared in <c>uart.h</c>; you supply its definition alongside the USART2 driver.</p>
+    <program language="c"><code><![CDATA[
+int uart2_RxAvail(void) {
+    if (USART2->ISR & USART_ISR_RXNE_RXFNE) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+]]></code></program>
+    <note>≈ 3 min.  The side box of her slide 16.</note>
+</slide>
             <p>
                 You will test the passthrough by typing into CoolTerm: each
                 character goes to USART2's receiver, your program passes it on to
@@ -595,6 +714,26 @@ int uart2_RxAvail(void) {
                 CoolTerm.  You need to be a little careful and send one character
                 at a time, because the AD2 does not support hardware flow control.
             </p>
+            <activity xml:id="act-day17-passthrough-test">
+                <title>Test your USART1 via passthrough</title>
+                <introduction>
+                    <p>Run the passthrough program on your Nucleo, with the AD2's
+                    Tx DIO wired to your USART1 receive pin and its Rx DIO to your
+                    USART1 transmit pin.  Send one character at a time: the AD2
+                    does not support hardware flow control.</p>
+                </introduction>
+                <task xml:id="task-day17-coolterm-to-ad2">
+                    <statement><p>Type a character into CoolTerm.  It goes to
+                    USART2's receiver, your program passes it on to USART1's
+                    transmitter, and you observe it in the Protocol tab on the
+                    AD2's Rx pin.</p></statement>
+                </task>
+                <task xml:id="task-day17-ad2-to-coolterm">
+                    <statement><p>Send a character from the AD2's Tx.  It is
+                    received by USART1, passed on to USART2's transmitter, and you
+                    see it in CoolTerm.</p></statement>
+                </task>
+            </activity>
         </subsection>
 
         <!-- Part 3: 16 min = 4 (wiring + app) + 3 (UART mode) + 3 (CMD mode) + 5 (MOD pin, Deliverable 5's brief) + 1 (ready) -->
@@ -607,7 +746,9 @@ int uart2_RxAvail(void) {
                 the crossover in the two flow-control rows.  Install the Adafruit
                 Bluefruit LE Connect app on your phone; the link is in Lab 9.
             </p>
-            <tabular halign="left">
+            <table xml:id="table-day17-wiring">
+                <title>The six connections, and their directions</title>
+                <tabular halign="left">
                 <row header="yes" bottom="minor">
                     <cell>Bluefruit pin</cell>
                     <cell>Direction</cell>
@@ -619,7 +760,21 @@ int uart2_RxAvail(void) {
                 <row><cell>CTS</cell><cell>into the module</cell><cell>USART1 RTS</cell></row>
                 <row><cell>VIN</cell><cell>power</cell><cell>3.3 V</cell></row>
                 <row><cell>GND</cell><cell>power</cell><cell>GND</cell></row>
-            </tabular>
+                </tabular>
+            </table>
+            <activity xml:id="act-day17-connect">
+                <title>Connect your Bluefruit to your Nucleo</title>
+                <task xml:id="task-day17-wire">
+                    <statement><p>With nothing powered, make the six connections in
+                    the table above, on the Nucleo pins your alternate function
+                    choices picked.  Note the crossover in the two flow-control
+                    rows.</p></statement>
+                </task>
+                <task xml:id="task-day17-app">
+                    <statement><p>Install the Adafruit Bluefruit LE Connect app on
+                    your phone.  The link is in Lab 9.</p></statement>
+                </task>
+            </activity>
             <p>
                 To test UART mode in lab, which Adafruit's documentation also calls
                 data mode, you slide the switch on the Bluefruit board to UART and
@@ -635,6 +790,24 @@ int uart2_RxAvail(void) {
                 students trying to find their devices, or give your device a name,
                 which you do in command mode.
             </p>
+            <activity xml:id="act-day17-uart-mode">
+                <title>Test UART mode (aka Data Mode in Adafruit speak)</title>
+                <task xml:id="task-day17-switch-uart">
+                    <statement><p>Slide the little switch on the Bluefruit board to
+                    UART, and run the passthrough program on your
+                    Nucleo.</p></statement>
+                </task>
+                <task xml:id="task-day17-find">
+                    <statement><p>Open the Adafruit Bluetooth app on your phone and
+                    select the <q>Must have UART Service</q> filter.  Find and
+                    connect to your device, and open the UART tab.</p></statement>
+                </task>
+                <task xml:id="task-day17-both-ways">
+                    <statement><p>Test sending and receiving characters over
+                    Bluetooth.  Make sure that characters you type here appear on
+                    CoolTerm, and vice versa.</p></statement>
+                </task>
+            </activity>
             <p>
                 In command mode the module accepts AT commands.  Slide the switch
                 toward CMD, keep the passthrough program running, and type commands
@@ -649,6 +822,24 @@ int uart2_RxAvail(void) {
                 command formats are described in the Adafruit documentation, and
                 the commands you need are given in Lab 9 §4.3.
             </p>
+            <activity xml:id="act-day17-cmd-mode">
+                <title>CMD (command) mode</title>
+                <introduction>
+                    <p>Place your Bluefruit into CMD mode by sliding the little
+                    switch toward CMD, and continue running the passthrough
+                    program on your Nucleo, so that you can see whether your
+                    commands were processed correctly (the module responds OK) or
+                    incorrectly (the module responds ERROR).</p>
+                </introduction>
+                <task xml:id="task-day17-at">
+                    <statement><p>Type a few AT commands into CoolTerm: <c>ATZ</c>
+                    (soft reset, which restarts the Bluetooth stack),
+                    <c>AT+FACTORYRESET</c> (the big hammer), and
+                    <c>AT+GAPDEVNAME</c> (how you give your device a recognizable
+                    name; issue an <c>ATZ</c> after changing the name so that the
+                    device starts advertising the change).</p></statement>
+                </task>
+            </activity>
             <p>
                 You wouldn't want to keep sliding that little switch by hand, and
                 there is a way to do it in software.  The MOD pin selects the same
@@ -664,6 +855,29 @@ int uart2_RxAvail(void) {
                 arrives.  Consider placing the initialization in its own file as a
                 function you can call from any program.
             </p>
+            <activity xml:id="act-day17-mode-pin">
+                <title>Switching modes via the MOD pin</title>
+                <introduction>
+                    <p>This is Deliverable 5 of Lab 9: a startup routine your final
+                    program calls once.</p>
+                </introduction>
+                <task xml:id="task-day17-gpio">
+                    <statement><p>Connect a GPIO pin on your Nucleo to the MOD pin
+                    on the Bluefruit.  You can control the mode by switching the
+                    pin high (CMD mode) or low (UART mode).  In your code you'll
+                    need to initialize the GPIO pin (as what kind of
+                    pin?).</p></statement>
+                </task>
+                <task xml:id="task-day17-startup">
+                    <statement><p>Make the BLE startup a routine of its own: switch
+                    the mode pin to CMD mode, perform a factory reset, assign a
+                    device name, perform a soft reset (so the device will start
+                    advertising the new name), and switch to UART mode.  The
+                    device should then wait, doing nothing, until data arrives.
+                    Consider placing the initialization in its own file as a
+                    function you can call from any program.</p></statement>
+                </task>
+            </activity>
             <p>
                 You are then ready to build your system.  Your system should behave
                 normally even if there is no other device connected.  When a
@@ -673,6 +887,14 @@ int uart2_RxAvail(void) {
                 periodically, and make sure that your main loop does not depend on
                 any particular state of the Bluetooth system.
             </p>
+            <slide xml:id="sl-day17-ready">
+    <ul>
+        <li>Your system should behave normally even if there is no other device connected.</li>
+        <li>When a Bluetooth device connects, it should start receiving data from your system, and your system should start responding to commands from the Bluetooth device.</li>
+        <li>Assume the Bluetooth device will come and go periodically, and make sure that your main loop does not depend on any particular state of the Bluetooth system.</li>
+    </ul>
+    <note>≈ 1 min.  Her slide 22, "You are now ready to build your system!" as the headline.</note>
+</slide>
         </subsection>
 
         <!-- Part 4: 7 min = 5 (project notes + paper design) + 2 (deadlines) -->
@@ -685,6 +907,14 @@ int uart2_RxAvail(void) {
                 incremental steps: the deliverables are ordered to lead you to a
                 functioning system fairly quickly.
             </p>
+            <slide xml:id="sl-day17-project-notes">
+    <ul>
+        <li>Read the project description carefully.  Ask questions as needed.</li>
+        <li>Get started with your paper design!  By Friday at 10 pm, submit your paper design (pseudocode, block diagram, and so on).  It is Deliverable 2 of Lab 9.</li>
+        <li>In Lab 9's own words: approach the design as a series of small incremental steps.  The deliverables are ordered to lead you to a functioning system fairly quickly.</li>
+    </ul>
+    <note>≈ 2 min.  Her slide 23, plus the lab's staging sentence.</note>
+</slide>
             <p>
                 Do not start coding the project until you have developed a plan.
                 Begin the process on paper by describing, with a block diagram,
@@ -714,6 +944,39 @@ int uart2_RxAvail(void) {
                 HiTA activity on Canvas, <em>Final Project Design</em>, can help
                 you think through the design.
             </p>
+            <activity xml:id="act-day17-paper">
+                <title>Begin your paper design</title>
+                <introduction>
+                    <p>This is a large, complicated project.  Do not start coding
+                    until you have developed a plan!  Your paper design is due
+                    Friday at 10 pm.</p>
+                </introduction>
+                <task xml:id="task-day17-diagram">
+                    <statement><p>Begin the process on paper by describing, with a
+                    block diagram, high-level pseudocode, or a state machine
+                    diagram, exactly which components you are using and how they
+                    will interact.  Consider in particular: are you using timers,
+                    and if so, which ones?  Will you need interrupts, and which
+                    ones?  What components will you use (buttons, display, motors,
+                    and so on)?  If you are using a state machine, what are its
+                    states?</p></statement>
+                </task>
+                <task xml:id="task-day17-io">
+                    <statement><p>Include a listing of all the input and output in
+                    your system and, importantly, how you are using it.  Rather
+                    than state that you are using a button, make notes detailing
+                    how often you will sample it, or whether an interrupt reads
+                    it, and how you will use the value to decide what happens
+                    next.</p></statement>
+                </task>
+                <task xml:id="task-day17-pseudo">
+                    <statement><p>If you write pseudocode, keep it at a high level
+                    and abstract; this will help you focus on the bigger picture
+                    before you get mired in the details.  Do not write C!
+                    Non-obvious steps, such as resetting a pin, should carry a
+                    note about why you are doing them.</p></statement>
+                </task>
+            </activity>
         </subsection>
 
         <!-- Part 5: 57 min of project work time, then the close (1 min) -->
@@ -726,29 +989,6 @@ int uart2_RxAvail(void) {
             </p>
         </subsection>
 
-        <instructor xml:id="inst-day17-af-options">
-            <p>The USART1 signal options from the datasheet's AF tables (Tables 13
-            through 18), for answering teams working on Deliverable 1.  The choice
-            is theirs; this table is not projected to students.</p>
-            <ul>
-                <li>USART1_TX: PA0 (AF4), PA9 (AF1), PB6 (AF0), PC14 (AF0).</li>
-                <li>USART1_RX: PA1 (AF4), PA8 (AF14), PA10 (AF1), PB2 (AF0), PB7 (AF0).</li>
-                <li>USART1_CTS: PA11 (AF1), PB4 (AF4), PB6 (AF5).</li>
-                <li>USART1_RTS: PA12 (AF1), PA14 (AF12, but PA14 is also SWCLK/BOOT0, and a team that uses it loses SWD flashing and debugging), PA15 (AF4), PB3 (AF4), PB6 (AF4).  The datasheet spells this signal USART1_RTS_DE_CK in the AF tables.</li>
-            </ul>
-            <p>Conflicts to steer teams around, depending on their project: PB6
-            and PB7 are D1 and D0, and are the Nucleo's default USART1 pins
-            (UM2953 Table 11), which is the most relevant fact for Deliverable 1;
-            PA2 and PA3 are USART2 to the ST-LINK; PA5 is the user LED; PC13 is
-            the user button; PB4 is D5, the course's external button; PA15 is D7,
-            the Day 12 photointerrupter; PA11 and PA12 carry CTS and RTS at AF1
-            and are A4 and A5 on CN8 by default (solder bridges SB8/SB9), so a
-            team using them gives up those analog inputs.  For a team whose
-            transmit works with flow control disabled and stops when CTSE is
-            enabled, the first thing to check is an unwired or miswired CTS: the
-            module's RTS must reach the USART1 CTS pin they chose, and both
-            flow-control wires cross rather than run straight.</p>
-        </instructor>
     </section>
 
     <!-- ============================================================ -->
