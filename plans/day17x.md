@@ -43,16 +43,19 @@ IWDG's key values and prescaler.
 
 *Optional — the sleep-modes unit runs first.*  Said plainly (Gate 1,
 logistics 3): running the full unit converts most of the hour into
-instruction — 32 of 50 minutes — and the day is then not a work session
-in any real sense.  That is the instructor's trade to make.
+instruction, 38 of 50 minutes at Gate 2's rebudget (Part 3's hands-on
+was under-budgeted at 9 minutes against the repo's own 10-minute
+copy-and-build precedent; it is now 12, funded from Part 4), and the
+day is then not a work session in any real sense.  That is the
+instructor's trade to make.
 
 | Part | min | Mode | What happens |
 | --- | --- | --- | --- |
 | — | 2 | — | agenda; the unit is running today |
 | 1. Where the power goes | 6 | explain | her slides 4–6: the plain one-liner first (an idle chip still leaks a little; every switch of a transistor costs a little more), then her bullets — static and dynamic power, dynamic ∝ clock, the levers (fewest peripherals, lowest clock, sleep), ST's five-arrow figure.  (3 + 3) |
 | 2. The four modes, and how you enter one | 10 | explain | her slides 7–14, against the RM: the clock tree (divide-by-four, not /8) (2); the transit diagram and the four modes qualitatively, off Table 19 — what each keeps running, what wakes it (4); ONE worked entry sequence, Stop mode, corrected against Table 20 — `RCC->APBENR1 \|= RCC_APBENR1_PWREN;`, LPMS stays at its reset 000, SLEEPDEEP in SCB->SCR, `__WFI()`, and the wake half of her slide 13 (an interrupt occurs; clear SLEEPDEEP; back to work); plain Sleep needs no register write at all (2); the processing loop with `__WFI()` (2).  The full LPMS table (Standby 011, Shutdown 1XX) lives in the Reference, not the teaching flow (Gate 1, load 3). |
-| 3. The watchdog | 17 | do → explain | her slides 15–20: what it does (3); the quick example on their boards — copy TemplateProject, download watchdog.c, watch "Hello dog world" repeat, then her two conditions by name: press the blue button more often than every 4 seconds, then less often (9; the repo's own precedent for copy+file+build is 10, Gate 1 arc 3); the reveal in her words (2); the IWDG configuration against RM0490 §20, read off her watchdog.c (3) |
-| 4. Stretch, then work time | 15 | do | her slide 21 for the fast; the room returns to project work |
+| 3. The watchdog | 20 | do → explain | her slides 15–20: what it does (3); the quick example on their boards — copy TemplateProject, download watchdog.c, watch "Hello dog world" repeat, then her two conditions by name: press the blue button more often than every 4 seconds, then less often (12; Gate 2 logistics — first-time file on first-time behavior); the reveal in her words (2); the IWDG configuration against RM0490 §20, read off her watchdog.c (3) |
+| 4. Stretch, then work time | 12 | do | her slide 21 for the fast, briefed in a sentence and done inside the work time; the room returns to project work |
 
 **Coverage table against her deck** (25 slides):
 

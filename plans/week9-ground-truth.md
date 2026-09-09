@@ -410,8 +410,12 @@ imgN = raw media):
 | 19 | slide19_img1.png = same as slide 17's photo | ref the one figure (Rule 8: never draw twice) |
 | 24 (paper design) | slide24_b49fb152.png — **looked at: a Canvas/HiTA screenshot, the "Final Project Design" discussion activity with its goals** (the "Optional HiTA activity" callout) | project on the paper-design slide as-is if she still runs the HiTA activity — question 11; not book content |
 
-Day 17x (`assets/images/Day17x-Sleep Modes/` = composites,
-`Day17x-Sleep_Modes/` = raw):
+Day 17x (`Day17x-Sleep_Modes/` = raw; the space-named composites folder
+held byte-identical duplicates and was deleted at Gate 2.  New crops
+beside the raws: `fig-pwr-cr1-low.png` (bits 15–0 of the PWR_CR1
+diagram), `fig-power-entry-trim.png` (Table 20's taught columns),
+`fig-watchdog-dog.png` (the 4.2 MB photo at half size);
+`slide12_img2.png` (the SCR diagram) is now used as `fig-power-scr`):
 
 | Her slide | File | Decision |
 | --- | --- | --- |

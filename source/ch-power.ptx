@@ -5,27 +5,25 @@
         <p>
             The goal of this chapter is to reduce how much power an embedded system
             consumes when it has nothing to do.  Every program we have written this
-            term runs the processor at full speed all the time, which is fine on USB
-            power and wasteful on a battery.  The STM32C031C6 offers four low-power
-            modes that stop parts of the chip when they are not needed, and one
-            instruction, <c>__WFI()</c>, that parks the processor until an interrupt
-            arrives.  The same chapter introduces the independent watchdog, a
-            hardware timer that resets the processor if the program stops making
-            progress.
+            term keeps the processor running continuously, never idling, which is
+            fine on USB power and wasteful on a battery.  The STM32C031C6 offers
+            four low-power modes that stop parts of the chip when they are not
+            needed, and one instruction, <c>__WFI()</c>, that parks the processor
+            until an interrupt arrives.  We'll also introduce the independent
+            watchdog, a hardware timer that resets the processor if the program
+            stops making progress.
         </p>
         <p>
-            This chapter belongs to the Wednesday x-hour of the final week, and that
-            hour is above all time to work on your final project.  The material here
-            is taught as the schedule allows; it has no reading assignment and no
-            homework, and nothing in the final project depends on it.  It is in the
-            book because power management is part of nearly every real embedded
-            design, and because the watchdog demonstration is worth five minutes of
-            anyone's time.
+            This chapter covers one class day, the Wednesday x-hour of the final
+            week.  In class we'll look at where a microcontroller's power goes, the
+            four low-power modes and how a program enters one, and the independent
+            watchdog.  <xref ref="sec-power-reference"/> collects the mode entry
+            values and the watchdog's registers for look-up while you build.
         </p>
         <objectives>
             <ul>
                 <li>Explain where a microcontroller's power goes: static leakage, and dynamic power proportional to the clock frequency.</li>
-                <li>Name the STM32C031C6's four low-power modes and the trade-off that deepens from Sleep to Shutdown.</li>
+                <li>Name the STM32C031C6's four low-power modes, and state for each one what it stops and how long it takes to wake.</li>
                 <li>Put the processor to sleep with <c>__WFI()</c> in an interrupt-driven main loop, and enter Stop mode with SLEEPDEEP.</li>
                 <li>Explain what the independent watchdog does, and configure it with the key, prescaler and reload registers.</li>
             </ul>
@@ -37,49 +35,63 @@
         <title>Day 17x In-Class: Project Work, and Power Management</title>
         <introduction>
             <p>
-                This x-hour is time to work on your final project.  Your paper design
-                is due Friday at 10 pm, and the demos are on Thursday, so bring your
-                system and keep building.  The material below, on sleep modes and
-                the watchdog, is taught as time allows; when it is not taught in
-                class, it remains here to read.
+                Today we'll look at where a microcontroller's power goes, the four
+                low-power modes and the one instruction that enters them, and the
+                independent watchdog.  Then we'll give you the rest of the hour to
+                work on your final project.
             </p>
+            <instructor xml:id="inst-day17x-session">
+                <p>The unit below is optional, and this hour is above all project
+                time; last year there was no time for sleep modes at all.  Running
+                the full unit takes about 38 of the 50 minutes, which leaves
+                roughly ten for project work, so the trade is the instructor's on
+                the day.  The cut order is in the plan: the stretch in Part 4
+                first, then Part 2's mode-entry detail, then Part 1 down to its
+                one-liner and the ST figure.  The watchdog demonstration and its
+                reveal are never cut.  Nothing in the final project depends on any
+                of this, and the day has no reading and no homework.</p>
+            </instructor>
         </introduction>
 
+        <!-- 2 min agenda before Part 1; 2 + 6 + 10 + 20 + 12 = 50 -->
         <!-- Part 1: 6 min = 3 (where the power goes) + 3 (the levers, ST figure) -->
         <subsection xml:id="subsec-day17x-power">
             <title>Part 1: Where Does the Power Go?</title>
             <p>
-                An idle chip still consumes a little power, and every switching
-                transistor consumes a little more.  The microcontroller's circuits
-                are made of transistors acting as switches.  Even when a transistor
-                is off, a tiny current leaks through it from the supply to ground;
-                that is <term>static power consumption</term>.  To switch a
-                transistor on or off, a tiny capacitance must be charged or
-                discharged; that is <term>dynamic power consumption</term>, and it
-                is proportional to the clock frequency, because every clock edge
-                switches transistors.  For the Cortex-M0+ core, the dynamic power
-                ranges from about 5 to 50 µW per MHz, depending on the fabrication
-                technology.
+                The microcontroller's circuits are made of transistors acting as
+                switches (<xref ref="fig-transistor-switch-concept"/>).  Even when
+                a transistor is off, a tiny current leaks through it from the
+                supply to ground; that is <term>static power consumption</term>.
+                To switch a transistor on or off, a tiny capacitance must be
+                charged or discharged; that is <term>dynamic power
+                consumption</term>, and it is proportional to the clock frequency,
+                because every clock edge switches transistors.  For the Cortex-M0+
+                core, the dynamic power ranges from about 5 to 50 µW per MHz.
             </p>
             <p>
-                Three levers follow from those two facts.  Enable only the internal
-                peripherals you are actually using, and disable them when done,
-                because a peripheral whose clock is stopped consumes almost nothing;
-                you have been enabling peripheral clocks through
-                <c>RCC-&gt;IOPENR</c> and its siblings all term, and the same
-                registers turn them off.  Run the processor at the lowest clock
-                speed you can.  And let the processor sleep when it has nothing to
-                do, using the low-power modes below.  The trade to understand from
-                the start: the deeper the sleep, the longer it takes to restore the
-                system to its operating state after waking
-                (<xref ref="fig-power-st-modes"/>).
+                Enable only the internal peripherals you are actually using, and
+                disable them when you are done, because a peripheral whose clock is
+                stopped consumes almost nothing; you have been enabling peripheral
+                clocks through <c>RCC-&gt;IOPENR</c> and its siblings all term, and
+                the same registers turn them off.  Run the processor at the lowest
+                clock speed that does the job.  Let the processor sleep when it has
+                nothing to do, using the low-power modes below.  And read the
+                datasheets of all the components you are using, and run tests at
+                different clock frequencies, because in a whole system the
+                microcontroller is rarely the only consumer.  For low power
+                consumption, disable anything you don't need.  The deeper the
+                sleep, the longer it can take to restore the system to its
+                operating state after waking (<xref ref="fig-power-st-modes"/>).
             </p>
             <figure xml:id="fig-power-st-modes">
-                <caption>The STM32C0's operating modes, with typical current and
-                wake-up time for each, at a supply of 3 V and 25 °C.  Run mode at
-                48 MHz draws 58 µA per MHz.  Each mode below it draws less and
-                takes longer to wake from: Sleep resumes in 10 clock cycles,
-                Shutdown, at 19 nA, takes 385 µs.  Figure from
+                <caption>The STM32C0's operating modes, with typical current and,
+                for the low-power modes, typical wake-up time, at a supply of 3 V
+                and 25 °C.  Run mode at 48 MHz draws 58 µA per MHz.  Each mode
+                below it draws less and takes longer to wake from: Sleep at 16 MHz
+                draws 20 µA per MHz and resumes in 10 clock cycles; Stop draws
+                80 µA and wakes in 5.9 µs; Standby draws 7.45 µA and wakes in
+                23 µs; Shutdown draws 19 nA, a thousand times less than a
+                microamp, and takes 385 µs.  Figure from
                 STMicroelectronics.</caption>
                 <image source="images/Day17x-Sleep_Modes/slide06_img1.png" width="80%"/>
             </figure>
@@ -97,83 +109,137 @@
                 divided by four at reset to give the 12 MHz system clock.
             </p>
             <figure xml:id="fig-power-clock-tree">
-                <caption>Clock distribution in the STM32C0, from the Reference
-                Manual.  The HSI48 oscillator at the left feeds the system clock
-                through a divider, set to divide by four at reset; other
-                oscillators, including the 32 kHz LSI that clocks the watchdog,
-                serve their own domains.  Each gate in the tree is a place power
-                can be saved.</caption>
+                <caption>Clock distribution in the STM32C0, Figure 9 of the
+                Reference Manual.  The HSI48 oscillator at the left feeds the
+                system clock through the HSIDIV divider, whose output HSISYS is
+                the clock the CPU runs on; HSIDIV divides by four at reset, which
+                is where our 12 MHz comes from.  Other oscillators, including the
+                32 kHz low-speed internal oscillator (LSI) that clocks the
+                watchdog, serve their own domains.  Stopping a clock stops the
+                domain it feeds, and saves its power.</caption>
                 <image source="images/Day17x-Sleep_Modes/slide07_img1.png" width="85%"/>
             </figure>
             <p>
                 The low-power modes stop progressively more of the chip.  The
                 device transitions from Run mode into a low-power mode and back;
                 there is no path from one low-power mode to another
-                (<xref ref="fig-power-transit"/>).  In <term>Sleep</term> mode the
-                CPU clock is off and everything else can keep running: any
-                peripheral can wake the CPU when an interrupt occurs.  In
-                <term>Stop</term> mode the high-speed oscillators stop too; SRAM
-                and register contents are retained, and waking re-enables the
-                HSI48.  In <term>Standby</term> mode the core's supply domain is
-                powered off and SRAM and register contents are lost, while the LSI
-                and the watchdog can keep running.  In <term>Shutdown</term> mode
-                everything is off, the current is nanoamps, and waking is
-                equivalent to a reset.  The Reference Manual's Table 19,
-                <em>Device resources enabled in different operating modes</em>,
-                lists exactly what runs and what can wake the device in each mode
-                (<xref ref="fig-power-resources"/>).
+                (<xref ref="fig-power-transit"/>).  The Reference Manual's Table
+                19, <em>Device resources enabled in different operating
+                modes</em>, lists exactly what runs and what can wake the device
+                in each mode (<xref ref="fig-power-resources"/>); the four rows
+                below are its summary.
             </p>
+            <table xml:id="table-day17x-modes">
+                <title>The four low-power modes</title>
+                <tabular halign="left">
+                <row header="yes" bottom="minor">
+                    <cell>Mode</cell>
+                    <cell>What stops</cell>
+                    <cell>What survives</cell>
+                    <cell>What wakes it</cell>
+                </row>
+                <row>
+                    <cell><term>Sleep</term></cell>
+                    <cell>the CPU clock</cell>
+                    <cell>everything else keeps running</cell>
+                    <cell>any enabled interrupt, in a few clock cycles</cell>
+                </row>
+                <row>
+                    <cell><term>Stop</term></cell>
+                    <cell>the CPU and the high-speed oscillators</cell>
+                    <cell>SRAM and register contents; the LSI, the LSE and a few wakeup-capable peripherals; GPIO pin states</cell>
+                    <cell>an interrupt from a peripheral that still has a clock</cell>
+                </row>
+                <row>
+                    <cell><term>Standby</term></cell>
+                    <cell>the core's supply domain, the part of the chip that powers the CPU and most peripherals</cell>
+                    <cell><c>PWR_CR3</c>, <c>PWR_CR4</c> and the backup registers; the IWDG and LSI can keep running.  SRAM, register contents and <c>PWR_CR1</c> are not retained</cell>
+                    <cell>the reset pin or a WKUPx pin; Table 19 lists the rest</cell>
+                </row>
+                <row>
+                    <cell><term>Shutdown</term></cell>
+                    <cell>all oscillators and the supply monitor</cell>
+                    <cell>nothing; contents are lost, and waking behaves like a reset</cell>
+                    <cell>the reset pin or a WKUPx pin</cell>
+                </row>
+                </tabular>
+            </table>
             <figure xml:id="fig-power-transit">
                 <caption>The low-power mode transit diagram, Figure 7 of the
                 Reference Manual.  Every low-power mode is entered from Run mode
                 and exits back to Run mode.</caption>
-                <image source="images/Day17x-Sleep_Modes/slide08_img1.png" width="70%"/>
+                <image source="images/Day17x-Sleep_Modes/slide08_img1.png" width="100%"/>
             </figure>
             <figure xml:id="fig-power-resources">
                 <caption>Reference Manual Table 19: which resources run in each
-                operating mode, and which can wake the device.  Reading down the
-                columns, Sleep keeps everything but the CPU available; Stop keeps
-                SRAM, the LSI and a few wakeup-capable peripherals; Standby and
-                Shutdown keep almost nothing.</caption>
-                <image source="images/Day17x-Sleep_Modes/slide09_img1.png" width="85%"/>
+                operating mode, and which can wake the device.  In ST's notation
+                Y is enabled, O optional (off by default, software can enable
+                it), U unchanged from before entry, A automatically disabled, and
+                a dash not available; the gray column beside Stop, Standby and
+                Shutdown is the resource's ability to wake the device.  Reading
+                down the columns, Sleep keeps everything but the CPU available;
+                Stop keeps SRAM, GPIO pin states, the LSI and a few
+                wakeup-capable peripherals; Standby and Shutdown keep almost
+                nothing.</caption>
+                <image source="images/Day17x-Sleep_Modes/slide09_img1.png" width="100%"/>
             </figure>
             <p>
-                Entering a mode takes at most three steps, and the selection is
-                determined by the SLEEPDEEP bit and the LPMS bit field, as the
-                Reference Manual's Table 20, <em>Low-power mode entry overview</em>,
-                lays out (<xref ref="fig-power-entry"/>).  Plain Sleep mode needs no
-                register writes at all: with SLEEPDEEP clear, executing
-                <c>__WFI()</c> (wait for interrupt) stops the CPU clock until an
-                interrupt arrives.  Stop mode is one bit more.  The LPMS field in
-                <c>PWR_CR1</c> keeps its reset value of 000, which selects Stop;
-                the SLEEPDEEP bit in the Cortex-M0+ system control register is set;
-                and <c>__WFI()</c> enters the mode.  The PWR peripheral's
-                registers, like every peripheral's, are reachable only while its
-                clock is enabled, so the sequence is:
+                Entering a low-power mode is a matter of two fields, as the
+                Reference Manual's Table 20, <em>Low-power mode entry
+                overview</em>, lays out (<xref ref="fig-power-entry"/>): the
+                SLEEPDEEP bit in the Cortex-M0+ system control register,
+                <c>SCB-&gt;SCR</c> (documented in the Arm Cortex-M0+ Generic User
+                Guide, Table 4-14, not in RM0490), and the LPMS (low-power mode
+                selection) field in <c>PWR_CR1</c>
+                (<xref ref="fig-pwr-cr1"/>).  Plain Sleep mode needs no register
+                writes at all: with SLEEPDEEP clear, executing <c>__WFI()</c>
+                (wait for interrupt) stops the CPU clock until an interrupt
+                arrives.  Entering Stop mode takes three steps.  LPMS is written
+                to 000, which selects Stop; the SLEEPDEEP bit is set; and
+                <c>__WFI()</c> enters the mode.  The PWR peripheral's registers,
+                like every peripheral's, are reachable only while its clock is
+                enabled, so the sequence is:
             </p>
             <program language="c"><code><![CDATA[
     RCC->APBENR1 |= RCC_APBENR1_PWREN;    // clock the PWR peripheral
-    // PWR->CR1's LPMS field stays at its reset value 000, which selects Stop mode
+    PWR->CR1 &= ~PWR_CR1_LPMS_Msk;        // LPMS = 000 selects Stop mode
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;    // deep sleep rather than Sleep
     __WFI();                              // enter Stop mode; an interrupt wakes us
 ]]></code></program>
+            <figure xml:id="fig-pwr-cr1">
+                <caption>The low half of the PWR_CR1 register (Reference Manual
+                §4.4.1; address offset 0x00, reset value 0x0000 0208, so LPMS
+                resets to 000).  The LPMS field in bits 2 to 0 selects the
+                low-power mode entered when SLEEPDEEP is set; 000 is Stop
+                mode.</caption>
+                <image source="images/Day17x-Sleep_Modes/fig-pwr-cr1-low.png" width="100%"/>
+            </figure>
+            <figure xml:id="fig-power-scr">
+                <caption>The Cortex-M0+ system control register,
+                <c>SCB-&gt;SCR</c>.  Bit 2, SLEEPDEEP, chooses between Sleep and
+                the deeper modes when <c>__WFI()</c> executes; the other bits are
+                not used in this course.  From the Arm Cortex-M0+ Generic User
+                Guide, Table 4-14.</caption>
+                <image source="images/Day17x-Sleep_Modes/slide12_img2.png" width="100%"/>
+            </figure>
             <p>
-                Waking is the same event in reverse: an appropriate interrupt
-                occurs, the HSI48 restarts, execution resumes at the instruction
-                after <c>__WFI()</c>, and the program clears SLEEPDEEP if the next
-                sleep should be a plain one.  The deeper modes, Standby and
-                Shutdown, are selected by writing 011 or 1XX into LPMS; their
-                entry rows are in <xref ref="sec-power-reference"/>, and neither is
-                needed this term.  There is a second entry instruction,
-                <c>__WFE()</c> (wait for event), which wakes on events as well as
-                interrupts; <c>__WFI()</c> is the one we use.
+                Waking runs the entry backwards.  An appropriate interrupt
+                occurs, the HSI48 restarts, the interrupt's own handler runs, and
+                then execution resumes at the instruction after <c>__WFI()</c>;
+                the program clears SLEEPDEEP if the next sleep should be a plain
+                one.  The deeper modes, Standby and Shutdown, are selected
+                through the same LPMS field; their entry values are in
+                <xref ref="sec-power-reference"/>, and neither is needed this
+                term.  There is a second entry instruction, <c>__WFE()</c> (wait
+                for event), which wakes on events as well as interrupts;
+                <c>__WFI()</c> is the one we use.
             </p>
             <figure xml:id="fig-power-entry">
-                <caption>Reference Manual Table 20: the low-power mode entered for
-                each combination of SLEEPDEEP, LPMS and entry instruction.  Sleep
-                needs only SLEEPDEEP clear; Stop is SLEEPDEEP set with LPMS at
-                000; Standby and Shutdown use LPMS 011 and 1XX.</caption>
-                <image source="images/Day17x-Sleep_Modes/slide11_img1.png" width="80%"/>
+                <caption>Reference Manual Table 20, trimmed to the columns we
+                use: the low-power mode entered for each combination of
+                SLEEPDEEP, LPMS and entry instruction.  Sleep needs only
+                SLEEPDEEP clear; Stop is SLEEPDEEP set with LPMS at 000.</caption>
+                <image source="images/Day17x-Sleep_Modes/fig-power-entry-trim.png" width="100%"/>
             </figure>
             <p>
                 The place <c>__WFI()</c> belongs in a program is the main loop of
@@ -202,41 +268,40 @@ int main(void) {
 ]]></code></program>
         </subsection>
 
-        <!-- Part 3: 17 min = 3 (what it does) + 9 (the quick example, both conditions) + 2 (the reveal) + 3 (the configuration) -->
+        <!-- Part 3: 20 min = 3 (what it does) + 12 (the quick example, both conditions) + 2 (the reveal) + 3 (the configuration) -->
         <subsection xml:id="subsec-day17x-watchdog">
             <title>Part 3: The Watchdog</title>
             <p>
                 A deployed embedded system has nobody watching it.  If the program
                 gets stuck, in a loop that never exits or waiting for an event that
-                never occurs, the system simply stops responding, and on a shelf or
+                never occurs, the system stops responding, and on a shelf or
                 a rooftop there is no one to press the reset button.  The
                 <term>independent watchdog</term> (IWDG) is the hardware answer.
                 It is a 12-bit downcounter with an 8-bit prescaler, running on its
-                own 32 kHz internal clock (the LSI) that is independent of the main
-                clock, which is what the name means: the watchdog keeps counting
-                even if the rest of the chip's clocks fail.  A healthy program
-                reloads the counter regularly, which the tradition calls
+                own 32 kHz internal clock, the LSI, separate from the clock that
+                runs the processor.  That is what independent means here: the
+                watchdog keeps counting even if the main clock stops.  A healthy
+                program reloads the counter often, which is called
                 <term>petting the dog</term>.  If the program gets stuck and the
                 reload stops coming, the counter reaches zero and the watchdog
                 resets the processor.
             </p>
             <figure xml:id="fig-watchdog-dog">
                 <caption>The watchdog at rest.</caption>
-                <image source="images/Day17x-Sleep_Modes/slide16_img1.png" width="55%"/>
+                <image source="images/Day17x-Sleep_Modes/fig-watchdog-dog.png" width="55%"/>
             </figure>
             <activity xml:id="act-day17x-watchdog">
                 <title>A quick example</title>
                 <introduction>
-                    <p>The program below is <c>watchdog.c</c>.  Make a copy of your
-                    template project, call the copy <c>Watchdog</c>, and copy
-                    <c>watchdog.c</c> from Canvas into the new project's source
-                    folder.  Compile, upload to your Nucleo, and open CoolTerm.</p>
+                    <p>Make a copy of <c>TemplateProject</c>, call the copy
+                    <c>Watchdog</c>, and copy <c>watchdog.c</c> from Canvas into
+                    the new project's <c>Src</c> folder.  Compile, upload to your
+                    Nucleo, and open CoolTerm at 9600 baud.  You'll see a
+                    <c>Hello dog world</c> message that seems to repeat every
+                    4 seconds.</p>
                 </introduction>
-                <task xml:id="task-day17x-observe">
-                    <statement><p>You'll see a <c>Hello dog world</c> message in
-                    CoolTerm that seems to repeat every 4 seconds.  Predict what the
-                    message's reappearance means before going on.</p></statement>
-                </task>
+                <!-- No predict task here: her slides 17-18 are do-then-reveal,
+                     and B-19 forbids adding one. -->
                 <task xml:id="task-day17x-press-often">
                     <statement><p>Press the blue user button repeatedly, more
                     frequently than every 4 seconds, and observe what
@@ -263,11 +328,28 @@ int main(void) {
                 §20).  Writing 0x0000 5555 to the key register <c>IWDG_KR</c>
                 unlocks the protected prescaler and reload registers.  The
                 prescaler <c>IWDG_PR</c> sets the counting rate; 0b011 divides the
-                32 kHz LSI by 32, giving a 1 ms tick.  The reload register
-                <c>IWDG_RLR</c> sets where the countdown starts; 4000 ticks is
-                4 seconds.  Writing 0x0000 CCCC starts the watchdog, and writing
-                0x0000 AAAA reloads the counter, which is the pet.  Once running,
-                the IWDG cannot be stopped.
+                32 kHz LSI by 32, giving a 1 ms tick.  <c>IWDG_PR</c> may only be
+                written while the PVU (prescaler value update) bit of the status
+                register <c>IWDG_SR</c> is clear, and <c>IWDG_RLR</c> only while
+                RVU (reload value update) is clear: the watchdog runs on its own
+                clock and needs a few of its own cycles to copy a new value in,
+                so the two <c>while</c> loops in the listing wait for each.
+                Writing 0x0000 CCCC starts the watchdog.  Its counter begins at
+                0xFFF, the value it holds after reset, so the first countdown is
+                4095 ticks, the 4 seconds you saw before the first press.
+                Writing 0x0000 AAAA reloads the counter from <c>IWDG_RLR</c>,
+                which is what petting the dog does in the program: it restarts
+                the countdown before it can reach zero.  <c>IWDG_RLR</c> is set
+                to 4000 in the listing, so every countdown after the first one is
+                4 seconds long.
+            </p>
+            <p>
+                The blue user button is on PC13, and the board pulls that pin up
+                to 3.3 V through a 4.7 kΩ resistor (R29 on the Nucleo schematic,
+                sheet 3), so a plain input reads 1 while the button is open and 0
+                while it is pressed; <c>GPIO_IDR_ID13</c> is the CMSIS mask for
+                bit 13 of the input data register, which is the bit the loop
+                tests.
             </p>
             <program language="c"><code><![CDATA[
 #include "ES28.h"
@@ -307,18 +389,25 @@ int main( void ) {
 }
 ]]></code></program>
             <p>
-                Two refinements exist beyond what we use.  The IWDG has a window
-                option, which generates a reset if the dog is petted too early as
-                well as too late.  And the STM32C031C6 carries a second watchdog,
-                the system window watchdog (WWDG), which runs on the main clock and
-                can generate an early interrupt before resetting; it is described
-                in Reference Manual §21.
+                The IWDG also has a window option, which generates a reset if the
+                dog is petted too early as well as too late.  The STM32C031C6
+                carries a second watchdog, the system window watchdog (WWDG),
+                which runs on the main clock and can generate an early interrupt
+                before it resets the processor; it is described in Reference
+                Manual §21.
             </p>
         </subsection>
 
-        <!-- Part 4: 2 min stretch briefing, then ~15 min of project work -->
+        <!-- Part 4: 12 min. The stretch is briefed in a sentence and done inside
+             the work time; if the hour is short it is the first thing cut
+             (plans/day17x.md cut order). -->
         <subsection xml:id="subsec-day17x-stretch">
             <title>Part 4: A Super Quick Modification, then Project Time</title>
+            <p>
+                The last thing we'll do with the watchdog is make it needier.  The
+                two changes below are quick, and you can make them inside the work
+                time that follows.
+            </p>
             <activity xml:id="act-day17x-needier">
                 <title>Super quick modification</title>
                 <task xml:id="task-day17x-onesec">
@@ -330,7 +419,11 @@ int main( void ) {
                     statement after the watchdog initialization but before the
                     <c>while</c> loop, so it runs before you get a chance to pet
                     the dog.  How needy can you make it before it resets too fast
-                    to even print your message?</p></statement>
+                    to even print your message?  Push the reload value down until
+                    the message starts arriving garbled or not at all; a partial
+                    line repeating in CoolTerm is what that looks like, and it is
+                    the expected result rather than a fault in your
+                    program.</p></statement>
                 </task>
             </activity>
             <instructor xml:id="inst-day17x-needier">
@@ -341,10 +434,15 @@ int main( void ) {
                 USART.  A reload value much below about 20 resets the chip in the
                 middle of the message, and the terminal shows a partial line
                 repeating.  Students will find the edge is not sharp, because the
-                reset and restart add time of their own.</p>
+                reset and restart add time of their own.  With the countdown
+                starting from 0xFFF, the edge only appears after the first pet,
+                so a student should press the button once before pushing the
+                reload value down.</p>
             </instructor>
             <p>
-                The rest of the hour is time to work on your project.
+                We'll now give you the rest of the hour to work on your final
+                project.  The paper design is due Friday at 10 pm, and the demos
+                are on Thursday.
             </p>
         </subsection>
     </section>
@@ -354,25 +452,32 @@ int main( void ) {
         <title>Reference: The Low-Power Modes and the Watchdog</title>
         <introduction>
             <p>
-                Lookup material for the four modes and the IWDG.  Nothing here is
-                new; it is the same information arranged for a quick look-up.
+                This section collects the four modes and the IWDG's registers for
+                look-up, including the details class did not cover: what the
+                watchdog's counter does before its first reload, the prescaler's
+                full range, and what survives in each mode.
             </p>
         </introduction>
 
         <subsection xml:id="subsec-power-ref-modes">
             <title>The Four Modes, and Their Entry Values</title>
             <p>
-                The modes and what survives in each (Reference Manual §4.3, and its
-                Table 19): <term>Sleep</term> stops the CPU clock only, and any
-                interrupt wakes it in a few cycles.  <term>Stop</term> also stops
-                the HSI48 and HSE oscillators; SRAM and registers are retained, the
-                LSI and LSE can keep running, and exiting re-enables the HSI48
-                with the system clock at its divide-by-four reset setting.
-                <term>Standby</term> powers off the core's supply domain; SRAM and
-                register contents are lost, except the PWR control and backup
-                registers, while the IWDG and LSI can keep running.
-                <term>Shutdown</term> disables all oscillators and the supply
-                monitor; contents are lost, and exiting behaves like a reset.
+                The four modes are summarized in
+                <xref ref="table-day17x-modes"/>; Reference Manual §4.3 and its
+                Table 19 carry the full accounting, and the details worth having
+                when you come back to this are the following.  Sleep stops the
+                CPU clock only.  Stop also stops the high-speed oscillators, the
+                HSI48 and the HSE (the high-speed external oscillator); SRAM and
+                register contents are retained, the LSI and the LSE (the
+                low-speed internal and external oscillators) can keep running,
+                and exiting re-enables the HSI48 with the system clock divider
+                left at whatever it was set to before entry.  Standby powers off
+                the core's supply domain: SRAM and register contents are lost and
+                <c>PWR_CR1</c> is reset to its default, while <c>PWR_CR3</c>,
+                <c>PWR_CR4</c> and the backup registers are retained and the IWDG
+                and LSI can keep running.  Shutdown disables all oscillators and
+                the supply monitor; contents are lost, and exiting behaves like a
+                reset.
             </p>
             <p>
                 Entry is controlled by SLEEPDEEP (in the Cortex-M0+ system control
@@ -392,40 +497,45 @@ int main( void ) {
                 <row><cell>Shutdown</cell><cell>1</cell><cell>1XX</cell></row>
             </tabular>
             <p>
-                The PWR peripheral's clock is enabled with
-                <c>RCC-&gt;APBENR1 |= RCC_APBENR1_PWREN;</c> before <c>PWR_CR1</c>
-                is written, following the same rule as every peripheral this term.
                 Waking from Sleep or Stop resumes execution after the
                 <c>__WFI()</c>; the pending flag of the interrupt that caused the
                 wake must be cleared as usual.  Waking from Standby or Shutdown
                 restarts the program from the beginning, as after a reset.
             </p>
-            <figure xml:id="fig-pwr-cr1">
-                <caption>The PWR_CR1 register, from the Reference Manual.  The
-                LPMS[2:0] field in bits 2 to 0 selects the low-power mode entered
-                when SLEEPDEEP is set: 000 Stop, 011 Standby, 1XX Shutdown.</caption>
-                <image source="images/Day17x-Sleep_Modes/slide12_img1.png" width="85%"/>
-            </figure>
         </subsection>
 
         <subsection xml:id="subsec-power-ref-iwdg">
-            <title>The IWDG Recipe</title>
+            <title>Configuring the IWDG</title>
             <p>
-                The independent watchdog is configured through four registers
-                (Reference Manual §20.4).  All key values are written to
-                <c>IWDG_KR</c>: 0x0000 5555 unlocks the prescaler, reload and
-                window registers; 0x0000 CCCC starts the watchdog, whose counter
-                counts down from 0xFFF; 0x0000 AAAA reloads the counter from
-                <c>IWDG_RLR</c> and prevents the reset.  The prescaler
-                <c>IWDG_PR</c> divides the 32 kHz LSI: 000 is divide by 4, each
-                step doubles it, 011 is divide by 32 (a 1 ms tick), and 110 and 111
-                are divide by 256.  <c>IWDG_PR</c> may only be changed while the
-                PVU bit of <c>IWDG_SR</c> is clear, and <c>IWDG_RLR</c> while RVU
-                is clear, which is what the two <c>while</c> loops in
-                <c>watchdog.c</c> wait for.  The timeout is the reload value times
-                the prescaled tick.  Once running, the IWDG cannot be stopped; it
-                continues through Sleep and Stop modes, so a program that sleeps
-                longer than its watchdog timeout will be reset in its sleep.
+                The independent watchdog has five registers (Reference Manual
+                §20.4), four of which this course uses: the key register
+                <c>IWDG_KR</c>, the prescaler <c>IWDG_PR</c>, the reload register
+                <c>IWDG_RLR</c> and the status register <c>IWDG_SR</c>.  The
+                fifth, <c>IWDG_WINR</c>, sets the window option we do not use.
+                All key values are written to <c>IWDG_KR</c>: 0x0000 5555 unlocks
+                the prescaler, reload and window registers; 0x0000 CCCC starts
+                the watchdog, whose counter counts down from 0xFFF; 0x0000 AAAA
+                reloads the counter from <c>IWDG_RLR</c> and prevents the reset.
+                The prescaler <c>IWDG_PR</c> divides the 32 kHz LSI: 000 is
+                divide by 4, each step doubles it, 011 is divide by 32 (a 1 ms
+                tick), and 110 and 111 are divide by 256.  The timeout is the
+                reload value times the prescaled tick.  The IWDG needs no clock
+                enable of its own, unlike every other peripheral this term,
+                because it is clocked by the LSI rather than from the bus that
+                RCC gates.
+            </p>
+            <p>
+                Once started, the IWDG cannot be turned off by software: there is
+                no disable bit, which is the point of a watchdog.  This is not a
+                permanent change to the chip.  The IWDG only runs at all once a
+                program has written 0x0000 CCCC to <c>IWDG_KR</c>, and any reset,
+                the watchdog's own, the board's reset button, or flashing a new
+                program, starts the chip with the watchdog stopped.  (Reference
+                Manual §20.3.3 describes a hardware-watchdog option byte that
+                starts the IWDG automatically at power-up; this course does not
+                set it.)  It keeps counting through Sleep, Stop and Standby, so a
+                program that sleeps for longer than its watchdog timeout is reset
+                before it wakes.
             </p>
         </subsection>
     </section>
