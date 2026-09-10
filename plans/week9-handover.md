@@ -138,10 +138,27 @@ refinement.  Delivered, committed on `main`:
   and will be trimmed once she passes the deck; Gate 3 runs then too.
   The Day 17x deck follows the same pattern once this one is approved.
 
+## Session 3 (2026-09-10): her 12 deck comments applied
+
+Her ruling, now in memory: at least what her slides had; solutions never
+given away; explanations may be added, nothing skipped.  Applied and
+committed (`0f50bf4`): passthrough.c and uart2_RxAvail withdrawn from
+student text ("You are giving it away!") — described in her slide 15's
+words, built by the students in the activity, the worked code in
+`inst-day17-passthrough` as the reveal; the AF fill-in table
+(`act-day17-af-table`, Lab 9's Table 1 with its two prefilled Bluefruit
+cells and everything else blank); her slide 19's circled-switch picture
+rebuilt (`fig-bluefruit-switch.svg`, pptx_annotate) as a figure and an
+image-dominant slide; the crossover names the Nucleo's and the
+Bluefruit's RTS/CTS (slide + mirrored paragraph); recap and agenda
+rewordings.  Deck 29 entries, full fit sweep clean (two instructor-only
+overflows allowed).
+
 ### Next session
 
-Her pass on the Day 17 deck → refine the in-class book prose from the
-passed deck → Gate 3 → the Day 17x deck
+Her next pass on the Day 17 deck → refine the in-class book prose from
+the passed deck (the briefing paragraphs still duplicate the activities
+— deliberate until she passes) → Gate 3 → the Day 17x deck
 (`assets/decks/day17.json`; her slides one to one; the wiring table and
 GATT table as slides; refPage recalls of the reading's pinout figure)
 and the Day 17x deck (`day17x.json`; the optional unit's slides +
