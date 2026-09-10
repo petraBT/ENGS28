@@ -492,11 +492,11 @@
                 that input is high the transmission does not occur.  RTS (request
                 to send) is the same signal from the other side's point of view: a
                 device holds its RTS output low while it is ready to receive, and
-                raises it when it is not.  The two wires cross: our RTS output
-                drives the module's CTS input, and the module's RTS output drives
-                our CTS input.  A USART with flow control enabled and its CTS input
-                left unconnected can stop transmitting entirely, with no error
-                anywhere.  The module holds its own CTS pin high until our RTS
+                raises it when it is not.  The two wires cross: the Nucleo's RTS output
+                drives the Bluefruit's CTS input, and the Bluefruit's RTS output
+                drives the Nucleo's CTS input.  A USART with flow control enabled
+                and its CTS input left unconnected can stop transmitting entirely,
+                with no error anywhere.  The module holds its own CTS pin high until our RTS
                 drives it low, so a module whose CTS is not wired will not
                 transmit.
             </p>
@@ -511,6 +511,33 @@
                 four USART1 signals.  You will need to decide which physical pins
                 you will use, and that decision is Deliverable 1 of Lab 9.
             </p>
+            <activity xml:id="act-day17-af-table">
+                <title>AF settings for USART1</title>
+                <introduction>
+                    <p>This is Deliverable 1 of Lab 9: fill in the table below with
+                    the pins you intend to use.</p>
+                </introduction>
+                <task xml:id="task-day17-af-fill">
+                    <statement>
+                        <p>For each of the four USART1 signals, choose a physical
+                        pin from the datasheet's alternate function mapping tables,
+                        and record the pin, its alternate function number, and the
+                        Bluefruit pin it will connect to.</p>
+                        <tabular halign="left">
+                            <row header="yes" bottom="minor">
+                                <cell>USART function</cell>
+                                <cell>Port/Pin</cell>
+                                <cell>Alt Func</cell>
+                                <cell>Bluefruit pin</cell>
+                            </row>
+                            <row><cell>USART1 TX</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>RXI</cell></row>
+                            <row><cell>USART1 RX</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
+                            <row><cell>USART1 CTS</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
+                            <row><cell>USART1 RTS</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>CTS</cell></row>
+                        </tabular>
+                    </statement>
+                </task>
+            </activity>
             <slide xml:id="sl-day17-bridge" ref="fig-bluefruit-pinout">
     <caption>The Bluefruit module from the reading: BLE on its own processor, a UART on its pads.  The switch selects UART (data) mode or CMD (command) mode.</caption>
     <note>≈ 2 min.  The reading's pinout figure by refPage; a one-breath recall, not a re-teaching.</note>
@@ -528,7 +555,7 @@
         <li><term>Hardware flow control</term> is two extra wires that carry each side's ready-or-not state, so that neither side sends data faster than the other can take it in.</li>
         <li>CTS (clear to send) is the input that allows a device to transmit: with flow control enabled, the transmitter checks its CTS input before sending each frame, and if that input is high the transmission does not occur.</li>
         <li>RTS (request to send) is the same signal from the other side's point of view: a device holds its RTS output low while it is ready to receive, and raises it when it is not.</li>
-        <li>The two wires cross: our RTS output drives the module's CTS input, and the module's RTS output drives our CTS input.  A USART with flow control enabled and its CTS input left unconnected can stop transmitting entirely, with no error anywhere.</li>
+        <li>The two wires cross: the Nucleo's RTS output drives the Bluefruit's CTS input, and the Bluefruit's RTS output drives the Nucleo's CTS input.  A USART with flow control enabled and its CTS input left unconnected can stop transmitting entirely, with no error anywhere.</li>
     </ul>
     <note>≈ 3 min.  Part 1's mechanism; the RM citation is in the book paragraph.</note>
 </slide>
@@ -601,106 +628,25 @@
                 </task>
             </activity>
             <p>
-                The program below tests a USART1 driver before the Bluefruit is
-                ever wired: if characters cross it in both directions, your
-                transmit, your receive and your availability check work.  Flow
-                control is exercised later, by the module.  The program connects
-                the two USARTs back to back, so that whatever arrives on one is
-                transmitted out the other.  Using the two USARTs in this manner is
-                known as <term>passthrough</term>.
+                To test your driver before the Bluefruit is ever wired, in Lab 9
+                you are asked to write a small program which connects the
+                transmitter of USART2 (CoolTerm) to the receiver of USART1, and
+                vice versa: whatever arrives on one USART is transmitted out the
+                other.  Using the two UARTs in this manner is known as
+                <term>passthrough</term>.  If characters cross it in both
+                directions, your transmit, your receive and your availability
+                checks work.  Flow control is exercised later, by the module.  The
+                program is yours to build, and it is short: initialize both
+                drivers, and in the main loop use your two availability checks so
+                that neither direction ever blocks the other.
             </p>
-            <program language="c"><code><![CDATA[
-/* passthrough.c */
-
-#include <stdio.h>
-#include "uart.h"
-#include "uart1.h"
-#include "ES28.h"
-
-int uart2_RxAvail(void);
-
-int main(void) {
-    uart1_init();
-    uart2_init();
-    printf("UART1-2 passthrough test.\r\n");
-    while (1) {
-        if (uart1_RxAvail()) {
-            int c = uart1_read();
-            uart2_write(c);
-        }
-        if (uart2_RxAvail()) {
-            int c = uart2_read();
-            uart1_write(c);
-        }
-    }
-    return 1;
-}
-]]></code></program>
-            <slide xml:id="sl-day17-passthrough">
-    <program language="c"><code><![CDATA[
-/* passthrough.c */
-#include <stdio.h>
-#include "uart.h"
-#include "uart1.h"
-#include "ES28.h"
-
-int uart2_RxAvail(void);
-
-int main(void) {
-    uart1_init();
-    uart2_init();
-    printf("UART1-2 passthrough test.\r\n");
-    ...
-]]></code></program>
-    <caption>The setup: your USART1 driver's header and init beside the given USART2 driver's.  The prototype is there because uart2_RxAvail() is not declared in uart.h.</caption>
-    <note>≈ 1 min.  Her slide 16's listing, split over two slides to fit; this is the setup half.</note>
-</slide>
-            <slide xml:id="sl-day17-passthrough-loop">
-    <program language="c"><code><![CDATA[
-    while (1) {
-        if (uart1_RxAvail()) {
-            int c = uart1_read();
-            uart2_write(c);
-        }
-        if (uart2_RxAvail()) {
-            int c = uart2_read();
-            uart1_write(c);
-        }
-    }
-    return 1;
-}
-]]></code></program>
-    <caption>The loop: whatever arrives on one USART is transmitted out the other.  If characters cross in both directions, your transmit, receive and availability check work.</caption>
-    <note>≈ 2 min.  The loop half of her slide 16 (return 1 per B-14, pending Q5).</note>
-</slide>
-            <p>
-                The functions declared in <c>uart1.h</c> are your driver.  The
-                prototype at the top of <c>passthrough.c</c> is there because
-                <c>uart2_RxAvail()</c> is not declared in <c>uart.h</c>; you supply
-                its definition alongside the USART2 driver.  It is the model to
-                mimic for USART1: it reads the flag and returns, without waiting.
-            </p>
-            <program language="c"><code><![CDATA[
-int uart2_RxAvail(void) {
-    if (USART2->ISR & USART_ISR_RXNE_RXFNE) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-]]></code></program>
-            <slide xml:id="sl-day17-rxavail">
-    <p>The availability check for USART2 is the model to mimic for USART1: it reads the flag and returns, without waiting.  Its prototype is at the top of <c>passthrough.c</c> because <c>uart2_RxAvail()</c> is not declared in <c>uart.h</c>; you supply its definition alongside the USART2 driver.</p>
-    <program language="c"><code><![CDATA[
-int uart2_RxAvail(void) {
-    if (USART2->ISR & USART_ISR_RXNE_RXFNE) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-]]></code></program>
-    <note>≈ 3 min.  The side box of her slide 16.</note>
+            <slide xml:id="sl-day17-passthrough-intro">
+    <ul>
+        <li>To test your USART1 driver, write a small program which connects the transmitter of USART2 (CoolTerm) to the receiver of USART1, and vice versa.  Using the two UARTs in this manner is known as <term>passthrough</term>.</li>
+        <li>If characters cross it in both directions, your transmit, your receive and your availability checks work.  Any problem that appears after the Bluefruit is connected is then in the wiring or the module, not in your driver.</li>
+        <li>The program is short: initialize both drivers, and in the main loop use your two availability checks so that neither direction ever blocks the other.</li>
+    </ul>
+    <note>≈ 3 min.  Her slide 15's description; the program is theirs to build (her ruling, 2026-09-10) — the worked version is the instructor reveal.</note>
 </slide>
             <p>
                 You will test the passthrough by typing into CoolTerm: each
@@ -715,25 +661,71 @@ int uart2_RxAvail(void) {
                 at a time, because the AD2 does not support hardware flow control.
             </p>
             <activity xml:id="act-day17-passthrough-test">
-                <title>Test your USART1 via passthrough</title>
-                <introduction>
-                    <p>Run the passthrough program on your Nucleo, with the AD2's
-                    Tx DIO wired to your USART1 receive pin and its Rx DIO to your
-                    USART1 transmit pin.  Send one character at a time: the AD2
-                    does not support hardware flow control.</p>
-                </introduction>
+                <title>Build the passthrough, and test your USART1 with it</title>
+                <task xml:id="task-day17-build-passthrough">
+                    <statement><p>Write the small passthrough program: it connects
+                    the transmitter of USART2 (CoolTerm) to the receiver of
+                    USART1, and vice versa.  Use your two availability checks so
+                    that neither direction ever blocks the other.</p></statement>
+                </task>
                 <task xml:id="task-day17-coolterm-to-ad2">
-                    <statement><p>Type a character into CoolTerm.  It goes to
-                    USART2's receiver, your program passes it on to USART1's
-                    transmitter, and you observe it in the Protocol tab on the
-                    AD2's Rx pin.</p></statement>
+                    <statement><p>Run it, with the AD2's Tx DIO wired to your
+                    USART1 receive pin and its Rx DIO to your USART1 transmit
+                    pin.  Type a character into CoolTerm: it goes to USART2's
+                    receiver, your program passes it on to USART1's transmitter,
+                    and you observe it in the Protocol tab on the AD2's Rx
+                    pin.</p></statement>
                 </task>
                 <task xml:id="task-day17-ad2-to-coolterm">
                     <statement><p>Send a character from the AD2's Tx.  It is
                     received by USART1, passed on to USART2's transmitter, and you
-                    see it in CoolTerm.</p></statement>
+                    see it in CoolTerm.  Send one character at a time: the AD2
+                    does not support hardware flow control.</p></statement>
                 </task>
             </activity>
+            <instructor xml:id="inst-day17-passthrough">
+                <p>The worked passthrough, with the availability check for USART2
+                beside it, for the reveal after teams have built their own.  This
+                is her slide 16's code; the students' Deliverable 3 includes both
+                availability checks, which is why neither is in the student
+                book.</p>
+                <program language="c"><code><![CDATA[
+/* passthrough.c */
+
+#include <stdio.h>
+#include "uart.h"
+#include "uart1.h"
+#include "ES28.h"
+
+int uart2_RxAvail(void);
+
+int main(void) {
+    uart1_init();
+    uart2_init();
+    printf("UART1-2 passthrough test.\r\n");
+    while (1) {
+        if (uart1_RxAvail()) {
+            int c = uart1_read();
+            uart2_write(c);
+        }
+        if (uart2_RxAvail()) {
+            int c = uart2_read();
+            uart1_write(c);
+        }
+    }
+    return 1;
+}
+]]></code></program>
+                <program language="c"><code><![CDATA[
+int uart2_RxAvail(void) {
+    if (USART2->ISR & USART_ISR_RXNE_RXFNE) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+]]></code></program>
+            </instructor>
         </subsection>
 
         <!-- Part 3: 16 min = 4 (wiring + app) + 3 (UART mode) + 3 (CMD mode) + 5 (MOD pin, Deliverable 5's brief) + 1 (ready) -->
@@ -775,9 +767,16 @@ int uart2_RxAvail(void) {
                     your phone.  The link is in Lab 9.</p></statement>
                 </task>
             </activity>
+            <figure xml:id="fig-bluefruit-switch">
+                <caption>The mode switch on the Bluefruit board, circled.  Slide
+                it toward UART for data mode and toward CMD for command mode; the
+                two labels are printed beside it on the board.</caption>
+                <image source="images/Day17-BLE/fig-bluefruit-switch.svg" width="35%"/>
+            </figure>
             <p>
                 To test UART mode in lab, which Adafruit's documentation also calls
-                data mode, you slide the switch on the Bluefruit board to UART and
+                data mode, you slide the switch on the Bluefruit board to UART
+                (<xref ref="fig-bluefruit-switch"/>) and
                 run the passthrough program on your Nucleo.  In the app, select the
                 <q>Must have UART Service</q> filter, find and connect to your
                 device, and open the UART tab.  Characters you type there should
@@ -790,6 +789,10 @@ int uart2_RxAvail(void) {
                 students trying to find their devices, or give your device a name,
                 which you do in command mode.
             </p>
+            <slide xml:id="sl-day17-switch" ref="fig-bluefruit-switch">
+    <caption>The mode switch, circled: slide it toward UART for data mode, toward CMD for command mode.</caption>
+    <note>Her slide 19's picture with the switch circled; leave up while they find the switch.</note>
+</slide>
             <activity xml:id="act-day17-uart-mode">
                 <title>Test UART mode (aka Data Mode in Adafruit speak)</title>
                 <task xml:id="task-day17-switch-uart">
