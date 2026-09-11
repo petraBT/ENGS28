@@ -199,6 +199,20 @@ stale — `location.reload(true)` is not enough; the JSON is copied at
 build time, so after a deck-JSON edit either rebuild or copy it into
 `output/web-deck-instructor/external/decks/` before measuring.
 
+Later that day: her 11 follow-up comments applied (`3e22fbd`).  The
+big one is the AF table in two stages, her design: the quick
+port/pin/AF table right after her slide 13 (`act-day17-pin-table`),
+and after the flow slide the old activity becomes "Complete your
+earlier table by adding the right-hand column" (the Bluefruit pin).
+Also: demos are on TUESDAY (recap + Part 5 paragraph — this reconciles
+the kit-return notice, Q8 closed); the x-hour promise removed from the
+close (she may bring a speaker or do sleep modes — bears on how Day
+17x is framed); the wiring table in her terminology (into/out of the
+Bluefruit module, "On your Nucleo"); the AD2 DIO roles are the
+students' choice, no dedicated pins; AT commands briefly introduced;
+the RX/TX crossover noted beside the flow-control one; "either read".
+Deck 31 entries.
+
 ### Next session
 
 Her next pass on the Day 17 deck → refine the in-class book prose from
