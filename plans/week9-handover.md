@@ -231,6 +231,23 @@ confirms Q8 (kits collected Tuesday after class = demo day).
 19; Day 18 needs only a small work-time deck (groupings/recap, the
 deadlines, work time, close).  Replan before building either deck.
 
+**She passed the Day 17 deck (2026-09-11: "Okay, deck is finished").**
+The deferred in-class prose refinement then ran: the five briefing
+paragraphs that restated their activities verbatim (driver, wiring,
+UART mode, CMD mode, MOD pin, paper design) were trimmed to context
+the tasks do not carry, per her Day 9x specimen.  checker-voice ran on
+the trimmed section (14 findings); applied: the AD2 paragraph
+condensed (the four test tasks carry the steps), "Initially there will
+be a lot missing" moved after the paper activity where its antecedent
+lives (her slide 24's order), AT commands defined in prose before
+first use, the UART-mode diagnostics moved after the activity, the
+CTS-unwired sentences reordered (module first, then our end), the
+pads bridge sentence before the complete-your-table activity, RXNE
+expanded in prose, small dedups.  NOT applied (would edit activities
+she passed): trimming task-day17-at's definition or the spelled-out
+crossovers in task-day17-wire (her explicit ask).  The passed deck's
+slide and activity text is untouched.
+
 ### Next session
 
 Her next pass on the Day 17 deck → refine the in-class book prose from

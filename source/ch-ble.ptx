@@ -495,12 +495,13 @@
                 device holds its RTS output low while it is ready to receive, and
                 raises it when it is not.  The two wires cross: the Nucleo's RTS output
                 drives the Bluefruit's CTS input, and the Bluefruit's RTS output
-                drives the Nucleo's CTS input.  A USART with flow control enabled
-                and its CTS input accidentally left unconnected can stop
-                transmitting entirely, with no error appearing anywhere.  The
+                drives the Nucleo's CTS input.  The
                 module holds its own CTS pin high until our RTS
                 drives it low, so a module whose CTS is not wired will not
-                transmit.
+                transmit.  The same is true at our end: a USART with flow
+                control enabled and its CTS input accidentally left unconnected
+                can stop transmitting entirely, with no error appearing
+                anywhere.
             </p>
             <p>
                 Read the
@@ -536,6 +537,10 @@
                     </tabular>
                 </statement>
             </activity>
+            <p>
+                The module's pads are the ones you met in the reading, and the
+                four that matter here are RXI, TXO, CTS and RTS.
+            </p>
             <activity xml:id="act-day17-af-table">
                 <title>Complete your table: the Bluefruit connections</title>
                 <statement>
@@ -640,19 +645,17 @@
         <subsection xml:id="subsec-day17-driver">
             <title>Part 2: Your USART1 Driver, and the Passthrough Test</title>
             <p>
-                In Lab 9 you'll write your own driver for USART1, and you can
+                Lab 9 asks for your own driver for USART1, and we'll start
+                writing it now.  You can
                 mimic the USART2 driver we gave you in the UART
-                chapter.  Start with <c>uart2_init()</c> and modify it to use the
-                pins that you decided on.  Remember that you need to enable
-                hardware flow control.  Then write the rest of the driver the same
-                way.  In the final
-                system, you won't know which USART will transmit first, so you must
-                devise a way to determine whether there are any characters in the
-                receive data register.  Do not use the existing read function
-                unless you already know there is a byte waiting; otherwise, you may
-                block indefinitely.  You made this kind of non-blocking check once
-                before, in the UART chapter's keyboard-counter exercise, where you
-                polled the RXNE flag yourself instead of calling <c>uart2_read()</c>.
+                chapter.  The one piece with no model in that driver is the
+                availability check: <c>uart2_read()</c> waits until a byte
+                arrives, so you'll need a way to ask whether a byte has arrived
+                without waiting for one.  You made this kind of non-blocking
+                check once before, in the UART chapter's keyboard-counter
+                exercise, where you polled the RXNE (receive data register not
+                empty) flag yourself instead of
+                calling <c>uart2_read()</c>.
             </p>
             <activity xml:id="act-day17-driver">
                 <title>Write your USART1 driver</title>
@@ -694,10 +697,9 @@ int uart2_read() {
                 transmitter of USART2 (CoolTerm) to the receiver of USART1, and
                 vice versa: whatever arrives on one USART is transmitted out the
                 other.  Using the two UARTs in this manner is known as
-                <term>passthrough</term>.  If characters cross it in both
+                <term>passthrough</term>.  If characters cross in both
                 directions, your transmit, your receive and your availability
-                checks work.  The AD2 does not support hardware flow control, so
-                this test does not exercise it; the module will.  The
+                checks work.  The
                 program is short: initialize both
                 drivers, and in the main loop use your two availability checks so
                 that neither direction ever blocks the other.
@@ -712,19 +714,14 @@ int uart2_read() {
     <note>≈ 3 min.  Her slide 15's description with more build guidance (her ask, 2026-09-11), still no code — the worked version is the instructor reveal.</note>
 </slide>
             <p>
-                You will test the passthrough by typing into CoolTerm: each
-                character goes to USART2's receiver, your program passes it on to
-                USART1's transmitter, and the AD2 can observe it.  Nothing is
-                connected to USART1 yet; we'll use the AD2 as a device that can
-                temporarily fill this role.
-                The instrument
-                for that is new today: under the <term>Protocol</term> tab in the
-                main Waveforms menu, the AD2 acts as another UART device that can
-                send and receive.  In the protocol settings you define which AD2
-                DIO pin acts as Tx and which acts as Rx.  Characters sent from the
-                AD2's side arrive at USART1's receiver and are passed on to
-                CoolTerm.  You need to be a little careful and send one character
-                at a time, because the AD2 does not support hardware flow control.
+                Nothing is connected to USART1 yet, so we'll use the AD2 as a
+                device that can temporarily fill this role.  The
+                <term>Protocol</term> tab in the main Waveforms menu is new to
+                us: in it the AD2 acts as another UART device, one that can both
+                send characters into USART1's receiver and show what USART1
+                transmits.  The AD2 does not support hardware flow control, so
+                the passthrough test does not exercise the flow-control wires;
+                those are first used once the module is connected.
             </p>
             <slide xml:id="sl-day17-ad2-protocol">
     <ul>
@@ -810,13 +807,8 @@ int uart2_RxAvail(void) {
             <p>
                 With the driver tested, we'll take the AD2 off USART1 and put the
                 Bluefruit module there.  The connections are given in Lab 9 §4.2,
-                using the Nucleo pins you picked earlier along with their
-                alternate function modes.  Note the crossover in both pairs: your
-                USART1 TX goes to the Bluefruit's RXI, and the Bluefruit's TXO
-                goes to your USART1 RX; your USART1 RTS goes to the Bluefruit's
-                CTS, and the Bluefruit's RTS goes to your USART1 CTS.  Install
-                the Adafruit Bluefruit LE Connect app on your phone; the link is
-                in Lab 9.
+                and <xref ref="table-day17-wiring"/> collects them with their
+                directions.
             </p>
             <table xml:id="table-day17-wiring">
                 <title>The six connections, and their directions</title>
@@ -857,21 +849,11 @@ int uart2_RxAvail(void) {
                 <image source="images/Day17-BLE/fig-bluefruit-switch.svg" width="35%"/>
             </figure>
             <p>
-                UART mode is the switch's own label, and Adafruit's documentation
-                calls the same mode data mode.  To test it, slide the switch on
-                the Bluefruit board to UART
-                (<xref ref="fig-bluefruit-switch"/>) and
-                run the passthrough program on your Nucleo.  In the app, select the
-                <q>Must have UART Service</q> filter, find and connect to your
-                device, and open the UART tab.  Characters you type there should
-                appear in CoolTerm, and characters you type into CoolTerm should
-                appear on the phone.  If the app connects but no characters cross
-                in either direction, check the crossover first: the Bluefruit's
-                RTS must reach the USART1 CTS pin you chose, and your RTS must
-                reach the Bluefruit's CTS.  If you have trouble finding your device, sort
-                the app's list by signal strength, go to a space with fewer ENGS 28
-                students trying to find their devices, or give your device a name,
-                which you do in command mode.
+                The switch's own label for data mode is UART
+                (<xref ref="fig-bluefruit-switch"/>), and Adafruit's
+                documentation calls it data mode.  With the
+                passthrough program running and the switch at UART, the app's
+                UART tab and CoolTerm are two ends of one serial link.
             </p>
             <activity xml:id="act-day17-uart-mode">
                 <title>Test UART mode (aka Data Mode in Adafruit speak)</title>
@@ -908,20 +890,24 @@ int uart2_RxAvail(void) {
     <note>≈ 3 min.  Her slide 19: the steps with her circled-switch picture beside them.  The activity in the book carries the same steps.</note>
 </slide>
             <p>
-                In command mode the module listens for <term>AT commands</term>:
-                short text lines, each starting with <c>AT</c>, that configure
-                the module or ask it to do something.  Slide the switch
-                toward CMD, keep the passthrough program running, and type commands
-                into CoolTerm; the module's reply, OK or ERROR, comes back the same
-                way.  Type a few AT commands into CoolTerm, for example: <c>ATZ</c> is a soft
-                reset, which restarts the Bluetooth stack; <c>AT+FACTORYRESET</c>
-                is the big hammer, which restores the module to a known state; and
-                <c>AT+GAPDEVNAME=chosenName</c> gives your device a recognizable name (GAP is
-                the same advertising layer from the reading, and the name is what
-                your phone's scan shows).  After changing the name, issue
-                <c>ATZ</c> so that the device starts advertising the change.  The
-                command formats are described in the Adafruit documentation, and
-                the commands you need are given in Lab 9 §4.3.
+                If the app connects but no characters cross in either direction,
+                check the crossover first: the Bluefruit's RTS must reach the
+                USART1 CTS pin you chose, and your RTS must reach the
+                Bluefruit's CTS.  If you have trouble finding your device, sort
+                the app's list by signal strength, go to a space with fewer
+                ENGS 28 students trying to find their devices, or give your
+                device a name, which you do in command mode.
+            </p>
+            <p>
+                Command mode is where the module is configured.  Instructions to
+                the module come in the form of <term>AT commands</term>: short
+                text lines, each starting with <c>AT</c>, that configure it or
+                ask it to do something.  We'll keep the passthrough program
+                running here too, so your commands travel out through USART1 and
+                the module's reply, OK or ERROR, comes back the same way.  The
+                name you assign with <c>AT+GAPDEVNAME=chosenName</c>
+                is the name your phone's scan shows, and GAP is the same
+                advertising layer from the reading.
             </p>
             <activity xml:id="act-day17-cmd-mode">
                 <title>CMD (command) mode</title>
@@ -949,17 +935,9 @@ int uart2_RxAvail(void) {
             <p>
                 You wouldn't want to keep sliding that little switch by hand, and
                 you don't have to: the MOD pin selects the same
-                mode the switch does.  Connect a GPIO pin on your Nucleo to MOD and
-                drive it high for command mode, low for UART mode.  Lab 9 points
-                you to the Bluefruit schematic, which shows how the switch
-                and the MOD pin make the same selection.  In your code you'll need to
-                initialize that GPIO pin (as what kind of pin?).  In Lab 9 you'll
-                build a startup routine on this: switch the mode pin to command mode, perform a
-                factory reset, assign your device name, perform a soft reset so the
-                device starts advertising the new name, and switch back to UART
-                mode.  The device should then wait, doing nothing, until data
-                arrives.  Consider placing the initialization in its own file as a
-                function you can call from any program.
+                mode the switch does.  Lab 9 points
+                you to the Bluefruit schematic, where you can see how the two
+                are wired together.
             </p>
             <activity xml:id="act-day17-mode-pin">
                 <title>Switching modes via the MOD pin</title>
@@ -1008,7 +986,7 @@ int uart2_RxAvail(void) {
             <title>Part 4: The Final Project, and Your Paper Design</title>
             <p>
                 Read the project description carefully, and ask questions as needed.
-                The project has several significant parts.  Approach the design as
+                Approach the design as
                 a series of small incremental steps: the deliverables are ordered
                 to lead you to a functioning system fairly quickly.
             </p>
@@ -1020,35 +998,6 @@ int uart2_RxAvail(void) {
     </ul>
     <note>≈ 2 min.  Her slide 23, plus the lab's staging sentence.</note>
 </slide>
-            <p>
-                Do not start coding the project until you have developed a plan.
-                Begin the process on paper by describing, with a block diagram,
-                high-level pseudocode, or a state machine diagram, exactly which
-                components you are using and how they will interact.  Consider in
-                particular: are you using timers, and if so, which ones?  Will you
-                need interrupts, and which ones?  What components will you use
-                (buttons, display, motors, and so on)?  If you are using a state
-                machine, what are its states?  Your paper design should include a
-                listing of all the input and output in your system and,
-                importantly, how you are using it: rather than state that you are
-                using a button, make notes detailing how often you will sample it,
-                or whether an interrupt reads it, and how you will use the value to
-                decide what happens next.  If you write pseudocode, keep it at a
-                high level and abstract; this will help you focus on the bigger
-                picture before you get mired in the details.  Pseudocode is not
-                real code, and it should block out the main steps without any C in
-                it.  Non-obvious steps, such as resetting a pin, should carry a
-                note about why you are doing them.
-            </p>
-            <p>
-                Initially there will be a lot missing, but approaching the problem
-                top-down at a high level allows you to evolve your design
-                gradually, so that without too much effort you can map from your
-                high-level ideas to the low-level pieces we have been studying all
-                term.  Your paper design is due Friday at 10 pm.  An optional
-                HiTA activity on Canvas, <em>Final Project Design</em>, can help
-                you think through the design.
-            </p>
             <activity xml:id="act-day17-paper">
                 <title>Begin your paper design</title>
                 <introduction>
@@ -1083,6 +1032,15 @@ int uart2_RxAvail(void) {
                     note about why you are doing them.</p></statement>
                 </task>
             </activity>
+            <p>
+                Initially there will be a lot missing, but approaching the problem
+                top-down at a high level allows you to evolve your design
+                gradually, so that without too much effort you can map from your
+                high-level ideas to the low-level pieces we have been studying all
+                term.  An optional
+                HiTA activity on Canvas, <em>Final Project Design</em>, can help
+                you think through the design.
+            </p>
         </subsection>
 
         <!-- Part 5: 49 min of project work time, then the close (1 min) -->
