@@ -213,6 +213,24 @@ students' choice, no dedicated pins; AT commands briefly introduced;
 the RX/TX crossover noted beside the flow-control one; "either read".
 Deck 31 entries.
 
+Third pass, same day: her 7 follow-up comments applied.  The fill-in
+table moved ONTO her slide 13 itself (her ask: the document names stay
+readable while teams fill it in) — `act-day17-pin-table` stays in the
+book as the completion's antecedent but is no longer projected; the
+AD2 sends as well as observes ("reads" on its Rx DIO pin); "we'll use
+the AD2 as a device that can temporarily fill this role" (her words,
+slide + paragraph); the connect task says "using the Nucleo pins you
+picked earlier along with their alternate function modes" and spells
+out BOTH crossovers (RX/TX and RTS/CTS) — her rule: both or neither.
+Deck back to 30 entries; Part 1 still 12 min.
+
+**Her ruling (2026-09-11, message): Day 18 (Thursday) is project work
+time.  Day 19 (Tuesday) is demos and wrap-up.**  This answers Q7 and
+confirms Q8 (kits collected Tuesday after class = demo day).
+`plans/day18.md` was written for a demos day — it now describes Day
+19; Day 18 needs only a small work-time deck (groupings/recap, the
+deadlines, work time, close).  Replan before building either deck.
+
 ### Next session
 
 Her next pass on the Day 17 deck → refine the in-class book prose from

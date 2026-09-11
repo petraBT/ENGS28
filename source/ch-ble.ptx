@@ -582,7 +582,21 @@
         <li>We'll also be using hardware-based flow control: read the details of USART1 in the Reference Manual (RM0490 §24.5.20) to understand how to enable this feature.</li>
         <li>Once you understand how to enable it, examine the alternate function mappings in the STM32C031 datasheet (Tables 13 through 18).  You will need to decide which physical pins you will use for the four USART1 signals.</li>
     </ul>
-    <note>≈ 3 min.  Her slide 13.  The lookups are theirs: name the documents, do not do them.</note>
+    <tabular halign="left" top="minor" left="minor" bottom="minor" right="minor">
+        <col right="minor"/>
+        <col right="minor"/>
+        <col right="minor"/>
+        <row header="yes" bottom="minor">
+            <cell>USART function</cell>
+            <cell>Port/Pin</cell>
+            <cell>Alt Func</cell>
+        </row>
+        <row bottom="minor"><cell>USART1 TX</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
+        <row bottom="minor"><cell>USART1 RX</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
+        <row bottom="minor"><cell>USART1 CTS</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
+        <row bottom="minor"><cell>USART1 RTS</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
+    </tabular>
+    <note>≈ 5 min.  Her slide 13 with the fill-in table on the same slide (her ask, 2026-09-11): the documents stay readable while teams fill it in.  The lookups are theirs: name the documents, do not do them.</note>
 </slide>
             <slide xml:id="sl-day17-flow">
     <ul>
@@ -690,7 +704,7 @@ int uart2_read() {
         <li>To test your USART1 driver, write a small program which connects the transmitter of USART2 (CoolTerm) to the receiver of USART1, and vice versa.  Using the two UARTs in this manner is known as <term>passthrough</term>.</li>
         <li>The program is short.  Initialize both drivers.  Then, in an endless loop: if a character is available on USART1, read it and write it to USART2; if a character is available on USART2, read it and write it to USART1.  Your availability checks keep either read from blocking the other.</li>
         <li>If characters cross in both directions, your transmit, your receive and your availability checks all work.  A problem that appears after the Bluefruit is connected is then in the wiring or the module, not in your driver.</li>
-        <li>Nothing is connected to USART1 yet, so in the next step the AD2 will stand in for the far end.</li>
+        <li>Nothing is connected to USART1 yet; we'll use the AD2 as a device that can temporarily fill this role.</li>
     </ul>
     <note>≈ 3 min.  Her slide 15's description with more build guidance (her ask, 2026-09-11), still no code — the worked version is the instructor reveal.</note>
 </slide>
@@ -698,7 +712,8 @@ int uart2_read() {
                 You will test the passthrough by typing into CoolTerm: each
                 character goes to USART2's receiver, your program passes it on to
                 USART1's transmitter, and the AD2 can observe it.  Nothing is
-                connected to USART1 yet, so the AD2 stands in for the far end.
+                connected to USART1 yet; we'll use the AD2 as a device that can
+                temporarily fill this role.
                 The instrument
                 for that is new today: under the <term>Protocol</term> tab in the
                 main Waveforms menu, the AD2 acts as another UART device that can
@@ -710,9 +725,9 @@ int uart2_read() {
             </p>
             <slide xml:id="sl-day17-ad2-protocol">
     <ul>
-        <li>You can use your AD2 to observe the pins on USART1 and confirm that it is working properly, using the <term>Protocol</term> tab in the main Waveforms menu (on the left-hand side of the welcome tab).</li>
+        <li>You can use your AD2 to observe the pins on USART1, and to send characters to it, confirming that it is working properly: use the <term>Protocol</term> tab in the main Waveforms menu (on the left-hand side of the welcome tab).</li>
         <li>The AD2 acts as another UART device that can send and receive.  In the protocol settings you define which AD2 DIO pin acts as Tx and which acts as Rx.</li>
-        <li>Sending from CoolTerm: CoolTerm sends to USART2's receiver, your passthrough program passes the character on to USART1's transmitter, and the AD2 observes it on its Rx DIO pin.</li>
+        <li>Sending from CoolTerm: CoolTerm sends to USART2's receiver, your passthrough program passes the character on to USART1's transmitter, and the AD2 reads it on its Rx DIO pin.</li>
         <li>Sending from the AD2: the character arrives at USART1's receiver, your program passes it on to USART2's transmitter, and you will see it in CoolTerm.</li>
         <li>You need to be a little careful and send one character at a time, because the AD2 does not support hardware flow control.</li>
     </ul>
@@ -816,11 +831,12 @@ int uart2_RxAvail(void) {
                 <title>Connect your Bluefruit to your Nucleo</title>
                 <task xml:id="task-day17-wire">
                     <statement><p>With nothing powered, make the six connections in
-                    the table above, on the Nucleo pins your alternate function
-                    choices picked.  Note the crossover in the two flow-control
-                    rows, and the same crossover in RX and TX: your USART1 TX
-                    goes to the Bluefruit's RXI, and the Bluefruit's TXO goes to
-                    your USART1 RX.</p></statement>
+                    the table above, using the Nucleo pins you picked earlier
+                    along with their alternate function modes.  Note the
+                    crossover in both pairs: your USART1 TX goes to the
+                    Bluefruit's RXI, and the Bluefruit's TXO goes to your USART1
+                    RX; your USART1 RTS goes to the Bluefruit's CTS, and the
+                    Bluefruit's RTS goes to your USART1 CTS.</p></statement>
                 </task>
                 <task xml:id="task-day17-app">
                     <statement><p>Install the Adafruit Bluefruit LE Connect app on
