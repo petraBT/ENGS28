@@ -154,15 +154,58 @@ Bluefruit's RTS/CTS (slide + mirrored paragraph); recap and agenda
 rewordings.  Deck 29 entries, full fit sweep clean (two instructor-only
 overflows allowed).
 
+## Session 4 (2026-09-11): her 16 deck comments, and the committee pass she demanded
+
+Her message was angry on two counts: unreadable slides, and no
+committee pass before delivery ("Are you getting this checked by any
+student committee?").  Both fixed.  All 16 comments applied (archived):
+the AF fill-in table as a real grid (statement-only, no lone "(a)");
+her waits-not-aborted CTS correction mirrored on the slide, the Part-1
+paragraph and the Reference; "accidentally"/"appearing" inserted; the
+driver activity's empty intro deleted; her ask honored with a new
+`sl-day17-uart2-read` (the given `uart2_read()` with the blocking line
+marked — given code, not a solution); the passthrough intro rebuilt
+with the loop in words, no code; the test activity as four short tasks;
+the standalone switch slide deleted and rebuilt as `sl-day17-uart-mode`
+(her slide 19's layout: steps beside the circled-switch picture);
+deliverable numbers swept from student-facing text.
+
+Then the committee ran — learner-in-the-room + checker-voice — and its
+findings were applied before replying: a new `sl-day17-ad2-protocol`
+(her slide 15's AD2/Protocol-tab half, which I had skipped — the test
+activity referenced a tab never introduced); the AF fill-in moved after
+the flow-control slide (its crossover column was unanswerable one slide
+earlier); `sl-day17-bridge` rebuilt as her slide 12's bullets beside
+the pinout (content was caption-bound); `AT+GAPDEVNAME=chosenName`
+(the bare command was uncarryoutable) + the Lab 9 §4.3 pointer; the
+paper-design questions as a sub-list (`room: "compressed"` to fit);
+9600 baud in the AD2 task; RXNE glossed on the uart2-read slide; her
+slide 12/15/17 titles restored verbatim; recap/agenda voice fixes.
+Deck now 30 entries; budgets reconcile (7+11+18+16+7+50+1 = 110).
+Full fit sweep clean (two instructor-only overflows allowed); every
+changed slide looked at.
+
+Committee findings NOT applied, on purpose: the flow-slide split with a
+crossover drawing (invented figure), the USART_CR3-at-UE=0 bullet (the
+Reference and the assigned RM reading carry it), MOD in the wiring
+table (her slide 17 also had six), the groupings grid and kit-return
+date (hers to fill; Q8/Q9 open), inter-command startup waits (Lab 9's
+detail, not her slides').  Voice findings on the Part 2–4 briefing
+paragraphs (duplicating the activities) remain deferred: that is the
+post-pass prose refinement, per her instruction.
+
+Gotcha: the deck player's fetch cache AND the build output both go
+stale — `location.reload(true)` is not enough; the JSON is copied at
+build time, so after a deck-JSON edit either rebuild or copy it into
+`output/web-deck-instructor/external/decks/` before measuring.
+
 ### Next session
 
 Her next pass on the Day 17 deck → refine the in-class book prose from
 the passed deck (the briefing paragraphs still duplicate the activities
-— deliberate until she passes) → Gate 3 → the Day 17x deck
-(`assets/decks/day17.json`; her slides one to one; the wiring table and
-GATT table as slides; refPage recalls of the reading's pinout figure)
-and the Day 17x deck (`day17x.json`; the optional unit's slides +
-`inst-day17x-session`) → Gate 3 → fit check at 1600×900 with the
-crossfade killed and MathJax settled → deliver.  Then her answers on
-Q7–Q9 → `day18.json`.  Close the loop: any general correction as a rule
-in `AUTHORING-book.md`.
+— deliberate until she passes; checker-voice's rewrites 1–2 and 6–7 are
+the worklist, in `reviews/` context via this file) → the Day 17x deck
+(`day17x.json`; the optional unit's slides + `inst-day17x-session`) →
+Gate 3 → fit check at 1600×900 with the crossfade killed and MathJax
+settled → deliver.  Then her answers on Q7–Q9 → `day18.json`.  Close
+the loop: any general correction as a rule in `AUTHORING-book.md`.
