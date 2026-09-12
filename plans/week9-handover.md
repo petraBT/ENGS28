@@ -248,7 +248,36 @@ she passed): trimming task-day17-at's definition or the spelled-out
 crossovers in task-day17-wire (her explicit ask).  The passed deck's
 slide and activity text is untouched.
 
+## Session 4 (2026-09-12): her passes on both chapters, and the Day 17x deck
+
+- Day 17 deck passed ("Okay, deck is finished") after three more comment
+  batches (11 + follow-ups); the in-class prose refined from the passed
+  deck (checker-voice ran on the trim).  Chapter 16 passed after her
+  batches, including 13 comments the archive step had swept unread —
+  recovered from the archive by ts and applied (the new standing rule:
+  archive only handled lines, matched by ts, never truncate blind).
+- Her rulings recorded: Day 18 (Thursday) is project work time; Day 19
+  (Tuesday) is demos and wrap-up.  No x-hour promises anywhere (she
+  sometimes brings a speaker).  The HiTA sentence is out (undecided).
+- The Day 17x deck built from the passed text: 14 slide blocks +
+  day17x.json (27 entries; both inst blocks projected).  Committee ran
+  (learner-in-the-room + checker-voice); the big applied findings:
+  Table 20 added to the wall (the entry story was unexecutable for
+  three modes without it), Table 19's legend into its caption, the
+  needier activity's first-pet caveat and reflash escape, her
+  window/WWDG block restored to the watchdog slide, watchdog.c in
+  three screens with her comments verbatim.  Full fit sweep clean.
+- Delivered to her; her pass on the Day 17x deck is next.
+
 ### Next session
+
+Her pass on the Day 17x deck → then Day 18 (work-time deck, glue only)
+and Day 19 (demos + wrap-up deck; the where-to-go beat absorbs her 17x
+slides 22-25 if Q1 lands there).  Open questions: Q1 (microcontroller
+slides), the technology-used clause on her slide 4, the VCORE naming in
+the modes table, kit-return timing vs Tuesday demos (Q8).
+
+### Superseded plan below
 
 Her next pass on the Day 17 deck → refine the in-class book prose from
 the passed deck (the briefing paragraphs still duplicate the activities
