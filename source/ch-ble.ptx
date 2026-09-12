@@ -496,7 +496,7 @@
                 raises it when it is not.  The two wires cross: the Nucleo's RTS output
                 drives the Bluefruit's CTS input, and the Bluefruit's RTS output
                 drives the Nucleo's CTS input.  The
-                module holds its own CTS pin high until our RTS
+                Bluefruit module holds its own CTS pin high until our RTS
                 drives it low, so a module whose CTS is not wired will not
                 transmit.  The same is true at our end: a USART with flow
                 control enabled and its CTS input accidentally left unconnected
@@ -515,30 +515,9 @@
                 four USART1 signals.  You will need to decide which physical pins
                 you will use for the four USART1 signals.
             </p>
-            <activity xml:id="act-day17-pin-table">
-                <title>AF settings for USART1</title>
-                <statement>
-                    <p>Fill in the table below with the pins you intend to use:
-                    for each of the four USART1 signals, the port and pin, and
-                    its alternate function number.</p>
-                    <tabular halign="left" top="minor" left="minor" bottom="minor" right="minor">
-                        <col right="minor"/>
-                        <col right="minor"/>
-                        <col right="minor"/>
-                        <row header="yes" bottom="minor">
-                            <cell>USART function</cell>
-                            <cell>Port/Pin</cell>
-                            <cell>Alt Func</cell>
-                        </row>
-                        <row bottom="minor"><cell>USART1 TX</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
-                        <row bottom="minor"><cell>USART1 RX</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
-                        <row bottom="minor"><cell>USART1 CTS</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
-                        <row bottom="minor"><cell>USART1 RTS</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell><cell>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</cell></row>
-                    </tabular>
-                </statement>
-            </activity>
             <p>
-                The module's pads are the ones you met in the reading, and the
+                The module's pads are the ones you met in the reading
+                (<xref ref="fig-bluefruit-pinout"/>), and the
                 four that matter here are RXI, TXO, CTS and RTS.
             </p>
             <activity xml:id="act-day17-af-table">
@@ -650,8 +629,11 @@
                 mimic the USART2 driver we gave you in the UART
                 chapter.  The one piece with no model in that driver is the
                 availability check: <c>uart2_read()</c> waits until a byte
-                arrives, so you'll need a way to ask whether a byte has arrived
-                without waiting for one.  You made this kind of non-blocking
+                arrives, which is not an appropriate way to handle incoming data
+                in this project.  Your program will be running normally even in
+                the absence of input arriving from your phone, and will react to
+                input if any arrives, so you'll need a way to ask whether a byte
+                has arrived without waiting for one.  You made this kind of non-blocking
                 check once before, in the UART chapter's keyboard-counter
                 exercise, where you polled the RXNE (receive data register not
                 empty) flag yourself instead of
@@ -721,7 +703,7 @@ int uart2_read() {
                 send characters into USART1's receiver and show what USART1
                 transmits.  The AD2 does not support hardware flow control, so
                 the passthrough test does not exercise the flow-control wires;
-                those are first used once the module is connected.
+                those are first used once the Bluefruit module is connected.
             </p>
             <slide xml:id="sl-day17-ad2-protocol">
     <ul>
@@ -747,13 +729,22 @@ int uart2_read() {
                     driver.</p></statement>
                 </task>
                 <task xml:id="task-day17-coolterm-to-ad2">
-                    <statement><p>Type into CoolTerm: your program passes each
-                    character on to USART1, and the AD2 shows it.</p></statement>
+                    <statement><p>Type into CoolTerm.  Each character should
+                    make the full trip: CoolTerm sends it to USART2's receiver,
+                    your passthrough program passes it on to USART1's
+                    transmitter, and the AD2 reads it on its Rx DIO pin and
+                    shows it.  If a character does not show up on the AD2,
+                    either something is incorrectly wired or set in Waveforms,
+                    or the passthrough program is not quite right
+                    yet.</p></statement>
                 </task>
                 <task xml:id="task-day17-ad2-to-coolterm">
                     <statement><p>Send characters from the AD2, one at a time
-                    (the AD2 does not support hardware flow control): USART1
-                    receives them, and they appear in CoolTerm.</p></statement>
+                    (the AD2 does not support hardware flow control).  Each
+                    character should make the trip in reverse: the AD2 sends it
+                    from its Tx DIO pin to USART1's receiver, your program
+                    passes it on to USART2's transmitter, and it appears in
+                    CoolTerm.</p></statement>
                 </task>
             </activity>
             <instructor xml:id="inst-day17-passthrough">
@@ -831,7 +822,7 @@ int uart2_RxAvail(void) {
                 <task xml:id="task-day17-wire">
                     <statement><p>With nothing powered, make the six connections in
                     the table above, using the Nucleo pins you picked earlier
-                    along with their alternate function modes.  Note the
+                    and the alternate function modes you determined for them.  Note the
                     crossover in both pairs: your USART1 TX goes to the
                     Bluefruit's RXI, and the Bluefruit's TXO goes to your USART1
                     RX; your USART1 RTS goes to the Bluefruit's CTS, and the
@@ -869,8 +860,8 @@ int uart2_RxAvail(void) {
                 </task>
                 <task xml:id="task-day17-both-ways">
                     <statement><p>Test sending and receiving characters over
-                    Bluetooth.  Make sure that characters you type here appear on
-                    CoolTerm, and vice versa.</p></statement>
+                    Bluetooth.  Make sure that characters you type on your phone
+                    appear in CoolTerm, and vice versa.</p></statement>
                 </task>
             </activity>
             <slide xml:id="sl-day17-uart-mode" room="yes">
@@ -879,7 +870,7 @@ int uart2_RxAvail(void) {
             <ol>
                 <li>Slide the little switch on the Bluefruit board to UART (circled at the right), and run the passthrough program on your Nucleo.</li>
                 <li>Open the Adafruit Bluetooth app on your phone and select the <q>Must have UART Service</q> filter.  Find and connect to your device, and open the UART tab.</li>
-                <li>Test sending and receiving characters over Bluetooth.  Make sure that characters you type here appear on CoolTerm, and vice versa.</li>
+                <li>Test sending and receiving characters over Bluetooth.  Make sure that characters you type on your phone appear in CoolTerm, and vice versa.</li>
             </ol>
         </stack>
         <stack>
@@ -902,12 +893,9 @@ int uart2_RxAvail(void) {
                 Command mode is where the module is configured.  Instructions to
                 the module come in the form of <term>AT commands</term>: short
                 text lines, each starting with <c>AT</c>, that configure it or
-                ask it to do something.  We'll keep the passthrough program
-                running here too, so your commands travel out through USART1 and
-                the module's reply, OK or ERROR, comes back the same way.  The
+                ask it to do something.  The
                 name you assign with <c>AT+GAPDEVNAME=chosenName</c>
-                is the name your phone's scan shows, and GAP is the same
-                advertising layer from the reading.
+                is the name your phone's scan shows.
             </p>
             <activity xml:id="act-day17-cmd-mode">
                 <title>CMD (command) mode</title>
@@ -918,24 +906,22 @@ int uart2_RxAvail(void) {
                     or ERROR) will appear in CoolTerm.</p></statement>
                 </task>
                 <task xml:id="task-day17-at">
-                    <statement><p>In command mode the module listens for
-                    <term>AT commands</term>: short text lines, each starting
-                    with <c>AT</c>, that configure the module or ask it to do
-                    something.  Type a few into CoolTerm:</p>
+                    <statement><p>Type a few AT commands into CoolTerm:</p>
                     <p><ul>
                         <li><c>ATZ</c> is a soft reset: it restarts the Bluetooth stack.</li>
                         <li><c>AT+FACTORYRESET</c> is the big hammer: it restores the module to a known state.</li>
                         <li><c>AT+GAPDEVNAME=chosenName</c> gives your device a recognizable name.  Issue an <c>ATZ</c> afterwards so that the device starts advertising the change.</li>
                     </ul></p>
-                    <p>The command formats are described in the Adafruit
-                    documentation, and the commands you need are given in
+                    <p>The command formats are described in the
+                    <url href="https://learn.adafruit.com/introducing-the-adafruit-bluefruit-le-uart-friend/command-mode-1">Adafruit
+                    documentation</url>, and the commands you need are given in
                     Lab 9 §4.3.</p></statement>
                 </task>
             </activity>
             <p>
                 You wouldn't want to keep sliding that little switch by hand, and
-                you don't have to: the MOD pin selects the same
-                mode the switch does.  Lab 9 points
+                you don't have to: the MOD pin is another way to select the mode
+                without touching the switch.  Lab 9 points
                 you to the Bluefruit schematic, where you can see how the two
                 are wired together.
             </p>
@@ -1037,9 +1023,7 @@ int uart2_RxAvail(void) {
                 top-down at a high level allows you to evolve your design
                 gradually, so that without too much effort you can map from your
                 high-level ideas to the low-level pieces we have been studying all
-                term.  An optional
-                HiTA activity on Canvas, <em>Final Project Design</em>, can help
-                you think through the design.
+                term.
             </p>
         </subsection>
 
@@ -1047,7 +1031,7 @@ int uart2_RxAvail(void) {
         <subsection xml:id="subsec-day17-work">
             <title>Part 5: Project Work Time</title>
             <p>
-                We'll now give you the rest of the class to work on your project.
+                You will have the rest of the class to work on your project.
                 Your paper design is due Friday at 10 pm, and the project demos are
                 on Tuesday.
             </p>
