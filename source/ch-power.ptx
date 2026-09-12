@@ -17,8 +17,7 @@
             This chapter covers one class day, the Wednesday x-hour of the final
             week.  In class we'll look at where a microcontroller's power goes, the
             four low-power modes and how a program enters one, and the independent
-            watchdog.  <xref ref="sec-power-reference"/> collects the mode entry
-            values and the watchdog's registers for look-up while you build.
+            watchdog.
         </p>
         <objectives>
             <ul>
@@ -37,8 +36,7 @@
             <p>
                 Today we'll look at where a microcontroller's power goes, the four
                 low-power modes and the one instruction that enters them, and the
-                independent watchdog.  Then we'll give you the rest of the hour to
-                work on your final project.
+                independent watchdog.
             </p>
             <instructor xml:id="inst-day17x-session">
                 <p>The unit below is optional, and this hour is above all project
@@ -69,7 +67,7 @@
                 core, the dynamic power ranges from about 5 to 50 µW per MHz.
             </p>
             <p>
-                Enable only the internal peripherals you are actually using, and
+                To reduce power consumption, enable only the internal peripherals you are actually using, and
                 disable them when you are done, because a peripheral whose clock is
                 stopped consumes almost nothing; you have been enabling peripheral
                 clocks through <c>RCC-&gt;IOPENR</c> and its siblings all term, and
@@ -87,7 +85,7 @@
                 <caption>The STM32C0's operating modes, with typical current and,
                 for the low-power modes, typical wake-up time, at a supply of 3 V
                 and 25 °C.  Run mode at 48 MHz draws 58 µA per MHz.  Each mode
-                below it draws less and takes longer to wake from: Sleep at 16 MHz
+                below Run mode draws less and takes longer to wake from: Sleep at 16 MHz
                 draws 20 µA per MHz and resumes in 10 clock cycles; Stop draws
                 80 µA and wakes in 5.9 µs; Standby draws 7.45 µA and wakes in
                 23 µs; Shutdown draws 19 nA, a thousand times less than a
@@ -116,8 +114,10 @@
                 is where our 12 MHz comes from.  Other oscillators, including the
                 32 kHz low-speed internal oscillator (LSI) that clocks the
                 watchdog, serve their own domains.  Stopping a clock stops the
-                domain it feeds, and saves its power.</caption>
-                <image source="images/Day17x-Sleep_Modes/slide07_img1.png" width="85%"/>
+                domain it feeds, and saves its power.  The blue path is our
+                clock; the boxes at the right are the domains it
+                serves.</caption>
+                <image source="images/Day17x-Sleep_Modes/fig-clock-tree-annotated.svg" width="85%"/>
             </figure>
             <p>
                 The low-power modes stop progressively more of the chip.  The
@@ -131,32 +131,36 @@
             </p>
             <table xml:id="table-day17x-modes">
                 <title>The four low-power modes</title>
-                <tabular halign="left">
+                <tabular halign="left" top="minor" left="minor" bottom="minor" right="minor">
+                <col right="minor"/>
+                <col right="minor"/>
+                <col right="minor"/>
+                <col right="minor"/>
                 <row header="yes" bottom="minor">
                     <cell>Mode</cell>
                     <cell>What stops</cell>
                     <cell>What survives</cell>
                     <cell>What wakes it</cell>
                 </row>
-                <row>
+                <row bottom="minor">
                     <cell><term>Sleep</term></cell>
                     <cell>the CPU clock</cell>
-                    <cell>everything else keeps running</cell>
+                    <cell>all peripherals can run and wake up the CPU; peripheral clocks can be disabled before going to sleep</cell>
                     <cell>any enabled interrupt, in a few clock cycles</cell>
                 </row>
-                <row>
+                <row bottom="minor">
                     <cell><term>Stop</term></cell>
-                    <cell>the CPU and the high-speed oscillators</cell>
+                    <cell>the CPU clock and the high-speed oscillators</cell>
                     <cell>SRAM and register contents; the LSI, the LSE and a few wakeup-capable peripherals; GPIO pin states</cell>
                     <cell>an interrupt from a peripheral that still has a clock</cell>
                 </row>
-                <row>
+                <row bottom="minor">
                     <cell><term>Standby</term></cell>
                     <cell>the core's supply domain, the part of the chip that powers the CPU and most peripherals</cell>
                     <cell><c>PWR_CR3</c>, <c>PWR_CR4</c> and the backup registers; the IWDG and LSI can keep running.  SRAM, register contents and <c>PWR_CR1</c> are not retained</cell>
                     <cell>the reset pin or a WKUPx pin; Table 19 lists the rest</cell>
                 </row>
-                <row>
+                <row bottom="minor">
                     <cell><term>Shutdown</term></cell>
                     <cell>all oscillators and the supply monitor</cell>
                     <cell>nothing; contents are lost, and waking behaves like a reset</cell>
@@ -184,19 +188,19 @@
                 <image source="images/Day17x-Sleep_Modes/slide09_img1.png" width="100%"/>
             </figure>
             <p>
-                Entering a low-power mode is a matter of two fields, as the
-                Reference Manual's Table 20, <em>Low-power mode entry
-                overview</em>, lays out (<xref ref="fig-power-entry"/>): the
-                SLEEPDEEP bit in the Cortex-M0+ system control register,
-                <c>SCB-&gt;SCR</c> (documented in the Arm Cortex-M0+ Generic User
-                Guide, Table 4-14, not in RM0490), and the LPMS (low-power mode
-                selection) field in <c>PWR_CR1</c>
-                (<xref ref="fig-pwr-cr1"/>).  Plain Sleep mode needs no register
-                writes at all: with SLEEPDEEP clear, executing <c>__WFI()</c>
-                (wait for interrupt) stops the CPU clock until an interrupt
-                arrives.  Entering Stop mode takes three steps.  LPMS is written
-                to 000, which selects Stop; the SLEEPDEEP bit is set; and
-                <c>__WFI()</c> enters the mode.  The PWR peripheral's registers,
+                To put the processor into a low-power mode, you set two fields
+                and execute one instruction.  Set the LPMS (low-power mode
+                selection) field in <c>PWR_CR1</c> to the desired mode
+                (<xref ref="fig-pwr-cr1"/>).  Set the SLEEPDEEP bit in the
+                Cortex-M0+ system control register, <c>SCB-&gt;SCR</c>
+                (documented in the Arm Cortex-M0+ Generic User Guide, not in
+                RM0490).  Then execute <c>__WFI()</c> (wait for interrupt).
+                Plain Sleep mode needs no register
+                writes at all: with SLEEPDEEP clear, <c>__WFI()</c>
+                stops the CPU clock until an interrupt
+                arrives.  For Stop mode, LPMS is 000 and SLEEPDEEP is set;
+                <xref ref="fig-power-entry"/> lays out the full table.  The PWR
+                peripheral's registers,
                 like every peripheral's, are reachable only while its clock is
                 enabled, so the sequence is:
             </p>
@@ -208,19 +212,10 @@
 ]]></code></program>
             <figure xml:id="fig-pwr-cr1">
                 <caption>The low half of the PWR_CR1 register (Reference Manual
-                §4.4.1; address offset 0x00, reset value 0x0000 0208, so LPMS
-                resets to 000).  The LPMS field in bits 2 to 0 selects the
-                low-power mode entered when SLEEPDEEP is set; 000 is Stop
+                §4.4.1), with the LPMS field circled: bits 2 to 0 select the
+                low-power mode entered when SLEEPDEEP is set, and 000 is Stop
                 mode.</caption>
-                <image source="images/Day17x-Sleep_Modes/fig-pwr-cr1-low.png" width="100%"/>
-            </figure>
-            <figure xml:id="fig-power-scr">
-                <caption>The Cortex-M0+ system control register,
-                <c>SCB-&gt;SCR</c>.  Bit 2, SLEEPDEEP, chooses between Sleep and
-                the deeper modes when <c>__WFI()</c> executes; the other bits are
-                not used in this course.  From the Arm Cortex-M0+ Generic User
-                Guide, Table 4-14.</caption>
-                <image source="images/Day17x-Sleep_Modes/slide12_img2.png" width="100%"/>
+                <image source="images/Day17x-Sleep_Modes/fig-pwr-cr1-circled.png" width="100%"/>
             </figure>
             <p>
                 Waking runs the entry backwards.  An appropriate interrupt
@@ -229,8 +224,7 @@
                 the program clears SLEEPDEEP if the next sleep should be a plain
                 one.  The deeper modes, Standby and Shutdown, are selected
                 through the same LPMS field; their entry values are in
-                <xref ref="sec-power-reference"/>, and neither is needed this
-                term.  There is a second entry instruction, <c>__WFE()</c> (wait
+                <xref ref="sec-power-reference"/>.  There is a second entry instruction, <c>__WFE()</c> (wait
                 for event), which wakes on events as well as interrupts;
                 <c>__WFI()</c> is the one we use.
             </p>
@@ -242,9 +236,8 @@
                 <image source="images/Day17x-Sleep_Modes/fig-power-entry-trim.png" width="100%"/>
             </figure>
             <p>
-                The place <c>__WFI()</c> belongs in a program is the main loop of
-                an interrupt-driven design, which you have been writing since the
-                timer chapter.  Initialize the devices, enable the interrupts, and
+                The place where <c>__WFI()</c> belongs in a program is the main
+                loop of an interrupt-driven design.  Initialize the devices, enable the interrupts, and
                 then loop: check the flags your ISRs set, take whatever action they
                 call for, and go to sleep until the next interrupt.  At least one
                 enabled interrupt must exist, or nothing will ever wake the
