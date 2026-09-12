@@ -173,7 +173,7 @@
                     <cell><term>Sleep</term></cell>
                     <cell>the CPU clock</cell>
                     <cell>all peripherals can run and wake up the CPU; peripheral clocks can be disabled before going to sleep</cell>
-                    <cell>any enabled interrupt, in a few clock cycles: every peripheral keeps its clock, so no special wakeup capability is needed</cell>
+                    <cell>any enabled interrupt, in a few clock cycles.  A peripheral whose clock you left running can interrupt and wake the CPU; one whose clock you disabled cannot</cell>
                 </row>
                 <row bottom="minor">
                     <cell><term>Stop</term></cell>
@@ -219,7 +219,7 @@
                 <image source="images/Day17x-Sleep_Modes/slide09_img1.png" width="100%"/>
             </figure>
             <slide xml:id="sl-day17x-resources" ref="fig-power-resources">
-    <caption>Reference Manual Table 19: which resources run in each operating mode, and which can wake the device.  In ST's notation Y is enabled, O optional, U unchanged from before entry, A automatically disabled, and the gray column is the resource's ability to wake the device.  Reading down the columns: Sleep keeps everything but the CPU, Stop keeps SRAM, the GPIO pin states, the LSI and a few wakeup-capable peripherals, and Standby and Shutdown keep almost nothing.</caption>
+    <caption>Reference Manual Table 19: which resources run in each operating mode, and which can wake the device.  In ST's notation, Y means the resource is enabled, O that software can enable it, U that it stays as it was before entry, and A that it is switched off automatically; the gray columns show whether the resource can wake the device.  Reading down the columns: Sleep keeps everything but the CPU, Stop keeps SRAM, the GPIO pin states, the LSI and a few wakeup-capable peripherals, and Standby and Shutdown keep almost nothing.</caption>
     <note>≈ 1 min.  Her slide 9.  If time is short this one is a wave, not a walk.</note>
 </slide>
             <p>
@@ -252,9 +252,17 @@
                 mode.</caption>
                 <image source="images/Day17x-Sleep_Modes/fig-pwr-cr1-circled.png" width="100%"/>
             </figure>
-            <slide xml:id="sl-day17x-tab20" ref="fig-power-entry">
-    <caption>The two entry instructions are WFI (wait for interrupt), the one we use, and WFE (wait for event).  Sleep needs only SLEEPDEEP clear; Stop is SLEEPDEEP set with LPMS at 000; the Standby and Shutdown rows read the same way.</caption>
-    <note>≈ 1 min.  Her slide 11, RM Table 20 trimmed.  This is the table that makes the corrected LPMS value visible rather than asserted.</note>
+            <slide xml:id="sl-day17x-tab20">
+    <sidebyside widths="36% 60%" margins="0%" valign="middle">
+        <stack>
+            <image source="images/Day17x-Sleep_Modes/fig-power-entry-trim.png" width="100%"/>
+        </stack>
+        <stack>
+            <image source="images/Day17x-Sleep_Modes/fig-pwr-cr1-circled.png" width="100%"/>
+        </stack>
+    </sidebyside>
+    <caption>The two entry instructions are WFI (wait for interrupt), the one we use, and WFE (wait for event).  The LPMS values in the table's right column live in PWR_CR1, circled at the right; Stop is SLEEPDEEP set with LPMS at 000.</caption>
+    <note>≈ 1 min.  Her slide 11, RM Table 20 trimmed, with the LPMS register beside it (her ask, 2026-09-12).  The register repeats full-width on the next slide.</note>
 </slide>
             <slide xml:id="sl-day17x-pwr-cr1" ref="fig-pwr-cr1">
     <caption>LPMS, the low-power mode selection field, is bits 2 to 0 of PWR_CR1; 000 is Stop.  SLEEPDEEP lives in the processor's own control register, SCB-&gt;SCR.</caption>
@@ -272,15 +280,16 @@
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;    // deep sleep rather than Sleep
     __WFI();                              // enter Stop mode; an interrupt wakes us
 ]]></code></program>
-    <p>To wake the processor up: an appropriate interrupt occurs, the HSI48 restarts, the interrupt's own handler runs, and then execution resumes at the instruction after <c>__WFI()</c>.  Clear SLEEPDEEP if the next sleep should be a plain one.</p>
+    <p>To wake the processor up: an appropriate interrupt occurs, the HSI48 restarts, the interrupt's own handler runs, and then execution resumes at the instruction after <c>__WFI()</c>.  SLEEPDEEP stays set after waking, so the next <c>__WFI()</c> would enter Stop mode again: clear it first if the next sleep should be plain Sleep.</p>
     <note>≈ 2 min.  Her slide 13, with the LPMS value corrected against Table 20 (000 is Stop) and the PWREN line her slide omitted.</note>
 </slide>
             <p>
                 Waking runs the entry backwards.  An appropriate interrupt
                 occurs, the HSI48 restarts, the interrupt's own handler runs, and
-                then execution resumes at the instruction after <c>__WFI()</c>;
-                the program clears SLEEPDEEP if the next sleep should be a plain
-                one.  The deeper modes, Standby and Shutdown, are selected
+                then execution resumes at the instruction after <c>__WFI()</c>.
+                SLEEPDEEP stays set after waking, so the next <c>__WFI()</c>
+                would enter Stop mode again; the program clears it if the next
+                sleep should be a plain one.  The deeper modes, Standby and Shutdown, are selected
                 through the same LPMS field; their entry values are in
                 <xref ref="sec-power-reference"/>.
             </p>
@@ -363,11 +372,12 @@ int main(void) {
                 <image source="images/Day17x-Sleep_Modes/fig-watchdog-dog.png" width="55%"/>
             </figure>
             <slide xml:id="sl-day17x-watchdog-what">
-    <sidebyside widths="62% 34%" margins="0%" valign="middle">
+    <sidebyside widths="67% 29%" margins="0%" valign="middle">
         <stack>
             <ul>
-                <li>The <term>independent watchdog</term> (IWDG) is a timer that runs on a 32 kHz (slow!) internal clock, independent of the main clock: it keeps counting even if the main clock stops.  A 12-bit downcounter with an 8-bit prescaler.</li>
-                <li>A healthy program resets the watchdog often: <term>petting the dog</term>.</li>
+                <li>A deployed embedded system has nobody watching it.  If the program gets stuck, the system stops responding, and there is no one to press the reset button.  The <term>independent watchdog</term> (IWDG) is the hardware answer.</li>
+                <li>It is a 12-bit downcounter with an 8-bit prescaler, and it runs on its own 32 kHz (slow!) internal clock, the LSI.  That is what independent means: the watchdog keeps counting even if the main clock stops.</li>
+                <li>A healthy program resets the watchdog often; this is called <q>petting the dog</q>.</li>
                 <li>If the program gets stuck, or an expected event does not occur in time, the watchdog times out and resets the processor.</li>
                 <li>The IWDG also has a window option, which allows petting the dog only during a specified window in the countdown: petting too early or too late will generate a reset.  There is another watchdog, the system window watchdog (WWDG), which runs on the main clock and can generate early interrupts before a reset occurs (Reference Manual §21; the IWDG is §20).</li>
             </ul>
@@ -438,6 +448,7 @@ int main(void) {
                 before it can reach zero.
             </p>
             <slide xml:id="sl-day17x-iwdg-config">
+    <p>Each step is a write to one of the watchdog's registers; the key values and the register descriptions are in the Reference Manual, §20.</p>
     <ul>
         <li>Unlock the protected prescaler and reload registers by writing 0x0000 5555 to the key register <c>IWDG_KR</c>.</li>
         <li>Set the counting rate using the prescaler <c>IWDG_PR</c>: 0b011 divides the 32 kHz LSI by 32, giving a 1 ms tick.</li>
@@ -562,12 +573,14 @@ int main( void ) {
             <activity xml:id="act-day17x-needier">
                 <title>Super quick modification</title>
                 <introduction>
-                    <p>One thing to know before you judge a new timeout: the
-                    countdown starts from its maximum, 4095 ticks, and only
-                    picks up your reload value at the first pet, so press the
-                    button once after each flash.  And if the board ends up
-                    resetting continuously, reflash it: a fresh flash starts
-                    with the watchdog stopped.</p>
+                    <p>One thing to know before you judge a new timeout:
+                    writing 0x0000 CCCC starts the count from the reset value
+                    0xFFF, not from <c>IWDG_RLR</c>, and your reload value is
+                    only picked up at the first pet (Reference Manual §20.3.1).
+                    So press the button once after each flash.  With a very
+                    small reload value the board will then reset continuously;
+                    to get out of that, reflash it, because a fresh flash
+                    starts with the watchdog stopped.</p>
                 </introduction>
                 <task xml:id="task-day17x-onesec">
                     <statement><p>Make the dog even needier: have it need a pet
