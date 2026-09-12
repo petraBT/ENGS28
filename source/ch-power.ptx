@@ -146,25 +146,25 @@
                     <cell><term>Sleep</term></cell>
                     <cell>the CPU clock</cell>
                     <cell>all peripherals can run and wake up the CPU; peripheral clocks can be disabled before going to sleep</cell>
-                    <cell>any enabled interrupt, in a few clock cycles</cell>
+                    <cell>any enabled interrupt, in a few clock cycles: every peripheral keeps its clock, so no special wakeup capability is needed</cell>
                 </row>
                 <row bottom="minor">
                     <cell><term>Stop</term></cell>
                     <cell>the CPU clock and the high-speed oscillators</cell>
-                    <cell>SRAM and register contents; the LSI, the LSE and a few wakeup-capable peripherals; GPIO pin states</cell>
+                    <cell>SRAM and register contents; the 32 kHz low-speed oscillator (LSI) that clocks the watchdog, and a few wakeup-capable peripherals; GPIO pin states</cell>
                     <cell>an interrupt from a peripheral that still has a clock</cell>
                 </row>
                 <row bottom="minor">
                     <cell><term>Standby</term></cell>
                     <cell>the core's supply domain, the part of the chip that powers the CPU and most peripherals</cell>
-                    <cell><c>PWR_CR3</c>, <c>PWR_CR4</c> and the backup registers; the IWDG and LSI can keep running.  SRAM, register contents and <c>PWR_CR1</c> are not retained</cell>
-                    <cell>the reset pin or a WKUPx pin; Table 19 lists the rest</cell>
+                    <cell>SRAM and register contents are lost, except PWR control register 3; the IWDG and LSI can keep running</cell>
+                    <cell>the reset pin or one of the dedicated wakeup (WKUP) pins; Reference Manual Table 19 lists the rest</cell>
                 </row>
                 <row bottom="minor">
                     <cell><term>Shutdown</term></cell>
                     <cell>all oscillators and the supply monitor</cell>
                     <cell>nothing; contents are lost, and waking behaves like a reset</cell>
-                    <cell>the reset pin or a WKUPx pin</cell>
+                    <cell>the reset pin or a wakeup (WKUP) pin</cell>
                 </row>
                 </tabular>
             </table>
@@ -224,16 +224,14 @@
                 the program clears SLEEPDEEP if the next sleep should be a plain
                 one.  The deeper modes, Standby and Shutdown, are selected
                 through the same LPMS field; their entry values are in
-                <xref ref="sec-power-reference"/>.  There is a second entry instruction, <c>__WFE()</c> (wait
-                for event), which wakes on events as well as interrupts;
-                <c>__WFI()</c> is the one we use.
+                <xref ref="sec-power-reference"/>.
             </p>
             <figure xml:id="fig-power-entry">
                 <caption>Reference Manual Table 20, trimmed to the columns we
                 use: the low-power mode entered for each combination of
                 SLEEPDEEP, LPMS and entry instruction.  Sleep needs only
                 SLEEPDEEP clear; Stop is SLEEPDEEP set with LPMS at 000.</caption>
-                <image source="images/Day17x-Sleep_Modes/fig-power-entry-trim.png" width="100%"/>
+                <image source="images/Day17x-Sleep_Modes/fig-power-entry-trim.png" width="70%"/>
             </figure>
             <p>
                 The place where <c>__WFI()</c> belongs in a program is the main
@@ -325,8 +323,8 @@ int main(void) {
                 32 kHz LSI by 32, giving a 1 ms tick.  The watchdog needs a
                 moment to absorb each of these writes, and that is what the two
                 <c>while</c> loops in the listing wait for.
-                Writing 0x0000 CCCC starts the watchdog.
-                Writing 0x0000 AAAA reloads the counter to the value in
+                Writing 0x0000 CCCC to <c>IWDG_KR</c> starts the watchdog.
+                Writing 0x0000 AAAA to <c>IWDG_KR</c> reloads the counter to the value in
                 <c>IWDG_RLR</c>, 4000 in the listing, and that is what petting
                 the dog does in the program: it restarts the 4 second countdown
                 before it can reach zero.
