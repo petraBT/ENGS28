@@ -64,14 +64,25 @@ lab kits will be collected on Tuesday after class"; her Day 19 slide 8
 says "Return your kit to Tad after demo."  With demos on Tuesday these
 now agree (Q8 closed, 2026-09-11).  Her Day 19 wording is kept.
 
-**Q1 (answered 2026-09-13).**  Her 17x slides 22–25 (Choosing a
-microcontroller / Beyond the Arduino / Make: guide / ecosystems) are
-built as an **instructor-only block** after the where-to-go slide — a
-section divider plus five content slides (her slide 23 split in three
-to fit; her speaker notes carried in the presenterNotes).  Her call:
-she doesn't yet know whether she'll use them again, so the student
-deck drops them; if run, the slack and the demo block absorb the
-minutes.
+**Q1 (answered 2026-09-13), then modernized the same day at her
+request.**  The instructor-only block after the where-to-go slide is
+no longer a carry of her 17x slides 22–25: she asked for it to be
+updated to the current market and the Nucleo-based course, with
+researched recommendations for a student who must pick a
+microcontroller for another course's project.  Its shape now: section
+→ **Start with what your project needs** (the method: peripherals,
+wireless, battery, flash/RAM/pins, ecosystem, a worked example) → her
+**Microcontroller "ecosystems"** slide (kept, examples refreshed) →
+**Beyond the Nucleo** in two slides (Cortex-M transfer claim with the
+read-the-new-manual caveat, her Arm-licensing line, ST C0→H7, the
+other vendors, Nordic/Bluefruit; then RP2350/ESP32, RISC-V with a
+one-term-project caveat, her 8/16-bit line) → **Suggested boards, by
+what the project needs** (STM32 Nucleo / ESP32 / Nordic / Pico 2 /
+small computers / Arduino) → **Where to look** (parametric search,
+vendor selectors, Adafruit/SparkFun, the Make: guide, the
+datasheet-check habit).  Market facts checked 2026-09 by web search
+(sources in the delivery message); still instructor-only until she
+says otherwise; if run, ≈ 10–12 min out of the demo block.
 
 **Format items still hers (folded into Q7, unchanged from the
 predecessor plan):** BLE congestion with ~8 modules advertising in one

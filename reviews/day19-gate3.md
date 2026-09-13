@@ -90,6 +90,36 @@ wifi chip" line in a carried instructor note (her own speech, kept
 verbatim); "Can it be connected to by a phone?" kept exactly as her
 comment wrote it.
 
+## Modernization round (2026-09-13, her ask: current market, Nucleo-based course)
+
+The instructor block rewritten as new content (her authorization
+supersedes wording-is-the-floor for these five slides); market facts
+verified by web search.  Committee ran on the draft (learner MINOR,
+voice MAJOR); applied: the block reordered so "ecosystem" is defined
+(her slide) before it is used to justify recommendations; the opener's
+"feels impossible / It isn't" drama and "You know how to do this now"
+wall reassurance removed (her encouragement lives in notes, on the
+specimen); three epigram titles renamed ("Start with what your project
+needs", "Beyond the Nucleo: other microcontroller families",
+"Suggested boards, by what the project needs"); the six suggestion
+lines rebuilt as plain whole sentences instead of label-colon blurbs;
+"everything transfers" corrected to carry her own caveat (register
+names differ; you still read the new manual — S-19); her Arm-licensing
+line restored to the wall; Silicon Labs restored; the Bluefruit claim
+made truthful (its radio is Nordic's older nRF51822, so the slide says
+"a Nordic radio", not nRF52/54); MSP430 and 16-bit restored in her
+sentence; a flash/RAM/pins bullet and a worked requirements example
+added (learner); RISC-V given a decision (mature Arm tools for a
+one-term project); the Qualcomm/UNO news moved off the wall into the
+note; where-to-look reordered engineer-first (parametric search before
+the Make: browse); "requirements you worked out" (never say "write");
+the em-dash and whole-sentences rules swept; the inherited "we haven't
+used a debugger" note corrected (Day 7x used the CubeIDE debugger).
+Not applied: an HTML table for the suggestions (glue has no table
+styling; parallel sentences carry the mapping); annotating her
+"Development / evaluation boards" line (hers); naming the nRF51822 in
+ch-ble (corpus decision, flagged).
+
 ## What both reviewers confirmed
 
 Coverage of her eight slides is complete and verbatim (both mined the
