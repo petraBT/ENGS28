@@ -173,7 +173,7 @@
                     <cell><term>Sleep</term></cell>
                     <cell>the CPU clock</cell>
                     <cell>all peripherals can run and wake up the CPU; peripheral clocks can be disabled before going to sleep</cell>
-                    <cell>any enabled interrupt, in a few clock cycles.  A peripheral whose clock you left running can interrupt and wake the CPU; one whose clock you disabled cannot</cell>
+                    <cell>any enabled interrupt, in a few clock cycles; a peripheral whose clock you left running can interrupt and wake the CPU, and one whose clock you disabled cannot</cell>
                 </row>
                 <row bottom="minor">
                     <cell><term>Stop</term></cell>
@@ -253,7 +253,8 @@
                 <image source="images/Day17x-Sleep_Modes/fig-pwr-cr1-circled.png" width="100%"/>
             </figure>
             <slide xml:id="sl-day17x-tab20">
-    <sidebyside widths="36% 60%" margins="0%" valign="middle">
+    <p>To put the processor into a low-power mode, you set two fields and execute one instruction.</p>
+    <sidebyside widths="33% 63%" margins="0%" valign="middle">
         <stack>
             <image source="images/Day17x-Sleep_Modes/fig-power-entry-trim.png" width="100%"/>
         </stack>
@@ -261,12 +262,15 @@
             <image source="images/Day17x-Sleep_Modes/fig-pwr-cr1-circled.png" width="100%"/>
         </stack>
     </sidebyside>
-    <caption>The two entry instructions are WFI (wait for interrupt), the one we use, and WFE (wait for event).  The LPMS values in the table's right column live in PWR_CR1, circled at the right; Stop is SLEEPDEEP set with LPMS at 000.</caption>
-    <note>≈ 1 min.  Her slide 11, RM Table 20 trimmed, with the LPMS register beside it (her ask, 2026-09-12).  The register repeats full-width on the next slide.</note>
+    <caption>The two entry instructions are WFI (wait for interrupt) and WFE (wait for event).  The LPMS values in the table's right column live in PWR_CR1, circled at the right; SLEEPDEEP is set in the Cortex-M0+ system control register, SCB-&gt;SCR.  Stop is SLEEPDEEP set with LPMS at 000.</caption>
+    <note>≈ 1 min.  Her slide 11, RM Table 20 trimmed, with the LPMS register beside it (her ask, 2026-09-12).  Both registers repeat full-width on the next slide.</note>
 </slide>
-            <slide xml:id="sl-day17x-pwr-cr1" ref="fig-pwr-cr1">
-    <caption>LPMS, the low-power mode selection field, is bits 2 to 0 of PWR_CR1; 000 is Stop.  SLEEPDEEP lives in the processor's own control register, SCB-&gt;SCR.</caption>
-    <note>≈ 1 min.  Her slide 12, the register with the field circled.</note>
+            <slide xml:id="sl-day17x-pwr-cr1">
+    <p>PWR_CR1, with LPMS, the low-power mode selection field, in bits 2 to 0:</p>
+    <image source="images/Day17x-Sleep_Modes/fig-pwr-cr1-circled.png" width="88%"/>
+    <p>SCB-&gt;SCR, the Cortex-M0+ system control register, with SLEEPDEEP in bit 2:</p>
+    <image source="images/Day17x-Sleep_Modes/fig-scr-circled.png" width="62%"/>
+    <note>≈ 1 min.  Her slide 12: both registers the entry writes, each with its field circled.</note>
 </slide>
             <slide xml:id="sl-day17x-entry">
     <ul>
@@ -434,7 +438,9 @@ int main(void) {
                 (<url href="external/stm32c031_rm.pdf">Reference Manual</url>
                 §20).  Writing 0x0000 5555 to the key register <c>IWDG_KR</c>
                 unlocks the protected prescaler and reload registers.  The
-                prescaler <c>IWDG_PR</c> sets the counting rate; 0b011 divides the
+                prescaler <c>IWDG_PR</c> sets the counting rate; only certain
+                divider values are allowed, listed in the Reference Manual's
+                IWDG_PR description, and 0b011 divides the
                 32 kHz LSI by 32, giving a 1 ms tick.  The reload register
                 <c>IWDG_RLR</c> is set to the length of the countdown in ticks,
                 4000 in the listing, so a full countdown is 4 seconds.  The
@@ -451,7 +457,7 @@ int main(void) {
     <p>Each step is a write to one of the watchdog's registers; the key values and the register descriptions are in the Reference Manual, §20.</p>
     <ul>
         <li>Unlock the protected prescaler and reload registers by writing 0x0000 5555 to the key register <c>IWDG_KR</c>.</li>
-        <li>Set the counting rate using the prescaler <c>IWDG_PR</c>: 0b011 divides the 32 kHz LSI by 32, giving a 1 ms tick.</li>
+        <li>Set the counting rate using the prescaler <c>IWDG_PR</c>: only certain divider values are allowed, listed in the Reference Manual's IWDG_PR description.  0b011 divides the 32 kHz LSI by 32, giving a 1 ms tick.</li>
         <li>Set from where to count down using the reload register <c>IWDG_RLR</c>: 4000 ticks is 4 seconds.</li>
         <li>Start the watchdog: write 0x0000 CCCC to <c>IWDG_KR</c>.  When the counter reaches zero, a reset is generated.</li>
         <li>Pet the dog: write 0x0000 AAAA to <c>IWDG_KR</c>.  The <c>IWDG_RLR</c> value is reloaded into the counter, and the reset is prevented.</li>
@@ -488,6 +494,8 @@ int main( void ) {
     IWDG->RLR = 4000;
     // Wake the dog...
     IWDG->KR = KEY_START;
+    // Pet once, so the first countdown also runs from IWDG_RLR (4 seconds)
+    IWDG->KR = KEY_UPDATE;
     // Now, loop and pet the dog whenever the blue user button is pushed.
     while(1){
         if ( (GPIOC->IDR & GPIO_IDR_ID13) == 0 ){
@@ -535,8 +543,10 @@ int main( void ) {
     IWDG->RLR = 4000;
     // Wake the dog...
     IWDG->KR = KEY_START;
+    // Pet once, so the first countdown also runs from IWDG_RLR (4 seconds)
+    IWDG->KR = KEY_UPDATE;
 ]]></code></program>
-    <note>The middle screen of her slide 20, her comments verbatim; long comment lines are wrapped and the two trailing status-bit comments moved above their lines for the wall.</note>
+    <note>The middle screen of her slide 20, her comments verbatim; long comment lines are wrapped and the two trailing status-bit comments moved above their lines for the wall.  The pet-once line is her 2026-09-13 addition; the Canvas watchdog.c needs the same two lines.</note>
 </slide>
             <slide xml:id="sl-day17x-code-loop">
     <p><c>watchdog.c</c>, the loop: pet the dog whenever the blue user button is pushed.</p>
@@ -573,14 +583,9 @@ int main( void ) {
             <activity xml:id="act-day17x-needier">
                 <title>Super quick modification</title>
                 <introduction>
-                    <p>One thing to know before you judge a new timeout:
-                    writing 0x0000 CCCC starts the count from the reset value
-                    0xFFF, not from <c>IWDG_RLR</c>, and your reload value is
-                    only picked up at the first pet (Reference Manual §20.3.1).
-                    So press the button once after each flash.  With a very
-                    small reload value the board will then reset continuously;
-                    to get out of that, reflash it, because a fresh flash
-                    starts with the watchdog stopped.</p>
+                    <p>With a very small reload value the board will reset
+                    continuously; to get out of that, reflash it, because a
+                    fresh flash starts with the watchdog stopped.</p>
                 </introduction>
                 <task xml:id="task-day17x-onesec">
                     <statement><p>Make the dog even needier: have it need a pet
@@ -606,10 +611,10 @@ int main( void ) {
                 USART.  A reload value much below about 20 resets the chip in the
                 middle of the message, and the terminal shows a partial line
                 repeating.  Students will find the edge is not sharp, because the
-                reset and restart add time of their own.  With the countdown
-                starting from 0xFFF, the edge only appears after the first pet,
-                so a student should press the button once before pushing the
-                reload value down.</p>
+                reset and restart add time of their own.  The pet-once line at
+                the end of the configuration (her 2026-09-13 addition) makes the
+                first countdown run from IWDG_RLR too, so the effect appears on
+                the very first run with no button press needed.</p>
             </instructor>
         </subsection>
     </section>
