@@ -310,6 +310,24 @@ words).  Full fit sweep at 1600×900, crossfade killed: all 11 fit,
 every slide looked at.  All five targets rebuilt, checks clean,
 pushed (`a43af4c`).
 
+### Modernization, same day: the microcontroller block rebuilt at her ask
+
+Her instruction: update the where-to-go microcontroller slides to the
+current market and the Nucleo-based course, researched, for students
+who must pick a part in another course and are lost.  Rebuilt (still
+instructor-only, her earlier ruling): method slide (requirements
+first, worked example) → her ecosystems slide as the criterion →
+Beyond the Nucleo ×2 (Cortex-M transfer + caveat, her Arm-licensing
+line, vendors, Nordic/Bluefruit; RP2350, ESP32, RISC-V, her 8/16-bit
+line) → suggested boards by need → where to look.  Market facts
+web-verified 2026-09 (Pico 2/RP2350, nRF54 shipping, Qualcomm-Arduino
++ UNO Q, Make: Volume 95, C-M ~2/3 share, STM32C5 announced 2026-03).
+Committee ran (learner MINOR, voice MAJOR — reorder, de-drama,
+plain-sentence rebuilds, em-dash sweep, Bluefruit radio truthed to "a
+Nordic radio", nRF51822 inside); all applied, gate3 modernization
+section has the full list.  Deck 18 slides / student 11; all checks
+clean; pushed (e8ced12).
+
 ### Rework, same day: her rulings and five comments applied
 
 Her message: the counts are **LEGO pieces used as votes** — each
