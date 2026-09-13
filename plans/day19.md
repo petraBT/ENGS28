@@ -47,7 +47,7 @@ points on the wall.
 | 1 title ("Engs 28 / Embedded Systems / Day 19") | — | `title` glue, the course's standard form |
 | 2 agenda: Project Presentations; Wrapping up the course | verbatim | `agenda` glue |
 | 3 Share Projects! (section) | verbatim | `section` glue, Part 1 |
-| 4 share format + votes | "One project partner stays at their table, the other walks around to look at other projects." + "Each person gets to vote on:" + the four categories with her count parentheticals | `notice` glue, her sentences verbatim.  The `(1x12)`-style parentheticals are in the presenterNote, not on the wall — the committee's learner read them as a voting rule (12 votes here, 2 there); question for her below |
+| 4 share format + votes | "One project partner stays at their table, the other walks around to look at other projects." + "Each person gets to vote on:" + the four categories with her count parentheticals and her four LEGO piece photos | `notice` glue.  Her ruling (2026-09-13): the counts name LEGO pieces — each student gets one of each and deposits it with the project they vote for.  The pieces and counts are on the wall (her comment), and the mechanism is in the body in her words |
 | — | — | **the one addition**: the demo checklist (Lab 9 §4.6's six checkboxes, the lab's words, no deliverable number) — stays on the wall through the demo block; its lead is the lab's own sentence re-tensed ("Today each team will demonstrate their project:") |
 | 5 Wrapping up (section) | verbatim | `section` glue, Part 2 |
 | 6 Review: Engs 28 learning objectives | "Here's where we've been:" + the eight objectives | two `recap` slides (1–5, 6–8), verbatim — all eight overflow one glue slide and the eighth was sliced at the bottom edge; her speaker note ("YOU DID ALL THESE THINGS!!!") as the presenterNote |
@@ -64,14 +64,14 @@ lab kits will be collected on Tuesday after class"; her Day 19 slide 8
 says "Return your kit to Tad after demo."  With demos on Tuesday these
 now agree (Q8 closed, 2026-09-11).  Her Day 19 wording is kept.
 
-**Q1 (open — the microcontroller slides).**  Her 17x slides 22–25
-(Choosing a microcontroller / Beyond the Arduino / Make: guide /
-ecosystems) are in no deck this year; the recommendation on record is
-that this day's where-to-go beat is their home.  **Not built** — her
-Day 19 deck is the ground truth and she has not answered Q1.  If she
-wants them, they slot after the where-to-go slide as three glue slides
-and the where-to-go beat grows by ~5 minutes out of the demo block's
-slack.
+**Q1 (answered 2026-09-13).**  Her 17x slides 22–25 (Choosing a
+microcontroller / Beyond the Arduino / Make: guide / ecosystems) are
+built as an **instructor-only block** after the where-to-go slide — a
+section divider plus five content slides (her slide 23 split in three
+to fit; her speaker notes carried in the presenterNotes).  Her call:
+she doesn't yet know whether she'll use them again, so the student
+deck drops them; if run, the slack and the demo block absorb the
+minutes.
 
 **Format items still hers (folded into Q7, unchanged from the
 predecessor plan):** BLE congestion with ~8 modules advertising in one
@@ -84,7 +84,12 @@ the deck; the format slide states her format as she projected it.
 are the same Tuesday (Q8); Lab 9's stated due date (Tuesday March 10,
 2:15 PM) is the demo day itself, no longer after it.
 
-**Questions for her at delivery:** the vote-count parentheticals
-(`1x12`, `2x4`, `1x4`, `2x2`) — prize counts?  Keep on the wall or
-drop?; Q1 as above; whether "Tad" is still the kit-return person this
-year; Q7's three format calls if she wants any of them on a slide.
+**Her rulings, 2026-09-13 (message + five review comments, all
+applied):** the counts are LEGO pieces used as votes — pieces and
+counts back on the wall, mechanism in the body; the checklist lead is
+her "In your demonstration:" and item e gains "by a phone"; the
+course list loses "and ENGS 62, Microprocessors" from the COSC 50
+line and "(next winter)"; Tad confirmed; the 17x microcontroller
+block built instructor-only (Q1 closed).  Remaining open: Q7's format
+calls (stay/walk swap; one block or two) — nothing on a slide until
+she asks.

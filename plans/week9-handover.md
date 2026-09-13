@@ -310,15 +310,30 @@ words).  Full fit sweep at 1600×900, crossfade killed: all 11 fit,
 every slide looked at.  All five targets rebuilt, checks clean,
 pushed (`a43af4c`).
 
-### Open questions at delivery
+### Rework, same day: her rulings and five comments applied
 
-Q1 (her 17x slides 22–25 — not built; the where-to-go beat is the
-recommended home if she wants them), Q7 (vote mechanism, stay/walk
-swap, one block or two), the vote-count parentheticals (prize counts?
-back on the wall?), whether "Tad" is still the kit-return person,
-ENGS 62 twice / "(next winter)" in her course list.  Smaller items
-carried: the technology-used clause on her 17x slide 4, VCORE naming
-in the modes table.
+Her message: the counts are **LEGO pieces used as votes** — each
+student gets one of each and deposits it with the project they vote
+for; pieces (her four photos, inline `<img>` in the glue items — glue
+carries inline HTML) and counts back on the wall, the mechanism in the
+body in her sentence.  Her five comments (all circles located by DOM
+hit-test against the 1600×900 stage before editing; archived by ts):
+"In your demonstration:" as the checklist lead; "by a phone" on
+"Can it be connected to?"; keep the LEGO pieces; delete ", and ENGS
+62, Microprocessors" from the COSC 50 line (the circle starts
+mid-line — COSC 50 stays); delete "(next winter)".  Q1 closed: her
+17x slides 22–25 built as **six instructor-only glue slides** after
+where-to-go (section + her slide 23 split in three + Make: guide with
+her cover image + ecosystems; her speaker notes carried nearly
+verbatim; filter_student_decks drops instructor glue from the student
+build — verified 17 → 11).  Tad confirmed.  Committee re-ran on the
+rework (both MINOR; reviews/day19-gate3.md rework section): her exact
+deposit sentence restored, split titles in her nouns, **SAMD52 →
+SAMD51** (no SAMD52 exists; flagged to her), her note lines restored,
+timing note honest (≈ 10 min out of the demo block).  Still hers:
+when voting opens/closes and the stay/walk swap (Q7); the Make: cover
+says 2021.  Smaller items carried: the technology-used clause on her
+17x slide 4, VCORE naming in the modes table.
 
 ### Superseded plan below
 

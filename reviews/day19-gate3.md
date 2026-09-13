@@ -60,6 +60,36 @@ real player), checker-voice (against the three frozen specimens and her
   8).  The title slide uses her ruling's own words ("demos and
   wrap-up"); her agenda line stays hers verbatim.
 
+## Rework round (2026-09-13, after her message + five review comments)
+
+Her rulings applied: the counts are LEGO pieces used as votes — pieces
+and counts back on the wall with the mechanism in her message's words;
+"In your demonstration:" as the checklist lead; "by a phone" on item e;
+the two course-list deletions; the 17x microcontroller block (her
+slides 22–25) built as six instructor-only glue slides after
+where-to-go (Q1 closed); Tad confirmed.
+
+Committee re-ran on the rework (both MINOR).  Applied: slide 4's body
+restored to her exact sentence ("…and they deposit their piece with
+the project they want to vote for…" — the compression mixed number and
+lost the distributive "their piece"); the split titles made symmetric
+in her own nouns ("8- and 16-bit microcontrollers", "ARM
+architectures" — her verb "designs" nominalized was a garden path);
+SAMD52 → SAMD51 on the wall and in the note (there is no SAMD52; the
+M4 part is the SAMD51 — flagged to her, same pattern as GAAT→GATT);
+the ecosystems note regains her opening line (the 89/90 pointer) and
+the two OS-scheduling sentences; the instructor block's timing note
+names where the minutes come from (the demo block, not the 2-min
+slack); LEGO thumbnails raised to 2em; the stale student build
+rebuilt; the five comments archived by ts.
+
+Not applied, on purpose: when voting opens/closes and whether the
+stay/walk pair swaps (her open Q7 format call — nothing invented); the
+Make: cover reading "2021" (her image; flagged); her "ESP32 is your
+wifi chip" line in a carried instructor note (her own speech, kept
+verbatim); "Can it be connected to by a phone?" kept exactly as her
+comment wrote it.
+
 ## What both reviewers confirmed
 
 Coverage of her eight slides is complete and verbatim (both mined the
