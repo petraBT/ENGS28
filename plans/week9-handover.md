@@ -285,16 +285,40 @@ Her rulings: **Day 18 (Thursday) is a pure work day — no deck, no
 slides.**  Day 19 (Tuesday, last day of classes) is demos and wrap-up
 and needs its deck; that is the remaining Week 9 deliverable.
 
-### Next session
+## Session 6 (2026-09-13, same day): the Day 19 deck built and delivered
 
-The Day 19 deck (demos + wrap-up, Tuesday 110 min; her
-Day19-Topics.pptx is the ground truth; plans/day18.md was written for
-the demos/wrap-up day and carries the arc — retarget it to Day 19).
-Open questions that land there: Q1 (her 17x slides 22-25, choosing a
-microcontroller — the where-to-go beat is the recommended home), Q7
-(demo format), Q9 (groupings).  Smaller open items: the
-technology-used clause on her 17x slide 4, VCORE naming in the modes
-table.
+`plans/day18.md` retargeted as `plans/day19.md` (Gate 1 self-check,
+slide for slide against her Day19-Topics.pptx); day18.md reduced to
+her ruling (Thursday = pure work day, nothing to build).  The deck:
+`assets/decks/day19.json`, 11 slides, **all glue** — no chapter means
+no book pages to ref, and glue is text-only (her title art and vote
+icons cannot be carried; the text carries whole).  Her eight slides
+verbatim; the one addition is the Lab 9 §4.6 demo checklist in the
+lab's words (no deliverable number, no points), up through the
+70-minute block.  Committee ran before delivery (learner-in-the-room +
+checker-voice, `reviews/day19-gate3.md`); applied: her vote-count
+parentheticals moved off the wall into the presenterNote (a student
+reads "(1x12)" as a voting rule), slide 4 retitled to the explanatory
+form, the checklist lead re-tensed to the lab's own sentence, the
+eight objectives split 1–5 / 6–8 (all eight overflowed one glue slide
+and the eighth was sliced at the bottom edge), her where-to-go speaker
+note restored verbatim ("Kofi teaches it" had been condensed away).
+Not applied, on purpose: a vote mechanism (hers to say, Q7), a forward
+results slide (her page-back rule), ENGS 62's double entry and "(next
+winter)" (hers, flagged), the b–f checkboxes as statements (the lab's
+words).  Full fit sweep at 1600×900, crossfade killed: all 11 fit,
+every slide looked at.  All five targets rebuilt, checks clean,
+pushed (`a43af4c`).
+
+### Open questions at delivery
+
+Q1 (her 17x slides 22–25 — not built; the where-to-go beat is the
+recommended home if she wants them), Q7 (vote mechanism, stay/walk
+swap, one block or two), the vote-count parentheticals (prize counts?
+back on the wall?), whether "Tad" is still the kit-return person,
+ENGS 62 twice / "(next winter)" in her course list.  Smaller items
+carried: the technology-used clause on her 17x slide 4, VCORE naming
+in the modes table.
 
 ### Superseded plan below
 
