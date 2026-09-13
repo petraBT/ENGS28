@@ -269,13 +269,32 @@ slide and activity text is untouched.
   three screens with her comments verbatim.  Full fit sweep clean.
 - Delivered to her; her pass on the Day 17x deck is next.
 
+## Session 5 (2026-09-13): the Day 17x deck passed
+
+Three comment batches on the deck (10 + 10 + 2), all applied and
+archived: the modes-table wording, Table 19's legend in plain words,
+Table 20 side by side with the circled LPMS register, both registers
+(PWR_CR1 + SCB->SCR, fields circled) on the register slide, the
+watchdog slide expanded in the book's sentences, and her pet-once
+ruling — IWDG->KR = KEY_UPDATE added after KEY_START in the book
+listing and the code screen, the stretch's first-pet caveat dropped
+accordingly.  **She still needs to add the same two lines to the
+Canvas watchdog.c.**  Her close: "Amazing. Done."
+
+Her rulings: **Day 18 (Thursday) is a pure work day — no deck, no
+slides.**  Day 19 (Tuesday, last day of classes) is demos and wrap-up
+and needs its deck; that is the remaining Week 9 deliverable.
+
 ### Next session
 
-Her pass on the Day 17x deck → then Day 18 (work-time deck, glue only)
-and Day 19 (demos + wrap-up deck; the where-to-go beat absorbs her 17x
-slides 22-25 if Q1 lands there).  Open questions: Q1 (microcontroller
-slides), the technology-used clause on her slide 4, the VCORE naming in
-the modes table, kit-return timing vs Tuesday demos (Q8).
+The Day 19 deck (demos + wrap-up, Tuesday 110 min; her
+Day19-Topics.pptx is the ground truth; plans/day18.md was written for
+the demos/wrap-up day and carries the arc — retarget it to Day 19).
+Open questions that land there: Q1 (her 17x slides 22-25, choosing a
+microcontroller — the where-to-go beat is the recommended home), Q7
+(demo format), Q9 (groupings).  Smaller open items: the
+technology-used clause on her 17x slide 4, VCORE naming in the modes
+table.
 
 ### Superseded plan below
 
