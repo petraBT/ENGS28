@@ -1,0 +1,69 @@
+# Day 19 deck — committee report (Gate 3, 2026-09-13)
+
+Deck: `assets/decks/day19.json` (all glue; no chapter).  Two reviewers:
+learner-in-the-room (walked all slides rendered at 1600×900 through the
+real player), checker-voice (against the three frozen specimens and her
+`Day19-Topics.pptx`).  Findings applied before delivery.
+
+## Applied
+
+1. **Vote-count parentheticals off the wall** (learner MAJOR 1 + voice
+   "For Petra").  `(1x12)`, `(2x4)`, `(1x4)`, `(2x2)` read from the room
+   as a voting rule — "12 votes in this category, 2 in that one" — on the
+   one slide that tells students how to participate in the next 70
+   minutes.  Moved verbatim into the slide's presenterNote; the four
+   category names stay, hers.  Question to Petra: prize counts?  Back on
+   the wall if she wants them.
+2. **Slide 4 retitled** (voice MAJOR 1).  "The sharing format, and the
+   votes" was a nominal, writerly title of the shape her Day 8 pass
+   struck, and "format" is lesson-design vocabulary.  Now "How we'll
+   share projects, and what you vote on" (her Day 8 pattern: the
+   explanatory form when a distinct name is needed; the plain "Share
+   projects!" is the Part divider immediately before).
+3. **Checklist lead re-tensed to the lab's own sentence** (voice MINOR 2,
+   resolves learner MINOR 5's orientation problem).  "Each team
+   demonstrates their project:" (impersonal, not her register) → "Today
+   each team will demonstrate their project:" — Lab 9 §4.6's sentence
+   with "On the last day of class" replaced by "Today".
+4. **Objectives split into two slides** (learner MAJOR 3, confirmed by
+   the fit sweep).  Eight objectives overflow one glue slide; the eighth
+   — the communication-protocols objective — was sliced at the bottom
+   edge.  Split 1–5 / 6–8 at the same type size (S-9: split, don't
+   thin); "Here's where we've been:" leads the first.
+5. **Where-to-go presenterNote restored verbatim** (voice MINOR 3).  The
+   condensation had dropped "(Kofi teaches it)" and her "if you liked X,
+   then Y is for you" framing.  Her speaker note now carried whole.
+
+## Not applied, on purpose
+
+- **A vote mechanism on the wall** (learner MAJOR 2).  Her old slide
+  states none, and inventing one (cards, form, hands) violates the
+  never-invent rule.  Folded into the Q7 questions at delivery; the
+  swap-roles question likewise.
+- **A forward "results" slide instead of paging back to the vote slide**
+  (learner MAJOR 4).  Contradicts her standing rule: never project the
+  same content twice — page back to it (AUTHORING-slides.md, her Day 12
+  correction).  The Part 1 presenterNote says page back.
+- **Combining the checklist and the vote categories on one slide**
+  (learner MAJOR 4 alternative).  Two audiences, one dense slide; the
+  presenterNotes on both slides now say which is up when and where the
+  other lives (one slide back).
+- **ENGS 62 twice, and "(next winter)"** (learner MINOR 6).  Her list,
+  kept verbatim; flagged to her at delivery.
+- **"Return your kit to Tad after demo" wording** (learner MINOR 7).
+  Hers; it agrees with the passed Day 17 notice (kits collected Tuesday
+  after class); whether "Tad" is still right this year is asked at
+  delivery.
+- **The b–f checklist items as statements instead of the lab's yes/no
+  questions** (voice "For Petra").  They are the lab's own words; kept.
+- **Renaming the day to match "Project presentations"** (learner MINOR
+  8).  The title slide uses her ruling's own words ("demos and
+  wrap-up"); her agenda line stays hers verbatim.
+
+## What both reviewers confirmed
+
+Coverage of her eight slides is complete and verbatim (both mined the
+pptx independently); the one addition (the Lab 9 §4.6 checklist) carries
+no deliverable number and no points; presenterNotes hold all timing and
+staging; no anthropomorphism, urgency, count-armature, banner leads, or
+classroom management in student-facing text; `check_deck.py` clean.
