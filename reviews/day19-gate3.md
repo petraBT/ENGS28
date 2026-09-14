@@ -120,6 +120,33 @@ styling; parallel sentences carry the mapping); annotating her
 "Development / evaluation boards" line (hers); naming the nRF51822 in
 ch-ble (corpus decision, flagged).
 
+## Her 16 comments on the modernized block (2026-09-13, all applied)
+
+Every circle located by DOM hit-test before editing; two facts
+re-verified by web search where she challenged a claim.  Method slide:
+the load-cell example replaced with parts the course handled (a
+thermostat reading a TMP235, driving the I2C display, one ADC channel
+— her "what does that mean?" and "why would this need two?"); "answer
+this early: it rules out a number of options" (her words).  Ecosystems:
+debuggers and emulators split and glossed (the ST-LINK is a debugger;
+an emulator is software that pretends to be the chip, her own note's
+words); field application engineers glossed.  Families: "one of
+thousands" dropped for "one member of the enormous Arm Cortex-M
+family" (her "really?"); the Arm/ST relationship answered on the wall
+(Arm designs and licenses, makes no chips; an STM32 is an Arm core
+with ST peripherals around it); the Nucleo price corrected to $15–$40
+with "most families" (her "is that true?" — Nucleo-64 runs $18–26,
+Nucleo-144 to ~$40); the Bluefruit's radio named outright (nRF51822;
+nRF52/54 are the current families).  Continued: RP2350 and ESP32
+split into two bullets (her "somewhat different though, no?" — one is
+a plain microcontroller, the other has the radios on the chip);
+RISC-V's speakers named (ESP32-C3/C6, the Pico 2's boot-selectable
+cores); the 8/16-bit line made checkable (Microchip ships new AVR/PIC
+parts yearly; TI still sells the MSP430, new designs point at the
+Arm-based MSPM0); "the AVR was the chip in the original Arduinos;
+today's UNO boards carry Arm parts."  Full fit sweep clean; all
+targets rebuilt; the 16 comments archived by ts.
+
 ## What both reviewers confirmed
 
 Coverage of her eight slides is complete and verbatim (both mined the
