@@ -328,8 +328,10 @@ passed.**  Status rows for ch-ble / ch-power / Days 18–19 updated in
 CHAPTER_PROCESS.md.  Loose ends for any future session: she still
 needs to add the two KEY_UPDATE lines to the Canvas watchdog.c
 (2026-09-13); the VCORE naming and the technology-used clause on her
-17x slide 4 were never asked; the microcontroller block stays
-instructor-only until she flips it.
+17x slide 4 were never asked.  Post-pass rulings (2026-09-14): the
+microcontroller block is student-facing (all seven flags removed; the
+student deck carries all 18 slides), and she was handed the passed
+watchdog.c (pet-once lines included) for Canvas.
 
 ### Modernization, same day: the microcontroller block rebuilt at her ask
 
