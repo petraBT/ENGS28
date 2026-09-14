@@ -1,0 +1,358 @@
+# The whole-book style and voice sweep — contract and worklist
+
+Prompt 1 output (measured 2026-09-14). This session edited nothing in
+`source/`. It measures the divergence, drafts the contract Petra approves, and
+orders the work for Prompts 2 and 3. **Nothing here is applied until she passes
+Part B.** The charter is `plans/STYLE-SWEEP-PROMPTS.md`; its three "never" rules
+bind every stage.
+
+Numbers below are whole-corpus counts over `source/ch-*.ptx` (16 chapters,
+~32k lines). Where a call is genuinely hers, Part B marks it **[QUESTION]**;
+where the corpus already answers it, **[SETTLED]**.
+
+---
+
+## Part A — the divergence catalog
+
+### A.1 How the reference manual is cited
+
+The reference manual is named **173 times** and linked **9 times**. It is the
+largest single inconsistency in the book.
+
+| Form | Count | Example |
+| --- | --- | --- |
+| "reference manual" / "Reference Manual" (prose phrase) | 79 | `ch-power.ptx` (16×), `ch-i2c.ptx` (12×) |
+| — of those, capitalized "Reference Manual" | 34 | L-14's intended form |
+| — lowercase "reference manual" | 45 | mixed within the same chapters |
+| "RM0490" designator | 94 | `ch-gpio-interrupts.ptx` (20×) |
+| `<url>` links to `external/stm32c031_rm.pdf` | **9** | see A.3 |
+
+**Section-number notation after RM0490:**
+
+| Form | Count | Note |
+| --- | --- | --- |
+| literal `§` (U+00A7) | 166 | dominant; the house form |
+| `&#167;` entity | 7 | renders identically — a stray variant to normalize |
+| "RM0490 §N" | 43 | designator + § |
+| "RM0490 section N" (word) | 1 | outlier |
+| "section N.N" / "Section N.N" **with no "Reference Manual" or "RM0490"** | ~35 | the L-14 trap — reads as a section of *this book* |
+
+The L-14 trap is live and mixed **within one chapter**. `ch-motors.ptx` writes
+bare "find it in section 17.4" and "Section 17.3.8 says…" (RM sections, but
+unqualified) alongside the correct "the Reference Manual (Section 17.3.8)" and
+"section 12.5.6 of the Reference Manual". A student cannot tell which "section
+17.4" means the RM and which means the textbook.
+
+**Chapters with the worst RM link gap** (RM named often, linked never):
+
+| Chapter | "reference manual" | "RM0490" | `<url>` to RM |
+| --- | --- | --- | --- |
+| ch-gpio-interrupts (Day 9) | 8 | 20 | **0** |
+| ch-timers-interrupts (Day 8) | 5 | 19 | **0** |
+| ch-i2c (Days 9x, 10) | 12 | 19 | 1 |
+| ch-motors (Days 11–12) | 11 | 16 | (RM: 0; 9 urls are datasheet/other) |
+| ch-uart (Day 5) | 5 | 0 | **0** |
+
+### A.2 How datasheets are cited
+
+The word "datasheet" appears **339 times**; **120** of those are the generic
+"the datasheet" with no document named. Component/MCU datasheets are linked
+**~30 times**, unevenly.
+
+The starkest gap is the datasheet-literacy chapter itself: **`ch-io-datasheets`
+(Day 5x) mentions "datasheet" 36 times and links none.** `ch-transistors` (Day
+6) has 20 datasheet mentions, 0 links. `ch-accelerometers` has 96 mentions, 7
+links (many mentions are generic back-references, so the real link surface is
+far smaller than 96).
+
+Datasheet **display forms vary** across five shapes:
+
+| Display text | Example targets |
+| --- | --- |
+| "`<Part>` datasheet" | "TB6612FNG datasheet", "SG90 datasheet", "LSM303AGR datasheet", "PDV-P8001 datasheet", "EE-SX67 series datasheet" |
+| bare "datasheet" | lsm303agr.pdf, C17481_SG92R, stm32c031_datasheet |
+| document number | "DS13867" (×3), "UM2953", "AN-1057" |
+| "`<Part>` series" | "EE-SX67 series" |
+| chip-name variants | "STM32C031 datasheet" vs "STM32C031C6 datasheet" (L-5: the part is STM32C031C6) |
+
+### A.3 `<url>` display-text conventions
+
+43 `<url>` links exist. For the MCU documents the display text is inconsistent:
+
+- **RM** (`stm32c031_rm.pdf`, 9 links): "RM0490", "Reference Manual" (×3),
+  "STM32C031 reference manual" (×2), "STM32C031C6 Reference Manual" — four
+  distinct forms.
+- **MCU datasheet** (`stm32c031_datasheet.pdf`, 8 links): "DS13867" (×3),
+  "STM32C031 datasheet", "STM32C031C6 datasheet", "datasheet" (×2) — four forms.
+- **Nucleo docs**: "Nucleo pinout", "UM2953" — mixed friendly-name vs doc-number.
+- External web links (Adafruit, howtomechatronics): 8 links, display the page
+  topic — these are fine and out of scope for the RM/datasheet normalization.
+
+### A.4 Links currently sitting in projected surfaces (link-safety)
+
+The charter's hard rule: **no link in anything projected.** Current state,
+grepping every `<slide>`, `<activity>`, and `<instructor>` block:
+
+- **`ch-i2c.ptx` — a `<url>` inside a `<slide>` block** (`sl-day10-af6`, line
+  2540, links to the MCU datasheet). This is an **outright existing violation**
+  of the no-links-in-slides rule and must be fixed regardless of the contract.
+- **11 `<url>`s inside `<activity>`/`<instructor>` blocks** across 8 chapters
+  (adc ×3, plus accelerometers, ble, blinky, motors, photosensors, servos,
+  switches). These are violations **only if a deck refs that block** — Prompt 2
+  must build the ref'd-id set from `assets/decks/*.json` (28 decks) and check
+  each. The link moves to surrounding reading prose where it does.
+- No `<xref>` currently sits inside a `<slide>` block. (The player's `dexref()`
+  neutralizes `<xref>` in a projected *activity*, but the charter extends the
+  grep to `<url` because nothing neutralizes those.)
+
+### A.5 Other mechanics — measured, not guessed
+
+| Mechanic | Finding | Divergence? |
+| --- | --- | --- |
+| **Unit spacing** | "5 V" (spaced) 431 vs "5V" (no space) ~29 in prose; heaviest in `ch-servos` (20), `ch-motors` (8). Both forms appear in one caption: *"the Nucleo's 3.3 V or 5V pin"* | **Yes — normalize** |
+| **Micro sign** | "µs" 85, "µF" 17; ascii "us" appears once | Minor — 1 fix |
+| **`§` vs entity** | literal `§` 166 vs `&#167;` 7 | **Yes — 7 fixes** |
+| **`<xref>` display** | 334 bare (auto-numbered) vs 2 with `text=` override | Uniform; 2 outliers to review |
+| **Register names in `<c>`** | `GPIOA->` in `<c>` 47 vs bare in prose 4 | Uniform; 4 outliers |
+| **List terminal punctuation** | `<li>` ending "." 546 vs no terminal punct 13 | Uniform (L-12 already governs; 13 are likely legit checklists) |
+| **Figure captions** | noun-phrase lead, descriptive, self-contained (B-7) — consistent shape; length varies (B-18 already caps it) | Uniform |
+| **`<c>` vs `<term>`** | 3050 `<c>`, 793 `<term>` — serve distinct roles (code font vs definitional term); no systematic misuse found in sampling | No rule needed |
+
+**Conclusion:** the mechanical divergence that actually matters is **links**
+(RM + datasheet), **the L-14 bare-section trap**, **unit spacing**, and the **7
+`&#167;` entities**. Captions, xrefs, `<c>`/`<term>`, and list punctuation are
+already uniform and need no new rule.
+
+### A.6 Which chapters Petra passed, and which she never did
+
+From `CHAPTER_PROCESS.md`'s status table. This decides Prompt 3's freedom.
+**Critical nuance:** "done/passed" means the chapter cleared her review *by
+exception* (she commented, they were fixed) — **not** that she authored every
+sentence. Her explicit ask ("the beginning doesn't hit my voice, sweep it")
+confirms even passed early chapters are in scope. The voice **floor** is the
+narrower set: her review-comment wording, her slide-derived wording, and the
+three frozen hand-pass specimens (Day 8, 9x, 10 diffs).
+
+| Chapter | Days | Petra status | Prompt-3 hand |
+| --- | --- | --- | --- |
+| ch-intro-blinky | 1,1x,2 | **done** (comment-level) | sweepable; floor = her comments |
+| ch-switches | 3,3x,4 | **done** (comment-level) | sweepable |
+| ch-uart | 5 | **done** (comment-level) | sweepable |
+| ch-io-datasheets | 5x | **done** (comment-level) | sweepable |
+| ch-transistors | 6 | **done** (comment-level) | sweepable |
+| ch-adc | 7 | **pilot — never passed** | **freer hand** |
+| ch-debugging | 7x | **Gate 2, Petra pending** | **freer hand** |
+| ch-timers-interrupts | 8 | reviewed; **Day 8 diff is HER hand-pass** | floor-heavy |
+| ch-gpio-interrupts | 9 | **Gate 2, Petra pending** | **freer hand** |
+| ch-i2c | 9x,10 | **Day 9x + Day 10 diffs are HER hand-passes** | floor-heavy (Day 10 = her full prose pass) |
+| ch-motors | 11,11x,12 | Day 11 **done+passed**; 11x/12 not | mixed |
+| ch-accelerometers | 13,13x,14 | heavily commented (pass 1–4 applied) | floor-heavy |
+| ch-servos | 15,15x | **done+passed** | mostly her floor |
+| ch-photosensors | 16 | **book passed** (3 passes) | mostly her floor |
+| ch-ble | 17 | **done+passed** | mostly her floor |
+| ch-power | 17x | **done+passed** | mostly her floor |
+
+---
+
+## Part B — the proposed contract
+
+One rule per mechanic, written so a linter can check it. Link rules and
+mechanics only; voice rules stay Prompt 3's job (Part B ends with the ranking,
+not voice rules).
+
+### Link rules
+
+**C-1 — Every RM mention in book prose links to `external/stm32c031_rm.pdf`.**
+The link anchor is the **designator token**: "RM0490" when it is present in the
+sentence, otherwise the phrase "reference manual". The **`§` number and any
+Table/Figure number stay OUTSIDE the link, as plain text**, so the precise
+location remains visible and teachable (P-11) and does not turn blue.
+
+- Canonical first mention in a subsection: *"the reference manual, [RM0490]
+  §17.4, Table 40"* — link on "RM0490".
+- Where prose uses the phrase alone: *"the [reference manual]"* — link on the
+  phrase.
+- **[QUESTION Q1]** Confirm the anchor is the designator only (not the whole
+  "RM0490 §17.4" string, and never the § / Table number). *Recommend: yes.*
+- **[QUESTION Q2]** Canonical phrase — standardize on **"the reference manual
+  (RM0490)"** at first use per subsection, "RM0490 §N" thereafter? (Kills the
+  four competing display forms and the 45/34 lowercase/capitalized split.)
+  *Recommend: yes; capitalize "Reference Manual" only when it opens a sentence
+  or when no "RM0490" accompanies it, per L-14.*
+
+**C-2 — Every datasheet mention in book prose links to its specific PDF.**
+Display form on the first specific mention per subsection: **"`<Part>`
+datasheet"** (e.g. "TB6612FNG datasheet", "LSM303AGR datasheet",
+"STM32C031C6 datasheet" → `external/stm32c031_datasheet.pdf`; component parts →
+`external/datasheets/<name>.pdf`). The generic "the datasheet" (120×), used as a
+back-reference after the part was named in the same subsection, stays **plain
+text**.
+
+- **[QUESTION Q3]** Document-number display ("DS13867", "UM2953", "AN-1057"):
+  replace with the friendly "`<Part>` datasheet" form, or keep the number?
+  *Recommend: friendly form for the MCU datasheet (DS13867 → "STM32C031C6
+  datasheet") and the Nucleo manual (UM2953 → "Nucleo user manual"); keep
+  "AN-1057" as-is, since an application note is genuinely known by its number —
+  display "AN-1057, Using an Accelerometer for Inclination Sensing".*
+
+**C-3 — Link scope is once per subsection, on first specific mention.** Not
+every mention (that would make Day 5x and the accelerometer chapter a sea of
+blue), not once per chapter (a reader landing on a subsection page from search
+must still get the link — B-11b). Lintable: within each subsection, the RM and
+each datasheet named there must be linked at least once. **[SETTLED]** — follows
+from B-11b (each subsection stands alone).
+
+**C-4 — No `#page=N` page anchors.** Evidence (tested this session against the
+real hosted PDF): the RM ships a **1192-entry bookmark outline** — full
+click-navigation is already built into the file. The `§` number is **not** the
+PDF page number: §1 begins on **PDF page 35**, and the offset is not constant
+(the RM restarts its own page numbering), so every anchor would need a manual
+per-citation page lookup across ~90 mentions, and would **silently break** if ST
+reissues the PDF. Embedded/in-app PDF viewers (including this environment's) also
+**force-download** the PDF and skip the fragment entirely. Linking plain, with
+the visible "§20.3.1, Table 40" as the navigation aid, is more robust and is the
+P-11 teaching point anyway.
+- **[QUESTION Q4]** Confirm: no page anchors. *Recommend: confirm.*
+
+**C-5 — No link in any projected surface.** No `<url>` and no `<xref>` inside a
+`<slide>` block, or inside any `<activity>`/`<task>`/`<instructor>`/`<table>`/
+`<figure>` block that a deck refs. Build the ref'd-id set from
+`assets/decks/*.json` before and after. Where the reading needs the link, it
+lives in the surrounding prose (per AUTHORING-slides.md). **[SETTLED]** — this is
+the existing standing rule; the sweep enforces it and fixes the one live
+violation (`sl-day10-af6`, A.4).
+
+### Mechanical rules
+
+**C-6 — RM sections always carry the designator.** A section/figure/table number
+that refers to the reference manual is written "reference manual §N" or
+"RM0490 §N", never bare "section 17.4" (which reads as a section of this book —
+L-14). The book's own sections use `<xref>`, never a typed "section N". Lintable:
+a typed "section N.N" in prose must be preceded by "reference manual"/"RM0490"
+(or datasheet) within the sentence. **[SETTLED]** — this is L-14, currently
+unenforced; ~35 bare RM-section mentions violate it.
+
+**C-7 — Section marker is the literal `§`.** Replace the 7 `&#167;` entities.
+One space (or nbsp) between a number and its unit: "5 V", never "5V" (~29 prose
+fixes, mostly ch-servos); micro sign "µ", never ascii "u". **[SETTLED]** —
+corpus is 166:7 and 431:29 in favor of the majority form; CLAUDE.md already
+fixes the unit *character*, this adds *spacing*.
+
+**C-8 — `<xref>` stays bare (auto-numbered).** The 2 `text=` overrides are
+reviewed and removed unless there is a reason. Low priority. **[SETTLED]**.
+
+### Lintable rules to add in Prompt 2 (new L-rules, next free number is L-19)
+
+- **L-19** — an RM or datasheet mention in book prose (outside a projected
+  block) with no link to it anywhere in its subsection. (C-1, C-2, C-3.)
+- **L-20** — a malformed link display form: RM link whose anchor is not
+  "RM0490"/"reference manual", or a datasheet link not of the "`<Part>`
+  datasheet" shape; a `§` written as `&#167;`; a number-unit pair with no space;
+  a bare "section N" meaning the RM. (C-1, C-2, C-6, C-7.)
+- **L-21** — a `<url>` or `<xref>` inside a `<slide>` block or inside any block
+  a deck refs. (C-5.)
+
+Document all three in `AUTHORING-book.md` and wire them into
+`scripts/check_rules.py` so the uniformity survives future edits.
+
+### Part B, voice half — the distance ranking (evidence, not chronology)
+
+`checker-voice` ran in survey mode over the 3 oldest and 3 newest chapters. The
+gap Petra named is real, systemic, and consistent in *kind*:
+
+| Chapter | Age | Voice distance | Dominant divergence |
+| --- | --- | --- | --- |
+| ch-uart (Day 5) | old | **5/10** | "we'll" absent (0 vs 9 "you will"); opens on absence; rhetorical connectives ("Here is the catch:") |
+| ch-transistors (Day 6) | old | **4/10** | "we" absent (systemic); CMSIS/KVL unexpanded; no goal-opening |
+| ch-intro-blinky (Days 1–2) | oldest | **3/10** | opens on absence (×3); weekday-as-actor (S-20); few "we" |
+| ch-servos (Days 15–15x) | new | **1/10** | none material — target register |
+| ch-photosensors (Day 16) | new | **1/10** | none — the calibration target |
+| ch-power (Day 17x) | newest | **1/10** | none — the floor the others move toward |
+
+The **through-line** across every old chapter: (1) **"we/we'll" absent** —
+shared class work narrated impersonally or as "you will" (S-13); (2) **openings
+on what is absent/limited** rather than the goal (S-22); (3) scattered
+aphoristic tells and slogan endings; (4) **unexpanded acronyms** at first use.
+The newest chapters get all four right. This is a repeatable pass, not a
+per-chapter reinvention — which is why Prompt 3 can be ordered by distance and
+run a few chapters at a time.
+
+---
+
+## Part C — the worklist
+
+### C.a Prompt 2 (links + mechanical) — book order, one commit per chapter
+
+Mechanical normalization is low-risk and uniform, so **book order** (the
+`main.ptx` sequence) gives clean per-chapter commits Petra can review in reading
+order. Heaviest link surface flagged with ●.
+
+| # | Chapter | Days | Passed | RM mentions | datasheet mentions | no-space units | notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | ch-intro-blinky | 1,1x,2 | done | 2 | 0 | 0 | light |
+| 2 | ch-switches | 3,3x,4 | done | 4 | 0 | 0 | light |
+| 3 | ch-uart | 5 | done | 5 | 2 | 0 | ● 5 RM, 0 links |
+| 4 | ch-io-datasheets | 5x | done | 0 | 36 | 0 | ● datasheet chapter, 0 links; check projected activities |
+| 5 | ch-transistors | 6 | done | 0 | 20 | 0 | ● 20 datasheet, 0 links |
+| 6 | ch-adc | 7 | pilot | 7 | 18 | 0 | ● 3 urls in activities — check deck refs |
+| 7 | ch-debugging | 7x | pending | 9 | 1 | 2 | RM 9, 1 link |
+| 8 | ch-timers-interrupts | 8 | her pass | 24 | 1 | 0 | ● 24 RM, 0 links |
+| 9 | ch-gpio-interrupts | 9 | pending | 28 | 0 | 0 | ●● biggest RM gap, 0 links |
+| 10 | ch-i2c | 9x,10 | her pass | 31 | 64 | 0 | ●● + **fix `sl-day10-af6` url-in-slide** |
+| 11 | ch-motors | 11,11x,12 | mixed | 27 | 39 | 8 | ● + bare-"section 17.4" L-14 cluster (27) |
+| 12 | ch-accelerometers | 13,13x,14 | commented | 1 | 96 | 1 | ● datasheet-heavy (many generic) |
+| 13 | ch-servos | 15,15x | done | 3 | 29 | 20 | ● heaviest unit-spacing fixes |
+| 14 | ch-photosensors | 16 | passed | 4 | 24 | 3 | web links out of scope |
+| 15 | ch-ble | 17 | done | 10 | 5 | 0 | web links out of scope |
+| 16 | ch-power | 17x | done | 18 | 4 | 0 | ● 18 RM, 1 link |
+
+Before each commit: all five targets rebuilt; `check_rules`, `check_deck`,
+`check_starters`, `check_instructor_only`, `image_ratios --check` green.
+
+### C.b Prompt 3 (voice) — voice-distance order, worst first, 2–3 per session
+
+Front-load the chapters that least sound like her and the never-passed pilots.
+Group by session. **Measured** distances are from the survey; **est.** are
+extrapolated from age + whether a hand-pass specimen exists (to be confirmed as
+each chapter's survey runs at the head of its session).
+
+| Session | Chapters | Voice dist. | Comment surface | Hand |
+| --- | --- | --- | --- | --- |
+| 1 | ch-uart (5), ch-transistors (6) | 5, 4 (measured) | medium, ~10 | sweepable |
+| 2 | ch-switches (3–4), ch-io-datasheets (5x) | ~4 est. | est. medium | sweepable |
+| 3 | ch-adc (7), ch-debugging (7x) | ~4 est. | est. medium | **freer hand** (never passed) |
+| 4 | ch-intro-blinky (1–2), ch-gpio-interrupts (9) | 3 meas., ~3 est. | low / est. medium | blinky sweepable; gpio **freer hand** |
+| 5 | ch-timers-interrupts (8) | ~2–3 est. | est. low | **floor-heavy** (Day 8 is her diff) |
+| 6 | ch-motors (11–12), ch-i2c (9x–10) | ~2 est. | est. low–medium | floor-heavy (Day 10 is her full pass) |
+| 7 | ch-accelerometers (13–14), ch-ble (17) | ~2 est. | est. low | floor-heavy / mostly hers |
+| — | ch-servos (15), ch-photosensors (16), ch-power (17x) | 1 (measured) | ~0 | **skip — these are the target** |
+
+The three 1/10 chapters are the calibration reference, not rework candidates.
+
+Every touched `<slide>` block triggers a full deck fit-sweep at 1600×900 (per
+the charter and AUTHORING-slides.md), and no link the sweep moves lands in a
+projected surface.
+
+---
+
+## What I need from Petra (numbered)
+
+**Settled by the corpus (stated, not asked):** literal `§` over `&#167;`;
+one space in "5 V"; bare auto-numbered `<xref>`; link once per subsection; RM
+sections always carry the designator (L-14); no link in any projected surface
+(and the `sl-day10-af6` violation gets fixed).
+
+**Genuinely your calls:**
+
+1. **Q1** — Link only the designator ("RM0490"/"reference manual"), leaving
+   "§17.4, Table 40" as plain visible text? *(Recommend yes.)*
+2. **Q2** — Canonical RM phrase: "the reference manual (RM0490)" at first use per
+   subsection, "RM0490 §N" after? *(Recommend yes.)*
+3. **Q3** — Datasheet display "`<Part>` datasheet"; replace doc numbers (DS13867,
+   UM2953) with friendly names but keep "AN-1057"? *(Recommend yes.)*
+4. **Q4** — No `#page=N` page anchors (evidence in C-4)? *(Recommend confirm.)*
+5. **Q5** — Voice-sweep the "done/passed" early chapters too, with the floor =
+   your comment/slide wording + the three specimens (not every sentence)? *(This
+   is what your ask implies; confirming the floor.)*
+6. **Q6** — Prompt 3 order: worst-voice-first (C.b), or would you rather it run
+   in book order so you review in reading sequence?
