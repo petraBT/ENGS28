@@ -10,6 +10,8 @@ five).  These are the errors that should never reach a human reviewer.
 """
 
 import argparse
+import glob
+import json
 import os
 import re
 import sys
@@ -17,6 +19,31 @@ from xml.etree import ElementTree as ET
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(REPO, "assets")
+DECKS = os.path.join(ASSETS, "decks")
+
+
+def deck_refed_ids():
+    """xml:ids that some deck JSON projects (the style sweep's L-21/C-5 scope).
+
+    A deck entry of type "ref" names the projected element's own xml:id in its
+    "slide" field -- either a <slide> it points AT via ref=, or (when an
+    activity/instructor block is shown wholesale, with no separate <slide>)
+    that block's own xml:id directly.  Cached on first call.
+    """
+    if deck_refed_ids._cache is None:
+        ids = set()
+        for f in glob.glob(os.path.join(DECKS, "*.json")):
+            if os.path.basename(f) == "index.json":
+                continue
+            deck = json.load(open(f, encoding="utf-8"))
+            for s in deck.get("slides", []):
+                if isinstance(s, dict) and s.get("type") == "ref" and "slide" in s:
+                    ids.add(s["slide"])
+        deck_refed_ids._cache = ids
+    return deck_refed_ids._cache
+
+
+deck_refed_ids._cache = None
 
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
@@ -274,6 +301,149 @@ def check_file(path, quiet=False):
             problems.append(("warning", line_of(raw, off), "L-12",
                              "fragment in a list of sentences -- give it a "
                              f"verb and a full stop: {' '.join(t.split())[:60]!r}"))
+
+    # L-19, L-20, L-21: the style sweep's link contract (plans/style-sweep.md
+    # Part B, C-1..C-7).  Every reference-manual/datasheet mention in book
+    # prose links to its hosted PDF, once per subsection, in the canonical
+    # display form, and never inside anything a deck projects.
+    # These scan `text` (comments blanked to spaces, same positions/length as
+    # `raw`) rather than `raw` itself: a literal "<slide>" or a unit mention
+    # typed inside an authoring comment (e.g. explaining the standing rule)
+    # is not a real element and must not seed a bogus multi-thousand-line span.
+    projected_ids = deck_refed_ids()
+    slide_spans = [element_span(text, m.start())
+                   for m in re.finditer(r"<slide\b[^>]*>", text)]
+    proj_spans = list(slide_spans)
+    for m in re.finditer(r'xml:id="([^"]+)"', text):
+        if m.group(1) in projected_ids:
+            tag_start = text.rfind("<", 0, m.start())
+            proj_spans.append(element_span(text, tag_start))
+
+    # L-21: a <url> anywhere projected -- always forbidden (style-sweep.md
+    # C-5).  A bare <xref> is neutralized at render time by the player's
+    # dexref() inside an activity/task/instructor/table/figure a deck refs
+    # (style-sweep.md A.4), so it is only flagged inside an actual <slide>
+    # block, where nothing neutralizes it.
+    for s, e in proj_spans:
+        block = text[s:e]
+        for m in re.finditer(r"<url\b", block):
+            problems.append(("error", line_of(raw, s + m.start()), "L-21",
+                             "link inside a projected block -- nothing "
+                             "projected may carry a link (the standing "
+                             "no-links-in-slides rule, style-sweep.md C-5)"))
+    for s, e in slide_spans:
+        block = text[s:e]
+        for m in re.finditer(r"<xref\b", block):
+            problems.append(("warn", line_of(raw, s + m.start()), "L-21",
+                             "xref inside a <slide> block -- nothing "
+                             "neutralizes it there the way the player "
+                             "neutralizes one inside an activity "
+                             "(style-sweep.md A.4/C-5)"))
+
+    # L-20a: the &#167; entity, instead of a literal section mark.
+    for m in re.finditer(r"&#167;", text):
+        problems.append(("warn", line_of(raw, m.start()), "L-20",
+                         "&#167; entity -- use a literal § (style-sweep.md C-7)"))
+
+    # L-20b: a number and its unit with no space between them.
+    for m in re.finditer(
+            r"(?<![\w.])\d+(\.\d+)?(V|mA|A|kHz|MHz|Hz|ms|ns|kΩ|Ω|µF|F)\b", text):
+        problems.append(("warn", line_of(raw, m.start()), "L-20",
+                         f"no space between number and unit: {m.group(0)!r} "
+                         f"(style-sweep.md C-7)"))
+
+    # L-20c: an RM/datasheet <url> whose display text isn't the canonical
+    # designator-only anchor (style-sweep.md C-1/C-2), or that carries a
+    # #page= anchor (C-4).
+    for m in re.finditer(r'<url\s+href="(external/(?:stm32c031_rm\.pdf|'
+                         r'stm32c031_datasheet\.pdf|datasheets/[^"]+\.pdf))"'
+                         r'([^>]*)>(.*?)</url>', text, re.S):
+        if 'visual="' in m.group(2):
+            continue   # a resource-card CTA (e.g. frontmatter's "Open"), not
+                       # an inline prose mention -- C-1/C-2 don't apply to it
+        href, anchor = m.group(1), re.sub(r"<[^>]+>", "", m.group(3)).strip()
+        if "#page=" in m.group(0):
+            problems.append(("error", line_of(raw, m.start()), "L-20",
+                             "#page=N anchor on a hosted PDF link -- not "
+                             "supported, per style-sweep.md C-4"))
+        if href == "external/stm32c031_rm.pdf":
+            if not re.fullmatch(r"RM0490|[Rr]eference [Mm]anual", anchor):
+                problems.append(("warn", line_of(raw, m.start()), "L-20",
+                                 f"RM link anchor {anchor!r} is not the "
+                                 f"designator alone (style-sweep.md C-1)"))
+        elif not re.search(r"\bdatasheet\b", anchor, re.I) \
+                and not re.fullmatch(r"AN-1057.*", anchor):
+            problems.append(("warn", line_of(raw, m.start()), "L-20",
+                             f"datasheet link anchor {anchor!r} does not read "
+                             f"as '<Part> datasheet' (style-sweep.md C-2)"))
+
+    # L-20d: a typed "section N" that means the reference manual or a
+    # datasheet, with no designator in the same sentence (the L-14 trap).
+    for m in re.finditer(r"\b[Ss]ection\s+\d+(\.\d+)*\b", text):
+        window = text[max(0, m.start() - 150):m.start()]
+        sentence = re.split(r"[.!?]\s", window)[-1]
+        if not re.search(r"[Rr]eference\s+[Mm]anual|RM0490|datasheet",
+                         sentence, re.I):
+            problems.append(("warn", line_of(raw, m.start()), "L-20",
+                             "bare 'section N' with no reference-manual/"
+                             "datasheet designator in the same sentence -- "
+                             "reads as this book's own section (L-14)"))
+
+    # L-19: an RM/datasheet mention in book prose (i.e. outside a projected
+    # block) with no link anywhere in its enclosing subsection/section.
+    def in_projected(pos):
+        return any(s <= pos < e for s, e in proj_spans)
+
+    scopes = [(m.start(), m.group(1))
+              for m in re.finditer(r"<(?:sub)?section\s+xml:id=\"([^\"]+)\"", text)]
+    scopes.append((len(text), None))
+
+    def scope_of(pos):
+        best = None
+        for start, sid in scopes:
+            if start <= pos:
+                best = (start, sid)
+            else:
+                break
+        return best
+
+    scope_bounds = [s[0] for s in scopes]
+
+    def scope_end(start):
+        i = scope_bounds.index(start)
+        return scope_bounds[i + 1] if i + 1 < len(scope_bounds) else len(text)
+
+    def scope_has_link(start, href_pat):
+        end = scope_end(start)
+        return re.search(r'<url\s+href="' + href_pat + r'"', text[start:end])
+
+    warned_scopes = set()
+    for m in re.finditer(r"[Rr]eference\s+[Mm]anual|RM0490", text):
+        if in_projected(m.start()):
+            continue
+        sc = scope_of(m.start())
+        if sc is None or (sc[1], "rm") in warned_scopes:
+            continue
+        if not scope_has_link(sc[0], r"external/stm32c031_rm\.pdf"):
+            problems.append(("warn", line_of(raw, m.start()), "L-19",
+                             "reference-manual mention in book prose with no "
+                             "link anywhere in its subsection (style-sweep.md "
+                             "C-1/C-3)"))
+            warned_scopes.add((sc[1], "rm"))
+    for m in re.finditer(r"\bdatasheet\b", text, re.I):
+        if in_projected(m.start()):
+            continue
+        sc = scope_of(m.start())
+        if sc is None or (sc[1], "ds") in warned_scopes:
+            continue
+        if not scope_has_link(sc[0], r"external/(?:stm32c031_datasheet\.pdf|"
+                                       r"datasheets/[^\"]+\.pdf)"):
+            problems.append(("warn", line_of(raw, m.start()), "L-19",
+                             "datasheet mention in book prose with no link "
+                             "anywhere in its subsection (style-sweep.md "
+                             "C-2/C-3) -- may be a generic back-reference, "
+                             "check by hand"))
+            warned_scopes.add((sc[1], "ds"))
 
     # Images resolve on disk.
     for m in re.finditer(r'<image\s+source="([^"]+)"', text):
