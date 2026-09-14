@@ -12,19 +12,25 @@
     <title>Serial Communication: UART</title>
     <introduction>
         <p>
-            So far our programs can only communicate with the outside world by blinking LEDs.
-            The <term>Universal Asynchronous Receiver-Transmitter (UART)</term> lets the
-            microcontroller exchange text with a PC terminal over a serial connection.
-            It is the simplest and most ubiquitous serial protocol in embedded systems,
-            invaluable for debugging and for building human-readable interfaces.
+            The goal of this chapter is to send text from our microcontroller to a
+            terminal window on a laptop, and to read characters typed in that window
+            back into our program.  We'll do this with the
+            <term>Universal Asynchronous Receiver-Transmitter (UART)</term>, one of the
+            serial interfaces built into the STM32C031C6.  So far our programs could
+            only communicate with the outside world by blinking an LED.  Once
+            <c>printf()</c> reaches your laptop we have a debugging tool we'll use for
+            the rest of the term, and a way to build an interface a person can read.
+            UART is also the simplest and most ubiquitous serial protocol in embedded
+            systems, and the same frame format turns up again on the Bluetooth module
+            later in the course.
         </p>
         <objectives>
             <ul>
                 <li>Describe the UART frame format: start bit, data bits, stop bit.</li>
                 <li>Explain what <q>asynchronous</q> means and why baud rate matching is critical.</li>
-                <li>Use <c>printf()</c> to send text from the STM32 to a PC terminal.</li>
+                <li>Use <c>printf()</c> to send text from the STM32C031C6 to a PC terminal.</li>
                 <li>Read characters from the keyboard using the UART receive path.</li>
-                <li>Configure the STM32 USART2 peripheral at the register level.</li>
+                <li>Configure the STM32C031C6's USART2 peripheral at the register level.</li>
             </ul>
         </objectives>
     </introduction>
@@ -37,27 +43,35 @@
         <title>Before Class: How UART Works</title>
         <introduction>
         <p>
-            When your STM32 calls <c>printf("Hello\n")</c>, it does not transmit the
-            string as a single burst.  It sends each character one bit at a time, over
-            a single wire, at a pre-agreed rate.  This is <term>UART</term>: Universal
-            Asynchronous Receiver-Transmitter.
+            This reading explains how a character gets from your program to a terminal
+            window on your laptop.  When your STM32C031C6 calls
+            <c>printf("Hello\n")</c>, each character goes out over a single wire one
+            bit at a time, at a rate both ends agreed on in advance, rather than as a
+            single burst or over eight wires at once.  This is <term>UART</term>:
+            Universal Asynchronous Receiver-Transmitter.  We'll look at how a byte is
+            turned into a bit stream, what the baud rate is, what a complete frame
+            looks like on the wire, and why the peripheral on our chip is called USART
+            rather than UART.
         </p>
         </introduction>
 
         <subsection xml:id="subsec-uart-one-wire">
             <title>One Wire, Two States</title>
             <p>
-                Suppose your laptop wants to receive the letter <sq>E</sq> from the
-                STM32.  The simplest possible connection is one wire: that wire is
-                either HIGH (3.3 V) or LOW (0 V).  To send <sq>E</sq>, the STM32
-                first looks up its ASCII code (69), converts it to binary
+                Suppose we want to send the letter <sq>E</sq> from the STM32C031C6 to
+                your laptop.  The simplest possible connection is one wire: that wire is
+                either HIGH (3.3 V) or LOW (0 V).  To send <sq>E</sq>, the STM32C031C6
+                first looks up its ASCII (American Standard Code for Information
+                Interchange) code, 69, converts it to binary
                 (<m>64 + 4 + 1 = 69</m>, so <c>0b01000101</c>), and then puts
                 those eight bits on the wire one at a time: HIGH for a 1, LOW for a 0.
             </p>
             <p>
-                This is the job of the <term>serializer</term> inside the USART peripheral:
-                it accepts the parallel byte from your code (all 8 bits at once, over the
-                32-bit APB bus) and converts it to a sequential bit stream.  On the other
+                This is the job of the <term>serializer</term> inside the USART, which is
+                the STM32C031C6's own name for this peripheral and which we come back to in
+                <xref ref="subsec-uart-vs-usart"/>.  The serializer accepts the parallel byte
+                from your code (all 8 bits at once, over the 32-bit APB, the Advanced
+                Peripheral Bus) and converts it to a sequential bit stream.  On the other
                 end, the receiver's <term>deserializer</term> does the reverse, reassembling
                 the incoming bits back into a parallel byte.
             </p>
@@ -72,8 +86,9 @@
         <subsection xml:id="subsec-uart-baud">
             <title>The Baud Rate Problem</title>
             <p>
-                Here is the catch: the laptop needs to know <em>when</em> to sample
-                the wire.  If it sees the wire sitting LOW, is that one bit?  Three?
+                The receiver still has a problem to solve: it has to know <em>when</em>
+                to sample the wire.  If the wire is held LOW for a while, nothing in the
+                signal itself says whether that is one 0 bit or three of them in a row.
                 Without a shared clock signal, both sides must agree in advance on how
                 fast bits are sent.  This pre-agreed rate is the <term>baud rate</term>,
                 measured in bits per second.  At 9600 baud, each bit lasts exactly
@@ -86,9 +101,9 @@
         <subsection xml:id="subsec-uart-frame">
             <title>The Frame</title>
             <p>
-                One more problem: the laptop must know exactly when a new byte begins.
-                The wire sits HIGH when nothing is being transmitted.  To announce the
-                start of a byte, the STM32 pulls the wire LOW for exactly one bit
+                The receiver also has to know exactly when a new byte begins.  The wire
+                idles HIGH whenever nothing is being transmitted, so to announce the
+                start of a byte the STM32C031C6 pulls it LOW for exactly one bit
                 period.  This is the <term>start bit</term>.  After the start bit come
                 the 8 data bits, sent <em>least-significant bit first</em>, D0 before
                 D7.  A final <term>stop bit</term>, always HIGH, closes the transmission
@@ -96,16 +111,15 @@
             </p>
             <p>
                 The complete frame for transmitting <sq>E</sq> at 9600 baud is shown
-                in <xref ref="fig-uart-frame-E"/>.  Three things are worth noticing.
-                First, the idle state is HIGH, so the start bit is a <em>falling
-                edge</em>, a sharp, unambiguous signal even after a long silence.
-                Second, the three consecutive LOW bits (D3, D4, D5 are all zero) look
-                identical to a single long pulse from the outside; only a receiver that
-                knows the baud rate can count them correctly.  This is exactly why
-                mismatched baud rates produce garbled output rather than silence.
-                Third, to decode the frame yourself: read D7 down to D0, write out
-                <c>01000101</c>, and convert: <m>64 + 4 + 1 = 69</m>.
-                Look up ASCII 69: <sq>E</sq>. ✓
+                in <xref ref="fig-uart-frame-E"/>.  The idle state is HIGH, so the start
+                bit is a <em>falling edge</em>, a sharp, unambiguous signal even after a
+                long silence.  Notice also that D3, D4 and D5 are all zero, so from the
+                outside those three bit periods look identical to one long LOW pulse;
+                only a receiver that samples at the agreed baud rate counts them as three
+                separate bits, which is why a mismatched baud rate produces garbled
+                output rather than silence.  To decode the frame yourself, read D7 down
+                to D0 as <c>01000101</c> and convert: <m>64 + 4 + 1 = 69</m>, which is
+                ASCII 69, the letter <sq>E</sq>.
             </p>
             <figure xml:id="fig-uart-frame-E">
                 <caption>UART frame for the character <sq>E</sq> (ASCII 69 =
@@ -128,15 +142,15 @@
         <subsection xml:id="subsec-uart-fullduplex">
             <title>Full Duplex and Pin Names</title>
             <p>
-                So far, data flows only one direction.  To reply, the laptop sends on
-                a <em>separate</em> wire simultaneously.  This gives two independent
-                one-way channels: the <term>TX</term> pin (transmit, STM32 to laptop)
-                and the <term>RX</term> pin (receive, laptop to STM32).  Both operate
-                at the same time, independently.  This two-wire arrangement is called
+                A UART link normally carries traffic in both directions at once, and it
+                does that by using one wire per direction.  The STM32C031C6 transmits on
+                its <term>TX</term> pin (transmit, board to laptop) and receives on its
+                <term>RX</term> pin (receive, laptop to board), and the two operate at
+                the same time, independently.  This two-wire arrangement is called
                 <term>full duplex</term>.  Because the two wires carry traffic in
-                opposite directions, TX on one device connects to RX on the other,
-                a crossing that confuses many first-time builders.
-                A shared ground connection is also required.
+                opposite directions, TX on one device connects to RX on the other.  The
+                two devices must also share a ground connection, or neither side has a
+                reference against which to call the line HIGH or LOW.
             </p>
             <figure xml:id="fig-uart-txrx-cross">
                 <caption>Full-duplex UART wiring between two devices.  TX on the left
@@ -150,21 +164,21 @@
         <subsection xml:id="subsec-uart-general">
             <title>UART Is a General-Purpose Protocol</title>
             <p>
-                UART is not specific to any particular pairing of devices.  Any two
-                devices with a UART interface can talk to each other: laptops, Bluetooth
-                modules, GPS receivers, motor controllers, other microcontrollers, and
-                countless sensors all use UART as their native interface.  In this course
-                you will use it both for printing debug output to your laptop and for
-                communicating with external modules such as the Bluefruit Bluetooth chip.
-                The same frame format and baud-rate agreement applies regardless of what
-                is at each end of the wire.
+                UART is a general-purpose protocol: any two devices with a UART
+                interface can talk to each other, and laptops, Bluetooth modules, GPS
+                receivers, motor controllers, other microcontrollers and countless
+                sensors all use it as their native interface.  In this course we'll use
+                it both for printing debug output to your laptop and, later in the term,
+                for communicating with external modules such as the Bluefruit Bluetooth
+                chip.  The same frame format and the same baud-rate agreement apply
+                regardless of what is at each end of the wire.
             </p>
         </subsection>
 
         <subsection xml:id="subsec-uart-vs-usart">
             <title>UART vs. USART</title>
             <p>
-                The STM32's serial peripheral is labeled <term>USART</term>.  The
+                The STM32C031C6's serial peripheral is labeled <term>USART</term>.  The
                 <q>S</q> stands for Synchronous.  The hardware also supports a clocked
                 mode for special cases, but in this course we use it exclusively in
                 asynchronous mode.  The USART handles all the timing in hardware: it
@@ -336,6 +350,20 @@
 
     <section xml:id="sec-uart-inclass">
         <title>In-Class Session</title>
+        <introduction>
+            <p>
+                Today we'll get print statements working on your own board.  We'll start
+                by building a Counter project that prints to a terminal window on your
+                laptop over UART, and we'll change the terminal's settings while it runs
+                to see what happens when the two ends of the wire disagree about them.
+                We'll then go through <c>uart.c</c>, the driver that makes
+                <c>printf()</c> arrive there.  Today's goal is to understand what
+                <c>uart2_init()</c> does and how a single byte is sent and received.  In the
+                last part we'll start the keyboard-controlled counter, which reads the
+                characters you type in the terminal and changes the count; you will
+                finish it at home.
+            </p>
+        </introduction>
 
         <!--
         ══════════════════════════════════════════════════════════════════
@@ -374,18 +402,21 @@
             -->
 
             <p>
-                In this first activity you will set up a project that prints
-                a live counter to your laptop over UART, the same workflow you
-                will use as a debugging tool throughout the rest of the course.
-                The figure below shows what the finished project should look like
-                in STM32CubeIDE; use it to check your file placement before
-                you build.
+                We'll start by setting up a project that prints a live counter to your
+                laptop over UART.  This is the same workflow we'll use as a debugging
+                tool for the rest of the course, so it is worth getting the file
+                placement right once.  <xref ref="fig-counter-project-structure"/> shows
+                what the finished project looks like in STM32CubeIDE; check yours
+                against it before you build.  The program on the laptop side is
+                <term>CoolTerm</term>, the terminal program you installed before the
+                term started: it opens a serial connection to the Nucleo and shows you
+                what the board is sending.
             </p>
 
             <figure xml:id="fig-counter-project-structure">
                 <caption>Finished Counter project in STM32CubeIDE.
-                <c>uart.c</c> and <c>uart.h</c> live in <c>Library/mylib/</c>;
-                <c>counter.c</c> lives in <c>Src/</c>.
+                <c>uart.c</c> and <c>uart.h</c> are in <c>Library/mylib/</c>;
+                <c>counter.c</c> is in <c>Src/</c>.
                 All three files are downloaded from Canvas.</caption>
                 <image source="images/Day05-UART/slide08_80ad6c08.png" width="55%"/>
             </figure>
@@ -448,9 +479,12 @@
                     <p>
                         Once it is working, go to Options, change the Baudrate
                         to 4800, click OK, disconnect, reconnect, and reset the
-                        board.  Observe the output.  Then try 115200.  In your
-                        notebook, write one sentence explaining each garbled
-                        result in terms of bit period.
+                        board, and look at what the terminal prints.  Then do the
+                        same at 115200, and set it back to 9600 to confirm the
+                        counter comes back.  For each of the two wrong settings,
+                        explain what you see in terms of the bit period: how long
+                        the terminal holds each sample window compared with how
+                        long the Nucleo holds each bit.
                     </p>
                 </statement>
             </activity>
@@ -468,9 +502,10 @@
 
             <slide xml:id="sl-uart-live-counter" ref="fig-counter-project-structure">
                 <ul>
-                    <li>You'll set up a project that prints a live counter over UART.</li>
-                    <li>Same workflow you'll use as a debugging tool all term.</li>
-                    <li><c>uart.c</c>/<c>uart.h</c> live in <c>Library/mylib/</c>; <c>counter.c</c> in <c>Src/</c>. All three from Canvas.</li>
+                    <li>We'll set up a project that prints a live counter to your laptop over UART.</li>
+                    <li>This is the same workflow we'll use as a debugging tool for the rest of the course.</li>
+                    <li>CoolTerm, the terminal program on your laptop, is what shows you the characters the board sends.</li>
+                    <li><c>uart.c</c> and <c>uart.h</c> go in <c>Library/mylib/</c>, and <c>counter.c</c> goes in <c>Src/</c>. All three are on Canvas.</li>
                 </ul>
                 <caption>Finished Counter project in STM32CubeIDE.</caption>
                 <note>INSTRUCTOR DEMO — run the finished counter yourself (CoolTerm at 9600, press reset), let them watch, then switch to 4800 and 115200 and ask what they see. Don’t answer — let them hypothesize.</note>
@@ -504,10 +539,10 @@
             <title>Using printf in Your Code</title>
 
             <p>
-                Now that <c>printf</c> is routing to your terminal, here is a
-                quick reference for the format specifiers you will reach for
-                throughout the course.  The pattern is always the same: a format
-                string containing one specifier per value, followed by the values.
+                Now that <c>printf</c> is routing to your terminal, here are the format
+                specifiers we'll use for the rest of the course.  The pattern is always
+                the same: a format string containing one specifier per value, followed
+                by the values themselves.
             </p>
 
             <program language="c"><code><![CDATA[
@@ -550,10 +585,13 @@ int main(void) {
 ]]></code></program>
 
             <p>
-                Two rules to remember every time: end each line with
-                <c>\r\n</c> (not just <c>\n</c>) so the terminal moves the
-                cursor back to the left edge, and call <c>uart2_init()</c>
-                once at the top of <c>main</c> before any <c>printf</c>.
+                Two things have to be right every time you use <c>printf</c> here.
+                End each line with <c>\r\n</c> rather than just <c>\n</c>, so that the
+                terminal returns the cursor to the left edge as well as moving it down a
+                line, because <c>uart.c</c> passes characters straight through and does
+                not add the carriage return for you.  And call <c>uart2_init()</c> once
+                at the top of <c>main</c>, before any <c>printf</c>, because until the
+                USART is configured the characters have nowhere to go.
             </p>
             <!-- check-rules: allow L-2  (this paragraph teaches that %f is unsupported) -->
             <p>
@@ -610,11 +648,11 @@ printf("key = %c\r\n", ch);                  // single character
             -->
 
             <p>
-                Below is <c>uart.c</c> with all comments stripped.  Annotate your
-                assigned section: explain what each line does and <em>why</em> it
-                is necessary.  After eight minutes you will teach your section to
-                a classmate; your goal is that they could explain any line
-                without your help.
+                Below is <c>uart.c</c> with all of its comments stripped out.  We'll
+                split the driver between groups: annotate your section, explaining what
+                each line does and, more importantly, why it is necessary.  You'll then
+                teach your section to someone who annotated a different one, so aim for
+                an annotation they could follow without you sitting next to them.
             </p>
 
             <program language="c"><code><![CDATA[
@@ -662,12 +700,13 @@ int uart2_read(void) {
         
 
             <slide xml:id="sl-uart-jigsaw">
-                <p><em>Annotate the driver in groups:</em></p>
+                <p>We'll annotate the driver in groups.</p>
                 <ul>
-                    <li>Below is <c>uart.c</c> with all comments stripped. Annotate your assigned section: what each line does and why.</li>
-                    <li>Groups A &amp; B: <c>uart2_init</c> (GPIO/AF, then clock/BRR/CR1). Groups C &amp; D: <c>uart2_write</c> and <c>uart2_read</c>.</li>
-                    <li>After 8 minutes, pair up across the split and teach each other.</li>
+                    <li>Below is <c>uart.c</c> with all of its comments stripped out. Annotate your section: what each line does, and why it is necessary.</li>
+                    <li>Groups A &amp; B take <c>uart2_init</c> (the GPIO and alternate-function lines, then the clock, BRR and CR1). Groups C &amp; D take <c>uart2_write</c> and <c>uart2_read</c>.</li>
+                    <li>Then pair up across the split and teach your section to each other.</li>
                 </ul>
+                <note>Timing: about 8 minutes to annotate, then about 8 minutes to teach. Cold-call the listener, not the teacher.</note>
             </slide>
 
             <!-- The stripped driver is TWO slides, split exactly where the jigsaw
@@ -760,10 +799,11 @@ int uart2_read(void) {
             -->
 
             <p>
-                Your counter currently only sends data.  Now make it listen too:
-                pressing a key in CoolTerm should change the count.  The challenge
-                is doing this without freezing the 500 ms print loop.  Use the
-                technique below and test it in CoolTerm.
+                Your counter currently only sends data.  Next we'll add the receive
+                side, so that pressing a key in CoolTerm changes the count.  The
+                difficulty is doing that without freezing the 500 ms print loop, and the
+                way around it is to poll the RXNE flag, which stands for receive data
+                register not empty.  Use the technique below and test it in CoolTerm.
             </p>
 
             <activity xml:id="act-uart-keyboard-counter">
@@ -782,7 +822,8 @@ int uart2_read(void) {
                         <li>Pressing <c>r</c> or <c>R</c> resets it to zero.</li>
                     </ul>
                     <p>
-                        Use the RXNE flag for a non-blocking receive: if a byte is
+                        Use the RXNE (receive data register not empty) flag for a
+                        non-blocking receive: if a byte is
                         waiting in the receive register, read it and act on it; if
                         not, skip straight to the print and delay.  Do <em>not</em>
                         call <c>uart2_read()</c>.  That function blocks until a byte
@@ -822,7 +863,8 @@ while (1) {
                 <c>USART2-&gt;RDR</c> behave as they do on hardware, and you can
                 watch both in the register panel as you type.  The terminal also
                 decodes at whatever baud rate you select in it, so you can
-                reproduce the mismatch from Part 1 without touching a cable.
+                reproduce the baud-rate mismatch you saw earlier today without
+                touching a cable.
                 Nothing here is saved for you, so copy your finished code
                 somewhere safe, or use <em>Full screen</em>, which carries your
                 edits into a new tab you can bookmark.
@@ -832,7 +874,7 @@ while (1) {
 
             <slide xml:id="sl-uart-listen">
                 <ul>
-                    <li>Your counter only sends.  Now make it listen. Pressing a key should change the count.</li>
+                    <li>Your counter sends characters but never reads any. We'll add the receive side, so that a key you press in CoolTerm changes the count.</li>
                     <li>Calling <c>uart2_read()</c> at the top of the loop would block forever waiting for a key, freezing the counter.</li>
                     <li>The fix: poll the RXNE flag. If a byte is waiting, read it and act; if not, skip to the print and delay.</li>
                 </ul>
@@ -886,7 +928,7 @@ int main(void) {
             </p>
             <p>
                 The diagram below shows the internal architecture of the USART peripheral.
-                The key registers you will interact with are <c>USART_TDR</c> (transmit
+                The registers we'll use are <c>USART_TDR</c> (transmit
                 data register), <c>USART_RDR</c> (receive data register),
                 <c>USART_BRR</c> (baud rate), <c>USART_CR1</c> (control), and
                 <c>USART_ISR</c> (status flags).  The TX and RX shift registers handle
@@ -906,7 +948,7 @@ int main(void) {
             <title>Step 1: GPIO Alternate Function Configuration</title>
 
             <p>
-                The STM32C031 has two USART instances: USART1 (full feature set) and
+                The STM32C031C6 has two USART instances: USART1 (full feature set) and
                 USART2 (basic feature set, more than enough for this course).  Both
                 can be routed to several different pins via the alternate function
                 system, but on the Nucleo board only one set of pins per peripheral is
@@ -919,8 +961,8 @@ int main(void) {
 
             <figure xml:id="fig-uart-physical-connection">
                 <caption>The NUCLEO-C031C6 board.  The ST-LINK section (top) contains a
-                separate STM32 that acts as programmer and USB-to-serial bridge.  PA2 (TX)
-                and PA3 (RX) of the STM32C031 connect internally to the ST-LINK, which
+                separate microcontroller that acts as programmer and USB-to-serial bridge.  PA2 (TX)
+                and PA3 (RX) of the STM32C031C6 connect internally to the ST-LINK, which
                 appears on your laptop as a USB serial device.</caption>
                 <image source="images/Day05-UART/slide22_img1_annotated.png" width="80%"/>
             </figure>
@@ -941,7 +983,7 @@ int main(void) {
 
             <p>
                 Setting MODER to <c>10</c> puts a pin in Alternate Function mode, but
-                the MCU still needs to know <em>which</em> peripheral to route it to.
+                the chip still needs to know <em>which</em> peripheral to route it to.
                 The alternate function register <c>GPIOA-&gt;AFR[0]</c> (covering pins
                 0–7) stores a 4-bit code for each pin: AF0–AF15 each map to a different
                 peripheral.  The table below shows that PA2 and PA3 need AF1, which
@@ -986,8 +1028,9 @@ GPIOA->AFR[0] |=  ((1U  << 8) | (1U  << 12));    // AF1 = USART2
                     <p>
                         If you look at <c>uart.c</c>, you will see the same operations
                         written differently: each pin is configured in its own pair of
-                        lines, and the bit positions are given by named CMSIS macros
-                        instead of raw numbers.  For example:
+                        lines, and the bit positions are given by named macros from
+                        CMSIS (Common Microcontroller Software Interface Standard)
+                        instead of by raw numbers.  For example:
                     </p>
                     <program language="c"><code><![CDATA[
 GPIOA->MODER &= ~GPIO_MODER_MODE2_Msk;
@@ -1007,12 +1050,12 @@ GPIOA->MODER |= (GPIO_ALTERNATE << GPIO_MODER_MODE3_Pos);
 
             <slide xml:id="sl-uart-physical" ref="fig-uart-physical-connection">
                 <ul>
-                    <li>The ST-Link section (top of the board) is a second STM32: programmer AND USB-to-serial bridge.</li>
-                    <li>USART2 TX = PA2, RX = PA3 connect internally (solder bridges) to the ST-Link, no external wiring.</li>
-                    <li>The ST-Link appears on your laptop as a USB serial device.</li>
-                    <li>So: printf → PA2 → ST-Link → USB → CoolTerm.</li>
+                    <li>The ST-LINK section at the top of the board is a second STM32: it is both the programmer and a USB-to-serial bridge.</li>
+                    <li>USART2's TX on PA2 and RX on PA3 connect to the ST-LINK internally, through solder bridges, so no external wiring is needed.</li>
+                    <li>The ST-LINK appears on your laptop as a USB serial device.</li>
+                    <li>So a character printed by <c>printf()</c> leaves the STM32C031C6 on PA2, crosses to the ST-LINK, travels over USB, and appears in CoolTerm.</li>
                 </ul>
-                <caption>PA2 (TX) and PA3 (RX) connect internally to the ST-Link, which is the USB serial device.</caption>
+                <caption>PA2 (TX) and PA3 (RX) connect internally to the ST-LINK, which is the USB serial device.</caption>
             </slide>
 
             <slide xml:id="sl-uart-af" ref="fig-uart-afr-register">
@@ -1020,7 +1063,7 @@ GPIOA->MODER |= (GPIO_ALTERNATE << GPIO_MODER_MODE3_Pos);
                     <li>One physical pin can serve many peripherals: two fields decide which.</li>
                     <li><c>GPIOA->MODER</c> = 10 puts PA2/PA3 in Alternate Function mode.</li>
                     <li><c>GPIOA->AFR[0]</c> picks which function, 4 bits per pin. AF1 = USART2 for PA2/PA3.</li>
-                    <li>That is exactly the Group A code in the driver.</li>
+                    <li>That is exactly the code that configures the pins at the top of <c>uart2_init()</c>.</li>
                 </ul>
                 <caption>AFRL, 4 bits per pin: PA2 = bits [11:8], PA3 = bits [15:12]; write 0001 (AF1) into each.</caption>
             </slide>
@@ -1125,7 +1168,7 @@ USART2->BRR = APB_CLK / UART_BAUD_RATE;   // = 1250
 
             <slide xml:id="sl-uart-oversampling" ref="fig-uart-oversampling" stack="yes">
                 <ul>
-                    <li>Each byte is framed: line idles HIGH, a START bit (LOW) begins it, 8 data bits LSB-first, a STOP bit (HIGH) ends it (8N1).</li>
+                    <li>Each byte is framed: the line idles HIGH, a START bit (LOW) begins it, then 8 data bits, least-significant bit first, and a STOP bit (HIGH) ends it (8N1).</li>
                     <li>The receiver samples at 16× the baud rate: catch the START edge, count 8 ticks to bit center, then sample every 16 ticks, always mid-bit.</li>
                     <li>That is how it reads several identical bits correctly with no clock wire.</li>
                 </ul>
@@ -1141,7 +1184,10 @@ USART2->BRR = APB_CLK / UART_BAUD_RATE;   // = 1250
                 8 data bits, 1 stop bit, no parity, and oversampling by 16,
                 exactly what we need for 8N1 operation.  The only bits we must
                 set explicitly are TE (bit 3, transmitter enable), RE (bit 2, receiver
-                enable), and UE (bit 0, USART enable).  UE must be set last.
+                enable), and UE (bit 0, USART enable).  UE must be set last, after BRR:
+                enabling the peripheral latches whatever divisor is in BRR at that
+                moment, so if UE goes first the USART starts up with BRR's reset value
+                of 0 and the baud rate is wrong.
             </p>
 
             <figure xml:id="fig-uart-cr1">
@@ -1163,7 +1209,7 @@ USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
                 <ul>
                     <li>The reset value of CR1/CR2 (0x00000000) already gives 8 data bits, no parity, 1 stop bit, oversampling ×16, exactly 8N1.</li>
                     <li>So we set only three bits: TE (transmit), RE (receive), UE (enable).</li>
-                    <li>UE must be set last, after BRR. That is the Group B code.</li>
+                    <li>UE must be set last, after BRR. That is the final line of <c>uart2_init()</c>.</li>
                 </ul>
                 <caption>USART_CR1/CR2: reset already selects 8N1 + oversampling ×16; set TE, RE, UE (UE last).</caption>
             </slide>
@@ -1233,11 +1279,11 @@ int uart2_read(void) {
         <title>Inside uart.c: Reading the Driver</title>
         <introduction>
             <p>
-                The ENGS 28 support library provides two files, <c>uart.h</c> and
-                <c>uart.c</c>, that you <c>#include</c> and call without worrying too much
-                about what they do.  This section shows the complete driver, connects every
-                line to a register you already know, and prepares you to adapt it for a
-                different UART peripheral.
+                We hand you two files, <c>uart.h</c> and <c>uart.c</c>, which you
+                <c>#include</c> and call.  This section opens them up: it shows the
+                complete driver, connects every line to a register you have already
+                configured yourself, and prepares you to adapt it for a different UART
+                peripheral.
             </p>
         </introduction>
 
