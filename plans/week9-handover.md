@@ -310,6 +310,27 @@ words).  Full fit sweep at 1600×900, crossfade killed: all 11 fit,
 every slide looked at.  All five targets rebuilt, checks clean,
 pushed (`a43af4c`).
 
+### PASSED (2026-09-14): "Done!"
+
+After the modernization below, two more comment rounds the same
+evening: her 16 comments on the block's content (every circle located;
+the load-cell example replaced with TMP235/I2C-display parts, the
+Arm/ST relationship answered on the wall, the Nucleo price corrected
+to $15–40 by web check, the Bluefruit's nRF51822 named, RP2350/ESP32
+split, AVR/PIC/MSP430 currency made checkable) and her 8 style
+comments (the deck-wide ruling: glue lead/body lines were 4.6cqmin
+against 3.4 for bullets — `#glue .big` now equals bullet size in the
+player, which also settles her August prompt-font complaint; the
+search-filter sentence deleted; RTOS glossed in her note's words).
+Then her "Done!"  **The Day 19 deck was the last Week 9 deliverable:
+Week 9, and the course, are complete — every day delivered and
+passed.**  Status rows for ch-ble / ch-power / Days 18–19 updated in
+CHAPTER_PROCESS.md.  Loose ends for any future session: she still
+needs to add the two KEY_UPDATE lines to the Canvas watchdog.c
+(2026-09-13); the VCORE naming and the technology-used clause on her
+17x slide 4 were never asked; the microcontroller block stays
+instructor-only until she flips it.
+
 ### Modernization, same day: the microcontroller block rebuilt at her ask
 
 Her instruction: update the where-to-go microcontroller slides to the
