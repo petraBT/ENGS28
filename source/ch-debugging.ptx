@@ -18,20 +18,21 @@
     <title>Debugging Embedded Programs</title>
     <introduction>
         <p>
-            Every program you write for the rest of this course, and most programs
-            you will write after it, will be wrong the first time you run it.
-            That is not a confession; it is the normal state of programming.
-            What separates a frustrating afternoon from a productive one is not
-            avoiding bugs, but having a systematic way to find them.
+            The goal of this chapter is to give you a systematic way to find the
+            bugs in your own programs.  Every program you write for the rest of
+            this course, and most programs you will write after it, will be wrong
+            the first time you run it; that is the normal state of programming,
+            and finding the fault quickly is a skill you can learn like any
+            other.
         </p>
         <p>
-            This chapter is a self-contained x-hour: there is no pre-class reading,
-            and everything the class uses is on these pages.  The first half
-            sharpens two tools you already own, the compiler's error messages and
-            the <c>printf</c> statement, and the second half introduces a new one:
-            the STM32CubeIDE <term>interactive debugger</term>, which lets you
+            This chapter covers one class day, the Wednesday x-hour, and it has no
+            pre-class reading: everything we use is on these pages.  In class
+            we'll first sharpen two tools you already own, the compiler's error
+            messages and the <c>printf</c> statement, and then we'll add a new
+            one: the STM32CubeIDE <term>interactive debugger</term>, which lets us
             pause a running program and look inside any register or variable on
-            the chip.  You will use all of them on Lab 4 before the hour is over.
+            the chip.  We'll use all three on Lab 4 in the rest of the hour.
             The <xref ref="sec-debug-reference" text="title-element"/> section at
             the end collects the checklists and reference tables to come back to
             all term.
@@ -45,7 +46,8 @@
                 <li>Place a diagnostic <c>printf</c> that answers a specific
                     question, printing the expected value beside the actual one.</li>
                 <li>Launch a debug session, single-step, and watch a peripheral
-                    register change in the SFRs view.</li>
+                    register change in the SFRs (Special Function Registers)
+                    view.</li>
                 <li>Set breakpoints, resume between them, and observe a variable
                     at the moment it changes.</li>
             </ul>
@@ -64,10 +66,15 @@
             instead of at the start of Part 3.  Repeat it verbally once.
             -->
             <p>
+                Today we'll practice finding bugs: first in a program that will
+                not build, then in one that builds and runs but goes quiet, and
+                then with the debugger on your own Blinky.
+            </p>
+            <p>
                 As you sit down: find your old <c>Blinky</c> project in
                 STM32CubeIDE (the very first project of the term), open it, and
                 click the build button.  Leave it compiling in the background;
-                you will need it, built and healthy, in about fifteen minutes.
+                we'll need it, built and healthy, when we get to the debugger.
             </p>
         </introduction>
 
@@ -80,9 +87,9 @@
             hand throughout.  Then the 60-second write-and-share.
             -->
             <p>
-                Bugs in C programs are not exotic.  The same short list of slips
-                accounts for a very large share of the time this class will spend
-                debugging:
+                Bugs in C programs come from a short list of slips, and the same
+                few account for most of the time we will spend debugging in this
+                course:
             </p>
             <ul>
                 <li>Missing or extra semicolon, <c>)</c>, or <c>}</c></li>
@@ -98,18 +105,18 @@
                 <li>Alas, many others<ellipsis/></li>
             </ul>
             <p>
-                Some of these the compiler will catch for you.  The ones it cannot
-                catch do something worse than fail: they compile cleanly and then
+                Some of these will be caught by the compiler.  The ones that are
+                not caught are the dangerous ones: they compile cleanly and then
                 run incorrectly.
             </p>
             <p>
-                A handful of habits prevents a remarkable fraction of that list
-                before it happens: plan the design on paper before typing; write
-                in small chunks and test each one before moving on; give every
-                function one clear job; use named constants instead of magic
-                numbers; and keep the code readable enough that a bug has nowhere
-                to hide.  The full checklist, with the reasoning behind each item,
-                is in <xref ref="subsec-debug-prevention"/>.
+                A few habits prevent a large part of that list before it happens:
+                plan the design on paper before typing; write in small chunks and
+                test each one before moving on; give every function one clear job;
+                use named constants instead of magic numbers; and keep the code
+                readable, with descriptive names.  The full checklist, with the
+                reasoning behind each item, is in
+                <xref ref="subsec-debug-prevention"/>.
             </p>
 
             <activity xml:id="act-debug-bugs">
@@ -117,14 +124,14 @@
                 <task xml:id="task-debug-bugs-count">
                     <p>
                         Count how many entries on the list above you have
-                        personally produced.  Raise your hand as we go through
-                        them.  The instructor's hand will be up for essentially
+                        personally produced.  We'll go through the list with hands
+                        up, and the instructor's hand will be up for essentially
                         every item.
                     </p>
                 </task>
                 <task xml:id="task-debug-bugs-practice">
                     <p>
-                        Pick one bug you just counted.  Write down which habit
+                        Pick one bug you just counted.  Think about which habit
                         from the paragraph above would have caught it before it
                         cost you time.
                     </p>
@@ -132,8 +139,9 @@
             </activity>
 
             <slide xml:id="sl-debug-bug-list">
-                <p>How many of these have you personally made?  Count.  Hands go
-                   up in a moment (the instructor's too):</p>
+                <p>How many of these have you personally made?  We'll go through
+                   them with hands up, and the instructor's hand will be up for
+                   essentially every item:</p>
                 <ul>
                     <li>Missing or extra semicolon, <c>)</c>, or <c>}</c></li>
                     <li>Incorrect register name · misspelled names</li>
@@ -148,13 +156,13 @@
 
             <slide xml:id="sl-debug-practices" room="yes">
                 <p>Habits that prevent most of that list.  Pick one bug you
-                   counted.  <em>Write down which habit would have caught it</em>:</p>
+                   counted, and <em>think about which habit would have caught it</em>:</p>
                 <ul>
                     <li>Plan the design on paper first: block diagram, pseudocode, state diagram.</li>
                     <li>Write in small chunks; test each before moving on.</li>
                     <li>One clear job per function: <q>set up the UART</q>, <q>get a value from the ADC</q>.</li>
                     <li>Named constants, not magic numbers.</li>
-                    <li>Readable code, comments as you go: a bug has nowhere to hide.</li>
+                    <li>Readable code with descriptive names, and comments as you go.</li>
                 </ul>
             </slide>
         </subsection>
@@ -169,9 +177,10 @@
             course toolchain (arm-none-eabi-gcc 13.3) on the listing shown.
             -->
             <p>
-                Compiler error messages are the cheapest debugging tool you have:
-                the compiler has already found the bug; it is just bad at telling
-                you where.  Here is a classmate's <c>main.c</c> that will not
+                Compiler error messages are the cheapest debugging tool we have:
+                the compiler has already found the problem, but the line it reports
+                is not always the line the mistake is on.  Here is a classmate's
+                <c>main.c</c> that will not
                 build.  It is Blinky, and exactly one thing is wrong with it:
             </p>
             <program language="c"><code><![CDATA[
@@ -221,16 +230,15 @@ main.c:6:21: note: in expansion of macro 'GPIOAEN'
                 </task>
                 <task xml:id="task-debug-root-find">
                     <p>
-                        Write down the line number where the actual bug is, and
-                        what the fix would be.  Commit to an answer before the
-                        reveal.
+                        Decide which line the actual bug is on, and what the fix
+                        would be.  Commit to an answer before reading on.
                     </p>
                 </task>
             </activity>
 
             <!-- Reveal (after the activity) -->
             <p>
-                Line 2 is perfectly healthy, and that is the lesson.  The real
+                Line 2 is perfectly healthy.  The real
                 bug is the missing semicolon at the end of line 6.  Both
                 <c>GPIOAEN</c> and <c>GPIOA</c> are macros that expand to
                 parenthesized expressions.  With the semicolon gone, the
@@ -259,11 +267,11 @@ main.c:6:21: note: in expansion of macro 'GPIOAEN'
                 the end of it, <em>below</em> line 2, not above.
             </p>
             <p>
-                So the rule is not <q>read up from the error</q> but <q>read up
-                from the line the compiler was reading</q>.  For ordinary code
-                those are the same line.  For a macro they are not, and the
-                <c>note:</c> is what tells you which line to start from.  Three
-                rules recover almost every case:
+                So the rule is to read up from the line the compiler was actually
+                reading.  For ordinary code that is the reported line; when the
+                message names a macro, it is the line given in the <c>note:</c>,
+                which is wherever the macro was used.  Three rules recover almost
+                every case:
             </p>
             <ul>
                 <li><em>Start at the top.</em>  One root error can spawn many
@@ -281,10 +289,12 @@ main.c:6:21: note: in expansion of macro 'GPIOAEN'
                     moves, it tells you a bug was inside the commented out code.</li>
             </ul>
             <p>
-                Worth doing once in your own project after today: delete that
-                semicolon, build, read the message, put it back.  The
-                transcript from your own compiler is evidence no one can hand
-                you.
+                It is worth doing this once in your own project after today:
+                delete that semicolon, build the project, read the message the
+                compiler gives you, and then put the semicolon back.  Seeing the
+                message your own compiler produces for a fault you created on
+                purpose is what makes it recognizable the next time it appears by
+                accident.
             </p>
 
             <slide xml:id="sl-debug-broken-blinky">
@@ -312,8 +322,8 @@ int main(void) {
 
             <slide xml:id="sl-debug-transcript" room="yes">
                 <p>The compiler's report.  (1) Read line 2: is anything wrong
-                   with it?  (2) <em>Write down</em> the line number of the
-                   actual bug, and the fix:</p>
+                   with it?  (2) <em>Decide which line</em> the actual bug is on,
+                   and what the fix is:</p>
                 <program><code><![CDATA[
 main.c: In function 'main':
 main.c:2:18: error: called object is not a function or function pointer
@@ -357,13 +367,10 @@ main.c:6:21: note: in expansion of macro 'GPIOAEN'
             Day 7 "Nothing printed?" ladder.
             -->
             <p>
-                When a program builds and runs but misbehaves, the fastest
-                question-answering tool is a <c>printf</c>.  You have used it
-                since Day 5.  The skill being practiced today is not writing a
-                <c>printf</c>; it is <em>placing</em> one.  Consider a symptom
-                you may have met this very week: your <c>ADCPot.c</c> builds,
-                flashes, and runs: prints its two greeting lines, and then
-                nothing more, ever.
+                When a program builds and runs but misbehaves, the fastest way to
+                answer a question about it is a <c>printf</c>.  You have used
+                <c>printf</c> since Day 5, so what we'll practice today is where to
+                place one.
             </p>
 
             <activity xml:id="act-debug-printf-where">
@@ -378,10 +385,10 @@ main.c:6:21: note: in expansion of macro 'GPIOAEN'
                 <task xml:id="task-debug-printf-place">
                     <p>
                         You get to add exactly <em>one</em> <c>printf</c> to
-                        <c>ADCPot.c</c>.  Write down: on which line does it go,
-                        and what does it print?  There is more than one good
+                        <c>ADCPot.c</c>.  Decide on which line it goes,
+                        and what it prints.  There is more than one good
                         answer, but there are many less ideal ones, so commit to yours
-                        before the reveal.
+                        before reading on.
                     </p>
                 </task>
             </activity>
@@ -398,9 +405,11 @@ main.c:6:21: note: in expansion of macro 'GPIOAEN'
                     works.  The hang is somewhere after it.  The highest-value
                     placement is the first line of <c>pa0_adc_init()</c>: it
                     splits <q>my init hangs</q> from <q>my sample loop
-                    hangs</q>, and one more print halves it again: bisection.
-                    (Had <em>nothing</em> printed, not even the greeting,
-                    Day 7's diagnostic ladder already names the usual cause: a
+                    hangs</q>, and one more print halves the remaining half again.
+                    That is bisection: each print cuts the region that can still
+                    hold the fault in two.
+                    (If nothing printed at all, not even the greeting,
+                    the usual cause is the one we saw on Day 7: a
                     stray <c>blinky.c</c> or another unrelated program is what is actually building.)</li>
                 <li><em>Is this value reasonable?</em>
                     <cd>printf("sensor_value = %d\r\n", sensor_value);</cd>
@@ -476,9 +485,9 @@ void pa0_adc_init(void) {
                 program forward one line at a time.  It talks to the STM32C031C6
                 over the same USB cable you already program with (the Nucleo's
                 ST-LINK circuitry is the go-between), and it works even before
-                the UART does.  The one prerequisite: the project must build
-                cleanly first: the debugger finds runtime bugs, not compile
-                errors.
+                the UART does.  The debugger finds errors that appear while the
+                program runs, not compile errors, so the project has to compile and
+                build without errors first.
             </p>
             <p>
                 Before you launch: glance at your breadboard's power wire.  It
@@ -490,7 +499,7 @@ void pa0_adc_init(void) {
             </p>
 
             <figure xml:id="fig-nucleo-power-header">
-                <caption>The Nucleo power header.  NRST sits directly above
+                <caption>The Nucleo power header.  NRST is directly above
                 3.3 V, an easy mis-plug.  Breadboard power comes from the
                 3.3 V pin.</caption>
                 <image source="images/Day07x-Debugging/nucleo_power_header.png" width="35%"/>
@@ -503,7 +512,7 @@ void pa0_adc_init(void) {
             </p>
 
             <figure xml:id="fig-debug-bug-icon">
-                <caption>The bug icon (boxed) sits beside the green Run button
+                <caption>The bug icon (boxed) is beside the green Run button
                 in the toolbar.  Clicking it builds, flashes, and launches the
                 program under the debugger.</caption>
                 <image source="images/Day07x-Debugging/toolbar_bug_icon.png" width="45%"/>
@@ -521,7 +530,7 @@ void pa0_adc_init(void) {
                 <task xml:id="task-debug-launch-bug">
                     <p>
                         Click the <em>bug icon</em> in the toolbar (next to the
-                        green Run button, the boxed icon in the figure above)
+                        green Run button, the boxed icon in the figure)
                         to build, flash, and launch under the debugger.  When
                         the <q>Confirm perspective switch</q> window appears,
                         accept it.
@@ -544,9 +553,10 @@ void pa0_adc_init(void) {
                 editor holds the Blinky source, <c>blinky.c</c> in this capture,
                 with the first statement of
                 <c>main()</c> highlighted in blue, loaded, but not yet
-                executed.  The tabbed pane on the right is where today happens:
-                SFRs now, Variables in Part 4 (the tab labels truncate on
-                screen to <q>Variabl</q> and <q>Breakp</q>).</caption>
+                executed.  The tabbed pane on the right is the one we'll work in:
+                the SFRs tab first, and the Variables tab later in the hour (the
+                tab labels truncate on screen to <q>Variabl</q> and
+                <q>Breakp</q>).</caption>
                 <image source="images/Day07x-Debugging/slide15_img2.png" width="95%"/>
             </figure>
 
@@ -554,9 +564,8 @@ void pa0_adc_init(void) {
                 <title>If the Debugger Will Not Launch</title>
                 <p>
                     Four failure modes cover nearly every stuck launch.  Find
-                    your symptom and apply the fix.  A launch that does not
-                    come up on the first try is a normal part of this, not a
-                    sign you broke something.
+                    your symptom below and apply the fix.  A launch that does not
+                    come up on the first try is normal.
                 </p>
                 <ul>
                     <li><em>The project will not build.</em>  You are likely trying to debug
@@ -595,8 +604,7 @@ void pa0_adc_init(void) {
 
             <slide xml:id="sl-debug-ladder">
                 <p>If the debugger will not launch, find your symptom.  A launch
-                   that does not come up on the first try is normal, not a sign
-                   you broke something:</p>
+                   that does not come up on the first try is normal:</p>
                 <ul>
                     <li><em>Project won't build</em> → you are likely debugging other code than the known-good Blinky: download <c>blinky.c</c> (Canvas, first day, or the link in this chapter), paste it over <c>Src/main.c</c>, build again.  Still stuck?  We're here to help!</li>
                     <li><em>Board not found / connection error</em> → reseat the USB cable; then check the breadboard power wire: <clr c="red">3V3, not NRST</clr> directly above it.  (The mis-plug damages nothing; it just blocks the debug connection until moved.)</li>
@@ -629,9 +637,10 @@ void pa0_adc_init(void) {
                 <c>STM32C031</c>: ADC, GPIOA, RCC, USART2, and the rest, each
                 expandable down to individual registers and bit fields
                 (<xref ref="fig-debug-sfr-tree"/>).  These are the same
-                registers, with the same names, as in
-                <url href="external/stm32c031_rm.pdf">RM0490</url>.  The SFRs
-                view is the reference manual's register map, animated.
+                registers, with the same names, as in the reference manual,
+                <url href="external/stm32c031_rm.pdf">RM0490</url>.  What the SFRs
+                view adds is the value each one holds on your own chip at this
+                moment.
             </p>
 
             <figure xml:id="fig-debug-sfr-tree">
@@ -656,17 +665,16 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
                 <task xml:id="task-debug-iopenr-expand">
                     <p>
                         In the SFRs tab, expand <c>RCC</c>, then
-                        <c>RCC_IOPENR</c>.  Write down the current value of the
+                        <c>RCC_IOPENR</c>.  Note the current value of the
                         register, and of its bit 0 (the field named
                         <c>GPIOAEN</c>).
                     </p>
                 </task>
                 <task xml:id="task-debug-iopenr-predict">
                     <p>
-                        The blue-highlighted line is about to run.  Write down
-                        what you predict <c>RCC_IOPENR</c> will read
-                        <em>after</em> it executes, the whole register, not
-                        just the bit.
+                        The blue-highlighted line is about to run.  Predict what
+                        <c>RCC_IOPENR</c> will read <em>after</em> it executes, the
+                        whole register, not just the bit.
                     </p>
                 </task>
                 <task xml:id="task-debug-iopenr-step">
@@ -695,25 +703,25 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
             </figure>
 
             <p>
-                That is the whole mechanism, and it is worth pausing on: you wrote
-                <c>RCC-&gt;IOPENR |= GPIOAEN;</c> in week one and trusted that
-                it did something.  You have now <em>watched it happen</em>, one
-                line, one bit, cause and effect.  Every register write in every
+                You wrote <c>RCC-&gt;IOPENR |= GPIOAEN;</c> in week one and trusted
+                that it did something.  You have now <em>watched it happen</em> on
+                your own board: one line of code changing one bit in one register.
+                Every register write in every
                 program this term can be checked the same way.
             </p>
 
             <slide xml:id="sl-debug-sfrs" ref="fig-debug-sfr-tree">
                 <ul>
-                    <li>The <em>SFRs</em> tab is the reference manual's register map, live: every peripheral you have used, under <c>STM32C031</c>.</li>
+                    <li>The <em>SFRs</em> tab lists the processor's internals under <c>Cortex_M0PLUS</c>, and every peripheral you have used under <c>STM32C031</c>.</li>
                     <li>Expand a peripheral → its registers, addresses, and current values; expand a register → its bit fields.</li>
                     <li><c>x16</c> / <c>x10</c> / <c>x2</c> switch the display between hex, decimal, and binary.</li>
-                    <li>Same names as RM0490.  What you look up is what you see.</li>
+                    <li>The register names here are the same as in the reference manual, RM0490, and the value beside each one is what your own chip holds right now.</li>
                 </ul>
                 <caption>Select the SFRs tab in the right-hand pane, then expand RCC.</caption>
             </slide>
 
             <slide xml:id="sl-debug-iopenr-reveal" ref="fig-debug-iopenr">
-                <caption>One Step Over: RCC_IOPENR 0x0 → 0x1, GPIOAEN 0 → 1.  After the step, IOPENR is the only yellow row: the one register that changed.  Week one's line of code, watched happening.</caption>
+                <caption>One Step Over: RCC_IOPENR 0x0 → 0x1, GPIOAEN 0 → 1.  At launch the debugger reads everything for the first time, so many rows glow yellow; ignore that first flush.  After the step, IOPENR is the only yellow row: the one register that changed.  This is the line you wrote in week one, now watched as it executes.</caption>
             </slide>
         </subsection>
 
@@ -729,8 +737,8 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
                 Blinky's next two lines, the ones you have not stepped yet
                 (<xref ref="subsec-debug-part3b"/>), configure PA5 as an
                 output.  Before stepping them, expand <c>GPIOA</c> and look at
-                <c>GPIOA_MODER</c>, and look closely, because the value is a
-                small surprise: <c>0xEBFFFFFF</c>.  Not zero.  Nearly every
+                <c>GPIOA_MODER</c>, and look closely, because the value is not
+                zero: it reads <c>0xEBFFFFFF</c>, and nearly every
                 MODE field, including <c>MODE5</c> for our LED pin, holds
                 <c>0x3</c> (<xref ref="fig-debug-moder-before"/>).
             </p>
@@ -744,7 +752,7 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
             </figure>
             <p>
                 Why?  This is a question for the reference manual, and it is one
-                you have looked up before: Day 3's activity sent you to
+                you have looked up before: in the Day 3 activity you went to
                 <url href="external/stm32c031_rm.pdf">RM0490</url> §6.4.1 for
                 MODER's power-on default.  The answer
                 (<xref ref="fig-rm-moder-reset"/>): the reset value is
@@ -795,7 +803,7 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
 
             <slide xml:id="sl-debug-moder-rm" ref="fig-rm-moder-reset" stack="yes">
                 <ul>
-                    <li>Day 3's lookup, watched live: RM0490 §6.4.1, reset value <c>0xEBFF FFFF</c> (port A), <c>0xFFFF FFFF</c> (other ports).</li>
+                    <li>We looked this up on Day 3: RM0490 §6.4.1 gives the reset value <c>0xEBFF FFFF</c> for port A and <c>0xFFFF FFFF</c> for the other ports.</li>
                     <li>Pins wake up <em>analog</em> (<c>11</c>), the high-impedance do-nothing state from Day 7.  That is the <c>0x3</c> in every MODE field.</li>
                     <li>The <c>EB</c>: PA13/PA14 reset to <em>alternate function</em> instead, SWDIO and SWCLK, the debug port.  The debugger you are using right now depends on those two pins.</li>
                 </ul>
@@ -817,12 +825,14 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
             front demo instead of individual hands-on.
             -->
             <p>
-                Single-stepping is precise but slow.  You would not step your
-                way through a whole program, and you must <em>not</em> step your
-                way into Blinky's delay loop.  A <term>breakpoint</term> turns
-                the relationship around: instead of walking the program line by
-                line, you mark a line of interest and let the program run at
-                full speed until it gets there.  Setting two of them
+                Single-stepping is precise but slow, and you must <em>not</em>
+                step your way into Blinky's delay loop.  Instead of walking the
+                program line by line, you can mark a line of interest with a
+                <term>breakpoint</term> and let the program run at full speed
+                until it reaches it.  The statements in between execute normally,
+                but the program pauses when it gets to a breakpoint so that you
+                can look at the registers and the variables.  Setting two
+                breakpoints
                 (<xref ref="fig-debug-breakpoints"/>) and watching
                 <c>GPIOA_ODR</c> at each stop (<xref ref="fig-debug-odr"/>) is
                 the exercise below.
@@ -890,7 +900,7 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
             <slide xml:id="sl-debug-breakpoints" ref="fig-debug-breakpoints" stack="yes">
                 <ul>
                     <li>Stepping every line is slow, and never step <em>into</em> the delay loop.  Set a destination instead.</li>
-                    <li>Right-click the thin left margin beside a line → <q>Add Breakpoint</q>.  The program runs at full speed until it gets there.</li>
+                    <li>Right-click the thin left margin beside a line → <q>Add Breakpoint</q>.  The program runs at full speed until it gets there, then pauses so you can look at the registers and the variables.</li>
                     <li>Trapped mid-loop anyway?  <em>Terminate and Relaunch</em>, or <em>Reset the chip and restart execution</em>.</li>
                 </ul>
                 <caption>Two breakpoints: on the LED-on line and the LED-off line.</caption>
@@ -916,7 +926,8 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
                 variables just as easily, in the <term>Variables</term> tab of
                 the same right-hand pane.  The program is Day 5's
                 keyboard-controlled counter, whose receive path polls the RXNE
-                flag and reads the character register only when a byte has
+                (receive data register not empty) flag and reads the character
+                register only when a byte has
                 arrived:
             </p>
             <program language="c"><code><![CDATA[
@@ -932,8 +943,8 @@ while (1) {
 }
 ]]></code></program>
             <p>
-                A breakpoint on the marked line is a small piece of cleverness:
-                that line is only <em>reached</em> when the RXNE test succeeds.
+                A breakpoint on the marked line is useful because that line is
+                reached only when the RXNE test succeeds.
                 So the program runs free, printing <c>count</c> twice a second,
                 until the moment a key is pressed in CoolTerm, and then it
                 halts with the fresh byte one step away.  A breakpoint placed
@@ -977,8 +988,9 @@ while (1) {
                 holding 117, and the SFRs view shows <c>USART_RDR</c> holding
                 0x75 (<xref ref="fig-debug-variables"/>).  Same byte, three
                 names: the character <c>'u'</c>, the decimal 117, the hex 0x75.
-                The Variables tab and the SFRs tab are two windows onto the one
-                machine.
+                The Variables tab shows you that byte as your C code sees it, and
+                the SFRs tab shows the same byte in the peripheral register it
+                arrived in.
             </p>
 
             <figure xml:id="fig-debug-variables">
@@ -1040,8 +1052,8 @@ while (1) {
             Then the rest of the hour is Lab 4 with the debugger open.
             -->
             <p>
-                You now carry a toolbox rather than a tool.  Here is the day's map, by
-                symptom:
+                Each of these tools answers a different kind of question.  The
+                table below matches a symptom to the tool to reach for:
             </p>
 
             <table xml:id="table-debug-tool-map">
@@ -1065,22 +1077,22 @@ while (1) {
                     </row>
                     <row>
                         <cell>Suspect the circuit, not the code</cell>
-                        <cell>DMM and AD2, checklist in the Reference section</cell>
+                        <cell>Digital multimeter (DMM) and Analog Discovery 2 (AD2); the checklist is in the Reference section</cell>
                     </row>
                 </tabular>
             </table>
 
             <p>
-                One honest limitation to file away: a breakpoint <em>stops the
-                processor</em>, so anything that depends on real-time behavior
-                stops with it: a paused chip cannot blink, sample, or keep
-                time.  For timing questions, the oscilloscope watches without
-                pausing.  There is more to say about that when interrupts
-                arrive.
+                A breakpoint <em>stops the processor</em>, so anything that
+                depends on real-time behavior stops with it: a paused chip cannot
+                blink, sample, or keep time.  For a timing question the
+                oscilloscope is the better tool, because it watches the pins
+                without pausing the program.  We'll come back to this when we
+                start using interrupts.
             </p>
             <p>
-                And one more thing these four moves are for: checking code you
-                did not write, including code an AI tool drafted for you.  The
+                These tools are also how you check code you did not write,
+                including code an AI tool drafted for you.  The
                 course policy (<xref ref="aside-ai-policy"/>) asks you to be
                 able to explain every line you submit; the compiler's report,
                 a well-placed <c>printf</c>, and a register audit in the
@@ -1098,14 +1110,15 @@ while (1) {
                 <title>Stretch: Debug Your Actual Lab</title>
                 <introduction>
                     <p>
-                        Finished the walkthrough with time to spare?  Point the
-                        same four moves at the program you actually care about.
+                        Finished the walkthrough with time to spare?  Use the
+                        same tools on your own Lab 4 program.
                     </p>
                 </introduction>
                 <task xml:id="task-debug-stretch-dr">
                     <p>
                         Launch your <c>ADCPot.c</c> under the debugger.  Set a
-                        breakpoint on the line after the EOC wait, and watch
+                        breakpoint on the line after the EOC (end of conversion)
+                        wait, and watch
                         <c>ADC_DR</c> in the SFRs view while you turn the
                         potentiometer between stops.
                     </p>
@@ -1121,7 +1134,7 @@ while (1) {
             </activity>
 
             <slide xml:id="sl-debug-tool-map" ref="table-debug-tool-map">
-                <caption>The day in one table: match the symptom, reach for that tool.</caption>
+                <caption>Match the symptom, then reach for that tool.</caption>
             </slide>
         </subsection>
     </section>
@@ -1140,8 +1153,8 @@ while (1) {
         <subsection xml:id="subsec-debug-method">
             <title>The Scientific Debugging Method</title>
             <p>
-                Effective debugging is a scientific process, not a random walk.
-                It has five moves, in order:
+                Effective debugging is a systematic process, and it has five
+                steps, which are best taken in order:
             </p>
             <ul>
                 <li><em>Reproduce the problem reliably.</em>  A bug you cannot
@@ -1159,8 +1172,9 @@ while (1) {
                     midpoint (a <c>printf</c>, a breakpoint), then narrow to
                     the half that contains the fault.  Each test halves the
                     search.</li>
-                <li><em>Keep notes.</em>  Past a few minutes of stuck, write
-                    down what you tried and what you observed.  It prevents
+                <li><em>Keep notes.</em>  Once you have been stuck for more than a
+                    few minutes, keep a record of what you tried and what you
+                    observed.  It prevents
                     re-testing the same idea, and it is exactly what a TA or
                     instructor will ask you for.</li>
             </ul>
@@ -1169,8 +1183,8 @@ while (1) {
         <subsection xml:id="subsec-debug-prevention">
             <title>Preventing Bugs</title>
             <p>
-                The cheapest bug is the one that never happens.  These practices
-                measurably lower the rate:
+                The bugs that cost the least time are the ones that never happen,
+                and the practices below are the ones that prevent them:
             </p>
             <ul>
                 <li>Plan the design on paper (block diagrams, pseudocode,
@@ -1188,12 +1202,13 @@ while (1) {
                 <li>Delete commented-out code from the final version.</li>
             </ul>
             <p>
-                One loop-shaped habit belongs on this list.  Use <c>for</c> when
-                the number of iterations is known in advance,
-                <c>for (i = 0; i &lt; N; i++)</c>, and <c>while</c> (or
+                One more habit belongs on this list, and it is about choosing a
+                loop.  Use <c>for</c> when the number of iterations is known in
+                advance, <c>for (i = 0; i &lt; N; i++)</c>, and <c>while</c> (or
                 <c>do ... while</c>) when it is not.  C does allow
-                <c>break</c> to exit a <c>for</c> loop early, but reaching for
-                it is often a sign the loop wants to be a <c>while</c> instead.
+                <c>break</c> to exit a <c>for</c> loop early, but if you find
+                yourself reaching for it, a <c>while</c> loop is usually the better
+                fit.
             </p>
         </subsection>
 
@@ -1225,8 +1240,8 @@ while (1) {
                 <li>Are sensor outputs in the range the datasheet promises?</li>
             </ul>
             <p>
-                The AD2 has one more debugging capability that returns in later
-                chapters: its logic analyzer can decode digital protocols, displaying the
+                The AD2 has one more debugging capability, which we'll use in a
+                later chapter: its logic analyzer can decode digital protocols, displaying the
                 actual bytes on a UART or I2C line alongside the waveform.
             </p>
         </subsection>
@@ -1236,7 +1251,7 @@ while (1) {
             <p>
                 The three diagnostic questions from class, as copy-ready
                 patterns (format specifiers are Day 5 material; the full table
-                lives in <xref ref="sec-uart-driver" text="title-element"/>):
+                is in <xref ref="sec-uart-driver" text="title-element"/>):
             </p>
             <program language="c"><code><![CDATA[
 /* Did execution reach this point? */
@@ -1268,8 +1283,8 @@ printf("GPIOA->ODR = 0x%08lx\r\n", GPIOA->ODR);
         <subsection xml:id="subsec-debug-controls">
             <title>Debugger Controls</title>
             <p>
-                The debug toolbar's icons, in one place
-                (<xref ref="fig-debug-controls"/>).  The three used constantly:
+                The debug toolbar's icons are collected in
+                <xref ref="fig-debug-controls"/>.  The three used constantly:
                 <em>Resume</em> (run to the next breakpoint), <em>Step Over</em>
                 (execute one line, without descending into function calls), and
                 <em>Terminate</em> (end the session).  <em>Step Into</em>
@@ -1315,14 +1330,14 @@ printf("GPIOA->ODR = 0x%08lx\r\n", GPIOA->ODR);
                 <li><term>The DMM and AD2</term>: see the actual volts, which
                     no amount of software can misreport, and they keep watching
                     while the program runs at full speed.  Their blind spot:
-                    they cannot see <em>why</em>.  The code's intent lives in
-                    the other two tools.</li>
+                    they show what the hardware is doing, not what the program
+                    intended, which is what the other two tools are for.</li>
             </ul>
             <p>
                 A common full workflow: the scope confirms the hardware is
                 doing what it should; <c>printf</c> narrows which section of
-                code is at fault; the debugger pins the exact register or
-                variable where expectation and reality part ways.
+                code is at fault; the debugger shows the exact register or
+                variable whose value differs from what you expected.
             </p>
         </subsection>
     </section>

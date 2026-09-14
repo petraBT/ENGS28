@@ -1019,10 +1019,19 @@ been swept against S-11…S-21 and she still changed 692 lines.
   and a rebuild will settle it"~~.
   **The one surviving form in the corpus is `Still stuck?  We're here to help!`**
   — five words, and nothing after them. It survived her pass in `ch-i2c.ptx`.
-  Treat `ch-gpio-interrupts.ptx:382` and `ch-debugging.ptx:603`, which each carry
-  a longer version, as **outliers to be cleaned up, not as precedent** — a Gate 2
-  synthesis used them to overrule `checker-voice` on exactly this point, and her
-  pass shows `checker-voice` was right.
+  Both line references this rule used to carry were stale, and were replaced with
+  ids during the Prompt 3 voice sweep (2026-09-14), since line numbers rot:
+  `ch-gpio-interrupts.ptx` already carries the five-word form, and
+  `ch-debugging.ptx`'s `sl-debug-ladder` rung 1 was shortened to it in `344bfe9`.
+  **One longer version survives**, in `ch-debugging.ptx`'s
+  `insight-debug-ladder` rung 1 ("raise your hand and watch with a neighbor:
+  nothing later in Part 3 requires your own launch…"), and it is **Petra's own
+  typed sentence** (`9c3863c`, "ladder rung 1" among her direct edits kept as
+  written) — so it is floor, not an outlier to sweep. The book and the slide now
+  say different things about the same rung; that is a question for her, not a fix.
+  The standing principle is unchanged: a Gate 2 synthesis once used the longer
+  versions to overrule `checker-voice` on this point, and her pass shows
+  `checker-voice` was right.
 - **S-26 Name the referent; do not point at it.**
   ~~"How many LEDs is that?"~~ → "How many LEDs are in this display?";
   ~~"the `H` in the program"~~ → "the `H` in the `helloDisplay.c` program";
