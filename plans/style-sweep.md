@@ -6,6 +6,11 @@ orders the work for Prompts 2 and 3. **Nothing here is applied until she passes
 Part B.** The charter is `plans/STYLE-SWEEP-PROMPTS.md`; its three "never" rules
 bind every stage.
 
+> **CONTRACT STATUS: APPROVED by Petra 2026-09-14.** Q1–Q5 approved as
+> recommended; Q6 = worst-voice-first (Part C.b as written). Part B is now the
+> binding ruleset. Prompt 2 (mechanical/links) and Prompt 3 (voice) may run —
+> each in a fresh session, per the charter. See "Decisions" at the foot.
+
 Numbers below are whole-corpus counts over `source/ch-*.ptx` (16 chapters,
 ~32k lines). Where a call is genuinely hers, Part B marks it **[QUESTION]**;
 where the corpus already answers it, **[SETTLED]**.
@@ -172,13 +177,13 @@ location remains visible and teachable (P-11) and does not turn blue.
   §17.4, Table 40"* — link on "RM0490".
 - Where prose uses the phrase alone: *"the [reference manual]"* — link on the
   phrase.
-- **[QUESTION Q1]** Confirm the anchor is the designator only (not the whole
-  "RM0490 §17.4" string, and never the § / Table number). *Recommend: yes.*
-- **[QUESTION Q2]** Canonical phrase — standardize on **"the reference manual
-  (RM0490)"** at first use per subsection, "RM0490 §N" thereafter? (Kills the
-  four competing display forms and the 45/34 lowercase/capitalized split.)
-  *Recommend: yes; capitalize "Reference Manual" only when it opens a sentence
-  or when no "RM0490" accompanies it, per L-14.*
+- **[APPROVED Q1]** The anchor is the designator only — not the whole "RM0490
+  §17.4" string, and never the § / Table number.
+- **[APPROVED Q2]** Canonical phrase: **"the reference manual (RM0490)"** at
+  first use per subsection, "RM0490 §N" thereafter (kills the four competing
+  display forms and the 45/34 lowercase/capitalized split). Capitalize
+  "Reference Manual" only when it opens a sentence or when no "RM0490"
+  accompanies it, per L-14.
 
 **C-2 — Every datasheet mention in book prose links to its specific PDF.**
 Display form on the first specific mention per subsection: **"`<Part>`
@@ -188,12 +193,11 @@ datasheet"** (e.g. "TB6612FNG datasheet", "LSM303AGR datasheet",
 back-reference after the part was named in the same subsection, stays **plain
 text**.
 
-- **[QUESTION Q3]** Document-number display ("DS13867", "UM2953", "AN-1057"):
-  replace with the friendly "`<Part>` datasheet" form, or keep the number?
-  *Recommend: friendly form for the MCU datasheet (DS13867 → "STM32C031C6
-  datasheet") and the Nucleo manual (UM2953 → "Nucleo user manual"); keep
-  "AN-1057" as-is, since an application note is genuinely known by its number —
-  display "AN-1057, Using an Accelerometer for Inclination Sensing".*
+- **[APPROVED Q3]** Document-number display: friendly form for the MCU datasheet
+  (DS13867 → "STM32C031C6 datasheet") and the Nucleo manual (UM2953 → "Nucleo
+  user manual"); keep "AN-1057" as-is, since an application note is genuinely
+  known by its number — display "AN-1057, Using an Accelerometer for Inclination
+  Sensing".
 
 **C-3 — Link scope is once per subsection, on first specific mention.** Not
 every mention (that would make Day 5x and the accelerometer chapter a sea of
@@ -212,7 +216,7 @@ reissues the PDF. Embedded/in-app PDF viewers (including this environment's) als
 **force-download** the PDF and skip the fragment entirely. Linking plain, with
 the visible "§20.3.1, Table 40" as the navigation aid, is more robust and is the
 P-11 teaching point anyway.
-- **[QUESTION Q4]** Confirm: no page anchors. *Recommend: confirm.*
+- **[APPROVED Q4]** No page anchors.
 
 **C-5 — No link in any projected surface.** No `<url>` and no `<xref>` inside a
 `<slide>` block, or inside any `<activity>`/`<task>`/`<instructor>`/`<table>`/
@@ -335,24 +339,25 @@ projected surface.
 
 ---
 
-## What I need from Petra (numbered)
+## Decisions (approved by Petra 2026-09-14)
 
-**Settled by the corpus (stated, not asked):** literal `§` over `&#167;`;
-one space in "5 V"; bare auto-numbered `<xref>`; link once per subsection; RM
-sections always carry the designator (L-14); no link in any projected surface
-(and the `sl-day10-af6` violation gets fixed).
+**Settled by the corpus:** literal `§` over `&#167;`; one space in "5 V"; bare
+auto-numbered `<xref>`; link once per subsection; RM sections always carry the
+designator (L-14); no link in any projected surface (and the `sl-day10-af6`
+violation gets fixed).
 
-**Genuinely your calls:**
+**Her calls — all approved as recommended:**
 
-1. **Q1** — Link only the designator ("RM0490"/"reference manual"), leaving
-   "§17.4, Table 40" as plain visible text? *(Recommend yes.)*
-2. **Q2** — Canonical RM phrase: "the reference manual (RM0490)" at first use per
-   subsection, "RM0490 §N" after? *(Recommend yes.)*
-3. **Q3** — Datasheet display "`<Part>` datasheet"; replace doc numbers (DS13867,
-   UM2953) with friendly names but keep "AN-1057"? *(Recommend yes.)*
-4. **Q4** — No `#page=N` page anchors (evidence in C-4)? *(Recommend confirm.)*
-5. **Q5** — Voice-sweep the "done/passed" early chapters too, with the floor =
-   your comment/slide wording + the three specimens (not every sentence)? *(This
-   is what your ask implies; confirming the floor.)*
-6. **Q6** — Prompt 3 order: worst-voice-first (C.b), or would you rather it run
-   in book order so you review in reading sequence?
+1. **Q1 — yes.** Link only the designator ("RM0490"/"reference manual"); leave
+   "§17.4, Table 40" as plain visible text.
+2. **Q2 — yes.** Canonical RM phrase "the reference manual (RM0490)" at first use
+   per subsection, "RM0490 §N" after.
+3. **Q3 — yes.** Datasheet display "`<Part>` datasheet"; friendly names for
+   DS13867 and UM2953, keep "AN-1057".
+4. **Q4 — yes.** No `#page=N` page anchors.
+5. **Q5 — yes.** Voice-sweep the "done/passed" early chapters too; floor = her
+   comment/slide wording + the three frozen specimens, not every sentence.
+6. **Q6 — worst-voice-first.** Prompt 3 runs in the Part C.b order as written.
+
+Part B is the binding contract. Next: Prompt 2 in a fresh session (the exact
+prompt is in `plans/STYLE-SWEEP-PROMPTS.md`).
