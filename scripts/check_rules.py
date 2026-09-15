@@ -71,7 +71,7 @@ RULES = [
     # every URL that happens to contain them.
     ("L-7", r"\b(colour|behaviour|favour|labour|centre|metre|litre|analyse|organise|"
             r"recognise|normalise|stabilise|initialise|minimise|maximise|utilise|"
-            r"whilst|programme|defence|offence|travelling|modelling|labelled|"
+            r"whilst|programme|defence|offence|travelling|modelling|labelled|labelling|"
             r"cancelled|practise|licence|grey|greyed)\b",
      "British spelling — this book uses American spelling", "error"),
     # L-8..L-11 are the lintable corner of the voice rules (S-11..S-19).  Only
