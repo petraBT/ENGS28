@@ -785,8 +785,9 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
                 <image source="images/Day07x-Debugging/slide17_img4.png" width="70%"/>
             </figure>
 
-            <slide xml:id="sl-debug-moder-observe" ref="fig-debug-moder-before">
-                <caption>Before stepping the MODER lines, expand GPIOA_MODER: 0xEBFFFFFF.  Why is this register not zero?</caption>
+            <slide xml:id="sl-debug-moder-observe" ref="fig-debug-moder-before" stack="yes">
+                <p>Before stepping the MODER lines, expand <c>GPIOA_MODER</c> in the SFRs view.  It reads <c>0xEBFFFFFF</c>.</p>
+                <p><term>Why is this register not zero, when your program has never touched it?</term></p>
             </slide>
 
             <slide xml:id="sl-debug-moder-rm" ref="fig-rm-moder-reset" stack="yes">
@@ -798,8 +799,12 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
                 <caption>The reset value, verified on live hardware.</caption>
             </slide>
 
-            <slide xml:id="sl-debug-moder-step" ref="fig-debug-moder-after">
-                <caption>Step both MODER lines: MODE5 0x3 → 0x1.  It takes both: |= alone leaves 11 as 11.  You just audited a register write: every bit the code claims to set, read back set.</caption>
+            <slide xml:id="sl-debug-moder-step" ref="fig-debug-moder-after" stack="yes">
+                <program language="c"><code><![CDATA[
+GPIOA->MODER |= (1U << 10);   // Step 2a: set   bit 10
+GPIOA->MODER &= ~(1U << 11);  // Step 2b: clear bit 11 -> PA5 output
+]]></code></program>
+                <p>Step both lines and watch <c>MODE5</c> go from <c>0x3</c> to <c>0x1</c>.  It takes both of them: the <c>|=</c> alone leaves <c>11</c> as <c>11</c>.  You have just audited a register write, and every bit the code claims to set reads back set.</p>
             </slide>
         </subsection>
 
@@ -895,7 +900,7 @@ RCC->IOPENR |= GPIOAEN;     // Step 1: enable GPIOA clock
 
             <slide xml:id="sl-debug-odr-reveal" ref="fig-debug-odr" stack="yes">
                 <ul>
-                    <li>Place a breakpoint beside the LED-on line (<c>GPIOA-&gt;ODR |= LED_PIN;</c>) and another one beside the LED-off line: right-click the thin margin strip at the left edge of the code window, beside the row where you want the breakpoint.</li>
+                    <li>Place a breakpoint beside the LED-on line (<c>GPIOA-&gt;ODR |= LED_PIN;</c>) and another one beside the LED-off line (<c>GPIOA-&gt;ODR &amp;= ~LED_PIN;</c>): right-click the thin margin strip at the left edge of the code window, beside the row where you want the breakpoint.</li>
                     <li>Click <em>Resume</em>.  The delay loop runs at full speed and the program stops at the next breakpoint.</li>
                     <li>At each stop, check two things: the on-board LED, and <c>OD5</c> inside <c>GPIOA_ODR</c> in the SFRs view.  Do they agree?</li>
                 </ul>
@@ -1125,8 +1130,37 @@ while (1) {
                 </task>
             </activity>
 
-            <slide xml:id="sl-debug-tool-map" ref="table-debug-tool-map">
+            <!-- The slide carries its own copy of the tabular rather than ref'ing
+                 table-debug-tool-map: a ref'd table keeps its <title> on the wall
+                 (the player shows it deliberately), and "Which tool, when" is a
+                 duplicate of this slide's own title.  Her comment, 2026-09-15:
+                 "delete".  Keep the two in step if the book table changes. -->
+            <slide xml:id="sl-debug-tool-map">
                 <p>Find your symptom in the left column, and the right column names the tool to reach for.</p>
+                <tabular halign="left" top="minor" bottom="minor" left="minor" right="minor">
+                    <col width="40%"/>
+                    <col width="60%"/>
+                    <row header="yes" bottom="minor">
+                        <cell>Symptom</cell>
+                        <cell>Reach for</cell>
+                    </row>
+                    <row>
+                        <cell>Will not build</cell>
+                        <cell>Compiler messages: top down, read up</cell>
+                    </row>
+                    <row>
+                        <cell>Runs, but a value is wrong or missing</cell>
+                        <cell><c>printf</c> placed to answer one question</cell>
+                    </row>
+                    <row>
+                        <cell>Need to see a register or step a line</cell>
+                        <cell>Debugger: SFRs, stepping, breakpoints</cell>
+                    </row>
+                    <row>
+                        <cell>Suspect the circuit, not the code</cell>
+                        <cell>Digital multimeter (DMM) and Analog Discovery 2 (AD2); the checklist is in the Reference section</cell>
+                    </row>
+                </tabular>
             </slide>
         </subsection>
     </section>
