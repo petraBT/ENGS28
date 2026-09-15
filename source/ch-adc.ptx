@@ -589,8 +589,33 @@
     <ul>
         <li>One step, <term>1 LSB</term>, is <m>V_\text{ref}/2^B = 3.3\text{ V}/4096 \approx 0.806\text{ mV}</m>.</li>
         <li><m>\text{volts} = \text{count} \times 3.3/4096</m>, and <m>\text{count} = \lfloor \text{volts} \times 4096/3.3 \rfloor</m>.</li>
-        <li>Count 2048 gives <m>2048 \times 3.3/4096 = 1.650\text{ V}</m>, exactly half of <m>V_\text{ref}</m>; and 1.0 V gives <m>\lfloor 1.0 \times 4096/3.3 \rfloor = 1241</m> counts.</li>
-        <li>4096 steps, numbered 0 to 4095, so count 4095 gives 3.299 V and full scale is <em>not</em> 3.3 V. Divide by <m>4096</m>, not 4095.</li>
+        <li><p>Examples:</p>
+            <ul>
+                <li>Count 2048 gives <m>2048 \times 3.3/4096 = 1.650\text{ V}</m>, exactly half of <m>V_\text{ref}</m>.</li>
+                <li>1.0 V gives <m>\lfloor 1.0 \times 4096/3.3 \rfloor = 1241</m> counts.</li>
+            </ul>
+        </li>
+        <li>The count is a <term>bin number</term>: the range is chopped into 4096 equal bins, so we divide by <m>4096</m> and not by 4095. The top bin is number 4095, and it covers the voltages just below <m>V_\text{ref}</m>, which is why full scale reads 3.299 V.</li>
+    </ul>
+</slide>
+
+            <!-- Instructor-only, from her comment of 2026-09-15: the bins-versus-gaps
+                 argument, for when a student asks why the scale factor is 4096 and
+                 not 4095.  Her text, condensed to slide shape and split across two
+                 slides because it ran 165px past the frame on one. -->
+            <slide xml:id="sl-adc-bins-not-gaps" instructor="yes">
+    <p><term>Why 4096 and not 4095?</term> An ADC is not drawing a line between two endpoints. It is chopping a continuous range into 4096 equal-sized bins, and 4096 is the number of bins, not the number of gaps between them.</p>
+    <ul>
+        <li><term>Where the 4095 intuition comes from.</term> Reading it as linear interpolation, <q>0 V maps to code 0 and 3.3 V maps to code 4095, so scale by 4095/3.3</q>, treats this like two endpoints on a ruler with 4096 tick marks and 4095 gaps between them. That is a reasonable model for mapping a value between two known reference points, but it is not what a quantizer does.</li>
+        <li><term>What the ADC actually does.</term> A 12-bit ADC divides the full-scale range into <m>2^{12} = 4096</m> equal-width bins, each of width <m>\text{LSB} = V_\text{ref}/4096</m>. Bin 0 covers <m>[0, \text{LSB})</m>, bin 1 covers <m>[\text{LSB}, 2\,\text{LSB})</m>, and so on up through bin 4095, which covers <m>[4095\,\text{LSB}, V_\text{ref})</m>. The code tells you which bin the voltage fell into, <m>\text{code} = \lfloor V/\text{LSB} \rfloor = \lfloor V \times 4096/V_\text{ref} \rfloor</m>, so the count is a bin index and not a proportional position between two endpoints.</li>
+    </ul>
+    <note>Hold this until somebody asks, or until the 4095/4096 slip appears in their code.</note>
+</slide>
+
+            <slide xml:id="sl-adc-bins-top-end" instructor="yes">
+    <ul>
+        <li><term>Why it matters at the top end.</term> Code 4095 is not a single point at 3.3 V; it is a whole range of voltages just below it. Exactly 3.3 V is the one value with no home, since it would need a 4097th bin edge, so real converters saturate at 4095 for anything at or above <m>(4095/4096)\,V_\text{ref}</m>. The endpoint model would imply that only exactly 3.3 V produces code 4095, and that each code stands for a single voltage rather than a range, which misrepresents quantization error: it is spread uniformly over <m>\pm\tfrac{1}{2}</m> LSB, not concentrated on a discrete set of exact points.</li>
+        <li><term>The rule of thumb.</term> Dividing a range into <m>N</m> equal steps between two known endpoints, as on a ruler or in a lookup table with defined start and end values, uses <m>N-1</m> as the scale factor. Quantizing a continuous range into <m>N</m> bins, as an ADC does, uses <m>N</m>, because <m>N</m> counts bins and not gaps. An ADC is squarely the second case.</li>
     </ul>
 </slide>
 
