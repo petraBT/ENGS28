@@ -137,10 +137,10 @@
 
             <slide xml:id="sl-adc-system-view" ref="fig-adc-system-view">
     <ul>
-        <li>Voltage in on the left (0 to V_ref); a <term>count</term> out on the right.</li>
-        <li>B wires out &#8594; 2^B possible values. B = 12 gives 4096 of them.</li>
-        <li>V_ref sets the top of the range. On our board it is the 3.3 V supply.</li>
-        <li>D_out = floor(4096 &#215; V_in / V_ref), the whole conversion in one line.</li>
+        <li>An analog voltage between 0 and <m>V_\text{ref}</m> goes in, and a <term>count</term> comes out.</li>
+        <li><m>B</m> wires out &#8594; <m>2^B</m> possible values. <m>B = 12</m> gives 4096 of them.</li>
+        <li><m>V_\text{ref}</m> sets the top of the range. On our board it is the 3.3 V supply.</li>
+        <li><m>D_\text{out} = \lfloor 4096 \cdot V_\text{in} / V_\text{ref} \rfloor</m>, the whole conversion in one line.</li>
     </ul>
     <caption>4096 steps, but the top one is numbered 4095, so full scale reads 4095, not 4096.</caption>
 </slide>
@@ -670,7 +670,8 @@ volts     =  count x 3.3 / 4096          count  =  floor(volts x 4096 / 3.3)
                     <statement>
                         <p>
                             The pin you will use today is labeled <c>A0</c> on the
-                            Nucleo's header silkscreen.  Note all three names for
+                            Nucleo's header, printed on the board beside the pin.
+                            Note all three names for
                             it: the Arduino label, the port pin, and the ADC
                             channel number.  Keep these.  You will need the same
                             three-way translation for a different pin later.
@@ -766,10 +767,9 @@ volts     =  count x 3.3 / 4096          count  =  floor(volts x 4096 / 3.3)
                 <title>Predict, Then Measure</title>
                 <introduction>
                     <p>
-                        Wire the three jumpers.  Before you connect anything to the
-                        board's A0 pin, put your digital multimeter (DMM) on the
-                        wiper.  Answer the questions in order, predicting first and
-                        measuring afterwards.
+                        Put your digital multimeter (DMM) on the wiper, and answer
+                        the questions in order, predicting first and measuring
+                        afterwards.
                     </p>
                 </introduction>
                 <task xml:id="act-adc-wire-t1">
@@ -779,8 +779,7 @@ volts     =  count x 3.3 / 4096          count  =  floor(volts x 4096 / 3.3)
                             counter-clockwise, at its center, fully clockwise, and
                             about a quarter of the way up from the counter-clockwise
                             end.  Note all four numbers before you measure
-                            anything.  The quarter-turn one is the only one you
-                            cannot get from the rails alone.
+                            anything.
                         </p>
                     </statement>
                 </task>
@@ -820,14 +819,14 @@ volts     =  count x 3.3 / 4096          count  =  floor(volts x 4096 / 3.3)
         <subsection xml:id="subsec-adc-day7-registers">
             <title>Part 4a: The Registers, One at a Time</title>
             <p>
-                If you have used an Arduino, <c>analogRead(A0)</c> did five things
-                for you invisibly: it set the pin's mode, enabled the ADC's clock,
-                selected the channel, started a conversion, and waited for it to
-                finish.  Today we'll do each of those five steps ourselves.  Doing
-                them by hand is what lets you change any of them later, for a
-                different pin, a different resolution or a faster sample, and what
-                lets you see where a measurement went wrong when it does.  We'll
-                look at each step on its own before you write any of them.
+                Reading one voltage takes five steps, and all five are ours to
+                write: set the pin's mode, enable the ADC's clock, select the
+                channel, start a conversion, and wait for it to finish.  Today
+                we'll do each of those five steps ourselves.  Doing them by hand is
+                what lets you change any of them later, for a different pin, a
+                different resolution or a faster sample, and what lets you see
+                where a measurement went wrong when it does.  We'll look at each
+                step on its own before you write any of them.
             </p>
 
             <p>
@@ -973,18 +972,17 @@ while (!(ADC1->ISR & ADC_ISR_EOC)) {}    // wait until the conversion is done
             </p>
 
             <slide xml:id="sl-adc-registers-intro">
-    <p>If you have used an Arduino, <c>analogRead(A0)</c> did <term>five</term> things invisibly:</p>
+    <p>Reading one voltage takes <term>five</term> steps, and all five are ours to write:</p>
     <ul>
         <li>set the pin's mode: <c>GPIOA-&gt;MODER</c></li>
-        <li>enabled the ADC's clock: <c>RCC-&gt;APBENR2</c></li>
-        <li>selected the channel: <c>ADC1-&gt;CHSELR</c></li>
-        <li>started a conversion: <c>ADC1-&gt;CR</c></li>
-        <li>waited for it to finish: <c>ADC1-&gt;ISR</c></li>
+        <li>enable the ADC's clock: <c>RCC-&gt;APBENR2</c></li>
+        <li>select the channel: <c>ADC1-&gt;CHSELR</c></li>
+        <li>start a conversion: <c>ADC1-&gt;CR</c></li>
+        <li>wait for it to finish: <c>ADC1-&gt;ISR</c></li>
     </ul>
-    <p>Today we'll do each one ourselves. Doing them by hand is what lets you <term>change</term>
+    <p>Doing them by hand is what lets you <term>change</term>
     any of them later (a different pin, a different resolution, a faster sample), and what lets
     you see where a measurement went wrong when it does.</p>
-    <caption>Five registers, one at a time, and then we'll assemble them into a program.</caption>
 </slide>
 
 <slide xml:id="sl-adc-reg-pin">
@@ -1061,7 +1059,7 @@ while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {}   // Day 5: wait for the UART
 while (!(  PERIPH->ISR &  FLAG           )) {}    // the shape
 ]]></code></program>
     <ul>
-        <li>Read it aloud: keep looping <term>while it is not true</term> that the flag bit is set.</li>
+        <li>Keep looping <term>while it is not true</term> that the flag bit is set.</li>
         <li>The loop body is empty. All the work is the condition.</li>
         <li>Both of the waits you are about to write use this shape: the register is <c>ADC1-&gt;ISR</c>, and the two bit names are on the previous slide.</li>
     </ul>
@@ -1411,7 +1409,7 @@ GPIOA->ODR &= ~LED_PIN;      // clear bit 5
     </ul>
     <p>So <c>ADC1-&gt;ISR = ADC_ISR_ADRDY;</c> sends a 1 to bit 0 and a 0 to all the rest:
     bit 0 clears, every other bit is left exactly as it was.</p>
-    <caption>The register is not being overwritten. It is being sent one instruction per bit.</caption>
+    <p>The register is not being overwritten. It is being sent one instruction per bit.</p>
 </slide>
 
             <slide xml:id="sl-adc-why-not-rmw" ref="fig-adc-rmw-damage" stack="yes">
