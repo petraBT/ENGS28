@@ -145,8 +145,8 @@ three frozen hand-pass specimens (Day 8, 9x, 10 diffs).
 | ch-uart | 5 | **done** (comment-level) | sweepable |
 | ch-io-datasheets | 5x | **done** (comment-level) | sweepable |
 | ch-transistors | 6 | **done** (comment-level) | sweepable |
-| ch-adc | 7 | **pilot — never passed** | **freer hand** |
-| ch-debugging | 7x | **Gate 2, Petra pending** | **freer hand** |
+| ch-adc | 7 | ~~pilot — never passed~~ → **four closed comment passes** (see N-1) | floor-heavy |
+| ch-debugging | 7x | ~~Gate 2, Petra pending~~ → **her typed edits in ~16 places** (see N-1) | floor-heavy |
 | ch-timers-interrupts | 8 | reviewed; **Day 8 diff is HER hand-pass** | floor-heavy |
 | ch-gpio-interrupts | 9 | **Gate 2, Petra pending** | **freer hand** |
 | ch-i2c | 9x,10 | **Day 9x + Day 10 diffs are HER hand-passes** | floor-heavy (Day 10 = her full prose pass) |
@@ -322,9 +322,9 @@ each chapter's survey runs at the head of its session).
 
 | Session | Chapters | Voice dist. | Comment surface | Hand |
 | --- | --- | --- | --- | --- |
-| 1 | ch-uart (5), ch-transistors (6) | 5, 4 (measured) | medium, ~10 | sweepable |
-| 2 | ch-switches (3–4), ch-io-datasheets (5x) | ~4 est. | est. medium | sweepable |
-| 3 | ch-adc (7), ch-debugging (7x) | ~4 est. | est. medium | **freer hand** (never passed) |
+| 1 | ch-uart (5), ch-transistors (6) | 5, 4 (measured) | medium, ~10 | **DONE** 2026-09-07 (`d695cd3`, `bee8159`) |
+| 2 | ch-switches (3–4), ch-io-datasheets (5x) | **0.14 we/you, measured** | est. medium | **NOT STARTED** — next up; read N-1 and N-2 first |
+| 3 | ch-adc (7), ch-debugging (7x) | 4 and 5, measured | medium | **DONE** 2026-09-14/15 (`24da861`, `49f332b`, `faf99b1`) — floor-heavy, not free |
 | 4 | ch-intro-blinky (1–2), ch-gpio-interrupts (9) | 3 meas., ~3 est. | low / est. medium | blinky sweepable; gpio **freer hand** |
 | 5 | ch-timers-interrupts (8) | ~2–3 est. | est. low | **floor-heavy** (Day 8 is her diff) |
 | 6 | ch-motors (11–12), ch-i2c (9x–10) | ~2 est. | est. low–medium | floor-heavy (Day 10 is her full pass) |
@@ -336,6 +336,93 @@ The three 1/10 chapters are the calibration reference, not rework candidates.
 Every touched `<slide>` block triggers a full deck fit-sweep at 1600×900 (per
 the charter and AUTHORING-slides.md), and no link the sweep moves lands in a
 projected surface.
+
+---
+
+## Carry-forward notes for the remaining Prompt 3 sessions
+
+Added 2026-09-15, after session 3 (ch-adc, ch-debugging). Both notes cost that
+session real time; read them before starting a chapter.
+
+### N-1 — The passed/unpassed columns understate the floor. Verify per chapter.
+
+Part A.6's "Petra status" and Part C.b's "Hand" column were both built from
+`CHAPTER_PROCESS.md`'s status table, and for session 3's two chapters the table
+was wrong in the direction that matters — it promised a freer hand than the
+history supports:
+
+| Chapter | Worklist said | What the history shows |
+| --- | --- | --- |
+| ch-adc | "pilot — never passed" | **four** of her review passes, all closed, 31 items in `reviews/day7-petra.md` ("Day 7 has no open items"), plus an earlier S-11…S-19 deck voice pass in `8ed0875` |
+| ch-debugging | "Gate 2, Petra pending" | **her own typed edits in ~16 places**, committed as `9c3863c` with the message "Petra's direct book edits … are kept as written", plus a pass-5 round in `0ece562` |
+
+A chapter marked "done (comment-level)" is no more reliable in the other
+direction. **Before editing any chapter, run all three of these:**
+
+1. `ls reviews/ | grep -i <day>` — a `dayNN-petra.md` or gate file lists what she
+   asked for, item by item. Her *asks* are floor even where the wording is ours.
+2. `git log --oneline -- source/<chapter>.ptx` and read the messages. A commit
+   saying "fold in Petra's review edits" or "apply her pass-N comments" means
+   sentences in that file are hers verbatim.
+3. `git log -L <start>,<end>:source/<chapter>.ptx` on any sentence a finding
+   lands on, *before* rewriting it. Unwrapped long lines in an otherwise wrapped
+   paragraph, and typos, are both tells that a sentence was pasted from one of her
+   comments — session 3 found her wording that way twice, including the sentence a
+   finding wanted to replace at the head of ch-adc.
+
+Where a finding lands on her wording, the Day 10 specimen shows the move that is
+always available: she *added* a goal sentence at the head of the chapter and left
+the draft's sentence standing. Add before, don't replace.
+
+### N-2 — Sweep back her rulings that postdate the chapter, but check which form is banned.
+
+The four divergences Part B names (absent "we", openings on absence, unexpanded
+acronyms, aphoristic tells) are not the whole gap. The early chapters also
+predate standing rulings she made in September, and those were applied going
+forward and never swept back. Measured 2026-09-15:
+
+| Ruling | Banned form | Remaining, by chapter |
+| --- | --- | --- |
+| "Never say write" (2026-09-06) | `write down`, `in writing`, `write a sentence` | ch-i2c 6, ch-motors 4, ch-accelerometers 3, ch-gpio-interrupts 3 — **ch-switches 0, ch-io-datasheets 0** |
+| L-15 location verbs / meet-met | a **register, pin or value** that `sits`, `lives` or is `met` | ch-switches 2, ch-io-datasheets 1 (calibration chapters run 0–1) |
+
+**The trap, and it is the important half of this note:** asking a student to
+*write code or an equation* is legitimate and is not what she banned.
+`ch-servos.ptx:983` — "Write the expression that maps `pot_value` onto
+`pwm_value`" — survived her pass in a 1/10 chapter. So did
+`ch-io-datasheets.ptx:246`, "Write the transfer function", and
+`ch-switches.ptx:809`, "Write the C statements that…". Only prose-production
+phrasing is banned: "write down", "in writing", "write a sentence". Grep for
+those three, not for `write`.
+
+Same caution on L-15: session 3 fixed "the ADC **sits** on the APB" and "the two
+halves of the track **sit** in parallel", and deliberately kept "the wiper
+**sits at** half the supply" (×3), which is standard voltage idiom rather than the
+location personification she struck. `CHAPTER_PROCESS.md` records a sweep that
+flattened `plants` to `holds` on a slide where she had deliberately left the
+metaphor; an over-broad rule is how that happens.
+
+### N-3 — What the two committee members actually catch, so ask them the right thing.
+
+Session 3's gates earned their keep in a specific way worth reusing:
+
+- **checker-voice, run a second time as a confirmation pass**, caught five
+  problems the *edits themselves* created — a new opener that copied the chapter
+  intro almost verbatim, a count that disagreed with its own four-row table, an
+  orphaned pronoun, a hedge that weakened a claim S-16 says to keep at full
+  strength, and two slides still projecting metaphors the prose had just lost.
+  None of these existed before the sweep. Run it again after applying, and tell it
+  which deviations from its own report you made and why.
+- **learner-in-the-room overruled a rule application.** It ruled that removing a
+  reassurance line from the debugger's failure slide was wrong, because the
+  presenter note says it once at the start of the part while the slide is the
+  surface up for the whole eight-minute failure window. It was restored. Give it
+  the specific change you are least sure of and ask it to judge that one hard.
+- One checker-voice finding was **rejected after direct verification**: it
+  reported two `<url>`s reaching the projector through figure captions, but a
+  `<slide ref="fig-…">` that supplies its own `<caption>` replaces the book
+  caption, so the links never render. Verify a projected-link claim in the player
+  (`[...document.querySelectorAll('#ref a')]`) before editing a figure caption.
 
 ---
 
