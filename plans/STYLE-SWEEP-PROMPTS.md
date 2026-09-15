@@ -159,3 +159,88 @@ hosted targets are `external/stm32c031_rm.pdf`,
 > was flagged as mine and left, and the fit-sweep result.  Then I
 > review in the web-edit preview and my comments come back through
 > the normal batch workflow.
+
+---
+
+## Prompt 3, as issued for session 2 (ready to paste)
+
+Sessions 1 and 3 are done; session 2 (`ch-switches`, `ch-io-datasheets`) is
+next.  This is Prompt 3 above, filled in for those two chapters and hardened
+with what sessions 1 and 3 learned — the carry-forward notes N-1…N-4 at the
+foot of `plans/style-sweep.md`.  Paste it verbatim into a fresh session.
+
+> Voice-sweep these chapters from plans/style-sweep.md Part C.b session 2:
+> ch-switches (Days 3, 3x, 4), then ch-io-datasheets (Day 5x). The goal: the
+> early chapters read like the late ones — like me.
+>
+> Read CLAUDE.md, AUTHORING-book.md (S-11…S-30 and the two calibrations),
+> plans/STYLE-SWEEP-PROMPTS.md (the charter — its three "never" rules bind),
+> plans/style-sweep.md (Part B is the passed contract; the voice ranking is in
+> Part B's voice half) and, before you touch anything, the four carry-forward
+> notes N-1…N-4 at the foot of that file. They are the lessons from session 3
+> and they will save you a round trip each. Then read the three frozen
+> specimens in this order: plans/day10-voice-reference.diff first, then
+> plans/day9x-voice-reference.md, then plans/day8-voice-reference.diff.
+>
+> Measured divergence for these two, 2026-09-15: ch-switches runs 6
+> first-person-plural tokens against 43 "you", ch-io-datasheets 3 against 22 —
+> both about 0.14, against 0.41–0.94 in the three 1/10 calibration chapters
+> (ch-servos, ch-photosensors, ch-power). That ratio is the defining gap, along
+> with unit openings that lead on what is absent rather than the goal (S-22),
+> unexpanded acronyms at first use, and scattered aphoristic tells and slogan
+> endings. The 1/10 chapters are the target — read a subsection of ch-power to
+> fix the register in your ear before judging anything.
+>
+> Per chapter: run checker-voice over the FULL chapter — book prose AND its
+> <slide> blocks, since a slide and the paragraph it condenses must not sound
+> like different people, and both are rechecked whole when either changes.
+> Launch checker-voice with the Opus model (pass model: "opus" to the Agent
+> tool).
+>
+> Apply the rewrites with two guards.
+>
+> 1. My wording is the floor. Anything I wrote, passed by comment, or that came
+>    verbatim from my old decks is FLAGGED in the delivery if a finding lands on
+>    it — never edited. Both chapters are marked "done (comment-level)", which
+>    N-1 explains is not the whole story in either direction: before editing a
+>    chapter, check reviews/ for its day files, read the commit messages on the
+>    file, and run git log -L on any sentence a finding wants to change.
+>    Unwrapped long lines and typos inside an otherwise wrapped paragraph mean
+>    the sentence came from one of my comments. The exception is a misspelling:
+>    always fix those, in my text as much as yours, and do not ask.
+>
+> 2. Restoring my register lengthens text, which overflows slides. Every touched
+>    <slide> block means a full fit-sweep of that day's deck at 1600×900 with
+>    the crossfade killed and MathJax settled, and LOOKING at every changed
+>    slide, not just measuring. The traps are in AUTHORING-slides.md; N-4 lists
+>    the ones I actually caught by eye last time. The no-links-in-slides rule
+>    (contract C-5) holds for anything the sweep moves.
+>
+> Two things N-2 warns about, because they cut both ways. Sweep back the rulings
+> that postdate these chapters — but grep for the banned form, not the word:
+> "write down", "in writing", "write a sentence" are out, while asking a student
+> to write CODE or an equation is fine and survived my pass in ch-servos. Same
+> for L-15: a register or a value that "sits" or "lives" somewhere is out, but
+> "the wiper sits at half the supply" is ordinary voltage idiom and stays.
+>
+> Also check each chapter against the whole B and L list, not only the four
+> divergences Part B names. Session 3 shipped a slide that still opened on an
+> Arduino comparison, which B-11e bans outright, and I had to catch it myself.
+>
+> Committee before delivery: checker-voice confirms its own findings landed —
+> run it a second time as a confirmation pass, since last time that caught five
+> problems the edits themselves had created — and learner-in-the-room walks any
+> deck whose slides changed (Sonnet is fine for that one); hand it the one
+> change you are least sure of and ask it to judge that one hard. Fix what it
+> finds even if the sweep did not cause it: a gate is a defect gate on the deck,
+> not a regression check on your own edits.
+>
+> One commit per chapter; before each, all five targets rebuilt via
+> ./scripts/build-all.sh and check_rules / check_deck / check_starters /
+> check_instructor_only / image_ratios --check all green. Run shell commands
+> bare from the repo root (no "cd … &&") so the allowlist matches.
+>
+> Deliver, per chapter: what changed, what was flagged as mine and left, and the
+> fit-sweep result. Then I review in the web-edit preview and in the deck
+> player, and my comments come back through the normal batch workflow. Do not
+> run ahead of the two named chapters.

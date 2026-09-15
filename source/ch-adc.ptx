@@ -123,8 +123,8 @@
 
             <figure xml:id="fig-adc-system-view">
                 <caption>The ADC as a system.  An analog voltage between 0 and
-                <m>V_\text{ref}</m> goes in on the left; a bundle of
-                <m>B</m> wires carries the digital result out on the right, as
+                <m>V_\text{ref}</m> goes in, and a bundle of
+                <m>B</m> wires carries the digital result out, as
                 an integer between 0 and <m>2^B - 1</m>.  On the STM32C031C6,
                 <m>V_\text{ref}</m> is 3.3 V and <m>B</m> can be 6, 8, 10, or 12.
                 We start with 12, and you will change it later.  The relationship written across the figure,
@@ -172,6 +172,19 @@
                 not 3.3 V: there are 4096 steps, but the highest one is numbered
                 4095.  Dividing by 4095 instead of 4096, or expecting the top count
                 to read exactly <m>V_\text{ref}</m>, is an easy slip to make.
+            </p>
+            <p>
+                The reason the divisor is 4096 is worth being precise about, because
+                it is where that slip comes from.  The converter is not placing your
+                voltage on a line between two endpoints; it is chopping the range
+                into 4096 equal <term>bins</term>, each one LSB wide, and reporting
+                which bin the voltage fell into.  Bin 0 covers 0 V up to one LSB,
+                bin 1 the next LSB, and so on up to bin 4095, which covers the
+                voltages just below <m>V_\text{ref}</m>.  So the count is a bin
+                number rather than a proportional position, 4096 is the number of
+                bins rather than the number of gaps between them, and the top count
+                stands for a range of voltages rather than for
+                <m>V_\text{ref}</m> exactly.
             </p>
             <p>
                 More bits means smaller steps and less rounding error, at the cost
@@ -276,12 +289,14 @@
                 feeds its verdict, <m>V_c</m>, back to the SAR, which keeps or
                 clears the bit it is currently testing and moves on to the next.
                 The sample-and-hold circuit on the input freezes
-                <m>V_\text{in}</m> at the instant the conversion starts.</caption>
+                <m>V_\text{in}</m> at the instant the conversion starts.  The clock
+                input on the left paces the search: one comparison, and so one bit
+                of the answer, per clock.</caption>
                 <image source="images/Day07-ADC/adc-sar-block.svg" width="85%"/>
             </figure>
 
             <slide xml:id="sl-adc-sar-block" ref="fig-adc-sar-block">
-                <caption>You were the comparator. The number you were narrowing down is the SAR; the DAC is what turns that number into a test voltage to compare against.</caption>
+                <caption>You were the comparator. The number you were narrowing down is the SAR; the DAC is what turns that number into a test voltage to compare against. The sample-and-hold freezes the input when the conversion starts, which is why the pin may change while it runs.</caption>
             </slide>
 
             <p>
@@ -556,8 +571,8 @@
             <p>
                 If it does not come back to you straight away, look back at
                 <xref ref="subsec-adc-quantization"/>, and if you would rather sort
-                it out properly after class, that is fine too: Part 2 starts from the
-                datasheet and does not depend on this.
+                it out properly after class, that is fine too: the next part starts
+                from the datasheet and does not depend on this.
             </p>
 
             <activity xml:id="act-adc-predict-count">
@@ -736,7 +751,7 @@
 
             <slide xml:id="sl-adc-three-names">
                 <ul>
-                    <li><term>[header]</term> <clr c="orange">A0</clr>, the label silkscreened on the board.</li>
+                    <li><term>[header]</term> <clr c="orange">A0</clr>, the label printed on the board beside the pin.</li>
                     <li><term>[port pin]</term> <clr c="blue">PA0</clr>, what <c>MODER</c> names.</li>
                     <li><term>[channel]</term> <clr c="green">Channel 0</clr>, what <c>CHSELR</c> names.</li>
                     <li>All three happen to agree for A0, and for most other pins they do not, so look up each one.</li>
@@ -763,7 +778,10 @@
                 into the breadboard.  Otherwise, use three of the pin-to-clip
                 jumpers.  Either way the connections are the same: the two outer
                 terminals go to 3.3 V and GND, and the wiper, the middle terminal,
-                goes to the pin labeled <c>A0</c>.
+                goes to the pin labeled <c>A0</c>.  Watch which leg is which: 3.3 V
+                and GND on the wiper and one outer leg puts the two rails across
+                part of the track only, which is close to a short at one end of the
+                knob's travel.
             </p>
 
             <figure xml:id="fig-adc-pot-photo">
@@ -969,8 +987,8 @@ while (!(USART2->ISR & USART_ISR_TXE_TXFNF)) {}   // Day 5: wait for the UART
 while (!(ADC1->ISR & ADC_ISR_EOC)) {}    // wait until the conversion is done
 ]]></code></program>
             <p>
-                Read the condition out loud before you use it: keep looping for as
-                long as it is <em>not</em> true that the flag bit is set.
+                Keep looping for as long as it is <em>not</em> true that the flag
+                bit is set.
             </p>
 
             <p>
@@ -1265,8 +1283,8 @@ uint16_t adc_read(void) {
                 <ul>
                     <li><term>libusb error, debugger won&apos;t connect</term>: power rail on <c>NRST</c>, not <c>3V3</c>.</li>
                     <li><term>Runs, but no output</term>: a stray <c>blinky.c</c> is what&apos;s building.</li>
-                    <li><term>Output never changes</term>: wiper not on A0, or pin not in analog mode (TODO 1).</li>
-                    <li><term>Always 0</term>: ADC not enabled or not started (TODOs 2, 3, 4).</li>
+                    <li><term>Output never changes</term>: the wiper is probably not on A0. (Most pins reset to analog mode, so a forgotten TODO 1 is not the cause.)</li>
+                    <li><term>Always 0</term>: the pin really is at 0 V. Check the wiper shares a row with the pot's <em>middle</em> leg, and that the outer legs are not both on GND.</li>
                     <li><term>Hangs after the greeting</term>: waiting on a bit that will never be set.</li>
                 </ul>
                 <note>Leave this up for the whole of Part 4.</note>

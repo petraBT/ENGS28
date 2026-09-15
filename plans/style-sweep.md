@@ -424,6 +424,46 @@ Session 3's gates earned their keep in a specific way worth reusing:
   caption, so the links never render. Verify a projected-link claim in the player
   (`[...document.querySelectorAll('#ref a')]`) before editing a figure caption.
 
+
+### N-4 — Her deck review will find figure and layout faults, not just voice.
+
+Session 3 delivered two swept chapters and then took **31 review comments
+across four rounds** on the two decks. Almost none were about register. What
+they were about:
+
+- **Captions used for content.** Three separate comments. A `<slide>`
+  `<caption>` renders small, grey and centered; anything a student must read
+  belongs in a `<p>` or `<li>`. An image-dominant (`figure-focus`) slide hides
+  the body and blows the image up — adding body text plus `stack="yes"` is the
+  fix for both "this is ginormous" and "why is this so small".
+- **ASCII pseudo-math in a `<program>` block.** "V_ref / 2^B",
+  "floor(volts x 4096 / 3.3)" — she asked for real typeset math twice in one
+  session. Anything mathematical goes in `<m>`, never a code block.
+- **Rasters that upscale.** `adc-sar-block.svg` was a 500x287 PNG drawn at
+  683x392 and then scaled to slide width, so its baked-in labels projected
+  fuzzy; it also carried a third-party watermark. Grep projected figures for
+  `<image ... base64` and compare the PNG's real pixel size against its drawn
+  size before a deck ships.
+- **Figures read as diagrams.** After redrawing that figure I checked it for
+  label collisions and passed it; she then found four faults I had not looked
+  for — connector lines running *through* labels, an arrow landing lower on a
+  comparator than the symbol's convention puts it, a label with no clear
+  referent, and a waveform too shallow to read. Trace every wire, check each
+  label against the thing it names, check symbol conventions.
+- **Rules the sweep should have applied and did not.** B-11e bans Arduino
+  comparisons outright, and `sl-adc-registers-intro` still opened "If you have
+  used an Arduino, `analogRead(A0)` did five things for you invisibly" until she
+  cut it. Before delivering a chapter, grep it against the **whole** B and L
+  list, not only the four divergences Part B names.
+- **Two PreTeXt traps, each costing a render.** Bare text in an `<li>` that also
+  holds a nested `<ul>` is silently dropped, exactly as in `<activity>` before
+  `<task>` — wrap it in `<p>`. And a ref'd `<table>` keeps its `<title>` on the
+  wall by design, so if that duplicates the slide title the slide must carry its
+  own `<tabular>` (PreTeXt requires a title on `<table>`).
+
+None of this is lintable. The only thing that caught any of it was opening the
+slide and reading it, which is why the charter says *look*, not *measure*.
+
 ---
 
 ## Decisions (approved by Petra 2026-09-14)
