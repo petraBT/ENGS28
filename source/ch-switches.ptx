@@ -704,8 +704,8 @@ int main(void) {
             <p>
                 Now we'll use a pin for input rather than output.  We'll add a
                 pushbutton to the breadboard (<xref ref="fig-pushbutton-wiring"/>).
-                Use <em>D5 (PB4)</em> specifically, since the <c>button.c</c> starter
-                code is written for PB4.  Wire one side of the button to D5 and the
+                Use <em>D5 (PB4)</em> specifically, since the code we'll start with,
+                <c>button.c</c>, is written for PB4.  Wire one side of the button to D5 and the
                 other side to GND.
             </p>
 
@@ -723,7 +723,7 @@ int main(void) {
                 <ul>
                     <li>Add a pushbutton to your Lab 1 breadboard.</li>
                     <li>Wire one side to D5, the other side to GND.</li>
-                    <li>Use <em>D5 (PB4)</em> specifically, since <c>button.c</c> is written for PB4.</li>
+                    <li>Use <em>D5 (PB4)</em> specifically, since the code we'll start with, <c>button.c</c>, is written for PB4.</li>
                 </ul>
                             <caption>The button bridges two rows: one terminal to the GPIO pin, the other to GND.</caption>
             </slide>
@@ -811,7 +811,7 @@ int main(void) {
             </slide>
 
             <slide xml:id="sl-day3-pb4-config">
-                <p>Here is the reveal, PB4 configured as an input:</p>
+                <p>Here is how to configure PB4 as an input:</p>
                 <program language="c"><code><![CDATA[
 // PB4 = D5, active-low button with internal pull-up
 #define GPIOBEN    (1U << 1)   // IOPENR bit 1 -> GPIOB clock
@@ -831,7 +831,7 @@ GPIOB->PUPDR &= ~(1U << 9);
                     <li>Any voltage below <m>V_{IL}</m>, the maximum low input voltage, is reliably read as a logic 0.  That is about <m>0.3 \times V_{DD}</m>, where <m>V_{DD}</m> is the supply voltage, 3.3 V on the Nucleo, so about 1.0 V.</li>
                     <li>Any voltage above <m>V_{IH}</m>, the minimum high input voltage (about <m>0.7 \times V_{DD} \approx 2.3</m> V), is reliably read as a logic 1.</li>
                     <li>A voltage between the two is in an indeterminate zone, and what the input data register reads there is unpredictable.</li>
-                    <li>In ordinary digital circuits the signal is driven firmly to one rail or the other, so you stay well outside that zone.  It matters when a signal rises slowly, for example through a large RC filter, when there is significant noise on the line, or when two devices run on different supply voltages.</li>
+                    <li>In ordinary digital circuits the signal is driven firmly to one rail or the other, so you stay well outside that zone.  It matters when a signal rises slowly, for example through a large RC filter, or when there is significant noise on the line.</li>
                 </ul>
                 <note>OPTIONAL / REVEAL.</note>
             </slide>
@@ -842,7 +842,7 @@ GPIOB->PUPDR &= ~(1U << 9);
                     <p>
                         You know what MODER, PUPDR, and IDR do, but not yet
                         the specific bit values to write.  Open the
-                        STM32C031C6's reference manual (RM0490),
+                        reference manual (RM0490),
                         navigate to the <em>General-purpose I/Os (GPIO)</em>
                         section via the table of contents, then go to
                         <em>RM0490 §6.4, GPIO registers</em>.
@@ -878,6 +878,7 @@ GPIOB->PUPDR &= ~(1U << 9);
             </activity>
 
             <slide xml:id="sl-day3-button-excerpt">
+                <p>This is the part of <c>button.c</c> that reads the pin.  It enables the pull-up, waits for the pin to settle, and then lights the LED for as long as the button is held down:</p>
                 <program language="c"><code><![CDATA[
 // PB4 = D5 button, PA5 = D13 LED (active-low button)
 GPIOB->PUPDR |=  (1U << 8);   // enable pull-up on PB4
@@ -944,7 +945,7 @@ while (1) {
                 <ul>
                     <li>The pin does not jump to HIGH instantly: the pull-up charges the pin capacitance.</li>
                     <li>It reaches the HIGH threshold in about 2.5 µs.</li>
-                    <li>Read IDR before it settles and you get a spurious 0, so delay first.</li>
+                    <li>If you read IDR before it settles you get a spurious 0, so delay first.</li>
                 </ul>
                             <caption>Pin voltage rising after the internal pull-up is enabled: ~2.5 µs to reach HIGH.</caption>
             </slide>
@@ -1217,11 +1218,11 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                 Today we'll go back to the oscilloscope and look more closely at
                 switches and inputs.  We'll put the scope on the button itself and
                 see what actually happens on the pin when a finger presses it, and
-                then we'll fix it in hardware, with a capacitor across the switch.
-                After that we'll find a second fault underneath the first one, which a
-                capacitor cannot touch: polling gives you the button's level when what
-                a toggle needs is the moment it changes.  We'll fix that one in
-                software, by detecting the edge.
+                then we'll fix the switch bounce in hardware, by putting a capacitor
+                across the switch.  After that we'll discuss ways to write the
+                toggleLED program: polling gives you the button's level when what a
+                toggle needs is the moment it changes, so we'll detect the edge
+                instead.
             </p>
         </introduction>
 
@@ -1382,14 +1383,13 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                 <note>OPTIONAL / REVEAL — show after the activity if useful, or skip.</note>
             </slide>
 
-            <slide xml:id="sl-day3x-hw-fix">
-                <p>Debouncing consists of delaying the input to the pin until the bouncing stops.  The hardware way to do that is a capacitor across the switch:</p>
+            <slide xml:id="sl-day3x-hw-fix" ref="fig-day3x-rc" stack="yes">
+                <p>The analog fix is to connect a small capacitor across the switch, from D5 (PB4) to GND.</p>
                 <ul>
-                    <li>Add a small capacitor across the switch (from D5/PB4 to GND).</li>
-                    <li>When the switch closes, the cap discharges through the low-resistance contacts instead of bouncing.</li>
-                    <li>When it opens, the ~40 kΩ internal pull-up recharges it slowly.</li>
-                    <li>The RC time constant smooths the bounce spikes away.</li>
+                    <li>A capacitor cannot change its voltage instantly, so the pin's voltage can no longer follow the contacts as they chatter.</li>
+                    <li>Fit the capacitor, capture the button again, and note the effect.  We'll work out why it works in a moment.</li>
                 </ul>
+                <caption>The switch, the capacitor across it, and the internal pull-up that charges the capacitor while the switch is open.</caption>
             </slide>
 
             <slide xml:id="sl-day3x-cap-codes" ref="fig-cap-codes">
@@ -1417,12 +1417,11 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
 
             <slide xml:id="sl-day3x-rc-why" ref="fig-day3x-rc">
                 <ul>
-                    <li>Recall from Phys 14: a capacitor stores charge and can't change its voltage instantly.</li>
-                    <li>The internal pull-up (~40 kΩ) and the capacitor form an RC low-pass filter.</li>
-                    <li>When the switch bounces open, the cap recharges slowly through the pull-up.</li>
-                    <li>If C is large enough, the voltage never climbs back above <m>V_{IH}</m> during the bounce, so no spurious edges reach the pin.</li>
+                    <li><term>Switch open.</term>  Recall from Phys 14 that a capacitor stores charge and cannot change its voltage instantly; with the internal pull-up (~40 kΩ) it forms an RC low-pass filter.  The pull-up has charged the capacitor to 3.3 V, so the pin reads HIGH.</li>
+                    <li><term>Switch pressed.</term>  The closed contacts have almost no resistance, so the capacitor discharges through them at once and the pin goes LOW.</li>
+                    <li><term>Contacts bouncing.</term>  Each time they break, the capacitor can only recharge through the 40 kΩ pull-up, which is slow.  If C is large enough the voltage never climbs back above <m>V_{IH}</m> before the contacts close again, so no spurious edges reach the pin.</li>
+                    <li><term>Switch fully closed.</term>  The capacitor stays discharged and the pin sits at 0.</li>
                 </ul>
-                <caption><m>R_{pu}</m>, the internal pull-up resistance of about 40 kΩ, and C form an RC filter; the capacitor recharges slowly through <m>R_{pu}</m> when the switch bounces open.</caption>
                 <note>OPTIONAL / REVEAL.</note>
             </slide>
 
@@ -1431,7 +1430,7 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                 <ul>
                     <li><term>Hardware</term>, an RC filter or a digital timer: it does not tie up processor cycles.  It costs another small component and its wiring, and it is hard to revise for a different switch, so it has to be designed with some tolerance.</li>
                     <li><term>Software</term>, a delay: it is flexible, because if the switch changes you edit the code and reflash.  It is simple, and it needs no extra components.  It costs processor cycles, spent waiting for the bouncing to stop.</li>
-                    <li>Today we're using the hardware fix, the capacitor we just fitted.  A software delay would have done the same job, and Lab 2's Technical Study is where you size either one.</li>
+                    <li>Today we're using the hardware fix, the capacitor we just fitted.  A software delay would have done the same job.  In Lab 2's Technical Study you'll investigate this more.</li>
                 </ul>
             </slide>
         </subsection>
@@ -1515,7 +1514,7 @@ while (1) {
                 <ul>
                     <li>Reading the pin on every pass of the main loop and acting on its value is called <term>polling</term>. It is the simplest way to respond to an input.</li>
                     <li>A more general way to write it is to separate reading the pin from acting on what was read, which is what <c>buttonPushed</c> does below.</li>
-                    <li>Even with a debounced switch, this loop does not do what you want when the action is a toggle.</li>
+                    <li>Even with a debounced switch, this loop does not achieve the desired toggling action.  Why?</li>
                 </ul>
                 <program language="c"><code><![CDATA[
 while (1) {
@@ -1531,12 +1530,12 @@ while (1) {
                 <ul>
                     <li>Predict: if you press and hold the button for half a second, how many times will the LED toggle? Why?</li>
                     <li>The loop runs at ~12 MHz. Roughly how many times does it execute while a human holds the button for 200 ms? How many toggles does that produce?</li>
-                    <li>The fix is to detect the transition from unpressed to pressed, not just the level. The skeleton on the next slide does this; fill in the missing lines.</li>
+                    <li>The fix is to act on the moment the button goes down, rather than on the fact that it is down. The skeleton on the next slide does this; fill in the missing lines.</li>
                 </ul>
             </slide>
 
             <slide xml:id="sl-day3x-edge-skeleton">
-                <p>Often you need to sense both states of the switch, not just its current level.  The fix is to detect the leading edge, the moment the pin goes LOW, and to remember that you have already acted on it.  Fill in the blanks:</p>
+                <p>Often you need to sense both states of the switch, not just its current level.  The fix is to detect the leading edge, the moment the pin goes LOW, then remember once you have acted on it, so that the next pass of the loop does not act again.  Fill in the blanks:</p>
                 <program language="c"><code><![CDATA[
 unsigned buttonAlreadyPressed = 0;
 while (1) {
@@ -1691,17 +1690,53 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
             waits.
         </p>
         <p>
+            Three words carry the whole pattern.  A <term>state</term> is what the
+            program remembers about where it has got to: not the value of a pin right
+            now, but which of a small number of situations it is currently in.  An
+            <term>event</term> is something that happens and that the program notices,
+            such as a pin going LOW or an interval elapsing.  A
+            <term>transition</term> is the move from one state to another that an event
+            causes, and the <term>action</term> is whatever the program does on the way.
+            A state machine is nothing more than a list of the states, and for each one,
+            which events move it where and what happens when they do.
+        </p>
+        <p>
+            You have already written one.  <c>blinkySEQ.c</c> from Lab 1 lights three
+            LEDs in turn, and that is a machine with three states, one for each LED
+            (<xref ref="fig-fsm-blinkyseq"/>).  The only event is the half-second
+            interval elapsing; each transition's action is to light the next LED; and
+            after the third it wraps back to the first.  Written as a diagram, circles
+            are the states, arrows are the transitions, and each arrow carries the event
+            that triggers it and then, after a slash, the action taken.
+        </p>
+        <figure xml:id="fig-fsm-blinkyseq">
+            <caption>The running light of <c>blinkySEQ.c</c> drawn as a state diagram.
+            Three states, one per LED; one event, the half-second interval elapsing; and
+            an action on each transition, which is to light the next LED.  The machine
+            wraps from the third state back to the first, which is what makes the light
+            run continuously.</caption>
+            <image source="images/Day04-Debounce/fsm-blinkyseq.svg" width="92%"/>
+        </figure>
+        <p>
+            Notice what the diagram makes obvious and the code does not: there are
+            exactly three situations the program can be in, and exactly one thing that
+            can move it between them.  That is the value of drawing one before writing
+            any code.  A blinking sequence is simple enough that a
+            <c>for</c> loop handles it, but as soon as two different events can arrive,
+            such as an interval elapsing and a button going down, the loop stops being
+            enough and the diagram is what keeps the behavior straight.
+        </p>
+        <p>
             For a button toggle, we need two states: <c>UNPRESSED</c> and <c>PRESSED</c>.
             We toggle the LED exactly once per press, when transitioning from UNPRESSED to
             PRESSED.  Once in the PRESSED state we ignore further LOW readings (which could
             be bounce or held-down time) until the pin goes HIGH again.
         </p>
         <p>
-            An FSM is often drawn as a <em>state diagram</em>: circles represent states,
-            arrows represent transitions, and each arrow is labeled with the event that
-            triggers it and the action taken.  Before coming to class, draw the state
-            diagram for the button-toggle FSM described above on paper.  Label each state,
-            each transition arrow with its triggering event, and the action taken.
+            Before coming to class, draw the state diagram for the button-toggle FSM
+            described above on paper, the same way the running light is drawn in
+            <xref ref="fig-fsm-blinkyseq"/>.  Label each state, each transition arrow
+            with its triggering event, and the action taken on it.
         </p>
 
         <reading-questions xml:id="rq-fsm">
@@ -1775,7 +1810,7 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
                         Identify the parts of your code that correspond to FSM concepts:
                         where is the <em>state</em> stored?  What are the <em>events</em>?
                         What <em>action</em> happens on which transition?
-                        We will formalize this in the mini-lecture that follows.
+                        We will formalize this next.
                     </p>
                 </task>
             </activity>
@@ -1942,7 +1977,7 @@ while (1) {
                 <ul>
                     <li>A finite state machine is a set of <term>states</term>, the <term>events</term> that cause transitions between them, and the <term>actions</term> taken on each transition. Its advantage over a single flag variable is that it keeps working as you add more states or more events.</li>
                     <li>No blocking <c>while</c> loop inside: the FSM does a little work each pass and returns.</li>
-                    <li>So it embeds inside a larger main loop that also blinks LEDs, reads a UART, or does other work.</li>
+                    <li>So it embeds inside a larger main loop that can blink LEDs, read a UART, or do other work.</li>
                     <li>The state variable preserves context across iterations.</li>
                 </ul>
             </slide>
