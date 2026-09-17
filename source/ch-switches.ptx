@@ -107,10 +107,9 @@
             <p>
                 In normal digital circuits, where signals are driven cleanly to
                 ground or the supply rail, you stay well outside this zone and never
-                notice it.  It becomes important when signals are slow to transition
-                (for example, a slowly rising voltage from a large RC filter), when
-                there is significant noise on a line, or when interfacing devices that
-                operate at different supply voltages.
+                notice it.  It becomes important when signals are slow to transition,
+                for example a slowly rising voltage from a large RC filter, or when
+                there is significant noise on a line.
             </p>
             <p>
                 Reading a button in code is therefore straightforward, as long as the
@@ -1465,9 +1464,8 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                 input, and it is what we have been doing since <c>button.c</c>.  A more
                 general way to write it is to separate reading the pin from acting on
                 what was read, which is what <c>buttonPushed</c> does below.  Polling
-                stops being enough as soon as the action we want is a toggle, because a
-                pin gives you a level and a toggle needs an edge; this next activity is
-                where you find out what that costs.  Even with a debounced switch,
+                stops being enough as soon as the action we want is a toggle, and the
+                next activity is where you work out why.  Even with a debounced switch,
                 consider this loop:
             </p>
             <program language="c"><code><![CDATA[
@@ -1497,8 +1495,8 @@ while (1) {
                 </task>
                 <task>
                     <p>
-                        The fix is to detect the <em>transition</em> from
-                        unpressed to pressed, not just the level.  The code
+                        The fix is to act on the moment the button goes down,
+                        rather than on the fact that it is down.  The code
                         below uses a <c>buttonAlreadyPressed</c> flag to do
                         this.  Trace through it: when does the LED toggle?
                         When does it not toggle even though the button is down?
@@ -1615,12 +1613,28 @@ int main(void) {
         <subsection xml:id="subsec-hw-debounce">
             <title>Hardware Debouncing: RC Filter</title>
             <p>
-                The classic hardware fix is to add a small capacitor (0.1 µF or 0.15 µF) across
-                the switch terminals.  When the switch closes, the capacitor discharges through
-                the low-resistance closed contacts instead of bouncing.  When the switch opens,
-                the internal pull-up recharges the capacitor through its 40 kΩ resistance.
-                The resulting RC time constant smooths out the bounce spikes.
-                Breadboard placement is shown in <xref ref="fig-rc-debounce-circuit"/>.
+                The classic hardware fix is to add a small capacitor (0.1 µF or 0.15 µF)
+                across the switch terminals.  Together with the internal pull-up it forms
+                an RC low-pass filter, and what it changes is how fast the voltage on the
+                pin is allowed to move.  Follow it through the four situations.
+            </p>
+            <p>
+                While the switch is <term>open</term>, the pull-up has charged the
+                capacitor to 3.3 V through its 40 kΩ resistance, so the pin reads HIGH.
+                When the switch is <term>pressed</term>, the closed contacts have almost
+                no resistance, so the capacitor discharges through them at once and the
+                pin goes LOW.  While the contacts are <term>bouncing</term>, each time
+                they break the capacitor can only recharge through the 40 kΩ pull-up,
+                which is slow: if C is large enough the voltage never climbs back above
+                <m>V_{\mathrm{IH}}</m> before the contacts close again, so no spurious
+                edges reach the pin.  Once the switch is <term>fully closed</term>, the
+                capacitor stays discharged and the pin sits at 0.
+            </p>
+            <p>
+                Note that it is the switch contacts that bounce, never the capacitor.
+                The capacitor's only job is to be slow, and the RC time constant is what
+                makes the pin too slow to follow the chatter.  Breadboard placement is
+                shown in <xref ref="fig-rc-debounce-circuit"/>.
             </p>
 
             <figure xml:id="fig-rc-schematic">
@@ -1634,9 +1648,10 @@ int main(void) {
 
             <figure xml:id="fig-rc-results">
                 <caption>Effect of capacitor size on bounce suppression.  Top: C = 0.01 µF,
-                bounce recovers quickly and can reach V<sub>IH</sub>, causing spurious edges.
-                Bottom: C = 0.1 µF, bounce recovers so slowly that the voltage stays
-                below V<sub>IH</sub>, eliminating spurious transitions.</caption>
+                where the voltage recovers quickly between bounces and can reach
+                <m>V_{\mathrm{IH}}</m>, causing spurious edges.  Bottom: C = 0.1 µF, where
+                it recovers so slowly that it stays below <m>V_{\mathrm{IH}}</m>,
+                eliminating spurious transitions.</caption>
                 <image source="images/Day03x-Debounce/ann-d3x-rc-results.png" width="70%"/>
             </figure>
 
@@ -1773,11 +1788,11 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
             We toggle the LED exactly once per press, when transitioning from UNPRESSED to
             PRESSED.  Once in the PRESSED state we ignore further LOW readings until the
             pin goes HIGH again, which is what stops a finger held down for half a second
-            from toggling the LED thousands of times.  It does not cure bounce: while the
-            contacts are chattering the pin really does go back above
-            <m>V_{\mathrm{IH}}</m> and LOW again, and each of those is a genuine
-            UNPRESSED-to-PRESSED transition that toggles the LED once more.  That is what
-            the capacitor, or a delay in software, is for.
+            from toggling the LED thousands of times.  Note that this does not cure bounce: while the
+            contacts are chattering, if the pin really does go back above
+            <m>V_{\mathrm{IH}}</m> and LOW again then that would register as a genuine
+            UNPRESSED-to-PRESSED transition that would toggle the LED once more.  The
+            capacitor (or a delay in software) prevents this from happening.
         </p>
         <p>
             Before coming to class, draw the state diagram for the button-toggle FSM
@@ -1983,7 +1998,7 @@ int main(void) {
 
             <p>
                 Because there is no blocking <c>while</c> loop, this FSM can be embedded
-                in a larger main loop that also blinks LEDs, reads a UART, or does other
+                in a larger main loop that can blink LEDs, read a UART, or do other
                 work: the state variable preserves context across iterations.
             </p>
 
