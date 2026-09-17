@@ -19,13 +19,13 @@
  * Run blinks the simulated LED; Step
  * walks the program one line at a time so
  * you can watch MODER and ODR change.
- * Save your working code - in Day 1X you
- * will port it to the real Nucleo.
+ * Save your working code; tomorrow we'll
+ * port it to the real Nucleo.
  *
  * Drag the divider to widen this editor.
  */
 
-#include "stm32c0xx.h"          // all register definitions live here
+#include "stm32c0xx.h"          // all the port definitions are here
 #define GPIOAEN  (1U << 0)      // RCC->IOPENR bit 0: clock for GPIOA
 #define LED_PIN  (1U << 5)      // GPIOA bit 5: the on-board LED
 
