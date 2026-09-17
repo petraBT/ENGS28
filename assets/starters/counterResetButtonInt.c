@@ -41,7 +41,7 @@
  *   <date>   <your initials>   filled in TODOs 1-3
  *
  * -----------------------------------------------------------------------------
- * Three blanks to fill in.  Everything you need was in Parts 4 and 5:
+ * Three blanks to fill in.  We have gone through everything you need in class:
  *
  *   TODO 1   the four EXTI/NVIC switches      port, edge, mask, NVIC
  *   TODO 2   the handler itself               exact name from Table 40
