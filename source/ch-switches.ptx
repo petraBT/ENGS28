@@ -27,9 +27,11 @@
             This chapter covers three class days.  We'll configure a GPIO
             (general-purpose input/output) pin as an input with an internal pull-up
             resistor and read it in a polling loop.  We'll then learn to use the Analog
-            Discovery 2 oscilloscope and put it on the button to see the bounce.
-            Finally we'll eliminate the bounce in two different ways: in hardware with
-            a capacitor, and in software with a <term>state machine</term>.
+            Discovery 2 oscilloscope and put it on the button to see the bounce.  We'll
+            then get rid of the bounce, in hardware with a capacitor and in software by
+            waiting it out.  That still leaves a second problem, which is that polling
+            reports the button's level when what a toggle needs is the moment it changes,
+            and the pattern that solves it is the <term>state machine</term>.
         </p>
         <objectives>
             <ul>
@@ -37,7 +39,8 @@
                 <li>Read the Input Data Register (IDR) and respond to button presses.</li>
                 <li>Use the Analog Discovery 2 oscilloscope to observe and measure signals.</li>
                 <li>Explain contact bounce and why it is a problem for embedded software.</li>
-                <li>Implement hardware debouncing with an RC (resistor-capacitor) filter and software debouncing with a state machine.</li>
+                <li>Implement hardware debouncing with an RC (resistor-capacitor) filter, and software debouncing that waits out the bounce.</li>
+                <li>Use a state machine to act on the moment a button goes down rather than on the fact that it is down.</li>
             </ul>
         </objectives>
     </introduction>
@@ -1333,7 +1336,7 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                         are what the part looks like in your kit: a small squared-off
                         block with two legs, in blue or cream depending on the
                         manufacturer, with the marking printed on the flat face.</caption>
-                        <sidebyside widths="56% 20% 20%" margins="0% 0%" valign="middle">
+                        <sidebyside widths="66% 15% 15%" margins="0% 0%" valign="middle">
                             <image source="images/Day03x-Debounce/ann-d3x-cap-codes.png"/>
                             <image source="images/Day03x-Debounce/metal-film-cap-blue.png"/>
                             <image source="images/Day03x-Debounce/metal-film-cap-cream.png"/>
@@ -1666,8 +1669,12 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
 ]]></code></program>
             <p>
                 This works but <em>blocks</em> the CPU for 20 ms twice per button press.
-                A state-machine approach (see <xref ref="sec-state-machine"/>) avoids blocking
-                while still debouncing reliably.
+                The same waiting can be done without blocking, by a state machine that
+                starts a timer on the first edge and ignores the pin until it expires, or
+                one that requires the pin to hold the same value for several consecutive
+                samples.  That is a different machine from the two-state toggle in
+                <xref ref="sec-state-machine"/>, which turns a level into an edge and
+                does not debounce.
             </p>
 
             <insight>
@@ -1735,19 +1742,21 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
         </p>
         <p>
             Recall <c>blinkySEQ.c</c> from Lab 1: the program lights three
-            LEDs in turn, and we can think of that as a machine with three states, one for each LED
-            (<xref ref="fig-fsm-blinkyseq"/>).  The only event is the half-second
-            interval elapsing; each transition's action is to light the next LED; and
-            after the third it wraps back to the first.  Written as a diagram, circles
-            are the states, arrows are the transitions, and each arrow carries the event
-            that triggers it and then, after a slash, the action taken.
+            LEDs in turn, and we can think of that as a machine with three states, one
+            for each LED (<xref ref="fig-fsm-blinkyseq"/>).  The only event is the
+            half-second interval elapsing.  Each transition's action is to turn the LED
+            that is currently on off, light the next one, and restart the timer; after
+            the third it wraps back to the first.  Written as a diagram, circles are the
+            states, arrows are the transitions, and each arrow carries the event that
+            triggers it and then, after a slash, the action taken.
         </p>
         <figure xml:id="fig-fsm-blinkyseq">
             <caption>The running light of <c>blinkySEQ.c</c> drawn as a state diagram.
             Three states, one per LED; one event, the half-second interval elapsing; and
-            an action on each transition, which is to light the next LED.  The machine
-            wraps from the third state back to the first, which is what makes the light
-            run continuously.</caption>
+            three things done on each transition, which are to turn the LED that is on
+            off, light the next one, and restart the timer.  The machine wraps from the
+            third state back to the first, which is what makes the light run
+            continuously.</caption>
             <image source="images/Day04-Debounce/fsm-blinkyseq.svg" width="92%"/>
         </figure>
         <p>
@@ -1762,8 +1771,13 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
         <p>
             For a button toggle, we need two states: <c>UNPRESSED</c> and <c>PRESSED</c>.
             We toggle the LED exactly once per press, when transitioning from UNPRESSED to
-            PRESSED.  Once in the PRESSED state we ignore further LOW readings (which could
-            be bounce or held-down time) until the pin goes HIGH again.
+            PRESSED.  Once in the PRESSED state we ignore further LOW readings until the
+            pin goes HIGH again, which is what stops a finger held down for half a second
+            from toggling the LED thousands of times.  It does not cure bounce: while the
+            contacts are chattering the pin really does go back above
+            <m>V_{\mathrm{IH}}</m> and LOW again, and each of those is a genuine
+            UNPRESSED-to-PRESSED transition that toggles the LED once more.  That is what
+            the capacitor, or a delay in software, is for.
         </p>
         <p>
             Before coming to class, draw the state diagram for the button-toggle FSM
