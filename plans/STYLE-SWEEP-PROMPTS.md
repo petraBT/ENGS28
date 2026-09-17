@@ -162,7 +162,7 @@ hosted targets are `external/stm32c031_rm.pdf`,
 
 ---
 
-## Prompt 3, as issued for session 2 (ready to paste)
+## Prompt 3, as issued for session 2 (done 2026-09-17)
 
 Sessions 1 and 3 are done; session 2 (`ch-switches`, `ch-io-datasheets`) is
 next.  This is Prompt 3 above, filled in for those two chapters and hardened
@@ -244,3 +244,92 @@ foot of `plans/style-sweep.md`.  Paste it verbatim into a fresh session.
 > fit-sweep result. Then I review in the web-edit preview and in the deck
 > player, and my comments come back through the normal batch workflow. Do not
 > run ahead of the two named chapters.
+
+
+---
+
+## Prompt 3, as issued for session 4 (ready to paste)
+
+Sessions 1, 2 and 3 are done.  Session 4 is `ch-intro-blinky` (Days 1, 1x, 2) and
+`ch-gpio-interrupts` (Day 9).  This is Prompt 3 above, filled in for those two and
+hardened with what session 2 learned — the carry-forward notes **N-1…N-11** at the
+foot of `plans/style-sweep.md`.  Paste it verbatim into a fresh session.
+
+> Voice-sweep these chapters from plans/style-sweep.md Part C.b session 4:
+> ch-intro-blinky (Days 1, 1x, 2), then ch-gpio-interrupts (Day 9). The goal: the
+> early chapters read like the late ones — like me.
+>
+> Read CLAUDE.md, AUTHORING-book.md (S-11…S-30 and the two calibrations),
+> plans/STYLE-SWEEP-PROMPTS.md (the charter — its three "never" rules bind),
+> plans/style-sweep.md (Part B is the passed contract) and, before you touch
+> anything, ALL ELEVEN carry-forward notes N-1…N-11 at the foot of that file.
+> N-5…N-11 are session 2's, and every one of them cost that session a round trip
+> or an angry comment from me.
+>
+> Then read the specimens, in this order: plans/day10-voice-reference.diff,
+> plans/day9x-voice-reference.md, plans/day8-voice-reference.diff, and — new, and
+> specific to the second of your two chapters — `git show 0b0bba9`, my own hand
+> pass over the Day 9 reading and opening slides. Its commit message names the
+> three things I systematically removed there: personified hardware, course-internal
+> day references in student-facing text, and dramatized framing. Read that before
+> you edit a word of Day 9.
+>
+> Measured divergence, 2026-09-17, student-facing only (comments and <instructor>
+> blocks stripped, per N-6): **ch-intro-blinky runs 15 first-person-plural tokens
+> against 129 "you", a ratio of 0.12 — the worst in the book. ch-gpio-interrupts
+> runs 62 against 115, which is 0.54 and already inside the band.** The calibration
+> band measured the same way is ch-photosensors 0.41, ch-power 0.73, ch-servos 0.83.
+> So the ratio work is almost all in blinky; do not chase a higher number in Day 9,
+> and do not "improve" a chapter that is already in range.
+>
+> The other named divergences for blinky, from Part B's ranking: it **opens on what
+> is absent three separate times**, it makes the **weekday the actor** (S-20), and
+> it expands few acronyms. Check both chapters against the whole B and L list
+> anyway, not only those.
+>
+> **The hand is not what the worklist says.** Part C.b calls ch-gpio-interrupts a
+> "freer hand". It is not: 0b0bba9 is my hand pass, 88d11e3 applies fourteen items
+> from my slide review, and reviews/day9-gate2.md is a full panel review. Treat Day
+> 9 as floor-heavy. ch-intro-blinky is the genuinely sweepable one — no
+> reviews/day1* or day2* file, nothing in the comment archive, and its only
+> her-material commit is c847272, the Day 1X sample solution I wrote. Run N-1's
+> three checks on both regardless, including git log -L on any sentence a finding
+> wants to change.
+>
+> Per chapter: run checker-voice over the FULL chapter — book prose AND its <slide>
+> blocks — with model: "opus". Then apply, with the two guards from the charter.
+>
+> **Mirror every fix into both surfaces in the same edit (N-9).** This is the thing
+> I was most annoyed about last time: five corrections went to the slide and never
+> reached the book, including a sentence I had already called wrong on the slide two
+> rounds earlier. When you audit for it, use xml.parsers.expat line spans to blank
+> the <slide> blocks — a hand-rolled tag counter gave a false clean last time and I
+> had to find it myself.
+>
+> **Measure fit in headless Chrome over CDP, not the Browser pane (N-7).** When the
+> pane is hidden the browser suspends layout, every clientHeight reads 0, and a
+> slide 200px over reports "fits". Report the last item's clearance, not just the
+> body overflow, or a room="yes" slide looks broken when nothing is lost.
+>
+> Before each commit: all five targets via ./scripts/build-all.sh, and check_rules /
+> check_deck / check_starters / check_instructor_only / image_ratios --check all
+> green. One commit per chapter. Run shell commands bare from the repo root.
+>
+> Committee before delivery: checker-voice a second time as a confirmation pass —
+> it caught 14 problems the edits themselves created in each of session 2's two
+> chapters, mostly new openers repeating their neighbours — and learner-in-the-room
+> (Sonnet) on any deck whose slides changed. Hand it the change you are least sure
+> of and ask it to judge that one hard; last time it overruled me twice and was
+> right both times.
+>
+> Deliver, per chapter: what changed, what was flagged as mine and left, and the
+> fit-sweep result. Then I review in the web-edit preview and in the deck player.
+>
+> **One question to put to me in the delivery, not to decide yourself (N-11).** My
+> Day 9 pass removed every course-internal day reference from student-facing text
+> ("On Day 8" → "Last week"). That ruling is only in 0b0bba9's commit message, it is
+> not in AUTHORING-book.md, and L-11 currently says the opposite. 49 student-facing
+> "on Day N" remain in seven other chapters — including 7 in ch-servos, which I
+> passed. Ask me whether that sweeps corpus-wide; do not sweep it.
+>
+> Do not run ahead of the two named chapters.

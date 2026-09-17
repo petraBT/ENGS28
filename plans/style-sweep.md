@@ -323,9 +323,9 @@ each chapter's survey runs at the head of its session).
 | Session | Chapters | Voice dist. | Comment surface | Hand |
 | --- | --- | --- | --- | --- |
 | 1 | ch-uart (5), ch-transistors (6) | 5, 4 (measured) | medium, ~10 | **DONE** 2026-09-07 (`d695cd3`, `bee8159`) |
-| 2 | ch-switches (3–4), ch-io-datasheets (5x) | **0.14 we/you, measured** | est. medium | **NOT STARTED** — next up; read N-1 and N-2 first |
+| 2 | ch-switches (3–4), ch-io-datasheets (5x) | 0.19 and 0.00 measured | heavy: 62 comments over three rounds | **DONE** 2026-09-15/17 (`e338219`, `4f528a5`, `dd990e5`, `2a4c596`, `47c7fcf`, `72b285f`) |
 | 3 | ch-adc (7), ch-debugging (7x) | 4 and 5, measured | medium | **DONE** 2026-09-14/15 (`24da861`, `49f332b`, `faf99b1`) — floor-heavy, not free |
-| 4 | ch-intro-blinky (1–2), ch-gpio-interrupts (9) | 3 meas., ~3 est. | low / est. medium | blinky sweepable; gpio **freer hand** |
+| 4 | ch-intro-blinky (1,1x,2), ch-gpio-interrupts (9) | **0.12 and 0.54, measured 2026-09-17** | blinky: high; gpio: low | blinky sweepable and the worst ratio in the book; gpio is **NOT a freer hand** — see N-5 |
 | 5 | ch-timers-interrupts (8) | ~2–3 est. | est. low | **floor-heavy** (Day 8 is her diff) |
 | 6 | ch-motors (11–12), ch-i2c (9x–10) | ~2 est. | est. low–medium | floor-heavy (Day 10 is her full pass) |
 | 7 | ch-accelerometers (13–14), ch-ble (17) | ~2 est. | est. low | floor-heavy / mostly hers |
@@ -488,3 +488,132 @@ violation gets fixed).
 
 Part B is the binding contract. Next: Prompt 2 in a fresh session (the exact
 prompt is in `plans/STYLE-SWEEP-PROMPTS.md`).
+
+
+---
+
+## Carry-forward notes from session 2 (ch-switches, ch-io-datasheets)
+
+Added 2026-09-17.  Session 2 ran to **62 of her comments across three rounds**
+after delivery, which is more than sessions 1 and 3 combined.  Most of that was
+avoidable, and these notes are why.
+
+### N-5 — The worklist's "Hand" column is wrong again, and this time in the direction that bites.
+
+N-1 said to verify per chapter.  Do it for session 4 too, because the table is
+wrong about **ch-gpio-interrupts**, which it calls a *freer hand*:
+
+- `0b0bba9` is **"Petra's hand pass over the Day 9 reading and opening slides"**,
+  and its commit message is itself a voice specimen: she systematically removed
+  **personified hardware** ("carrying the news to `main()`" → "communicating
+  with", "none of it cares" → "none of it changes", "gets around to looking" →
+  "checking"), **every course-internal day reference in student-facing text**
+  ("On Day 8" → "Last week", "the Day 3 idiom" → "the same one we used
+  before"), and **the dramatized framing** around the wiring check.
+- `88d11e3` is "Apply Petra's Day 9 slide review", fourteen items.
+- `reviews/day9-gate2.md` exists and is a full panel review.
+
+So Day 9 is **floor-heavy**, and `0b0bba9` should be read as a fourth specimen
+before touching it.  ch-intro-blinky is the opposite: no `reviews/day1*` or
+`day2*` file, no comment-archive entries, and its only her-material commit is
+`c847272` ("Give Day 1X the sample solution Petra already wrote").  That one is
+genuinely sweepable, and at **0.12** it is the worst we/you ratio in the book.
+
+### N-6 — Measure the ratio with comments and `<instructor>` blocks stripped, or the number is wrong.
+
+Session 2 reported ch-io-datasheets at 1.84 and was corrected by its own
+confirmation pass: the real student-facing figure was 0.69.  The raw grep had
+counted XML comments and instructor blocks, where "we" is the presenter talking
+to herself.  Strip `<!-- -->` and `<instructor>…</instructor>` first.  The
+calibration band, measured that way: **ch-photosensors 0.41, ch-power 0.73,
+ch-servos 0.83**.  Anything in 0.4–0.85 is done; do not chase a higher number.
+
+### N-7 — The Browser pane cannot measure fit, and fails silently in the direction that says "fits".
+
+When the pane is hidden the browser suspends layout, so **every `clientHeight`
+reads 0** and the snippet in `AUTHORING-slides.md` answers "fits" for a slide
+that is 200 px over.  Screenshots also refuse, with "the page is not
+compositing frames".  Session 2 lost a round to this.  Drive **headless Chrome
+over raw CDP** instead — Node 22 has a built-in WebSocket client, so no
+puppeteer install is needed:
+
+```
+'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' \
+  --headless=new --remote-debugging-port=9333 --user-data-dir=<tmp> \
+  --window-size=1600,900 --hide-scrollbars --force-device-scale-factor=1 \
+  --disable-background-timer-throttling --disable-renderer-backgrounding
+```
+
+then `Page.navigate` / `Runtime.evaluate` / `Page.captureScreenshot` (which
+takes a `clip` rect, so it crops her bboxes directly).  Two further points the
+session learned:
+
+- **Report the last item's clearance, not just the body overflow.**  A
+  `room="yes"` slide reports 17 px "over" with the final bullet clear by 6 px —
+  that is the writing space below the last item and nothing is lost.  Only
+  `last.getBoundingClientRect().bottom > body.bottom` is a real clip.  Session 2
+  trimmed her wording for one of these before measuring properly.
+- The deck servers in `.claude/launch.json` are 8351/8354/8355; her own
+  `preview-slides.sh` is on 8352 and may be the only one up.  Check with `lsof`
+  rather than assuming.
+
+### N-8 — To read a terse comment, intersect her bbox with each word's rect. Do not crop screenshots.
+
+Two thirds of her comments are one or two words against circled text
+("capacitor", "in", "then", "will", "sample").  The cheap, exact method: walk
+the text nodes, `Range` each word, and keep the words whose rect overlaps the
+stage-scaled bbox; report the enclosing `<li>`/`<p>` too, so the replacement
+lands in the right sentence.  Walk `document.body` and skip `#bar`, not `#ref`,
+or the glue slides (`type: "notice"`, `"agenda"`) come back empty.  Three
+comments on one slide title composed into a single new title that way —
+"Delete the" + "sample" + "will" over *The questions a datasheet has to
+answer* → **"Sample questions a datasheet will answer"**.
+
+### N-9 — Mirror every fix into both surfaces in the same edit, and audit with a real parser.
+
+The single thing she was most annoyed about: *"you haven't carried the slide
+corrections to the book"*, and then *"you need to carry the fixes from the
+slides into the book sections"*.  Five corrections had been applied to the
+projected half only, including a sentence she had already called wrong on the
+slide two rounds earlier.  Fix the pair in the same edit, always.
+
+When auditing, **do not count `<slide>` tags by hand**.  A hand-rolled counter
+missed one closing tag, treated the whole rest of the file as slide content, and
+returned an almost-clean audit that was false.  Use `xml.parsers.expat` with
+`CurrentLineNumber` to get each slide's exact line span, blank those lines, and
+grep what is left.
+
+### N-10 — Her old decks are not permanently safe, and she may edit the source herself.
+
+- **A live comment overrides her own old deck.**  Session 2 restored
+  *"Debouncing consists of delaying the input to the pin until the bouncing
+  stops"* from her `Day03x` slide 12 as P-12 reuse; she then marked it *"Ummm
+  WHAT?  Not really correct."*  P-12 makes her old wording the preferred
+  starting point, not a shield.
+- **Check `git status` before starting.**  She rewrote a whole section directly
+  in the working tree and said so in a comment — *"I ended up rewriting this
+  whole section myself, so ignore comments 1 and 2.  But please improve on my
+  exposition, fix typos, make it more understandable"* — which both moots
+  earlier comments and, unusually, licenses editing her prose.  Read the queue
+  in `ts` order for exactly this reason.
+- **A corpus-wide ruling means corpus-wide.**  "Spell out capacitor everywhere,
+  never write cap", "get rid of the word idiomatic everywhere", and "can you
+  generally (as in everywhere) increase the font size of these captions" each
+  needed a grep over all sixteen chapters and all 28 decks, not the chapter in
+  hand.  The caption change touched every deck, so all 28 were re-swept.
+
+### N-11 — One open ruling, for her, before session 4 touches it.
+
+Her Day 9 pass removed **every course-internal day reference from
+student-facing text** ("On Day 8" → "Last week").  That ruling lives only in
+`0b0bba9`'s commit message; it is not in `AUTHORING-book.md`, and **L-11 still
+says the opposite** ("on Day N", never "in Day N").  Measured 2026-09-17, with
+slides, instructor blocks, notes and comments excluded: **49 student-facing "on
+Day N" remain in seven chapters** — ch-motors 19, ch-accelerometers 8,
+ch-timers-interrupts 8, **ch-servos 7**, ch-adc 4, ch-debugging 2,
+ch-io-datasheets 1.  ch-intro-blinky and ch-gpio-interrupts have none.
+
+That ch-servos, a passed 1/10 calibration chapter, still has seven is the
+reason **to ask rather than sweep**: either the ruling is narrower than the
+commit message reads, or it was simply never carried.  Put it to her as a
+numbered question; do not decide it.
