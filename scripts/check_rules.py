@@ -247,6 +247,48 @@ def check_file(path, quiet=False):
                              f"{got.lower()!r} (the filename is all lowercase; "
                              f"the part is STM32C031C6)"))
 
+    # L-11, second half: a course-internal day reference in STUDENT-FACING text.
+    # Petra's Day 9 hand pass (0b0bba9) struck these -- "On Day 8" -> "Last week",
+    # "the Day 3 idiom" -> "the same one we used before" -- and she confirmed the
+    # ruling corpus-wide on 2026-09-17: "I'd much prefer referencing topics rather
+    # than days."  A day names WHEN, never WHAT: the reader should not have to
+    # reconstruct the course calendar to know which topic is meant, and a
+    # subsection reached from search has no calendar at all (B-11b).
+    #
+    # This one cannot live in RULES, which matches the whole file.  Three things
+    # keep their day and would otherwise be a hundred false positives:
+    #   <title>        "Day 9 In-Class: GPIO Interrupts" is structural (B-1), and
+    #                  S-20 explicitly allows a day in a heading.
+    #   <instructor>   presenter-facing, the same carve-out L-18 makes for Parts.
+    #   <note>         likewise -- it is the presenter note.
+    # A day as a plain adverbial of time is also correct and is hers: "we'll see on
+    # Thursday why", "tomorrow".  Neither matches this pattern, which is only ever
+    # "Day <number>".
+    #
+    # WARN, not error: each one needs a topic chosen for it, and the sweep is
+    # authorized but not yet done (plans/style-sweep.md N-11 carries the counts).
+    # Promote to "error" once that sweep lands, so it cannot come back.
+    skip = []
+    for tag in ("instructor", "note"):
+        for m in re.finditer(rf"<{tag}\b[^>]*>.*?</{tag}>", text, re.S):
+            skip.append((m.start(), m.end()))
+    # A <title> is exempt only when the day IS the heading -- "Day 9 In-Class:
+    # GPIO Interrupts" -- which is the section-naming convention B-1 sets.  A
+    # title that merely mentions a day is using it as a topic name and is exactly
+    # what this rule is for: ch-motors' table title "The five writes, on Day 9's
+    # line and on Day 12's" reads better as "on PB4's line and on PA15's", and an
+    # exemption for every <title> would have hidden it.
+    for m in re.finditer(r"<title\b[^>]*>(.*?)</title>", text, re.S):
+        if re.match(r"\s*Day \d+[xX]?\b", m.group(1)):
+            skip.append((m.start(), m.end()))
+    for m in re.finditer(r"\b[Oo]n Day \d+[xX]?\b", text):
+        if any(a <= m.start() < b for a, b in skip):
+            continue
+        problems.append(("warn", line_of(text, m.start()), "L-11",
+                         "a day used as the name of a topic in student-facing "
+                         "text — say what it was, not when it was  ->  "
+                         f"{m.group(0)!r}"))
+
     # B-14: an int main() ends with a return, in every listing students copy.
     for m in re.finditer(
             r"<program language=\"c\"><code><!\[CDATA\[(.*?)\]\]></code></program>",

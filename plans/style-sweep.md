@@ -661,6 +661,15 @@ on PA15's", which is more precise anyway.
   the *name of a topic* the reader is expected to look up.
 - **ch-servos and ch-photosensors are passed 1/10 chapters.**  Deletions only
   there; do not reword a sentence of hers to fit a topic in.
-- **L-11 currently says the opposite** and has to be updated, or this regresses
-  on the next pass.  Fold the ruling into L-11 (or give it its own L-number) in
-  `AUTHORING-book.md` in the same commit, citing her sentence above.
+- **L-11 is already updated** (2026-09-17, commit below).  It now carries the
+  ruling, her sentence as the citation, and the four exemptions;
+  `check_rules.py` has a scoped check that **warns** on the student-facing form
+  and skips structural day headings, `<instructor>`, `<note>`, and a `<title>`
+  that the day names.  **The session doing the sweep does not need to touch
+  L-11** -- it needs to clear the warnings and then promote the severity from
+  `"warn"` to `"error"` in `scripts/check_rules.py` as the last step, so the
+  rule cannot regress.
+- The linter's count is **66**, two more than the 64 measured by hand: the extra
+  two are in ch-motors' table title "The five writes, on Day 9's line and on
+  Day 12's", which the by-hand pass had excluded along with the structural
+  headings and which is in fact one of the clearest cases to fix.
