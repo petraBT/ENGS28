@@ -144,7 +144,7 @@
                 nothing.  As long as the switching is fast enough, the motor's own
                 mechanical inertia smooths the pulses out, and the motor turns as though
                 it were driven by that steady average.  This is the same trick we used
-                to dim the seven-segment display on Day 10: there it was your eye,
+                to dim the seven-segment display: there it was your eye,
                 rather than a spinning mass, that did the averaging.
             </p>
             <p>
@@ -1020,7 +1020,7 @@
             <p>
                 The H-bridge sets the motor's direction.  In this part we turn to its
                 speed, which we set with <term>pulse-width modulation</term> (PWM).  We have
-                done this once already: the <c>SevenSeg_dim()</c> function we wrote on Day 10
+                done this once already: the <c>SevenSeg_dim()</c> function we wrote for the display
                 pulsed the display's LEDs, and a wider pulse gave a brighter digit.  The same
                 idea sets a motor's speed.  The
                 reading showed the difficulty: a GPIO pin
@@ -1036,7 +1036,7 @@
             <slide xml:id="sl-day11-pwm-idea">
     <p>The H-bridge sets the motor's direction. In this part we turn to its speed, which we set with pulse-width modulation (PWM).</p>
     <ul>
-        <li>We have done this once already: dimming the seven-segment display on Day 10 pulsed its LEDs, and a wider pulse gave a higher duty cycle and a brighter light. The same idea sets a motor's speed.</li>
+        <li>We have done this once already: dimming the seven-segment display pulsed its LEDs, and a wider pulse gave a higher duty cycle and a brighter light. The same idea sets a motor's speed.</li>
         <li>A GPIO pin is either fully HIGH or fully LOW, so it cannot hold an in-between voltage, and the STM32C031C6 has no true DAC to create one for us.</li>
         <li>So we switch the full supply on and off quickly, and let the fraction of each period spent HIGH, the <term>duty cycle</term>, set the average voltage.</li>
         <li>The motor's inertia smooths the pulses, and the shaft turns as though it were driven by that average.</li>
@@ -1076,7 +1076,7 @@
             </figure>
             <slide xml:id="sl-day11-counter-compare" ref="fig-pwm-counter-compare" room="compressed">
     <ul>
-        <li>A counter counts up from zero and resets when it reaches a fixed top value, over and over. That top value is the timer's ARR, the same auto-reload register we set on Day 8.</li>
+        <li>A counter counts up from zero and resets when it reaches a fixed top value, over and over. That top value is the timer's ARR, the same auto-reload register we set for periodic interrupts.</li>
         <li>A second number, the compare value, is checked against the counter. While the counter is below it the output is HIGH, and once the counter reaches it the output goes LOW until the counter resets. That number lives in the timer's CCR1, the capture/compare register.</li>
         <li>A larger compare value keeps the output HIGH for more of each period, which is a larger duty cycle.</li>
         <li>The entire process runs in the timer hardware, so once it is set up the CPU does nothing to keep it going. The output goes to a microcontroller pin, and from there it sets the motor's speed.</li>
@@ -1086,14 +1086,14 @@
 
             <p>
                 We'll use timer TIM14 for this, the same timer we set up for periodic
-                interrupts on Day 8, and route its output onto a pin.  Not every pin can
+                interrupts, and route its output onto a pin.  Not every pin can
                 carry a given timer's output; the
                 <url href="external/stm32c031_datasheet.pdf">STM32C031C6 datasheet</url>'s
                 pin table lists which can.
             </p>
             <slide xml:id="sl-day11-tim14-pin">
     <ul>
-        <li>We'll use timer TIM14, the same timer we used for periodic interrupts on Day 8.</li>
+        <li>We'll use timer TIM14, the same timer we used for periodic interrupts.</li>
         <li>Almost every pin can carry a PWM output, driven by one counter or another; the datasheet's Table 12 shows which counter to use for a particular pin, and which alternate function mode.</li>
     </ul>
     <note>This is the table they go to in the first task of the activity, so leave it on the wall while they start.</note>
@@ -1355,12 +1355,12 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
             </p>
             <p>
                 The PWM signal itself comes out of a peripheral we have already studied.  TIM14
-                is the same timer we set up on Day 8 to interrupt once a millisecond, and
+                is the same timer we set up to interrupt once a millisecond, and
                 there we looked only at its timing core: the prescaler that divides the system
                 clock down, the counter CNT that counts the divided pulses, and the
                 auto-reload register that sets how far the counter runs before it starts
                 again (<xref ref="fig-tim14-block"/>).  PWM is built into that same timer, in
-                the machinery around that core that we left aside on Day 8.
+                the machinery around that core that we left aside then.
             </p>
             <p>
                 <xref ref="fig-tim14-block-full"/> is the whole of TIM14 as the reference
@@ -1382,8 +1382,8 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                  day: Part 2's discoveries are not answered inside this figure.
                  DO NOT add register names to it.  The omission is deliberate. -->
             <figure xml:id="fig-tim14-block-full">
-                <caption>TIM14 in full, as RM0490 Figure 165 prints it.  On Day 8 we
-                looked only at this timer's core (the prescaler, the counter, and the
+                <caption>TIM14 in full, as RM0490 Figure 165 prints it.  When we used
+                it for periodic interrupts we looked only at this timer's core (the prescaler, the counter, and the
                 auto-reload value it counts up to, <xref ref="fig-tim14-block"/>) and said
                 the capture/compare machinery around it would come back in the motor
                 chapters.  This is it: now we introduce a new timer mode that allows us to
@@ -1395,7 +1395,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 <image source="images/Day11x-Motors(2)/fig-tim14-block-full.png" width="95%"/>
             </figure>
             <slide xml:id="sl-day11x-tim14-block" ref="fig-tim14-block-full">
-    <caption>The same timer we used on Day 8, with a register we didn't use then: the compare register, and the path from it to the pin.</caption>
+    <caption>The same timer we used for periodic interrupts, with a register we didn't use then: the compare register, and the path from it to the pin.</caption>
     <note>≈ 4 min, and it is a locate-along, not group work — show of hands. Ask for the three blocks Day 8 and Day 11 gave them numbers for: prescaler (÷6), the counter, and the top value (1250). Then point at what is new around them — the capture/compare register and the output control block — which is exactly what the timers chapter said would come back here. The point is that the timer is a thing with parts, before Part 2 goes hunting for the registers of those parts. Do not name CCMR1 or CCER here; Part 2 has to find them.</note>
 </slide>
         </subsection>
@@ -1408,10 +1408,10 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
 
             <p>
                 <c>TTmotor_ramp.c</c>, which we ran on Tuesday, drives exactly one pin: PA7,
-                which you found on Day 11 is where TIM14's channel 1 comes out.  Getting that pin to
+                which you found is where TIM14's channel 1 comes out.  Getting that pin to
                 carry a PWM waveform takes twelve steps of setup, and most of them write
-                registers we have written before: some on Day 8, when we first used this
-                timer, and some on Day 11, when we configured the pin.  So before we
+                registers we have written before: some when we first used this
+                timer, and some when we configured the pin.  So before we
                 go looking for what is new, here is what we already know how to do.
             </p>
             <table xml:id="table-day11x-recall">
@@ -1588,7 +1588,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                  this prediction slide, so re-check sl-day11x-predict-ccr1 if the
                  file is ever replaced. -->
             <figure xml:id="fig-pwm-scope-still">
-                <caption>One frozen moment of the trace you watched on Day 11
+                <caption>One frozen moment of the trace you watched earlier
                 (<xref ref="fig-pwm-scope"/>).  The window is about two milliseconds wide, so
                 it holds roughly three periods of the 1.6 kHz waveform and the duty cycle
                 barely changes across the screen.</caption>
@@ -1596,7 +1596,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
             </figure>
             <slide xml:id="sl-day11x-predict-ccr1" ref="fig-pwm-scope-still">
     <ul>
-        <li>This is the trace you measured on Day 11, while the ramp was running.</li>
+        <li>This is the trace you measured earlier, while the ramp was running.</li>
         <li>The width of the HIGH part changed as the motor sped up and slowed down. The period did not.</li>
         <li>So which of the two numbers we set up (the value the counter runs to, or the value it is compared against) is the program rewriting every two seconds?</li>
     </ul>
@@ -1852,7 +1852,7 @@ GPIOA->AFR[0] |= GPIO_AF4 << GPIO_AFRL_AFSEL7_Pos;
                 you have already looked up.
             </p>
             <p>
-                The pin first.  These are the same three operations we used on Day 11:
+                The pin first.  These are the same three operations we used before:
                 give the port a clock, put the pin in alternate-function mode, and select
                 which alternate function.
             </p>
@@ -2155,7 +2155,7 @@ void tim14_pwm_set(uint16_t value) {
                     brake?</p></statement>
                 </task>
                 <task xml:id="task-day11x-stretch-50hz">
-                    <statement><p>On Day 11 you predicted what would change if this motor
+                    <statement><p>You predicted earlier what would change if this motor
                     ran at 50 Hz instead of 1.6 kHz.  Now work out the numbers: from a
                     12 MHz clock, what does the prescaler have to divide by, and what does
                     the counter have to run up to, to give a 50 Hz PWM with 2000 steps of
@@ -2791,7 +2791,7 @@ void tim14_pwm_set(uint16_t value) {
                 can even look as though it is responding to the motor.
             </p>
             <p>
-                You have seen this behavior before under a different name.  On Day 10 the
+                You have seen this behavior before under a different name.  The
                 two I2C pins were configured as <term>open-drain</term> outputs
                 (<xref ref="subsec-day10-pins"/>), which can pull a line down and cannot
                 drive it up, and the bus needed pull-up resistors for exactly the reason
@@ -2843,7 +2843,7 @@ void tim14_pwm_set(uint16_t value) {
     <ul>
         <li><term>Why 3.3 V, and not the sensor's own 5 V.</term> The resistor's rail is what sets the HIGH level, and 3.3 V is what the STM32C031C6's pins expect. Pulled up to 5 V, this line would carry 5 V into whichever pin you wired it to.</li>
         <li>Using a much smaller resistor wastes current and makes the transistor work harder to pull the line down. A much larger resistor takes too long to bring the line back up against the stray capacitance of the wiring, and picks up more noise. Ten kilohms is comfortably inside the wide middle.</li>
-        <li>In Lab 6 you can use this resistor, or enable the pin's own internal pull-up with <c>PUPDR</c> the way you did on Day 3. Today we use the external one, because we are putting a scope probe on that node.</li>
+        <li>In Lab 6 you can use this resistor, or enable the pin's own internal pull-up with <c>PUPDR</c> the way you did for the button. Today we use the external one, because we are putting a scope probe on that node.</li>
     </ul>
     <note>≈ 2 min. This is the one they have not had before — Day 3 and Day 10 both gave them pull-ups without a value argument. Do not turn it into a calculation; it is a trade-off with a wide middle, which is why 10 kΩ is the answer to a lot of these questions.</note>
 </slide>
@@ -3103,7 +3103,7 @@ void tim14_pwm_set(uint16_t value) {
                 notice one at any moment.  That is what rules out <c>delay_ms()</c>: it can serve
                 exactly one of the three jobs, because while it is counting out its
                 milliseconds the program is doing nothing else whatsoever, the same
-                problem we watched a polled button counter have on Day 9.  In Lab 6 you
+                problem we watched a polled button counter have.  In Lab 6 you
                 are asked not to use <c>delay_ms()</c> for timing at all, and to use
                 <c>milliseconds()</c> instead.
             </p>
@@ -3118,7 +3118,7 @@ void tim14_pwm_set(uint16_t value) {
             <slide xml:id="sl-day12-three-rates" ref="fig-three-rates" stack="yes">
     <ul>
         <li>By the end of Lab 6 your program has three jobs, and they run at three different rates: sample the potentiometer 100 times a second, notice every pulse from the sensor as it arrives, and put a new number on the display.</li>
-        <li><c>delay_ms()</c> can only do one of them at a time. While it is counting out its milliseconds, the program is doing nothing else at all, which is the same problem we watched a polled button counter have on Day 9.</li>
+        <li><c>delay_ms()</c> can only do one of them at a time. While it is counting out its milliseconds, the program is doing nothing else at all, which is the same problem we watched a polled button counter have.</li>
     </ul>
     <caption>The pulses along the bottom line up with none of the three rates.</caption>
     <note>≈ 1 min. Do not explain milliseconds() yet — the next slide is the code. The Day 9 callback is the one to lean on: they have already seen a loop miss an event because it was busy waiting.</note>
@@ -3277,7 +3277,7 @@ void SysTickInit(void) {
             </p>
             <p>
                 <term>Taking a falling-edge interrupt on PA15.</term>  You have set one up
-                before, on Day 9, for the button on PB4.
+                before, for the button on PB4.
             </p>
             <p>
                 We'll use the interrupt.  Whether polling is fast enough depends on the
@@ -3300,7 +3300,7 @@ void SysTickInit(void) {
             <slide xml:id="sl-day12-two-answers">
     <ul>
         <li><term>Read the pin every pass.</term> Move the read out of the 10 ms beat so the loop looks at it as fast as it can go, and use <c>milliseconds()</c> only to decide when to sample the potentiometer and when to close the one-second counting window. This works, and it costs a promise: nothing anywhere in the loop may ever block, for as long as the program lives.</li>
-        <li><term>Take a falling-edge interrupt on PA15.</term> This is what we set up on Day 9 for the button on PB4, with 15 in place of 4, and PA15 is on the same handler you already wrote, <c>EXTI4_15_IRQHandler</c>. The port selection is in <c>EXTI_EXTICR4</c>, which the Reference Manual gives in section 12.5.6; section 12.5.9 there is only the register map.</li>
+        <li><term>Take a falling-edge interrupt on PA15.</term> This is what we set up for the button on PB4, with 15 in place of 4, and PA15 is on the same handler you already wrote, <c>EXTI4_15_IRQHandler</c>. The port selection is in <c>EXTI_EXTICR4</c>, which the Reference Manual gives in section 12.5.6; section 12.5.9 there is only the register map.</li>
         <li>The second one is the one this course goes with, and the reason is not the arithmetic. The arithmetic depends on how fast this particular motor turns and how wide these particular slots are. The interrupt does not: the pulse is counted whatever else the loop is doing, at any speed.</li>
     </ul>
     <note>≈ 3 min. The body prose no longer explains volatile or lists the five EXTI writes — Petra, 2026-08-26: "You are doing the work for them. This is THEIR work." The answers live in inst-day12-main-loop-sketch and in subsec-motors-ref-counting; do not hand them over here. Take three or four answers from the room BEFORE this slide goes up — the commit is the only place all day where a student makes this decision themselves. Describe the polled answer honestly rather than dismissing it: it is what Lab 6's text allows, and at these rates it works. What retires it is not that it fails here but that whether it fails depends on numbers nobody measured.</note>
@@ -3560,7 +3560,7 @@ void SysTickInit(void) {
                     <p>Start on paper.  Your program has to do three things at three
                     different rates.  The interrupt that counts the pulses is a
                     falling-edge interrupt on PA15 (D7), and it is the same one you
-                    wrote on Day 9 for the button on PB4: start from
+                    wrote for the button on PB4: start from
                     <c>counterResetButtonInt.c</c> and adapt it.</p>
                 </introduction>
                 <task xml:id="task-day12-sketch-rates">
@@ -4025,7 +4025,7 @@ int main(void) {
                 The rail is not a trade-off: whatever the resistor is tied to is the
                 voltage the wire presents to the pin, so it is 3.3 V.  In Lab 6 you can
                 keep the external resistor or leave it out and enable the pin's own
-                internal pull-up with <c>PUPDR</c>, the way you did on Day 3.  That one is about
+                internal pull-up with <c>PUPDR</c>, the way you did for the button.  That one is about
                 40 kΩ, four times the external resistor.  The external one
                 is what Day 12 uses, because there is a scope probe on that node;
                 <xref ref="fig-day12-lab6-build"/> draws the finished build with the
@@ -4064,15 +4064,15 @@ int main(void) {
                 The counter the handler increments must be declared <c>volatile</c>.
             </p>
             <table xml:id="table-day12-exti-lines">
-                <title>The five writes, on Day 9's line and on Day 12's</title>
+                <title>The five writes, on PB4's line and on PA15's</title>
                 <tabular halign="left" top="major" bottom="major" left="minor" right="minor">
                     <col width="34%"/>
                     <col width="33%"/>
                     <col width="33%"/>
                     <row header="yes" bottom="major">
                         <cell>What it does</cell>
-                        <cell>Day 9, the button on PB4</cell>
-                        <cell>Day 12, the sensor on PA15</cell>
+                        <cell>The button on PB4</cell>
+                        <cell>The sensor on PA15</cell>
                     </row>
                     <row bottom="minor">
                         <cell>Choose which port drives the line</cell>

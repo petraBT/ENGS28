@@ -265,9 +265,10 @@ def check_file(path, quiet=False):
     # Thursday why", "tomorrow".  Neither matches this pattern, which is only ever
     # "Day <number>".
     #
-    # WARN, not error: each one needs a topic chosen for it, and the sweep is
-    # authorized but not yet done (plans/style-sweep.md N-11 carries the counts).
-    # Promote to "error" once that sweep lands, so it cannot come back.
+    # ERROR since the sweep landed (2026-09-17, all 66 occurrences cleared in
+    # source/ and assets/decks/day13.json).  It was a warning only while the
+    # corpus still had to be swept; now that it is clean, a new one is a
+    # regression and should fail the check rather than scroll past.
     skip = []
     for tag in ("instructor", "note"):
         for m in re.finditer(rf"<{tag}\b[^>]*>.*?</{tag}>", text, re.S):
@@ -284,7 +285,7 @@ def check_file(path, quiet=False):
     for m in re.finditer(r"\b[Oo]n Day \d+[xX]?\b", text):
         if any(a <= m.start() < b for a, b in skip):
             continue
-        problems.append(("warn", line_of(text, m.start()), "L-11",
+        problems.append(("error", line_of(text, m.start()), "L-11",
                          "a day used as the name of a topic in student-facing "
                          "text — say what it was, not when it was  ->  "
                          f"{m.group(0)!r}"))

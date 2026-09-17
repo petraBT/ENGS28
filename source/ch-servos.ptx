@@ -590,7 +590,7 @@
         <subsection xml:id="subsec-day15-timer-design">
             <title>Part 3: Designing the Timer for the Servo's Pulse</title>
             <p>
-                On Day 11x we worked out what the prescaler and the auto-reload value would
+                We worked out what the prescaler and the auto-reload value would
                 have to be for a 50 Hz PWM (<xref ref="task-day11x-stretch-50hz"/>): the
                 12 MHz clock has to be divided down by a factor of 240,000 to get 50 Hz
                 (12,000,000 clock cycles per second divided by 50 periods per second is
@@ -600,7 +600,7 @@
             </p>
             <slide xml:id="sl-day15-second-design">
     <ul>
-        <li>On Day 11x we worked out what the prescaler and the auto-reload value would have to be for a 50 Hz PWM: the 12 MHz clock has to be divided down by a factor of 240,000 (12,000,000 cycles per second divided by 50 periods per second), and the prescaler and the counter split that factor between them.</li>
+        <li>We worked out what the prescaler and the auto-reload value would have to be for a 50 Hz PWM: the 12 MHz clock has to be divided down by a factor of 240,000 (12,000,000 cycles per second divided by 50 periods per second), and the prescaler and the counter split that factor between them.</li>
         <li>Today we'll repeat that computation for the servo, with a new constraint: the servo only uses pulse widths between 1 ms and 2 ms, and its dead band sets the finest change in width it can use.</li>
         </ul>
     <caption>The numbers we settle here become the five #define lines of the program we'll build afterwards.</caption>
@@ -793,18 +793,18 @@ void tim14_pwm_set(uint16_t pulse);
     <note>≈ 1 min. Three files plus their own adc.c/adc.h; the include guard is left off the slide.</note>
 </slide>
             <p>
-                The TIM14 functions in the timer library, <c>tim.c</c>, are the ones we used on Day 11x (<xref ref="subsec-day11x-driver"/>), with two changes.  The prescale
+                The TIM14 functions in the timer library, <c>tim.c</c>, are the ones we used (<xref ref="subsec-day11x-driver"/>), with two changes.  The prescale
                 factor and the counter's top value are now parameters, passed in from the
-                program, rather than <c>#define</c> lines at the top of the driver.  And <c>tim14_pwm_set()</c> no longer checks its value: on Day 11x it checked that the value it was given was within the range the counter can represent before writing it to <c>CCR1</c>; here it writes the value it is given.  The range check is now in the program, in <c>updateServo()</c>, where the range is <c>SERVO_MIN</c> to <c>SERVO_MAX</c>.  Every other register write in <c>tim14_pa7_pwm_init()</c> is the same as before; the whole file is printed in <xref ref="subsec-servo-ref-driver"/>, and <xref ref="fig-tim14-register-map"/> has the registers.  Here are the lines of <c>tim14_pa7_pwm_init()</c> that take the two numbers, and the whole of <c>tim14_pwm_set()</c>.  The initialization writes
+                program, rather than <c>#define</c> lines at the top of the driver.  And <c>tim14_pwm_set()</c> no longer checks its value: it used to check that the value it was given was within the range the counter can represent before writing it to <c>CCR1</c>; here it writes the value it is given.  The range check is now in the program, in <c>updateServo()</c>, where the range is <c>SERVO_MIN</c> to <c>SERVO_MAX</c>.  Every other register write in <c>tim14_pa7_pwm_init()</c> is the same as before; the whole file is printed in <xref ref="subsec-servo-ref-driver"/>, and <xref ref="fig-tim14-register-map"/> has the registers.  Here are the lines of <c>tim14_pa7_pwm_init()</c> that take the two numbers, and the whole of <c>tim14_pwm_set()</c>.  The initialization writes
                 <c>ARR = timerMax-1</c>, so <c>PWM_TIMER_MAX</c> is the number of counts
                 in one period, and <c>tim14_pwm_set()</c> writes <c>CCR1 = value</c>,
                 so the value is the number of counts the pin is HIGH, the same convention
-                as on Day 11x.  <c>SERVO_MID</c> is the middle of the range; the loop does
+                as before.  <c>SERVO_MID</c> is the middle of the range; the loop does
                 not use it, but it is the number that parks the horn at its center.
             </p>
                         <program language="c"><code><![CDATA[
 void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
-	// ... the pin and the clock setup, as on Day 11x ...
+	// ... the pin and the clock setup, as before ...
 
 	// Set prescaler
 	TIM14->PSC = prescaleFactor-1;
@@ -815,7 +815,7 @@ void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
 	// Set the compare register value - start with a speed of 0
 	TIM14->CCR1 = 0;
 
-	// ... the PWM mode, the output enable and the timer enable, as on Day 11x ...
+	// ... the PWM mode, the output enable and the timer enable, as before ...
 }
 ]]></code></program>
             <program language="c"><code><![CDATA[
@@ -835,7 +835,7 @@ void updateServo(uint16_t value) {
 }
 ]]></code></program>
             <p>
-                On Day 11x the limit in <c>tim14_pwm_set()</c> was the timer's: the largest count the counter can represent.  The servo's safe range, 1 ms to 2 ms, is much narrower than that, and it is a property of the servo, not of the timer.  Outside that range the servo drives against its own mechanical stops.  So the program, which is written for this servo, applies the limit, in <c>updateServo()</c>, and every value reaches <c>CCR1</c> through that function.
+                The limit in <c>tim14_pwm_set()</c> used to be the timer's: the largest count the counter can represent.  The servo's safe range, 1 ms to 2 ms, is much narrower than that, and it is a property of the servo, not of the timer.  Outside that range the servo drives against its own mechanical stops.  So the program, which is written for this servo, applies the limit, in <c>updateServo()</c>, and every value reaches <c>CCR1</c> through that function.
             </p>
             <slide xml:id="sl-day15-tim-c-1">
     <p>The whole of <c>tim.c</c>, with its comments left out, in two halves. First the tick timer and the one-line write of <c>CCR1</c>:</p>
@@ -886,14 +886,14 @@ void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
     <note>≈ 1 min. Do not re-walk the register writes; the two changes are the next slide.</note>
 </slide>
             <slide xml:id="sl-day15-driver-numbers">
-        <p>The TIM14 functions in the timer library, <c>tim.c</c>, are the ones we used on Day 11x, with two changes. First, the prescale factor and the counter's top value are now parameters of <c>tim14_pa7_pwm_init()</c>, passed in from the program, rather than <c>#define</c> lines at the top of the driver. The initialization writes <c>ARR = timerMax-1</c>, so <c>PWM_TIMER_MAX</c> is the number of counts in one period, and <c>tim14_pwm_set()</c> writes <c>CCR1 = value</c>, so the value is the number of counts the pin is HIGH, the same convention as on Day 11x. Second, <c>tim14_pwm_set()</c> no longer checks its value against the counter's range: it writes the value it is given.</p>
+        <p>The TIM14 functions in the timer library, <c>tim.c</c>, are the ones we used before, with two changes. First, the prescale factor and the counter's top value are now parameters of <c>tim14_pa7_pwm_init()</c>, passed in from the program, rather than <c>#define</c> lines at the top of the driver. The initialization writes <c>ARR = timerMax-1</c>, so <c>PWM_TIMER_MAX</c> is the number of counts in one period, and <c>tim14_pwm_set()</c> writes <c>CCR1 = value</c>, so the value is the number of counts the pin is HIGH, the same convention as before. Second, <c>tim14_pwm_set()</c> no longer checks its value against the counter's range: it writes the value it is given.</p>
     <program language="c"><code><![CDATA[
 void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
-	// ... the pin and the clock setup, as on Day 11x ...
+	// ... the pin and the clock setup, as before ...
 	TIM14->PSC = prescaleFactor-1;
 	TIM14->ARR = timerMax-1;      // timerMax counts per period
 	TIM14->CCR1 = 0;
-	// ... the PWM mode and the enables, as on Day 11x ...
+	// ... the PWM mode and the enables, as before ...
 }
 
 void tim14_pwm_set(uint16_t value) {
@@ -914,7 +914,7 @@ void updateServo(uint16_t value) {
 }
 ]]></code></program>
     <ul>
-                <li>On Day 11x the limit in <c>tim14_pwm_set()</c> was the timer's: the largest count the counter can represent. The servo's safe range, 1 ms to 2 ms, is much narrower than that, and it is a property of the servo, not of the timer. Outside that range the servo drives against its own mechanical stops. So the program, which is written for this servo, applies the limit.</li>
+                <li>The limit in <c>tim14_pwm_set()</c> used to be the timer's: the largest count the counter can represent. The servo's safe range, 1 ms to 2 ms, is much narrower than that, and it is a property of the servo, not of the timer. Outside that range the servo drives against its own mechanical stops. So the program, which is written for this servo, applies the limit.</li>
     </ul>
     <note>≈ 1 min.</note>
 </slide>
