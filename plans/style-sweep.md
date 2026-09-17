@@ -613,7 +613,54 @@ Day N" remain in seven chapters** — ch-motors 19, ch-accelerometers 8,
 ch-timers-interrupts 8, **ch-servos 7**, ch-adc 4, ch-debugging 2,
 ch-io-datasheets 1.  ch-intro-blinky and ch-gpio-interrupts have none.
 
-That ch-servos, a passed 1/10 calibration chapter, still has seven is the
-reason **to ask rather than sweep**: either the ruling is narrower than the
-commit message reads, or it was simply never carried.  Put it to her as a
-numbered question; do not decide it.
+That ch-servos, a passed 1/10 calibration chapter, still has seven is because
+the ruling was never carried, not because it is narrower.
+
+**ASKED AND ANSWERED, 2026-09-17.**  Her words: *"Indeed, I don't like the day
+references but since they kept coming up I gave up on that as a more minor
+issue.  If it's a relatively easy sweep I'd much prefer referencing topics
+rather than days."*  So the ruling **does** hold corpus-wide and the sweep is
+authorized.  She gave it up only because it looked expensive; measured, it is
+not.
+
+**Measured surface, 2026-09-17 - 64 student-facing occurrences**, so no later
+session need re-measure:
+
+| Surface | Count |
+| --- | --- |
+| book prose (`<slide>`, `<instructor>`, `<note>` and XML comments excluded) | 44 |
+| inside `<slide>` blocks (`<note>` excluded) | 19 |
+| deck glue text (`presenterNote` excluded) | 1 |
+
+By chapter: ch-motors 27, ch-accelerometers 8, ch-timers-interrupts 7,
+ch-servos 13, ch-adc 5, ch-debugging 3, ch-photosensors 1, ch-io-datasheets 1,
+`day13.json` 1.  **ch-intro-blinky and ch-gpio-interrupts have none**, which is
+why this can ride along with session 4 without touching either of its chapters.
+
+**Why it is cheaper than 64 edits.**  In the large majority the sentence already
+names the topic and the day reference is redundant on top of it, so the edit is a
+**deletion**: "the same timer we set up for periodic interrupts ~~on Day 8~~",
+"the same three operations we used ~~on Day 11~~", "the same list of mode
+constants you used ~~on Day 6~~", "~~as wired on Day 9x~~" -> "wired as before".
+Roughly 30 of the 64 are that.  About 25 need two or three words ("On Day 1 the
+delay was a busy-wait loop" -> "In our first blinky the delay was ...").  Around
+5 need a real decision, and one of those improves the text outright: the table
+title "The five writes, on Day 9's line and on Day 12's" -> "on PB4's line and
+on PA15's", which is more precise anyway.
+
+**The guardrails, which matter more than the edits:**
+
+- **Section and slide TITLES keep their day.**  "Day 9 In-Class: GPIO
+  Interrupts" is structural (B-1), and S-20 explicitly permits a day in a
+  heading.  Same for a deck's `notice` title such as "Looking ahead to Day 4".
+- **`<instructor>` blocks, `<note>` and `presenterNote` keep theirs.**  They are
+  presenter-facing, which is the same carve-out L-18 already makes for Part
+  numbers.
+- **A day as a plain adverbial of time stays**: "we'll see on Thursday why" and
+  "tomorrow" are hers and are correct (S-20, L-11).  What goes is a day used as
+  the *name of a topic* the reader is expected to look up.
+- **ch-servos and ch-photosensors are passed 1/10 chapters.**  Deletions only
+  there; do not reword a sentence of hers to fit a topic in.
+- **L-11 currently says the opposite** and has to be updated, or this regresses
+  on the next pass.  Fold the ruling into L-11 (or give it its own L-number) in
+  `AUTHORING-book.md` in the same commit, citing her sentence above.
