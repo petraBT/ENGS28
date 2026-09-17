@@ -173,6 +173,17 @@
                     <xsl:value-of select="@stack"/>
                 </xsl:attribute>
             </xsl:if>
+            <!-- Optional layout hint: mediawide="yes" → narrow the bullet column
+                 and give the width to the figure, for a two-column slide whose
+                 image carries fine detail (scope screenshots, pinouts).  Petra,
+                 2026-09-17, on the Day 3x trigger slide: "Can you make this image
+                 bigger and reduce the column width of the left-hand column?  There
+                 is plenty of space for this on the left." -->
+            <xsl:if test="@mediawide">
+                <xsl:attribute name="data-deck-mediawide">
+                    <xsl:value-of select="@mediawide"/>
+                </xsl:attribute>
+            </xsl:if>
             <!-- Optional: room="yes" → leave writing space after each list item,
                  for predict/practice slides students (and the instructor) write on.
                  room="compressed" is the opposite: tighten the gaps (not the type

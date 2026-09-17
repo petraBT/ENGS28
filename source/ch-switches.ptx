@@ -85,16 +85,21 @@
                 recent sample.
             </p>
             <p>
-                The input circuitry does not interpret voltage as a strict binary
-                threshold at a single point.  Instead, there are two separate
-                thresholds.  Any voltage below <term><m>V_{IL}</m></term> (the
-                maximum low input voltage, roughly <m>0.3 \times V_{DD}</m>, where
-                <m>V_{DD}</m> is the supply voltage, 3.3 V on the Nucleo, so about
-                1.0 V) is reliably read as logic 0.
-                Any voltage above <term><m>V_{IH}</m></term> (the minimum high input
-                voltage, roughly <m>0.7 \times V_{DD} \approx 2.3\text{ V}</m>)
-                is reliably read as logic 1.  Voltages in between fall in an
-                indeterminate zone where the result is unpredictable.
+                The Schmitt trigger does not compare the pin voltage against a
+                single threshold.  It has two.  Any voltage below
+                <term><m>V_{\mathrm{IL}}</m></term> (the maximum low input voltage,
+                roughly <m>0.3 \times V_{\mathrm{DD}}</m>, where
+                <m>V_{\mathrm{DD}}</m> is the supply voltage, 3.3 V on the Nucleo,
+                so about 1.0 V) is reliably read as logic 0, and any voltage above
+                <term><m>V_{\mathrm{IH}}</m></term> (the minimum high input voltage,
+                roughly <m>0.7 \times V_{\mathrm{DD}} \approx 2.3\text{ V}</m>) is
+                reliably read as logic 1.  In between, the output does not float: the
+                Schmitt trigger holds whatever it last settled on, so a rising voltage
+                has to reach <m>V_{\mathrm{IH}}</m> before the pin reads 1 and a
+                falling one has to drop to <m>V_{\mathrm{IL}}</m> before it reads 0.
+                That gap between the two thresholds is called
+                <term>hysteresis</term>, and it is what makes a slow or slightly noisy
+                edge produce one clean transition rather than several.
             </p>
             <p>
                 In normal digital circuits, where signals are driven cleanly to
@@ -826,11 +831,12 @@ GPIOB->PUPDR &= ~(1U << 9);
             </slide>
 
             <slide xml:id="sl-day3-vil-vih">
-                <p>The input circuitry does not compare the pin voltage against a single threshold.  There are two:</p>
+                <p>The Schmitt trigger does not compare the pin voltage against a single threshold.  It has two:</p>
                 <ul>
-                    <li>Any voltage below <m>V_{IL}</m>, the maximum low input voltage, is reliably read as a logic 0.  That is about <m>0.3 \times V_{DD}</m>, where <m>V_{DD}</m> is the supply voltage, 3.3 V on the Nucleo, so about 1.0 V.</li>
-                    <li>Any voltage above <m>V_{IH}</m>, the minimum high input voltage (about <m>0.7 \times V_{DD} \approx 2.3</m> V), is reliably read as a logic 1.</li>
-                    <li>A voltage between the two is in an indeterminate zone, and what the input data register reads there is unpredictable.</li>
+                    <li>Any voltage below <m>V_{\mathrm{IL}}</m>, the maximum low input voltage, is reliably read as a logic 0.  That is about <m>0.3 \times V_{\mathrm{DD}}</m>, where <m>V_{\mathrm{DD}}</m> is the supply voltage, 3.3 V on the Nucleo, so about 1.0 V.</li>
+                    <li>Any voltage above <m>V_{\mathrm{IH}}</m>, the minimum high input voltage (about <m>0.7 \times V_{\mathrm{DD}} \approx 2.3</m> V), is reliably read as a logic 1.</li>
+                    <li>Between the two, the Schmitt trigger holds whatever it last settled on: a rising voltage has to reach <m>V_{\mathrm{IH}}</m> before it is read as 1, and a falling one has to drop to <m>V_{\mathrm{IL}}</m> before it is read as 0.</li>
+                    <li>That gap between the two thresholds is <term>hysteresis</term>, and it is why a slow or slightly noisy edge still produces one clean transition instead of several.</li>
                     <li>In ordinary digital circuits the signal is driven firmly to one rail or the other, so you stay well outside that zone.  It matters when a signal rises slowly, for example through a large RC filter, or when there is significant noise on the line.</li>
                 </ul>
                 <note>OPTIONAL / REVEAL.</note>
@@ -953,7 +959,7 @@ while (1) {
             <slide xml:id="sl-day3-debounce-preview">
                 <p>Tomorrow we'll be adding a capacitor across the button to suppress the bounce.  That makes the button behave better, and it makes this settling problem worse:</p>
                 <ul>
-                    <li>With a 0.1 µF cap the pin takes ~4 ms to reach HIGH.</li>
+                    <li>With a 0.1 µF capacitor the pin takes ~4 ms to reach HIGH.</li>
                     <li>That leaves even more time to accidentally read the old 0.</li>
                 </ul>
                 <note>OPTIONAL / REVEAL — preview of Day 3x.</note>
@@ -969,12 +975,16 @@ while (1) {
                 initialization, before sampling any pin.  You can also loop until the
                 pin reads 1; or start the pin as an output, drive it to 1, and then
                 switch it to input and enable the pull-up; or fit an external pull-up
-                instead of using the internal one.
+                instead of using the internal one, which helps only because an external
+                one can be far smaller than the internal 40 kΩ and so recharges the pin
+                faster.
             </p>
             <p>
-                This is not only a start-up problem.  It happens any time the pin is
-                pulled down, so your code has to account for it every time it reads a
-                button.  The reliable way to do that in ordinary code is a state
+                None of those removes the problem, because it is not only a start-up
+                problem.  It happens any time the pin is pulled down, so your code has
+                to account for it every time it reads a button.  A smaller external
+                pull-up only shortens the wait, and once the debounce capacitor is
+                fitted it works against the debouncing.  The reliable way to do that in ordinary code is a state
                 machine that acts only on a transition: make sure the program has gone
                 from PRESSED back to UNPRESSED before it takes another action.  That is
                 the pattern we'll build on Thursday.
@@ -985,9 +995,9 @@ while (1) {
                 <ul>
                     <li>Loop until the pin reads 1.</li>
                     <li>Start the pin as an output, drive it to 1, then switch it to input and enable the pull-up.</li>
-                    <li>Fit an external pull-up instead of using the internal one.</li>
+                    <li>Fit an external pull-up instead of using the internal one.  This helps only because an external one can be far smaller than the internal 40 kΩ, so it recharges the pin faster.</li>
                 </ul>
-                <p>This is not only a start-up problem: it happens any time the pin is pulled down, so your code has to account for it on every read.  The reliable way in ordinary code is a state machine that acts only on a transition, which is the pattern we'll build on Thursday.</p>
+                <p>None of those three removes the problem, because it is not only a start-up problem: it happens any time the pin is pulled down, so your code has to account for it on every read.  A smaller external pull-up only shortens the wait, and once the debounce capacitor is fitted tomorrow it works against the debouncing.  The reliable way in ordinary code is a state machine that acts only on a transition, which is the pattern we'll build on Thursday.</p>
                 <note>The bridge from today's settling problem to Thursday's state machine, and worth the two minutes even when the hour is tight.</note>
             </slide>
         </subsection>
@@ -1272,7 +1282,7 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                     <p>
                         Use cursors to measure the total duration of the
                         bounce on your button.  Compare results with other
-                        groups.  Do all switches bounce the same amount?
+                        students.  Do all switches bounce the same amount?
                     </p>
                 </task>
                 <task>
@@ -1310,17 +1320,24 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                 <title>Hardware Fix: Adding a Capacitor</title>
                 <introduction>
                     <p>
-                        Lab 2's Technical Study is where you size the capacitor
-                        for a given switch yourself.  Today we'll use the one in
-                        your kit.
+                        In Lab 2's Technical Study you learn how to select an
+                        appropriately sized capacitor for a given switch.  For
+                        today the 0.1 µF or 0.15 µF capacitor works well.
                     </p>
                     <figure xml:id="fig-cap-codes">
                         <caption>Reading metal film capacitor markings.
                         The three fields encode value, tolerance, and maximum voltage.
                         Value is two digits and a decimal point; the decimal point
                         can be an <c>n</c> (nano), a <c>p</c> (pico), or a dot (micro).
-                        Example: <c>.1J63</c> = 0.1 µF, ±5%, 63 V.</caption>
-                        <image source="images/Day03x-Debounce/ann-d3x-cap-codes.png" width="80%"/>
+                        Example: <c>.1J63</c> = 0.1 µF, ±5%, 63 V.  The two photographs
+                        are what the part looks like in your kit: a small squared-off
+                        block with two legs, in blue or cream depending on the
+                        manufacturer, with the marking printed on the flat face.</caption>
+                        <sidebyside widths="56% 20% 20%" margins="0% 0%" valign="middle">
+                            <image source="images/Day03x-Debounce/ann-d3x-cap-codes.png"/>
+                            <image source="images/Day03x-Debounce/metal-film-cap-blue.png"/>
+                            <image source="images/Day03x-Debounce/metal-film-cap-cream.png"/>
+                        </sidebyside>
                     </figure>
                     <figure xml:id="fig-rc-debounce-circuit">
                         <caption>Place the debounce capacitor (0.1 µF or 0.15 µF,
@@ -1334,8 +1351,7 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                 <task>
                     <p>
                         Identify the debounce capacitor in your kit using its
-                        marking code.  Kits are stocked with either a 0.1 µF or
-                        a 0.15 µF part.  Both work here.
+                        marking code.
                     </p>
                 </task>
                 <task>
@@ -1368,7 +1384,7 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
                 <caption>CH1 on the button (PB4), CH2 on the LED (PA5); minus leads to GND.</caption>
             </slide>
 
-            <slide xml:id="sl-day3x-trigger" ref="fig-day3x-trigger-setup">
+            <slide xml:id="sl-day3x-trigger" ref="fig-day3x-trigger-setup" mediawide="yes">
                 <ul>
                     <li>Source: Channel 1 · Type: Edge · Condition: Falling · Level: 1 V.</li>
                     <li>Time base: 20 µs/div to start.</li>
@@ -1393,7 +1409,7 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
             </slide>
 
             <slide xml:id="sl-day3x-cap-codes" ref="fig-cap-codes">
-                <caption>Metal-film capacitor markings: value, tolerance, and max voltage. The decimal point can be an <c>n</c> (nano), <c>p</c> (pico), or a dot (micro). Example: <c>.1J63</c> = 0.1 µF, ±5%, 63 V.</caption>
+                <caption>Metal-film capacitor markings: value, tolerance, and max voltage. The decimal point can be an <c>n</c> (nano), <c>p</c> (pico), or a dot (micro). Example: <c>.1J63</c> = 0.1 µF, ±5%, 63 V. In your kit it is the small squared-off block with two legs, blue or cream, with the marking on the flat face.</caption>
             </slide>
 
             <slide xml:id="sl-day3x-cap-place" ref="fig-rc-debounce-circuit">
@@ -1417,9 +1433,9 @@ if ((GPIOB->IDR & BUTTON_PIN) == 0) {
 
             <slide xml:id="sl-day3x-rc-why" ref="fig-day3x-rc">
                 <ul>
-                    <li><term>Switch open.</term>  Recall from Phys 14 that a capacitor stores charge and cannot change its voltage instantly; with the internal pull-up (~40 kΩ) it forms an RC low-pass filter.  The pull-up has charged the capacitor to 3.3 V, so the pin reads HIGH.</li>
+                    <li><term>Switch open.</term>  Recall from Phys 14 that a capacitor together with the internal pull-up (~40 kΩ) forms an RC low-pass filter.  Through the pull-up the capacitor charges slowly to 3.3 V, so once the threshold voltage is reached the pin reads HIGH.</li>
                     <li><term>Switch pressed.</term>  The closed contacts have almost no resistance, so the capacitor discharges through them at once and the pin goes LOW.</li>
-                    <li><term>Contacts bouncing.</term>  Each time they break, the capacitor can only recharge through the 40 kΩ pull-up, which is slow.  If C is large enough the voltage never climbs back above <m>V_{IH}</m> before the contacts close again, so no spurious edges reach the pin.</li>
+                    <li><term>Contacts bouncing.</term>  Each time they break, the capacitor can only recharge through the 40 kΩ pull-up, which is slow.  If RC is large enough the voltage never climbs back above <m>V_{\mathrm{IH}}</m> before the contacts close again, so no spurious edges reach the pin.</li>
                     <li><term>Switch fully closed.</term>  The capacitor stays discharged and the pin sits at 0.</li>
                 </ul>
                 <note>OPTIONAL / REVEAL.</note>
@@ -1606,10 +1622,10 @@ int main(void) {
 
             <figure xml:id="fig-rc-schematic">
                 <caption>RC debounce circuit: the internal pull-up resistance
-                <m>R_{pu}</m>, about 40 kΩ, and the external capacitor form an RC
+                <m>R_{\mathrm{pu}}</m>, about 40 kΩ, and the external capacitor form an RC
                 low-pass filter.  When the switch bounces open, the capacitor recharges
-                slowly through <m>R_{pu}</m>; if C is large enough, the voltage never
-                rises above <m>V_{IH}</m> during the bounce window.</caption>
+                slowly through <m>R_{\mathrm{pu}}</m>; if C is large enough, the voltage never
+                rises above <m>V_{\mathrm{IH}}</m> during the bounce window.</caption>
                 <image source="images/Day03x-Debounce/ann-d3x-rc-circuit.png" width="75%"/>
             </figure>
 
@@ -1665,8 +1681,9 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
                     the code and reflash.  It is also simple, and it needs no extra
                     components.  What it costs is processor cycles, spent waiting for
                     the bouncing to stop.  In practice a small capacitor together with
-                    a short software delay covers both sides, and Lab 2's Technical
-                    Study is where you size the capacitor for a given switch.
+                    a short software delay covers both sides.  In Lab 2's Technical
+                    Study you learn how to select an appropriately sized capacitor for a
+                    given switch.
                 </p>
             </insight>
         </subsection>
@@ -1681,28 +1698,44 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
             state machine and then design new ones from scratch.
         </p>
         <p>
-            The pattern we'll use for the rest of the term, whenever a program has to
-            respond to something that happens at a moment rather than to something that
-            is simply true, is the <term>finite state machine</term> (FSM).  It works by
-            keeping <em>what happened last time around the loop</em> in a state
-            variable, and acting only on a genuine transition.  That gets us out of the blocking <c>while</c> loop, which
-            waits for the button to settle and stops the rest of the program while it
-            waits.
+            A <term>finite state machine</term> (FSM) is a way of thinking about code
+            that is especially useful for event-driven programs such as those running on
+            embedded systems.  It describes a program as a finite number of possible
+            states, with transitions between them that capture the behavior and the
+            logic.  Think for example of a simple traffic light.  It has three states:
+            red, green and yellow.  (Things get more complex once we add states such as
+            red blinking or yellow blinking, so we won't do that here.)  Once the light
+            is in state red it stays there until a certain amount of time has passed, at
+            which point it transitions to the green state.  (Let's keep this simple too
+            and not think about traffic-aware lights.)  The timer going off to let the
+            light know it is time to change is what we would call an <term>event</term>,
+            and the switch from red to green a <term>transition</term>.  Once the light
+            is green it stays in that new <term>state</term> until another event occurs,
+            namely another timer that indicates it is time to switch to yellow.  The
+            timer going off is the event again, and the transition is the switch to
+            yellow.  Next, yellow transitions back to red after another amount of time
+            has passed.
         </p>
         <p>
-            Three words carry the whole pattern.  A <term>state</term> is what the
-            program remembers about where it has got to: not the value of a pin right
+            We'll use this pattern in our code.  We keep track of what state our system
+            is currently in via a state variable, and in our infinite loop we check only
+            whether an event has happened that merits a state transition.  So we never
+            wait for a transition signal in a blocking <c>while</c> loop.
+        </p>
+        <p>
+            So a <term>state</term> is what the
+            program remembers about where it currently is: not the value of a pin right
             now, but which of a small number of situations it is currently in.  An
             <term>event</term> is something that happens and that the program notices,
             such as a pin going LOW or an interval elapsing.  A
             <term>transition</term> is the move from one state to another that an event
             causes, and the <term>action</term> is whatever the program does on the way.
             A state machine is nothing more than a list of the states, and for each one,
-            which events move it where and what happens when they do.
+            which events move it to what new state and what happens along the way.
         </p>
         <p>
-            You have already written one.  <c>blinkySEQ.c</c> from Lab 1 lights three
-            LEDs in turn, and that is a machine with three states, one for each LED
+            Recall <c>blinkySEQ.c</c> from Lab 1: the program lights three
+            LEDs in turn, and we can think of that as a machine with three states, one for each LED
             (<xref ref="fig-fsm-blinkyseq"/>).  The only event is the half-second
             interval elapsing; each transition's action is to light the next LED; and
             after the third it wraps back to the first.  Written as a diagram, circles
@@ -1718,13 +1751,13 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
             <image source="images/Day04-Debounce/fsm-blinkyseq.svg" width="92%"/>
         </figure>
         <p>
-            Notice what the diagram makes obvious and the code does not: there are
+            Notice what the diagram makes obvious and what is a bit harder to see from code alone: there are
             exactly three situations the program can be in, and exactly one thing that
-            can move it between them.  That is the value of drawing one before writing
+            can move it between them.  That is the value of drawing a state machine before writing
             any code.  A blinking sequence is simple enough that a
             <c>for</c> loop handles it, but as soon as two different events can arrive,
             such as an interval elapsing and a button going down, the loop stops being
-            enough and the diagram is what keeps the behavior straight.
+            enough and the diagram is what helps you keep the behavior straight.
         </p>
         <p>
             For a button toggle, we need two states: <c>UNPRESSED</c> and <c>PRESSED</c>.
@@ -1778,7 +1811,7 @@ if (!(GPIOC->IDR & BTN_PIN)) {     // button pressed (active-low)
                 around the loop; that variable is a <term>state</term>, and the pattern
                 built on it is the <term>finite state machine</term>, which both Lab 2
                 design challenges need.  We'll start by reading each other's toggle
-                code, then write the same logic as a state diagram and as idiomatic C,
+                code, then write the same logic as a state diagram and as C,
                 then design two machines of our own on paper and implement one of
                 them.
             </p>
@@ -1884,7 +1917,7 @@ int main(void) {
                 the state, and toggle the LED on the transition from unpressed to
                 pressed.  We'll write that
                 same logic out twice, once as a formal state diagram and once as
-                idiomatic C using <c>typedef enum</c> and <c>switch</c>, so that the
+                C using <c>typedef enum</c> and <c>switch</c>, so that the
                 diagram and the code can be read against each other line by line.
             </p>
 
@@ -1952,7 +1985,7 @@ int main(void) {
             </slide>
 
             <slide xml:id="sl-day4-enum-switch">
-                <p>The same logic as idiomatic C: <c>typedef enum</c> + <c>switch</c>:</p>
+                <p>The same logic in C: <c>typedef enum</c> + <c>switch</c>:</p>
                 <program language="c"><code><![CDATA[
 typedef enum { UNPRESSED, PRESSED } state_t;
 state_t state = UNPRESSED;
