@@ -67,7 +67,7 @@ int main(void) {
         }
         // Could do other stuff here, like poll a button.
     }
-    return 1;
+    return 0;
 }
 
 void tim14_500ms_init() {

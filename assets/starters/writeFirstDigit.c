@@ -75,5 +75,5 @@ int main(void) {
         i2c1_memWrite(display_addr, display_subaddr, 1, &digit_data);
         delay_ms(250);
     }
-    return 1;
+    return 0;
 }

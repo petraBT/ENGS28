@@ -80,5 +80,5 @@ int main(void) {
             counter++;
         }
     }
-    return 1;
+    return 0;
 }

@@ -102,7 +102,7 @@ int main(void) {
             counter++;
         }
     }
-    return 1;
+    return 0;
 }
 
 void pb4_exti_init(void) {
