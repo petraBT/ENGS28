@@ -19,8 +19,9 @@
  * Run blinks the simulated LED; Step
  * walks the program one line at a time so
  * you can watch MODER and ODR change.
- * Save your working code; tomorrow we'll
- * port it to the real Nucleo.
+ * Save your working code on your computer;
+ * tomorrow we'll port it to the real
+ * Nucleo.
  *
  * Drag the divider to widen this editor.
  */

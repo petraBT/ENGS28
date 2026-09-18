@@ -312,50 +312,8 @@
             </p>
         </introduction>
 
-        <subsection xml:id="subsec-day1-run-blinky">
-            <title>Part 1: Get Blinky Running</title>
-
-            <activity xml:id="act-day1-run-blinky">
-                <title>Run Blinky</title>
-                <introduction>
-                    <p>
-                        We'll start by importing the Blinky project from the
-                        Day 1 instructions on Canvas, building it, and flashing it
-                        to your Nucleo board, and we'll make sure the green
-                        on-board LED starts blinking.
-                    </p>
-                </introduction>
-                <task xml:id="act-day1-t1">
-                    <statement>
-                        <p>
-                            In the <em>Project Explorer</em> panel on the left,
-                            expand your project folder, then expand the <c>Src</c>
-                            subfolder.  Double-click <c>blinky.c</c> to open it in
-                            the editor.
-                        </p>
-                        <p>
-                            Find the delay loop:
-                            <c>for (int i = 0; i &lt; 100000; i++);</c>.
-                            Change <c>100000</c> to <c>1000000</c> (one extra zero).  Then click
-                            the hammer icon (Build) and, once the build succeeds,
-                            the play icon (Run) to flash the board.  What changes?
-                        </p>
-                    </statement>
-                </task>
-                <task xml:id="act-day1-t2">
-                    <statement>
-                        <p>
-                            Change the loop bound to <c>10000</c> and repeat.
-                            How fast can you make the LED blink before it appears
-                            to stop flickering?
-                        </p>
-                    </statement>
-                </task>
-            </activity>
-        </subsection>
-
         <subsection xml:id="subsec-day1-board-tour">
-            <title>Part 2: The Nucleo Board</title>
+            <title>Part 1: The Nucleo Board</title>
 
             <p>
                 In this course we use the <term>STM32 Nucleo-64</term> board, which
@@ -454,11 +412,75 @@
 
         </subsection>
 
+        <subsection xml:id="subsec-day1-run-blinky">
+            <title>Part 2: Get Blinky Running</title>
+
+            <activity xml:id="act-day1-run-blinky">
+                <title>Run Blinky</title>
+                <introduction>
+                    <p>
+                        Blinky is the <q>hello, world</q> of embedded programming,
+                        and we'll get it running on your own board before we look at
+                        any of the code.
+                    </p>
+                </introduction>
+                <task xml:id="act-day1-install">
+                    <statement>
+                        <p>
+                            Prior to today's class you were instructed to install
+                            STM32CubeIDE, the software we use to program the
+                            STM32C031C6.  You must have that software installed
+                            before you can go any farther.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-canvas">
+                    <statement>
+                        <p>
+                            Follow the instructions on the Day 1 Canvas page to
+                            download the Blinky project, import it into
+                            STM32CubeIDE, build it, and flash it to your Nucleo
+                            board.  The green on-board LED should start blinking.
+                            Once it does, we'll talk about how the program works.
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-t1">
+                    <statement>
+                        <p>
+                            In the <em>Project Explorer</em> panel on the left,
+                            expand your project folder, then expand the <c>Src</c>
+                            subfolder.  Double-click <c>blinky.c</c> to open it in
+                            the editor.
+                        </p>
+                        <p>
+                            Find the delay loop:
+                            <c>for (int i = 0; i &lt; 100000; i++);</c>.
+                            Change <c>100000</c> to <c>1000000</c> (one extra zero).  Then click
+                            the hammer icon (Build) and, once the build succeeds,
+                            the play icon (Run) to flash the board.  What changes?
+                        </p>
+                    </statement>
+                </task>
+                <task xml:id="act-day1-t2">
+                    <statement>
+                        <p>
+                            Change the loop bound to <c>10000</c> and repeat.
+                            How fast can you make the LED blink before it appears
+                            to stop flickering?
+                        </p>
+                    </statement>
+                </task>
+            </activity>
+        </subsection>
+
         <subsection xml:id="subsec-day1-blinky-walkthrough">
             <title>Part 3: Inside blinky.c</title>
 
             <p>
-                To make an LED blink, the program must do four things in order:
+                The LED we are blinking is the green one on the Nucleo board
+                itself, and it is wired to PA5 (Port A, bit 5).  To make it
+                blink, the program must do four things in order:
             </p>
             <ol>
                 <li>Turn on the clock to GPIO Port A (the peripheral is off by default).</li>
@@ -515,7 +537,10 @@ int main(void) {
 
             <p>
                 Before we step through each line, here are the C operators used
-                throughout blinky.c.
+                throughout blinky.c.  Each of them exists for one reason: a register
+                holds many independent settings at once, so we have to change the
+                bits belonging to one pin and leave every other bit exactly as it
+                was.
             </p>
 
             <p>
@@ -541,7 +566,9 @@ int main(void) {
 
             <p>
                 <term>Setting a bit: OR-assign (<c>|=</c>).</term>
-                The bitwise OR truth table shows what happens to each bit pair:
+                What we want is to set one individual bit in a register without
+                touching any of the others, and bitwise OR is the operator that does
+                that.  Its truth table shows what happens to each bit pair:
             </p>
 
             <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
@@ -624,7 +651,10 @@ LED_PIN  = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit 5 is 1)
                 we cannot read from or write to any GPIO register until that clock is
                 enabled.  The first line of <c>main()</c>, <c>RCC-&gt;IOPENR |= GPIOAEN</c>,
                 sets bit 0 of the <term>I/O Port Enable Register</term> and so
-                enables the clock to Port A; it must appear before any access to
+                enables the clock to Port A.  A <c>1</c> in that bit turns the port's
+                clock on, which gives the port power so its pins can be used; a
+                <c>0</c> turns it off, which saves power but leaves that port's pins
+                unusable.  Step 1 must appear before any access to
                 <c>GPIOA-&gt;MODER</c> or <c>GPIOA-&gt;ODR</c>.
             </p>
 
@@ -676,22 +706,26 @@ LED_PIN  = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit 5 is 1)
 
             <p>
                 <term>Steps 3 and 4: Drive PA5 high and low.</term>
+                The register here is <c>GPIOA-&gt;ODR</c>, the
+                <term>Output Data Register</term> for Port A, which holds the level
+                each pin is driving.
                 <c>GPIOA-&gt;ODR |= LED_PIN</c> sets bit 5 to <c>1</c>, pulling
                 PA5 to 3.3 V and turning the LED on.
                 <c>GPIOA-&gt;ODR &amp;= ~LED_PIN</c> clears bit 5 to <c>0</c>,
                 pulling PA5 to 0 V and turning the LED off.
                 Inside <c>while(1)</c>, these two operations alternate forever,
-                producing the blink.
+                which makes the LED blink.
             </p>
 
             <slide xml:id="sl-day1-four-steps">
+                <p>We are blinking the green LED on the Nucleo board itself, which is wired to PA5 (Port A, bit 5).</p>
                 <ol>
                     <li>Turn on the clock to GPIO Port A (peripherals are off by default).</li>
                     <li>Set PA5 to output mode so we can drive it HIGH or LOW.</li>
                     <li><em>In the loop:</em> set bit 5 HIGH → LED on, then wait.</li>
                     <li><em>In the loop:</em> clear bit 5 LOW → LED off, then wait.</li>
                 </ol>
-                <p>Steps 1–2 run <em>once</em> at startup. Steps 3 and 4 repeat <em>together, forever</em> inside <c>while (1)</c>: that alternation is the blink.</p>
+                <p>Steps 1–2 run <em>once</em> at startup. Steps 3 and 4 repeat <em>together, forever</em> inside <c>while (1)</c>, which makes the LED blink.</p>
                 <note>Embedded is the exception to "never write an infinite loop": setup runs once, then the device works forever. <c>return 0</c> is unreachable.</note>
             </slide>
 
@@ -721,15 +755,15 @@ int main(void) {
             <!-- ── Bitwise operations mini-arc (new to most students) ── -->
             <slide xml:id="sl-day1-why-bits">
                 <ul>
-                    <li>One 32-bit register packs many independent settings: e.g. <c>MODER</c> holds the mode of all 16 pins in a port at once.</li>
-                    <li>To configure one pin you must change <em>its</em> bits and leave the other 30 exactly as they were.</li>
+                    <li>One 32-bit register contains many independent settings: for example, the <c>MODER</c> register holds the mode of all 16 pins in a port at once, and a pin's mode determines whether that pin is an input, an output, or something else.</li>
+                    <li>To change the mode of one pin you must change its <em>two</em> bits and leave the other 30 exactly as they were.</li>
                     <li>A plain <c>reg = value</c> writes all 32 bits at once: it would overwrite every other setting in the register.</li>
-                    <li>Bitwise operators let you touch <em>exactly</em> the bits you mean: build a <term>mask</term>, then set / clear / test through it.</li>
+                    <li>Bitwise operators let you change <em>exactly</em> the bits you mean and leave every other bit alone.</li>
                 </ul>
             </slide>
 
             <slide xml:id="sl-day1-register">
-                <p>A register is just a row of bits. In <c>GPIOA->ODR</c> each bit is one pin's on/off switch (bit <em>n</em> drives pin PA<em>n</em>):</p>
+                <p>The simplest of blinky's registers is <c>GPIOA-&gt;ODR</c>, the <term>Output Data Register</term> for Port A, which holds the level each pin is driving. A register is just a row of bits, and in ODR each bit is one pin's on/off switch (bit <em>n</em> drives pin PA<em>n</em>):</p>
                 <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
                     <col width="12%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/><col width="5.5%"/>
                     <row header="yes" bottom="minor">
@@ -744,12 +778,13 @@ int main(void) {
                 </tabular>
                 <ul>
                     <li>16 bits → 16 pins, PA0–PA15. A <c>1</c> drives that pin HIGH (3.3 V); a <c>0</c> drives it LOW.</li>
-                    <li>Bit 5 = PA5 = the on-board LED: the lone <c>1</c> turns it on.</li>
+                    <li>Bit 5 = PA5 = the on-board LED: the <c>1</c> in bit 5 is what turns it on.</li>
                 </ul>
             </slide>
 
             <slide xml:id="sl-day1-shift-mask">
-                <p><c>1U &lt;&lt; n</c> puts a single <c>1</c> at position <c>n</c>, a <term>bit mask</term>:</p>
+                <p><term>From blinky.c:</term> <c>#define LED_PIN (1U &lt;&lt; 5)</c></p>
+                <p>That line uses the <term>left shift</term> operator, <c>&lt;&lt;</c>. Writing <c>1U &lt;&lt; n</c> shifts the value 1 left by <c>n</c> bit positions, leaving a single <c>1</c> at position <c>n</c> and zeros everywhere else:</p>
                 <program language="c"><code><![CDATA[
 1U       = 0b 0000 0000 0000 0000 0000 0000 0000 0001   (bit  0)
 1U <<  5 = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit  5)
@@ -757,12 +792,12 @@ int main(void) {
 ]]></code></program>
                 <ul>
                     <li>The <c>U</c> makes it an unsigned 32-bit value, required for shifts near bit 31.</li>
-                    <li>Name masks with <c>#define</c>: <c>LED_PIN</c> reads better than a bare <c>(1U&lt;&lt;5)</c>.</li>
+                    <li>A single <c>1</c> marking the one bit we care about is called a <term>bit mask</term>. Naming it with <c>#define</c> reads better than a bare <c>(1U&lt;&lt;5)</c>.</li>
                 </ul>
             </slide>
 
             <slide xml:id="sl-day1-or-operator">
-                <p>First the operator on its own. Bitwise <c>|</c> (OR) compares two values one column at a time. The result bit is <c>1</c> if <em>either</em> input bit is <c>1</c>:</p>
+                <p>To turn the LED on we have to set bit 5 of ODR and leave the other bits exactly as they are, and bitwise OR is the operator that does that. First the operator on its own: <c>|</c> compares two values one column at a time, and the result bit is <c>1</c> if <em>either</em> input bit is <c>1</c>:</p>
                 <sidebyside widths="56% 32%" margins="2%" valign="middle">
                     <program language="c"><code><![CDATA[
     0b 0000 1111
@@ -782,7 +817,8 @@ int main(void) {
             </slide>
 
             <slide xml:id="sl-day1-set-bit">
-                <p>Now apply it to the register. <c>reg |= mask</c> (shorthand for <c>reg = reg | mask</c>) <em>sets</em> the mask's <c>1</c>-bits and leaves the rest. Turn PA5 on without disturbing PA2:</p>
+                <p><term>From blinky.c:</term> <c>GPIOA-&gt;ODR |= LED_PIN;</c></p>
+                <p>What we want is to set one individual bit in a register without touching any of the others. <c>reg |= mask</c>, which is shorthand for <c>reg = reg | mask</c>, does exactly that: it sets the mask's <c>1</c>-bits and leaves every other bit alone. Turn PA5 on without disturbing PA2:</p>
                 <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
                     <col width="26%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/>
                     <row header="yes" bottom="minor"><cell>bit</cell><cell>7</cell><cell>6</cell><cell>5</cell><cell>4</cell><cell>3</cell><cell>2</cell><cell>1</cell><cell>0</cell></row>
@@ -813,10 +849,15 @@ int main(void) {
                         <row><cell>1</cell><cell>1</cell><cell>1</cell></row>
                     </tabular>
                 </sidebyside>
-                <p>To clear one bit we need a mask that is <c>0</c> in just that spot: that is what <c>~</c> builds.</p>
+                <p>To clear one bit we need a mask that is <c>0</c> in just that spot, and that is what <c>~</c> builds:</p>
+                <program language="c"><code><![CDATA[
+ LED_PIN = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit 5 is 1)
+~LED_PIN = 0b 1111 1111 1111 1111 1111 1111 1101 1111   (bit 5 is 0, the rest are 1s)
+]]></code></program>
             </slide>
 
             <slide xml:id="sl-day1-clear-bit">
+                <p><term>From blinky.c:</term> <c>GPIOA-&gt;ODR &amp;= ~LED_PIN;</c></p>
                 <p>Clearing works the same way on the register. <c>~</c> flips the mask to a single <c>0</c>, then <c>reg &amp;= ~mask</c> clears just that bit. Turn PA5 off, keep PA2:</p>
                 <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
                     <col width="26%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/><col width="9.25%"/>
@@ -849,6 +890,7 @@ RCC->IOPENR |= GPIOAEN;    // GPIOAEN is (1U << 0) — the mask for bit 0
 ]]></code></program>
                 <ul>
                     <li><c>IOPENR</c> (I/O Port Enable Register) is another row of bits, but here each bit is one whole <em>port's</em> clock: bit 0 = Port A, bit 1 = Port B, bit 2 = Port C.</li>
+                    <li>A <c>1</c> in that bit turns the port's clock on, which gives the port power so its pins can be used. A <c>0</c> turns it off, which saves power but leaves that port's pins unusable.</li>
                     <li><c>GPIOAEN</c> is just <c>(1U &lt;&lt; 0)</c>, the mask for bit 0, so this line sets bit 0 and switches on Port A's clock.</li>
                     <li>Every port's clock is <em>disabled</em> at reset to save power; until its clock is enabled, reads and writes to that port's registers do nothing.</li>
                     <li>So Step 1 must come <em>before</em> any <c>GPIOA-&gt;MODER</c> or <c>GPIOA-&gt;ODR</c> access.</li>
@@ -860,25 +902,7 @@ RCC->IOPENR |= GPIOAEN;    // GPIOAEN is (1U << 0) — the mask for bit 0
 GPIOA->MODER |=  (1U << 10);   // Step 2a: set   bit 10
 GPIOA->MODER &= ~(1U << 11);   // Step 2b: clear bit 11  → PA5 output
 ]]></code></program>
-                <ul>
-                    <li><c>MODER</c> is Port A's <term>Mode Register</term>: it stores the mode of all 16 pins.</li>
-                    <li>Each pin gets 2 bits (four possible modes). PA5 uses bits 10 &amp; 11.</li>
-                    <li>Output mode is <c>01</c>: set bit 10, clear bit 11, exactly the two lines above.</li>
-                </ul>
-            </slide>
-
-            <slide xml:id="sl-day1-moder" ref="table-moder-encoding">
-                <ul>
-                    <li>16 pins × 2 bits = one 32-bit register. Each pin owns a 2-bit field:</li>
-                    <li>pin 0 → bits 0 &amp; 1; pin 1 → bits 2 &amp; 3; pin 2 → bits 4 &amp; 5; … pin n → bits 2n &amp; 2n+1.</li>
-                    <li>So PA5 (pin 5) → bits 10 &amp; 11. Output is <c>01</c> → set bit 10, clear bit 11.</li>
-                    <li>That's why Step 2 is two lines: if you set bit 10 alone and bit 11 is still <c>1</c>, the pair reads <c>11</c> (analog) and the pin is not an output. The upper bit needs to be cleared as well.</li>
-                </ul>
-                <caption>MODER bit-pair encoding.</caption>
-            </slide>
-
-            <slide xml:id="sl-day1-moder-register">
-                <p>Here is MODER as boxes, <em>two</em> per pin. PA5's pair is bits 10 &amp; 11, and <c>01</c> means output:</p>
+                <p><c>MODER</c> is Port A's <term>Mode Register</term>, and it holds <em>two</em> bits per pin, so 16 pins fill one 32-bit register: pin 0 has bits 0 and 1, pin 1 has bits 2 and 3, and in general pin <em>n</em> has bits 2<em>n</em> and 2<em>n</em>+1. PA5 therefore has bits 10 and 11:</p>
                 <tabular halign="center" top="minor" bottom="minor" left="minor" right="minor">
                     <col width="16%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/><col width="7%"/>
                     <row header="yes" bottom="minor"><cell>bit</cell><cell>11</cell><cell>10</cell><cell>9</cell><cell>8</cell><cell>7</cell><cell>6</cell><cell>5</cell><cell>4</cell><cell>3</cell><cell>2</cell><cell>1</cell><cell>0</cell></row>
@@ -886,10 +910,12 @@ GPIOA->MODER &= ~(1U << 11);   // Step 2b: clear bit 11  → PA5 output
                     <row><cell><c>MODER</c></cell><cell>0</cell><cell>1</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell><cell>0</cell></row>
                 </tabular>
                 <ul>
-                    <li>Each pin has its own 2-bit field (four modes: <c>00</c> input, <c>01</c> output, <c>10</c> alternate, <c>11</c> analog).</li>
-                    <li>PA5's bits read <c>01</c>: bit 10 = <c>1</c>, bit 11 = <c>0</c>, exactly the two lines of Step 2.</li>
+                    <li>Output mode is <c>01</c>, so write a <c>1</c> into bit 10 and a <c>0</c> into bit 11, which is exactly what the two lines above do. Setting bit 10 alone is not enough: on this chip bit 11 is <c>1</c> at reset, so the pair would read <c>11</c> (analog) and the pin would not be an output.</li>
+                    <li>The four modes a pair can hold are <c>00</c> input, <c>01</c> output, <c>10</c> alternate function and <c>11</c> analog.</li>
                 </ul>
             </slide>
+
+
 
             <slide xml:id="sl-day1-step34">
                 <program language="c"><code><![CDATA[
@@ -903,7 +929,7 @@ while (1) {
                 <ul>
                     <li><c>ODR</c> is the <term>Output Data Register</term>: bit 5 sets PA5's voltage.</li>
                     <li>Set bit 5 → LED on; clear bit 5 → LED off. The two delay loops set how long each lasts.</li>
-                    <li>Inside <c>while (1)</c> they alternate forever, and that is the blink.</li>
+                    <li>Inside <c>while (1)</c> they alternate forever, which makes the LED blink.</li>
                 </ul>
             </slide>
 
@@ -911,8 +937,7 @@ while (1) {
                 <title>Bit Manipulation Practice</title>
                 <introduction>
                     <p>
-                        Apply the operators from the walkthrough.  Work through
-                        each task before moving to the next.
+                        Work through each task before moving to the next.
                     </p>
                 </introduction>
                 <task xml:id="act-day1-bitops-t1">
@@ -1058,18 +1083,19 @@ while (1) {
                             <em>Design first.</em>  What variable will control the
                             delay, and how does it change from one blink to the next?
                             How will the program know it has reached <q>fast</q> and
-                            should reset to <q>slow</q>?  Jot the logic of <c>main()</c>
-                            in plain English or pseudocode before you write any C.
+                            should reset to <q>slow</q>?  Start by writing the logic
+                            of <c>main()</c> in plain English or pseudocode before you
+                            write any C.
                         </p>
                     </statement>
                 </task>
                 <task xml:id="act-day1-plan-t2">
                     <statement>
                         <p>
-                            <em>Warm up.</em>  Open the simulator and re-create plain
-                            Blinky, the same four steps from class.  Confirm the
-                            simulated LED blinks and that you can read the register
-                            panel as your code runs.
+                            <em>Warm up.</em>  Open the simulator, which comes loaded
+                            with the same <c>blinky.c</c> you ran in class.  Confirm
+                            the simulated LED blinks and that you can read the
+                            register panel as your code runs.
                         </p>
                     </statement>
                 </task>
@@ -1086,9 +1112,10 @@ while (1) {
                 <task xml:id="act-day1-plan-t4">
                     <statement>
                         <p>
-                            Save your working simulator code.  Tomorrow you will
-                            port it to the real Nucleo.  Jot down one thing you are
-                            unsure will behave the same on real hardware.
+                            Save your working simulator code on your computer.
+                            Tomorrow you will port it to the real Nucleo.  Note one
+                            thing you are unsure will behave the same on real
+                            hardware.
                         </p>
                     </statement>
                 </task>
@@ -1245,7 +1272,7 @@ while (1) {
                         <p>
                             Did the board behave exactly like the simulator?  Note
                             any difference you see (timing, brightness, anything)
-                            and jot down why the real hardware might not match the
+                            and explain why the real hardware might not match the
                             simulation.
                         </p>
                     </statement>
@@ -1311,7 +1338,7 @@ int main(void) {
             </p>
 
             <activity xml:id="act-day1x-stretch">
-                <title>Make It Your Own</title>
+                <title>Stretch Challenges</title>
                 <introduction>
                     <p>Pick one to build; if you finish, try another.</p>
                 </introduction>
@@ -1334,8 +1361,7 @@ int main(void) {
                     <statement>
                         <p>
                             Whatever you pick, keep every delay in a named constant so
-                            a reader can see the timing at a glance.  We will look at a
-                            few of these together.
+                            a reader can see the timing at a glance.
                         </p>
                     </statement>
                 </task>
@@ -1386,9 +1412,9 @@ int main(void) {
                 <caption>How a C program runs on the STM32.  The compiler translates
                 C source into machine instructions stored in flash.  At run time the
                 CPU fetches and executes each instruction in sequence.  As a concrete
-                example, the line <c>GPIOA-&gt;ODR |= LED_PIN</c> compiles to a
-                load-OR-store sequence; when executed, the store to the GPIO Output
-                Data Register drives the output pin HIGH.</caption>
+                example, the line <c>GPIOA-&gt;ODR |= LED_PIN</c> compiles to three
+                instructions, a load, an OR and a write; when the write reaches the
+                GPIO Output Data Register it drives the output pin HIGH.</caption>
                 <image source="images/Day02-Blinky(2)/slide08_799bfba4.png" width="80%"/>
             </figure>
 
@@ -1399,10 +1425,11 @@ int main(void) {
                 There is no separate I/O bus and no special I/O instructions: the
                 CPU reads and writes peripheral registers exactly the same way it
                 reads and writes RAM.  <c>GPIOA-&gt;ODR</c> is not a variable stored
-                in RAM; it is a name for memory address <c>0x5000 0014</c>.
-                When the CPU stores a value to that address, the GPIO hardware
-                detects the write on the bus and responds immediately, within one
-                clock cycle.
+                in RAM; it names the contents of memory address
+                <c>0x5000 0014</c>, and those contents are Port A's output
+                register rather than a memory cell.  When the CPU writes a value
+                to that address, the GPIO hardware recognizes the address and
+                updates the pins within one clock cycle.
             </p>
 
             <figure xml:id="fig-memory-map">
@@ -1422,8 +1449,8 @@ int main(void) {
                 <term>push-pull</term> output.  Writing a <c>1</c> to the ODR bit
                 turns the P-MOS on (connecting the pin to 3.3 V) and turns the N-MOS
                 off.  Writing a <c>0</c> does the reverse: N-MOS on, P-MOS off, pin
-                driven to 0 V.  The GPIO hardware makes that transistor switch happen
-                within nanoseconds of the CPU store.  Setting MODER to output mode
+                driven to 0 V.  The transistors switch within nanoseconds of the
+                CPU writing to ODR.  Setting MODER to output mode
                 (<c>01</c>) connects this push-pull driver to the pin; in any other
                 mode the driver is disconnected.
             </p>
@@ -1446,14 +1473,15 @@ int main(void) {
                     <li>On reset the Cortex-M0+ <em>fetches and executes</em> those instructions one by one.</li>
                     <li>Your source lines no longer exist on the chip, only the machine code they became.</li>
                 </ul>
-                <caption>Compile → flash → execute. <c>GPIOA->ODR |= LED_PIN</c> becomes a load-OR-store; the store drives the pin HIGH.</caption>
+                <caption>Compile → flash → execute. <c>GPIOA->ODR |= LED_PIN</c> becomes a load, an OR and a write, and the write drives the pin HIGH.</caption>
             </slide>
 
             <slide xml:id="sl-day2-memmap" ref="fig-memory-map" stack="yes">
                 <ul>
                     <li>One 4 GB address space holds flash, RAM, and every peripheral register, with no separate I/O bus and no special I/O instructions.</li>
-                    <li><c>GPIOA->ODR</c> isn't a variable in RAM: it's a name for address <c>0x5000 0014</c>. Writing there <em>is</em> the I/O.</li>
-                    <li>The GPIO hardware sees the store on the bus and responds within one clock cycle.</li>
+                    <li><c>GPIOA-&gt;ODR</c> isn't a variable in RAM: it names the contents of address <c>0x5000 0014</c>, and those contents are the port's output register rather than a memory cell.</li>
+                    <li>Reaching a peripheral by writing to an address like this is called <term>memory-mapped I/O</term>.</li>
+                    <li>When the CPU writes to that address, the GPIO hardware recognizes it and updates the pins within one clock cycle.</li>
                 </ul>
                 <caption>Memory map: flash at 0x0800 0000, RAM at 0x2000 0000, GPIO registers at 0x5000 0000.</caption>
             </slide>
@@ -1463,7 +1491,7 @@ int main(void) {
                     <li>Each output pin has a <term>push-pull</term> pair: a P-MOS to 3.3 V on top, an N-MOS to ground below.</li>
                     <li>ODR bit = <c>1</c> → P-MOS on, pin driven HIGH (3.3 V). ODR bit = <c>0</c> → N-MOS on, pin driven LOW (0 V).</li>
                     <li>Setting MODER to output (<c>01</c>) connects this driver to the pin; other modes disconnect it.</li>
-                    <li>The switch happens within nanoseconds of the CPU's store.</li>
+                    <li>The transistors switch within nanoseconds of the CPU writing to ODR.</li>
                 </ul>
                 <caption>GPIO output stage (reference manual, annotated): ODR → control logic → P-MOS/N-MOS → the pin.</caption>
             </slide>
@@ -1532,7 +1560,7 @@ int main(void) {
             </slide>
 
             <slide xml:id="sl-day2-delay-code">
-                <p>Now delays read like what they mean:</p>
+                <p>Now delays can be written as follows:</p>
                 <program language="c"><code><![CDATA[
 #include "ES28.h"
 #define GPIOAEN  (1U << 0)
@@ -1592,8 +1620,8 @@ int main(void) {
                 To build the LED circuit, we'll use a red or green LED and a 220 Ω
                 resistor, wired as shown in
                 <xref ref="fig-external-led-circuit"/>: the GPIO pin connects to the
-                LED anode (+, longer lead), the LED cathode (−, shorter lead) connects
-                through the resistor to the ground rail.
+                LED's anode, which is its longer lead, and the LED's cathode, the
+                shorter lead, connects through the resistor to the ground rail.
             </p>
 
             <figure xml:id="fig-external-led-circuit">
@@ -1667,6 +1695,12 @@ int main(void) {
                 </task>
             </activity>
 
+            <p>
+                Now we'll move the LED's anode wire from D13 to D4, as shown in
+                <xref ref="fig-blinky-d4"/>.  That is the only jumper wire that
+                changes; everything else on the breadboard stays where it is.
+            </p>
+
             <figure xml:id="fig-blinky-d4">
                 <caption>The breadboard circuit after moving the LED's anode wire
                 from D13 to D4.  Only one jumper wire is rerouted.</caption>
@@ -1684,10 +1718,10 @@ int main(void) {
                 <title>Move to a New Pin</title>
                 <introduction>
                     <p>
-                        Now we'll move the LED's anode wire from D13 to D4.
-                        To make the LED blink from D4 you need to make three changes
-                        to your program: enable the correct GPIO port clock, configure
-                        the pin as an output, and drive it.
+                        We have just moved the LED's anode wire from D13 to D4, the
+                        one jumper wire we rerouted.  To make the LED blink from D4
+                        you now need three changes in your program: enable the correct
+                        GPIO port clock, configure the pin as an output, and drive it.
                         Before writing any code, answer the following on paper.
                     </p>
                 </introduction>
@@ -1744,7 +1778,7 @@ int main(void) {
             <slide xml:id="sl-day2-led-circuit" ref="fig-external-led-circuit">
                 <ul>
                     <li>Pick a red or green LED and a 220 Ω resistor.</li>
-                    <li>GPIO pin → LED anode (+, long lead); cathode (−, short lead) → resistor → ground rail.</li>
+                    <li>Connect the GPIO pin to the LED's anode, which is its longer lead. Connect the LED's cathode, the shorter lead, through the resistor to the ground rail.</li>
                     <li>The 220 Ω resistor limits current to ~10–15 mA, which keeps both the LED and the GPIO pin inside their current limits.</li>
                 </ul>
                 <caption>External LED driven from D13 (PA5). Current path: D13 → LED → 220 Ω → GND.</caption>
@@ -1760,7 +1794,7 @@ int main(void) {
             </slide>
 
             <slide xml:id="sl-day2-newpin-d4" ref="fig-blinky-d4">
-                <caption>Move only the LED's anode wire from D13 to D4, a single jumper rerouted.</caption>
+                <caption>Move the LED's anode wire from D13 to D4: that is just one jumper wire.</caption>
             </slide>
 
             <slide xml:id="sl-day2-pinout" ref="fig-nucleo-pinout">
@@ -1898,10 +1932,10 @@ int main(void) {
 
             <slide xml:id="sl-day2-lab1-setup">
                 <ul>
-                    <li>New project: copy your TemplateProject, rename it <c>Lab1</c>.</li>
+                    <li>Start a new project: copy your TemplateProject and rename it <c>Lab1</c>.</li>
                     <li>Download <c>template.c</c> from Canvas into <c>Src</c>; rename it to your first target filename.</li>
                     <li>Fill in the header comment: name, assignment, a table of I/O pins, and a revision history, for every file you submit.</li>
-                    <li>Descriptive <c>#define</c>s for every pin and timing constant; keep notes in comments.</li>
+                    <li>Use descriptive <c>#define</c>s for every pin and timing constant, and keep notes in comments.</li>
                 </ul>
             </slide>
         </subsection>
