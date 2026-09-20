@@ -412,7 +412,7 @@
                 <caption>Pin diagram of the STM32C031C6 (48-pin LQFP); PA5, the on-board LED pin, is highlighted in red.</caption>
             </slide>
 
-            <slide xml:id="sl-day1-pinmap" ref="fig-led-pin-connection" stack="yes">
+            <slide xml:id="sl-day1-pinmap" ref="fig-led-pin-connection" mediawide="yes">
                 <ul>
                     <li>D13 and PA5 are two names for the same physical pin: the Arduino label on the header, and the port-and-bit name in the STM32C031C6's documentation and in our code.</li>
                     <li>We'll address pins by port and bit, because a physical pin number depends on the chip's package while the port and bit names stay the same.</li>
@@ -558,8 +558,9 @@ int main(void) {
                 Writing <c>1U &lt;&lt; n</c> shifts the value 1 left by <c>n</c>
                 bit positions, placing a single <c>1</c> at position <c>n</c>
                 and zeros everywhere else.  The <c>U</c> suffix makes it an
-                <em>unsigned</em> 32-bit integer, to make sure we aren't using
-                two's complement representation by accident.
+                <em>unsigned</em> 32-bit integer, so that the leading bit isn't
+                interpreted as a way to indicate a negative number, which could
+                lead to unintended shift behavior around that bit.
             </p>
 
             <program language="c"><code><![CDATA[
@@ -808,7 +809,7 @@ int main(void) {
 1U << 10 = 0b 0000 0000 0000 0000 0000 0100 0000 0000   (bit 10)
 ]]></code></program>
                 <ul>
-                    <li>The <c>U</c> makes it an unsigned 32-bit value, to make sure we aren't using two's complement representation by accident.</li>
+                    <li>The <c>U</c> makes it an unsigned 32-bit value, so that the leading bit isn't interpreted as a way to indicate a negative number, which could lead to unintended shift behavior around that bit.</li>
                     <li>This 32-bit number with all zeros and a single <c>1</c> in the bit we care about is called a <term>bit mask</term>. Naming it with <c>#define</c> makes your code more readable than a bare <c>(1U&lt;&lt;5)</c>.</li>
                 </ul>
             </slide>
@@ -944,8 +945,8 @@ while (1) {
 }
 ]]></code></program>
                 <ul>
-                    <li><c>ODR</c> is the <term>Output Data Register</term>: bit 5 sets PA5's voltage.</li>
-                    <li>Set bit 5 → LED on; clear bit 5 → LED off. The two delay loops set how long each lasts.</li>
+                    <li><c>ODR</c> is the <term>Output Data Register</term>: bit 5 defines PA5's voltage.</li>
+                    <li>Set bit 5 → LED on; clear bit 5 → LED off. The two delay loops slow the processor down by keeping it busy, so that we can see the blinking.</li>
                     <li>Inside <c>while (1)</c> they alternate forever, which makes the LED blink.</li>
                 </ul>
             </slide>
@@ -1130,7 +1131,9 @@ while (1) {
                 <task xml:id="act-day1-plan-t4">
                     <statement>
                         <p>
-                            Save your working simulator code on your computer.
+                            The simulator does not save your code.  If you
+                            reload or close the page your work is gone, so copy it
+                            into a file on your own computer before you move on.
                             Tomorrow you will port it to the real Nucleo.  Note one
                             thing you are unsure will behave the same on real
                             hardware.
@@ -1496,7 +1499,7 @@ int main(void) {
                 <caption>Compile → flash → execute. <c>GPIOA->ODR |= LED_PIN</c> becomes a load, an OR and a write, and the write drives the pin HIGH.</caption>
             </slide>
 
-            <slide xml:id="sl-day2-memmap" ref="fig-memory-map" stack="yes">
+            <slide xml:id="sl-day2-memmap" ref="fig-memory-map">
                 <ul>
                     <li>One 4 GB address space holds flash, RAM, and every peripheral register, with no separate I/O bus and no special I/O instructions.</li>
                     <li><c>GPIOA-&gt;ODR</c> isn't a variable in RAM: it links to the contents of address <c>0x5000 0014</c>, and those contents are the port's output register rather than a memory cell.</li>
@@ -1506,14 +1509,13 @@ int main(void) {
                 <caption>Memory map: flash at 0x0800 0000, RAM at 0x2000 0000, GPIO registers at 0x5000 0000.</caption>
             </slide>
 
-            <slide xml:id="sl-day2-pushpull" ref="fig-gpio-output-circuit" stack="yes">
+            <slide xml:id="sl-day2-pushpull" ref="fig-gpio-output-circuit" stack="yes" room="compressed">
                 <ul>
                     <li>Each output pin has a <term>push-pull</term> pair: a P-MOS transistor to 3.3 V on top, an N-MOS transistor to ground below.</li>
                     <li>ODR bit = <c>1</c> → P-MOS on, pin driven HIGH (3.3 V). ODR bit = <c>0</c> → N-MOS on, pin driven LOW (0 V).</li>
                     <li>Setting MODER to output (<c>01</c>) connects this push-pull driver to the pin; other modes disconnect it.</li>
                     <li>The transistors switch within nanoseconds of the CPU writing to ODR.</li>
                 </ul>
-                <caption>GPIO output stage (reference manual, annotated): ODR → control logic → P-MOS/N-MOS → the pin.</caption>
             </slide>
         </subsection>
 
@@ -1671,11 +1673,15 @@ int main(void) {
                 <introduction>
                     <p>
                         We'll drive the external LED from the board and measure the
-                        voltages around it.  Work in <c>blinkySlowToFast.c</c>, the
-                        file already active in your build: swap its include to
-                        <c>ES28.h</c> and give it a steady rate instead of the ramp,
-                        <c>delay_ms(2000)</c> on and off, so the DMM display has time
-                        to settle.
+                        voltages around it.  Your <c>blinkySlowToFast.c</c> stays as
+                        it is: we'll switch the build back to <c>blinky.c</c>
+                        instead.  Right-click <c>blinkySlowToFast.c</c> and choose
+                        <em>Resource Configurations → Exclude from Build</em>, then
+                        right-click <c>blinky.c</c> and un-exclude it the same way.
+                        In <c>blinky.c</c>, change the include to <c>ES28.h</c> and
+                        replace its two delay loops with <c>delay_ms(2000)</c>, so
+                        that the LED stays on and off long enough for the DMM
+                        display to settle.
                     </p>
                 </introduction>
                 <task xml:id="act-day2-led-t1">
@@ -1787,7 +1793,7 @@ int main(void) {
                 </task>
             </activity>
 
-            <slide xml:id="sl-day2-breadboard" ref="fig-nucleo-breadboard">
+            <slide xml:id="sl-day2-breadboard" ref="fig-nucleo-breadboard" mediawide="slight" room="compressed">
                 <ul>
                     <li><clr c="red">Always unplug the USB cable</clr> (cutting power to the Nucleo) before you wire or rewire anything. Reconnect it only when you're ready to test.</li>
                     <li>Bring both power <em>and</em> ground from the Nucleo: its <em>3.3 V</em> header pin to the breadboard's + rails, and a <em>GND</em> header pin to the − rails.</li>
@@ -1944,6 +1950,7 @@ int main(void) {
             </aside>
 
             <slide xml:id="sl-day2-lab1-circuit" ref="fig-three-leds">
+                <p>In Lab 1 you extend the single-LED Blinky you built today to a three-LED circuit.</p>
                 <ul>
                     <li>Three LEDs, each through its own 220 Ω resistor, to three separate GPIO output pins.</li>
                     <li>Build incrementally: get LED 1 blinking before adding 2, and 2 before 3.</li>
