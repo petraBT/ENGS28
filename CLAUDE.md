@@ -247,11 +247,20 @@ rebuild affected targets **once**, and report per comment what changed. As
 each is handled (or judged moot — say why), MOVE its line to
 `reviews/slide-comments-archive.jsonl`; nothing is ever just deleted.
 
-To SEE what she circled: render the comment's `url` in headless Chrome
-(puppeteer-core) and crop. Slides: 1600×900 viewport, clip = bbox × stage
-size. Book: viewport width = `viewportWidth`, clip = the document-pixel bbox
-(padded) — and for the fix itself, prefer `source.file:line` or the anchors'
-ids/excerpts over pixels.
+To SEE what she circled, use **`scripts/read_comments.mjs`**: it walks every
+comment in the queue and prints the words her bbox actually encloses plus the
+`<p>`/`<li>` around them, by intersecting each word's `Range` rect with the
+stage-scaled bbox. Two thirds of her comments are one or two words typed
+against circled text, and they mean nothing without it. Fall back to rendering
+the `url` and cropping only when a bbox lands on an image. For the fix itself,
+prefer `source.file:line` or the anchors' ids/excerpts over pixels.
+
+To check a deck still FITS after her edits, use **`scripts/deck_fit.mjs`**,
+which drives headless Chrome over raw CDP — never the Browser pane, which
+suspends layout when hidden and answers "fits" for a slide 200 px over. It
+reports the last item's clearance, so `SOFT` is writing-room padding and only
+`CLIP` is a real loss. Both scripts need the deck player served, which
+`./preview-slides.sh` does on port 8352.
 
 **"Watch my review comments"** is the opt-in LIVE mode: ensure the server
 (`curl -s 127.0.0.1:8928/health`, else start it), then Monitor the queue file
