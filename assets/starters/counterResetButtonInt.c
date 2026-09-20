@@ -73,7 +73,6 @@
 void pb4_exti_init(void);
 
 // TODO 3a -- declare the flag the ISR shares with main.
-//            Which keyword must the declaration carry, and why?
 
 
 int main(void) {
