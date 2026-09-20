@@ -587,13 +587,14 @@ EXTI4 ... EXTI15   ->  IRQ7,  priority 14    <- our button, with eleven others
                 are served by these three entries.  The naming rule is the one
                 the timer used: take the acronym from this table and append
                 <c>_IRQn</c> for the NVIC constant.  Handler names are sometimes
-                non-standard, so the safest source for that one is the project's
-                startup file, <c>startup_stm32c031c6tx.s</c>.</caption>
+                non-standard, though this one is not, so the safest source for
+                a handler name is the project's startup file,
+                <c>startup_stm32c031c6tx.s</c>.</caption>
                 <image source="images/Day09-Interrupts(2)/vector_table_exti.svg" width="90%"/>
             </figure>
 
             <slide xml:id="sl-day9-exti-vectors" ref="fig-vector-table-exti">
-    <caption>The three rows in the reference manual: positions 5, 6 and 7, and the priority column that goes with them.</caption>
+    <caption>An excerpt of the vector table in the reference manual. Position 7 lists the interrupt we use for EXTI4.</caption>
     <note>Same lookup as the timer's TIM14: RM0490 §11.3, Table 40. Thirty seconds, on the projector.</note>
 </slide>
 
@@ -606,7 +607,7 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
 ]]></code></program>
     <ul>
         <li>This is the same lookup that gave us <c>TIM14_IRQn</c> for the timer, on a different row of the same table.</li>
-        <li>The <c>_IRQn</c> constant, which is what we use to register the interrupt with the NVIC, is built from the acronym in the table. The handler name is <term>sometimes non-standard</term>, and so it is safest to look it up in the project's startup file, <c>startup_stm32c031c6tx.s</c>, which carries one <c>.word</c> per vector-table slot:</li>
+        <li>The <c>EXTI4_15_IRQn</c> constant, which is what we use to register the interrupt with the NVIC, is built from the acronym in the table by adding <c>_IRQn</c> to it. The handler name is <term>sometimes non-standard</term> (though not in this case), and so it is safest to look it up in the project's startup file, <c>startup_stm32c031c6tx.s</c>, which carries one <c>.word</c> per vector-table slot:</li>
     </ul>
     <program><code><![CDATA[
   .word EXTI0_1_IRQHandler          /* EXTI line 0 and 1 interrupt */
@@ -723,7 +724,7 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
                 <task xml:id="act-gpio-exticr-t2">
                     <statement>
                         <p>Read the register description for
-                        <c>EXTI_EXTICR2</c>.</p>
+                        <c>EXTI_EXTICRx</c>.</p>
                         <ol>
                             <li><p>What value selects port B?</p></li>
                             <li><p>What would select port C?</p></li>
@@ -805,10 +806,13 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
                 the line number.
             </p>
             <p>
-                <em>Which edge.</em>  The button pin idles HIGH and goes LOW
+                <em>Which edge.</em>  The second of the four stages is
+                controlled by <c>EXTI_FTSR1</c>, the <term>falling trigger
+                selection register</term> (RM0490 §12.5.2), which decides for
+                each line whether a falling edge counts as an event at all.  The button pin idles HIGH and goes LOW
                 when pressed, so the press is a <term>falling edge</term> and
                 the release is a rising one.  We want the press, so we set bit
-                4 of the falling-trigger register
+                4 of that register
                 (<xref ref="fig-exti-ftsr1"/>).  There is a matching
                 <c>EXTI_RTSR1</c> for rising edges; setting the same bit in
                 both would interrupt on press <em>and</em> release, which some
@@ -830,8 +834,11 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
                 four steps (<xref ref="fig-exti-imr1"/>).  If an edge is
                 detected on a line but that line is not unmasked in
                 <c>EXTI_IMR1</c>, the event is not passed on to the NVIC:
-                RM0490 §12.4 says the pending bit is set only for an unmasked line,
-                so a masked line leaves nothing behind in <c>EXTI_FPR1</c> either.
+                RM0490 §12.4 says the pending bit is set only for an unmasked
+                line, so a masked line does not even register that an edge was
+                detected in <c>EXTI_FPR1</c>, the <term>falling edge pending
+                register</term>, which is the fourth and last stage of the
+                path.
                 That separation has several uses.  The same detected edge can be
                 routed to the EXTI's <em>event</em> output instead of its interrupt
                 output, through <c>EXTI_EMR1</c>.  A source can be switched off and
@@ -856,6 +863,7 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
 
             <slide xml:id="sl-day9-ftsr" ref="fig-exti-ftsr1" stack="yes">
     <ul>
+        <li><c>EXTI_FTSR1</c> is the <term>falling trigger selection register</term>, RM0490 §12.5.2. It is the second of the four stages of the EXTI signal path, and it decides, per line, whether a falling edge counts as an event at all.</li>
         <li>The pin idles HIGH and goes LOW when pressed, so the <term>press is a falling edge</term>, which is the one we want to be notified of.</li>
         <li>One bit per line, <c>FT0</c>&#8211;<c>FT15</c>: 1 enables falling-edge detection. The bit number <em>corresponds to</em> the line number in this register, and also in the next few.</li>
     </ul>
@@ -866,7 +874,7 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
     <ul>
         <li>Detecting an edge and requesting an interrupt are <term>deliberately separate</term>.</li>
         <li><c>EXTI_IMR1</c> is the <term>interrupt mask register</term>, which RM0490 calls the CPU wakeup with interrupt mask register. One bit in it decides, per line, whether that line's events are allowed through.</li>
-        <li>If an edge is detected on a line but the line is not unmasked in <c>EXTI_IMR1</c>, then this event is not passed on to the NVIC: RM0490 §12.4 says the pending bit is set <term>only for an unmasked line</term>, so a masked line leaves nothing behind in <c>EXTI_FPR1</c> either.</li>
+        <li>If an edge is detected on a line but the line is not unmasked in <c>EXTI_IMR1</c>, then this event is not passed on to the NVIC: RM0490 §12.4 says the pending bit is set <term>only for an unmasked line</term>, so a masked line does not even register that an edge was detected in <c>EXTI_FPR1</c>, the <term>falling edge pending register</term>, which is the stage the handler reads to find out which line fired.</li>
         <li>Every GPIO line is masked at reset, so a missing bit here is the <term>quietest possible bug</term>: the edge is detected, nothing is recorded, nothing happens.</li>
     </ul>
     <caption>Set IM4 and a detected event on line 4 may finally ask for the CPU.</caption>
@@ -885,7 +893,7 @@ NVIC_EnableIRQ(EXTI4_15_IRQn);   // let the request reach the CPU
 ]]></code></program>
             <p>
                 That is the whole configuration.  Four things have to be
-                true before a press on PB4 reaches the handler: port B is
+                true so that a press on PB4 reaches the handler: port B is
                 selected on line EXTI4 (<c>EXTI_EXTICR2</c>), a falling edge
                 counts as an event (<c>EXTI_FTSR1</c>), the line is unmasked so
                 the event may become a request (<c>EXTI_IMR1</c>), and the NVIC
@@ -894,7 +902,9 @@ NVIC_EnableIRQ(EXTI4_15_IRQn);   // let the request reach the CPU
                 interrupt.
             </p>
             <p>
-                Assembled, with the pin configuration you already have in front of it, this is the whole initialization:
+                Assembled, with the pin configuration you already have in front of it, this is the whole initialization.
+                The top part configures the pin as an input pin; the bottom part
+                sets it up to be able to interrupt on a falling edge.
             </p>
             <program language="c"><code><![CDATA[
 void pb4_exti_init(void) {
@@ -922,7 +932,7 @@ void pb4_exti_init(void) {
 ]]></code></program>
 
             <slide xml:id="sl-day9-four-switches">
-    <p>Everything that has to be true before a press on PB4 reaches the handler:</p>
+    <p>Everything that has to be true so that a press on PB4 reaches the handler:</p>
     <program language="c"><code><![CDATA[
 EXTI->EXTICR[1] &= ~EXTI_EXTICR2_EXTI4_Msk;             // 1. port B ...
 EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); //    ... on line EXTI4
@@ -940,7 +950,7 @@ NVIC_EnableIRQ(EXTI4_15_IRQn);   // 4. and the NVIC will deliver it
 </slide>
 
             <slide xml:id="sl-day9-init-code">
-    <p><c>pb4_exti_init()</c> is the pin configuration you already have, followed by the four steps:</p>
+    <p>Here is <c>pb4_exti_init()</c> in full:</p>
     <program language="c"><code><![CDATA[
 void pb4_exti_init(void) {
     __disable_irq();
@@ -959,7 +969,7 @@ void pb4_exti_init(void) {
     __enable_irq();
 }
 ]]></code></program>
-    <caption>Everything above the blank line you have written before. Everything below it is today.</caption>
+    <caption>The top part configures the pin as an input pin. The bottom part sets it up to be able to interrupt on a falling edge.</caption>
 </slide>
         </subsection>
 
@@ -988,13 +998,13 @@ void pb4_exti_init(void) {
             <activity xml:id="act-gpio-fpr-predict">
                 <title>Predict the Clear</title>
                 <task xml:id="act-gpio-fpr-t1">
-                    <statement><p>The reference manual calls bit 4 of
-                    <c>EXTI-&gt;FPR1</c> <c>FPIF4</c>.  To clear it, do you write
-                    a 1 to that bit or a 0?</p></statement>
+                    <statement><p>The reference manual calls bit 4 of the
+                    <c>EXTI_FPR1</c> register <c>FPIF4</c>.  To clear it, do you
+                    write a 1 to that bit or a 0?</p></statement>
                 </task>
                 <task xml:id="act-gpio-fpr-t2">
                     <statement><p><em>What would you look up to find
-                    out?</em>  Name the document and the section.  Then say
+                    out?</em>  Name the document and the section.  Then determine
                     which part of the register description you would
                     read.</p></statement>
                 </task>
@@ -1035,8 +1045,8 @@ ADC1->ISR  = ADC_ISR_ADRDY;    // ADC:    a 1 at the flag, 0s everywhere else
 EXTI->FPR1 = ???               // today
 ]]></code></program>
     <ul>
-        <li>The reference manual calls bit 4 of this register <c>FPIF4</c>. To clear it, do you write a 1 to that bit or a 0?</li>
-        <li>What would you look up to find out? Name the document and the section. Then say which part of the register description you would read.</li>
+        <li>The reference manual calls bit 4 of the <c>EXTI_FPR1</c> register <c>FPIF4</c>. To clear it, do you write a 1 to that bit or a 0?</li>
+        <li>What would you look up to find out? Name the document and the section. Then determine which part of the register description you would read.</li>
     </ul>
 </slide>
 
@@ -1050,9 +1060,10 @@ EXTI->FPR1 = ???               // today
 </slide>
 
             <p>
-                That gives the handler.  It checks which line, clears the flag,
-                sets a flag of its own, and leaves.  It has the same shape as the
-                timer handler, with a test in front of it:
+                That gives the handler.  It checks the pending flag to find out
+                which line fired, then clears that flag, sets a flag of its own,
+                and leaves.  It has the same shape as the timer handler, with a
+                test in front of it:
             </p>
             <program language="c"><code><![CDATA[
 // Interrupt service routine for the User button
@@ -1086,7 +1097,7 @@ volatile int buttonPushed;    // written by the ISR, read by main()
 ]]></code></program>
 
             <slide xml:id="sl-day9-isr-code">
-    <p>The handler finds out which line fired, clears it, records the press and leaves. It has the same shape as the timer handler, with a test in front of it.</p>
+    <p>The handler checks the pending flag to find out which line fired, then clears the flag, records the press and leaves. It has the same shape as the timer handler, with a test in front of it.</p>
     <program language="c"><code><![CDATA[
 volatile int buttonPushed;    // written by the ISR, read by main()
 
@@ -1110,8 +1121,11 @@ void EXTI4_15_IRQHandler(void){
         <subsection xml:id="subsec-day9-code">
             <title>Part 6: Writing counterResetButtonInt.c</title>
             <p>
-                Now assemble it.  The skeleton is the polled program with its
-                button handling moved out of the loop: the delay stays, the
+                Now assemble it.  <c>counterResetButtonInt.c</c> contains three
+                blocks of work: TODO 1 is the four EXTI/NVIC steps, in
+                <c>pb4_exti_init()</c>; TODO 2 is the handler; TODO 3 is the
+                shared flag.  Its loop is the polled program's with the
+                button handling moved out: the delay stays, the
                 printing stays, and the pin is never read in <c>main()</c>
                 again.
             </p>
@@ -1119,7 +1133,7 @@ void EXTI4_15_IRQHandler(void){
 /*
  * counterResetButtonInt.c -- reset a counter from a PB4 falling-edge interrupt
  *
- * Three blanks to fill in.  We have gone through everything you need in class:
+ * Three blocks of work to fill in.  We have gone through everything you need:
  *
  *   TODO 1   the four EXTI/NVIC steps      port, edge, mask, NVIC
  *   TODO 2   the handler itself               exact name from Table 40
@@ -1195,10 +1209,9 @@ void pb4_exti_init(void) {
 //           the event was on line 4, clear that pending bit, set your flag.
 ]]></code></program>
             <slide xml:id="sl-day9-skeleton" room="compressed">
-    <p>The file has three blanks. <term>TODO 1</term> is the four EXTI/NVIC steps, in <c>pb4_exti_init()</c>; <term>TODO 2</term> is the handler; <term>TODO 3</term> is the shared flag, below, in the polled loop with the button handling taken out:</p>
+    <p><c>counterResetButtonInt.c</c> contains three blocks of work: <term>TODO 1</term> is the four EXTI/NVIC steps, in <c>pb4_exti_init()</c>; <term>TODO 2</term> is the handler; <term>TODO 3</term> is the shared flag, and that is the one below. The loop is <c>counterResetButtonPolled.c</c>'s, with the pin read taken out and the reset split into its own branch:</p>
     <program language="c"><code><![CDATA[
 // TODO 3a -- declare the flag the ISR shares with main.
-
 int main(void) {
     int counter = 0;
     uart2_init();
@@ -1207,15 +1220,15 @@ int main(void) {
     while(1) {
         printf("%x\t%d\r\n", counter, counter);
         delay_ms(1000);
-        // TODO 3c -- fill in the test.  One chain, so a press does not
-        //            reset and then immediately increment.
+        // TODO 3c -- when the flag is set, reset the counter and clear the
+        //            flag.  One chain, so a press does not reset and then
+        //            immediately increment.
         if ( /* TODO 3c */ ) {
         } else if (counter == MAXCOUNT) { counter = 0; } else { counter++; }
     }
     return 0;
 }
 ]]></code></program>
-    <caption>Swap the build before you start: two <c>main()</c>s cannot coexist in one project.</caption>
 </slide>
 
             <activity xml:id="act-gpio-interrupt">
@@ -1237,11 +1250,11 @@ int main(void) {
                     build.</p></statement>
                 </task>
                 <task xml:id="act-gpio-int-t1c">
-                    <statement><p>Before you build: of the four steps, which
-                    one could you leave out and still get a program that
-                    compiles and links with no warnings and never interrupts?
-                    What would you see on the terminal if you
-                    did?</p></statement>
+                    <statement><p>Before you build: each of the four steps,
+                    left out, gives a program that compiles and links with no
+                    warnings and never interrupts.  Which of the four do you
+                    think would take you longest to find, and what would you see
+                    on the terminal?</p></statement>
                 </task>
                 <task xml:id="act-gpio-int-t2">
                     <statement><p>Fill TODO 1: the four steps, in order
@@ -1253,7 +1266,7 @@ int main(void) {
                 </task>
                 <task xml:id="act-gpio-int-t4">
                     <statement><p>Fill TODO 3: the flag, declared, initialized,
-                    and consumed in the loop.</p></statement>
+                    and used in the loop.</p></statement>
                 </task>
                 <task xml:id="act-gpio-int-t5">
                     <statement><p>Build, flash, and give the button the same
@@ -1540,9 +1553,11 @@ void EXTI4_15_IRQHandler(void){
                 </task>
             </activity>
             <p>
-                The difference is not style.  In the left-hand program
-                <c>counter++</c> is one line of C and five instructions of
-                machine code, and the machine code is where the problem lives:
+                The difference is not style.  In either program
+                <c>counter++</c> is one line of C that becomes several machine
+                instructions, and the machine code is where the problem lives.
+                Here is the version with the counter reset in the ISR, the
+                left-hand one:
             </p>
             <program language="asm"><code><![CDATA[
 0800013e:   ldr     r3, [pc, #12]    ; load the ADDRESS of counter into r3
@@ -1592,9 +1607,11 @@ void EXTI4_15_IRQHandler(void){
             <p>
                 The moral is a distinction worth carrying out of this course.
                 An ISR setting a <term>control signal</term>, a flag saying
-                <q>this happened</q>, cannot corrupt it, because nothing else
-                is mid-way through changing it; the worst it can do is merge
-                two events, as above.  An ISR changing <term>data</term>
+                <q>this happened</q>, cannot corrupt it.  <c>main()</c> writes
+                that flag too, but both sides only ever <em>store</em> a whole
+                value into it, never read it, change it and write it back, so
+                neither can be caught half-finished by the other; the worst that
+                can happen is that two events merge, as above.  An ISR changing <term>data</term>
                 that the main program also changes is a different thing
                 entirely: when it fails (rarely) it does so silently.  Rare and
                 silent is the worst combination a bug can have.  Be very careful
@@ -1602,11 +1619,10 @@ void EXTI4_15_IRQHandler(void){
                 not to.
             </p>
 
-            <slide xml:id="sl-day9-disassembly">
-    <p>The difference is not style. In the <term>left-hand</term> program, <c>counter++</c> is one line of C and five instructions of machine code:</p>
+            <slide xml:id="sl-day9-disassembly" room="compressed">
+    <p>The difference is not style: in either program <c>counter++</c> is one line of C that becomes several machine instructions. Here is the version with the <term>counter reset in the ISR</term>, the left-hand one:</p>
     <program language="asm"><code><![CDATA[
-; the LEFT-hand program:   main()   runs  while(1) { counter++; }
-;                          the ISR  runs  counter = 0;
+; the LEFT-hand program:  main()  while(1) { counter++; }    the ISR  counter = 0;
 
 0800013e:   ldr     r3, [pc, #12]    ; load the ADDRESS of counter into r3
 08000140:   ldr     r3, [r3, #0]     ; load the VALUE of counter into r3
@@ -1625,7 +1641,7 @@ void EXTI4_15_IRQHandler(void){
             <slide xml:id="sl-day9-moral">
     <p>Distinguish between data signals and control signals (flags).</p>
     <ul>
-        <li>An ISR setting a <term>control signal</term>, a flag saying <q>this happened</q>, is safe, because nothing else is part-way through changing it.</li>
+        <li>An ISR setting a <term>control signal</term>, a flag saying <q>this happened</q>, cannot corrupt it. <c>main()</c> writes that flag too, but both sides only ever <em>store</em> a whole value into it, never read it, change it and write it back, so neither can be caught half-finished by the other.</li>
         <li>An ISR changing <term>data</term> that the main program also changes is a different thing entirely: when it fails (rarely) it does so silently. Rare and silent is the worst combination a bug can have.</li>
         <li>Be very careful about modifying shared data in an ISR. Often the right answer is not to.</li>
         <li>Some fine print: the flag pattern does not avoid every issue. If a second press arrives between <c>if (buttonPushed)</c> and <c>buttonPushed = 0;</c>, that clearing line clears the new press along with the first, and the second press is never acted on. One event is lost, but no count is corrupted, which is a much milder failure. The reference section of this chapter explains how to prevent even this.</li>
@@ -1737,8 +1753,8 @@ GPIOA->BSRR = GPIO_BSRR_BR5;   // PA5 low  -- one write, no read
                 to preserve the other fifteen pins; <c>BSRR = BS_green</c> does
                 not, because the bits it does not mention are bits it does not
                 touch.  There is no window between a read and a write-back,
-                because there is no read.  Two lines of code can now set some
-                pins and clear others in one write and disturb no third pin.
+                because there is no read.  One write can now set some pins and
+                clear others and disturb no other pin.
             </p>
             <p>
                 BSRR has no <em>toggle</em>.  There is a set half and a clear half
@@ -1788,12 +1804,12 @@ GPIOA->BSRR = GPIO_BSRR_BR5;   // PA5 low  -- one write, no read
         <li>The <term>bit set/reset register</term> is 32 bits covering 16 pins twice: 1 to <c>BSy</c> in bits [15:0] <em>sets</em> pin y's output bit, 1 to <c>BRy</c> in bits [31:16] <em>clears</em> it. Writing 0 anywhere does nothing at all.</li>
         <li>Both halves are <term>write-only</term>: a read always returns 0. This is what RM0490 calls an <term>atomic bit set/reset</term>. The pin is set or cleared by a single write, with no read first, so the operation happens whole or not at all and an interrupt cannot land in the middle of it.</li>
         <li><c>ODR |= GREEN</c> must read the register to preserve the other fifteen pins. <c>BSRR = BS_green</c> does not, because the bits it does not mention are bits it does not touch.</li>
-        <li>One write can set some pins and clear others and disturb no third pin.</li>
+        <li>One write can set some pins and clear others and disturb no other pin.</li>
     </ul>
 </slide>
 
             <slide xml:id="sl-day9-bsrr-limits">
-    <p>BSRR has no toggle. There is a set half, a clear half and nothing that inverts, so BSRR does not directly replace <c>ODR ^= LED</c>. What it does is make the set and the clear uninterruptible. Here is the toggle written using BSRR:</p>
+    <p>BSRR has no toggle. There is a set half, a clear half and nothing that inverts, so BSRR does not directly replace <c>ODR ^= LED</c>. What it does is make the set and the clear uninterruptible. Here is the toggle written using BSRR, on Lab 5's red LED (PA6):</p>
     <program language="c"><code><![CDATA[
 volatile int redOn = 0;        // the ISR owns this; main() never writes it
 
@@ -1823,7 +1839,8 @@ void TIM14_IRQHandler(void) {
                 <title>Homework: counterResetButtonIntTimer.c</title>
                 <introduction>
                     <p>
-                        The program is due on Thursday, uploaded to Canvas.
+                        Both required parts are due on Thursday, uploaded to
+                        Canvas.
                     </p>
                 </introduction>
                 <task xml:id="act-gpio-hw-t1">
@@ -1834,12 +1851,15 @@ void TIM14_IRQHandler(void) {
                     neither.</p></statement>
                 </task>
                 <task xml:id="act-gpio-hw-t2">
-                    <statement><p>Also required: add an LED that you switch on
-                    when the loop begins its once-a-second work and off again
-                    when that work is done, driven with <c>GPIOA-&gt;BSRR</c>
-                    rather than <c>GPIOA-&gt;ODR</c>.  In one sentence: what
-                    does that buy you here, given what else is
-                    running?</p></statement>
+                    <statement><p>Also required: go back to the homework we
+                    reviewed at the start of class, the <c>ADCPot</c> with a
+                    timer-interrupt blink, whose <c>TIM14_IRQHandler</c>
+                    contains <c>GPIOA-&gt;ODR ^= LED;</c>.  Replace that line
+                    with a toggle built from <c>GPIOA-&gt;BSRR</c>.
+                    <c>BSRR</c> has no toggle of its own, so the ISR has to know
+                    the pin's current state from somewhere.  In one sentence:
+                    what would have to be added to that program for the old line
+                    to start losing toggles?</p></statement>
                 </task>
                 <task xml:id="act-gpio-hw-t3">
                     <statement><p>Optional housekeeping, nothing to submit: move
