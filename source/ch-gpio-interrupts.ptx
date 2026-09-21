@@ -1288,8 +1288,8 @@ int main(void) {
                     direction.  PC13 is also on lines 4 to 15, so it shares your
                     handler, which means the handler now has to tell the two
                     apart.  You will need a second initialization function, and
-                    a second field in a different <c>EXTICR</c>
-                    register.</p></statement>
+                    a second field in a different <c>EXTICR</c> register.
+                    This is also part of tonight's homework.</p></statement>
                 </task>
             </activity>
             <p>
@@ -1336,11 +1336,11 @@ int main(void) {
             </p>
 
             <slide xml:id="sl-day9-stretch">
-    <p>Add the Nucleo's blue user button. It is on <c>PC13</c>, and pressing it should reverse the counting direction.</p>
+    <p>Add the Nucleo's blue user button. It is on <c>PC13</c>, and pressing it should reverse the counting direction. This is also part of tonight's homework.</p>
     <ul>
         <li>PC13 is on lines 4 to 15 as well, so it shares <c>EXTI4_15_IRQHandler</c> with PB4: the handler now has to tell the two apart.</li>
         <li>You will need a second initialization function, and a second field in a <em>different</em> <c>EXTICR</c> register: work out which one.</li>
-        <li>The blue button is wired on the Nucleo already, so there is nothing to add on the breadboard.</li>
+        <li>The blue button is wired on the Nucleo already, so there is nothing to add on the breadboard. It is pulled up there too, so like PB4 it idles HIGH and a press is a falling edge.</li>
     </ul>
     <note>Say this at the START of Part 6, not at minute 47 — anyone who finishes early should go straight to it.</note>
 </slide>
@@ -1392,7 +1392,7 @@ void EXTI4_15_IRQHandler(void){
 </slide>
 
             <slide xml:id="sl-day9-pc13-solution-init" instructor="yes">
-    <p>Stretch solution, part 1: initializing PC13. Only the marked lines differ from <c>pb4_exti_init()</c>.</p>
+    <p>Initializing PC13. Only the marked lines differ from <c>pb4_exti_init()</c>.</p>
     <program language="c"><code><![CDATA[
 void pc13_exti_init(void) {
     __disable_irq();
@@ -1415,7 +1415,7 @@ void pc13_exti_init(void) {
 </slide>
 
             <slide xml:id="sl-day9-pc13-solution-isr" instructor="yes">
-    <p>Stretch solution, part 2: one handler, two buttons. This is the part the single-button version never forced you to write.</p>
+    <p>One handler, two buttons. This is the part the single-button version never forced you to write.</p>
     <program language="c"><code><![CDATA[
 volatile int buttonB4Pushed;
 volatile int buttonC13Pushed;
@@ -1841,10 +1841,11 @@ void TIM14_IRQHandler(void) {
         <subsection xml:id="subsec-day9-next">
             <title>Part 8: Before Next Class</title>
             <p>
-                Tonight you'll put two interrupt sources into one program: the button
-                on PB4 and a TIM14 timer, with a main loop that blocks on neither,
-                and you'll drive an LED from it with the atomic writes we have
-                just found in BSRR.
+                Tonight you'll put three interrupt sources into one program:
+                the button on PB4, the Nucleo's blue button on PC13, and a TIM14
+                timer, with a main loop that blocks on none of them.  The blue
+                button will also toggle the on-board LED, with the atomic writes
+                we have just found in BSRR.
             </p>
             <activity xml:id="act-gpio-homework">
                 <title>Homework: counterResetButtonIntTimer.c</title>
@@ -1854,26 +1855,41 @@ void TIM14_IRQHandler(void) {
                     </p>
                 </introduction>
                 <task xml:id="act-gpio-hw-t1">
-                    <statement><p>Modify <c>counterResetButtonInt.c</c> so that
-                    the one-second update comes from a TIM14 interrupt instead
-                    of <c>delay_ms()</c>.  The program then has two interrupt
-                    sources, a timer and a pin, and a main loop that blocks on
-                    neither.</p></statement>
+                    <statement><p>Modify <c>counterResetButtonInt.c</c> to use
+                    a TIM14 interrupt instead of <c>delay_ms()</c>, with an
+                    update period of one second.  The main loop then blocks on
+                    nothing.</p></statement>
+                </task>
+                <task xml:id="act-gpio-hw-t1b">
+                    <statement><p>Add the Nucleo's blue user button on PC13, so
+                    that pressing it reverses the counting direction.  PC13 is
+                    also on lines 4 to 15, so it shares
+                    <c>EXTI4_15_IRQHandler</c> with PB4, and the handler has to
+                    tell the two apart.  You will need a second initialization
+                    function, and a second field in a different <c>EXTICR</c>
+                    register.</p></statement>
                 </task>
                 <task xml:id="act-gpio-hw-t2">
-                    <statement><p>Also required, in the same program: add the
-                    on-board LED on PA5 (header D13) and toggle it each time a
-                    button press is noticed, in the same branch of <c>main()</c>
-                    that resets the counter.  Its clock enable and its
-                    <c>MODER</c> setup can come straight out of the program you
-                    wrote last night.  Drive it with <c>GPIOA-&gt;BSRR</c>
-                    rather than <c>GPIOA-&gt;ODR</c>: <c>BSRR</c> has no toggle
-                    of its own, so keep the LED's state in a variable and set or
-                    clear the pin from it, the way <c>redOn</c> does in the
-                    timer handler we looked at in class.</p></statement>
+                    <statement><p>The same press should also toggle the
+                    on-board LED on PA5 (header D13), and a press of PB4 should
+                    not.  The LED's clock enable and <c>MODER</c> setup can come
+                    from the program you wrote last night.  Drive it with
+                    <c>GPIOA-&gt;BSRR</c>, not <c>GPIOA-&gt;ODR</c>:
+                    <c>BSRR</c> has no toggle of its own, so keep the LED's
+                    state in a variable and set or clear the pin from it, the
+                    way <c>redOn</c> does in the timer handler we looked at in
+                    class.</p></statement>
                 </task>
+            </activity>
+            <activity xml:id="act-gpio-homework-optional">
+                <title>Good Practice, and a Head Start on Lab 5</title>
+                <introduction>
+                    <p>
+                        Neither of these gets uploaded to Canvas.
+                    </p>
+                </introduction>
                 <task xml:id="act-gpio-hw-t3">
-                    <statement><p>Optional housekeeping, nothing to submit: move
+                    <statement><p>It is good practice to move
                     <c>pb4_exti_init()</c> (and <c>pc13_exti_init()</c> if you
                     wrote it) into <c>exti.c</c> and <c>exti.h</c>.  Give the
                     header an <term>include guard</term>, the
@@ -1886,51 +1902,52 @@ void TIM14_IRQHandler(void) {
                     is actually about counting.</p></statement>
                 </task>
                 <task xml:id="act-gpio-hw-t4">
-                    <statement><p>Also optional, and a head start on Lab 5:
-                    rewrite <c>ADCPot.c</c> to take a measurement every second
+                    <statement><p>Rewrite <c>ADCPot.c</c> to take a
+                    measurement every second
                     from a timer interrupt rather than a delay.  You will still
                     poll the ADC to find out when the conversion is done; what
                     goes away is the <c>delay_ms()</c>.</p></statement>
                 </task>
             </activity>
             <slide xml:id="sl-day9-hw-solution" instructor="yes">
-    <p>This program has two interrupt sources, and the main loop blocks on neither.</p>
+    <p>Three sources, two handlers: PB4 and PC13 share <c>EXTI4_15_IRQHandler</c>, TIM14 has its own, and both are the ones from class. Only <c>main()</c> is new:</p>
     <program language="c"><code><![CDATA[
-volatile int buttonB4Pushed;
-volatile int timerFlag;
-
+volatile int buttonB4Pushed, buttonC13Pushed, timerFlag;
 int main(void) {
-  int counter = 0;
-  uart2_init();
-  pb4_exti_init();
+  int counter = 0, step = 1;
+  ...                              // uart2_init(), pb4_exti_init(), as in class
+  pc13_exti_init();                // the blue button, on the SAME handler
   tim14_ms_interrupt_init(1000);   // the delay_ms(1000) is gone
-  buttonB4Pushed = timerFlag = 0;
+  buttonB4Pushed = buttonC13Pushed = timerFlag = 0;
   while(1) {                       // nothing here blocks
-    if (timerFlag) {               // the timer drives the printing
+    if (timerFlag) {               // the timer prints, then steps the counter
       printf("%x\t%d\r\n", counter, counter);
-      if (counter == MAXCOUNT) { counter = 0; } else { counter++; }
+      counter += step;  if (counter > MAXCOUNT) { counter = 0; }
       timerFlag = 0;
     }
-    if (buttonB4Pushed) { counter = 0; buttonB4Pushed = 0; }  // the button resets
+    if (buttonB4Pushed)  { counter = 0; buttonB4Pushed = 0; }  // PB4 resets
+    if (buttonC13Pushed) { step = -step; /* and the LED */ }   // PC13 reverses
   }
   return 0;
 }
 ]]></code></program>
-    <caption>Two independent <c>if</c>s, not one chain, because a press and a tick are unrelated events. The two handlers clear with opposite masks: <c>rc_w0</c>, <c>rc_w1</c>.</caption>
+    <caption>Three independent <c>if</c>s, not one chain, because a tick and either press are unrelated events. The two handlers clear with opposite masks: <c>rc_w0</c>, <c>rc_w1</c>.</caption>
+    <note>Abridged: the init calls they already have are elided, and so is the negative wrap. The LED half is on the next slide and goes in the same branch, beside the step reversal.</note>
 </slide>
 
             <slide xml:id="sl-day9-hw-solution-led" instructor="yes">
     <p>The LED half of the homework. <c>main()</c> owns the state, and the pin is driven with one write.</p>
     <program language="c"><code><![CDATA[
-int ledOn = 0;                     // main() owns this; no ISR writes it
+  int ledOn = 0;                   // main() owns this; no ISR writes it
 
-    RCC->IOPENR |= RCC_IOPENR_GPIOAEN;      // PA5 as an output, as last night
-    GPIOA->MODER &= ~GPIO_MODER_MODE5_Msk;
-    GPIOA->MODER |= (GPIO_OUTPUT << GPIO_MODER_MODE5_Pos);
+  RCC->IOPENR |= RCC_IOPENR_GPIOAEN;      // PA5 as an output, as last night
+  GPIOA->MODER &= ~GPIO_MODER_MODE5_Msk;
+  GPIOA->MODER |= (GPIO_OUTPUT << GPIO_MODER_MODE5_Pos);
 
-    if (buttonB4Pushed) {          // the button resets AND toggles the LED
-      counter = 0; buttonB4Pushed = 0;
-      ledOn = !ledOn;                                 // flip our own copy ...
+    if (buttonC13Pushed) {         // the BLUE button, and only the blue one
+      buttonC13Pushed = 0;
+      step = -step;                                   // reverse the count ...
+      ledOn = !ledOn;                                 // ... flip our own copy
       if (ledOn) { GPIOA->BSRR = GPIO_BSRR_BS5; }     // ... then one write
       else       { GPIOA->BSRR = GPIO_BSRR_BR5; }
     }
