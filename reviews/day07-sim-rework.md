@@ -55,3 +55,64 @@ no slides, so there is nothing to walk in projection order.
 core. A two-paragraph rework does not carry a ten-reviewer panel; the three run
 were chosen for the two risks this change actually had — factual claims about a
 tool that changed under the prose, and register in a passed chapter.
+
+---
+
+## Petra's round, 2026-09-21
+
+Applied from her review of the above.
+
+| Her point | Action |
+|---|---|
+| Add the "bench" rule and fix that line | **L-22** added to `scripts/check_rules.py` and documented in `AUTHORING-book.md`. It fired on exactly one line, `ch-motors.ptx:668`, now "different on a real motor". `\bbench\b` cannot match inside "benchmark"; "workbench" and "lab station" are covered as the same claim in other words |
+| Update the "copy your finished code…" | Done in all three simulator paragraphs. Day 1 is the first appearance so it carries the explanation; Day 5 and Day 7 take the short form |
+| "the reading moves by about one count" isn't clear | Replaced with her wording: "the reading in the simulator has very little noise, a lot less than a real converter and a real potentiometer will give you" |
+| What do you mean by source resistance? | The term was hers, from `subsec-adc-ref-impedance`, but a student meets it three sections later. Dropped from Part 4b, which now says "none of the sampling-time effects of [xref] appear here at all" and leaves the xref for anyone who wants the detail |
+| Full screen and bookmarking — is the code saved? | The claim was misleading in all three paragraphs, hers included. Full screen base64-encodes the editor text into the new tab's address, so a bookmark holds the version you opened it with and no later edit. Stated plainly on Day 1, short form after |
+| "Homework" should be quoted, and say it is a head start on the lab | `<q>Homework</q>, to help you get a head start on the lab`, in the chapter and in `day7.json` by slide id. A colon after "Activity 6.2.6:" gave two colons in a row, so it is a comma. `deck_fit` says the slide still fits, 30 px clear |
+
+### Found while doing it, not fixed
+
+- **`assets/decks/day7.json` slide 32, `sl-adc-solution` ("Solution: pa0_adc_init()"), CLIPS** — body overflows 87 px down, so the bottom of the worked solution is off the projector. Pre-existing: nothing in this round touches that slide, and `reviews/day7-petra.md` has no note about it. It is an `instructor="yes"` slide, so only the instructor deck shows it. Fixing it means splitting the listing or shrinking it, which is a content decision.
+- **Six other homework labels** carry no quotation marks: `ch-accelerometers.ptx:1251` and `:2167`, `ch-gpio-interrupts.ptx:342` and `:1853`, `ch-i2c.ptx:1475` and `:3688`, `ch-timers-interrupts.ptx:1634`. If nothing in the course is collected, the same treatment applies to all of them.
+
+### The voice check on the Full screen wording
+
+The one piece of genuinely new prose in her round was mine, so `checker-voice`
+ran on it alone. **MAJOR**, and it caught a real miss:
+
+- **`ch-intro-blinky.ptx:1134` still said "copy it into a file"** — a second
+  save instruction, inside `act-day1-plan-t4`, which is the passage a student
+  reads *before* the paragraph beside the embed. My grep was for "copy your
+  finished code" and never saw it, so her request to name the download button
+  was half-applied in the one place it mattered most. Fixed, keeping her own
+  clause "If you reload or close the page your work is gone" verbatim.
+- **"the download button, marked ↓" is not her pattern.** `ch-debugging.ptx:599`
+  has it: **"Terminate (red square)"** — function first, appearance in
+  parentheses, no italics on the appearance, because her italics wrap words a
+  student can read on screen. Now "the download button (the downward arrow)",
+  with a locator on Day 1 since the embed's toolbar has seven glyph controls.
+- **"packed into the address itself"** was jargon with a three-clause tail.
+  Now "your code is part of that tab's web address", split into two sentences.
+- **The short forms offered download and Full screen as two ways of doing one
+  thing**, and they are not: one gives a `.c` file, the other a snapshot in a
+  URL, and only the file survives an edit. Split. "as it stands now" had no
+  referent (S-26) and is now "as it was when you pressed the button".
+- **`sl-day1-sim-demo`'s presenter note** named only Full screen, while the book
+  now names the download button as the thing that keeps your work. Both named.
+
+Day 5 and Day 7 carry the short form word-for-word identically, deliberately.
+
+### Also for Petra, from that check
+
+1. **Should the Day 1 paragraph say that nothing goes to a server?** It is the
+   most complete answer to the question she raised and it is true, but it
+   introduces "server" into a paragraph that otherwise stays inside the browser
+   window. Left out; the snapshot fact is stated twice instead.
+2. **The Day 3 simulator paragraph (`ch-switches.ptx:1036`) has no save sentence
+   at all**, so it is now the one embed of four that never mentions the download
+   button. Adding the short form makes all four consistent; leaving it keeps a
+   passed paragraph untouched.
+3. **In print** these paragraphs describe a downward arrow the PDF reader cannot
+   see. Already true of Run and Step, so not new, but it is a question about all
+   four paragraphs rather than about this sentence.

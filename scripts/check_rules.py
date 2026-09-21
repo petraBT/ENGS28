@@ -94,6 +94,15 @@ RULES = [
      "error"),
     ("L-11", r"\bin Day \d",
      "say 'on Day N' — or 'tomorrow', since Day Nx follows Day N", "error"),
+    # L-22: there are no lab benches in this course. Every student carries a
+    # portable kit and works on their own laptop, so "on the bench" describes a
+    # room they never sit in. Added 2026-09-21 after the word survived a
+    # committee gate in ch-motors.ptx and went into new Day 7 prose: nothing was
+    # checking for it. \bbench\b cannot match inside "benchmark", so that word
+    # is safe; "workbench" and "lab station" are the same claim in other words.
+    ("L-22", r"\bbench(es)?\b|\bworkbench(es)?\b|\blab station(s)?\b",
+     "there are no lab benches — students carry a kit and work on their own laptop",
+     "error"),
 ]
 
 # Bit/register names that must keep reference-manual casing.
