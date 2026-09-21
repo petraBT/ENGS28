@@ -6,7 +6,7 @@
  * pin A0. Drag the knob to move the
  * wiper; the voltage on it is shown
  * under the knob, which is what your
- * DMM would read on the bench.
+ * DMM would read.
  *
  * A0 is PA0, and PA0 is ADC channel 0.
  * All three happen to agree here. They
@@ -31,8 +31,10 @@
  *
  * Watch ADC1->CHSELR, ADC1->ISR and
  * ADC1->DR in the register panel as it
- * runs. The panel shows them once the
- * ADC's own clock is on.
+ * runs. They appear as soon as your
+ * program touches the converter, so a
+ * forgotten TODO 2 shows up as an empty
+ * RCC->APBENR2 beside them.
  */
 
 #include <stdio.h>
