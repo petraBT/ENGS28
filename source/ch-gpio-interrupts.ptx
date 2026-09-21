@@ -24,7 +24,8 @@
         </p>
         <p>
             Compared to timer interrupts, GPIO interrupts need one more piece of hardware configured: the
-            <term>EXTI</term>, which sits between the pins and the NVIC. We'll need to configure three
+            <term>EXTI</term>, the Extended Interrupt and Event Controller,
+            which sits between the pins and the NVIC. We'll need to configure three
             registers and use a fourth one inside the ISR.  We will also introduce one idea that is
             not about interrupts at all, but that only becomes visible once you
             have them: when an ISR and <c>main()</c> both touch the same register,
@@ -317,11 +318,13 @@
         <title>Day 9 In-Class: A Button That Interrupts</title>
         <introduction>
             <p>
-                Today we take a counter that misses button presses and give it
-                a button that cannot be missed.  We will run the polled version
-                first and watch it fail, then configure the EXTI so that a
-                falling edge on PB4 raises an interrupt, then write the handler.
-                By the end of class the counter resets the instant you press
+                Today we will look at a program that displays a count once a
+                second and in addition is supposed to reset the counter on a
+                button press.  We will first run the polled version and observe
+                where it misses button presses.  Next we will configure the EXTI
+                so that a falling edge on the button pin (PB4) raises an
+                interrupt, then write the handler.  With the button being able
+                to interrupt, the counter resets the instant you press
                 the button, even though the main loop spends almost all of its
                 time inside a one-second delay.
             </p>
@@ -330,25 +333,25 @@
                 doing since we started writing ISRs without examining it:
                 changing a variable inside an
                 ISR.  It works in the programs we have written so far, and we'll
-                see why it stops working as soon as two pieces of code change the
-                same thing.
+                see why it can become problematic as soon as two pieces of code change the
+                same variable.
             </p>
         </introduction>
 
         <subsection xml:id="subsec-day9-homework">
             <title>Part 1: Homework Review</title>
             <p>
-                Last night's program gave <c>ADCPot.c</c> a heartbeat: the ADC
+                In last night's homework you added a heartbeat to <c>ADCPot.c</c>: the ADC
                 keeps printing while a TIM14 interrupt blinks the on-board LED
                 one-third of a second on, one-third of a second off.  Compare your version with your
-                neighbors' before we look at one on the projector.
+                neighbors' and note any differences in implementation.
             </p>
             <p>
-                One detail to notice and then leave alone.  The hint was to
+                One detail to notice:  The hint was to
                 toggle the LED directly in the ISR, so most solutions contain a
                 line like <c>GPIOA-&gt;ODR ^= LED;</c> inside
-                <c>TIM14_IRQHandler</c>, an ISR reaching into a peripheral
-                register and changing it.  Keep that line in mind.  We come
+                <c>TIM14_IRQHandler</c>.  The ISR thus loads a peripheral
+                register, changes its value and writes it back.  Keep that line in mind:  We'll come
                 back to it at the end of class.
             </p>
 
@@ -457,14 +460,6 @@ while(1) {
     </ul>
 </slide>
 
-            <p>
-                Before running anything, check the hardware.  PB4 needs its
-                button and its debouncing capacitor, wired as in
-                <xref ref="fig-rc-debounce-circuit"/>.  If that circuit is no
-                longer on your breadboard, rebuild it now with the button on
-                D5 (PB4), and run your earlier <c>button.c</c> to confirm it
-                works before going further.
-            </p>
             <activity xml:id="act-gpio-polled-run">
                 <title>Watch the Counter Miss a Press</title>
                 <introduction>
@@ -580,7 +575,7 @@ EXTI4 ... EXTI15   ->  IRQ7,  priority 14    <- our button, with eleven others
 </slide>
 
             <figure xml:id="fig-vector-table-exti">
-                <caption>The three EXTI rows of RM0490's Table 40, the vector
+                <caption>The three EXTI rows as part of RM0490's Table 40, the vector
                 table.  <c>EXTI0_1</c> is position 5, <c>EXTI2_3</c> is position
                 6, and <c>EXTI4_15</c>, the one PB4 uses, is position 7, with
                 priority 14 and vector address 0x0000_005C.  Sixteen EXTI lines
@@ -626,10 +621,11 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
                 the port.  An edge-detection circuit decides whether this is an
                 edge worth reacting to.  A mask decides whether a detected edge
                 is allowed to become an interrupt request at all.  And a pending
-                register records that it happened, so the request survives until
-                software acknowledges it.  Each stage is one register.
+                register records that it happened, so that the EXTI logic then
+                generates the interrupt request that is sent to the NVIC.  Each
+                stage has its own register.
                 We'll configure the first three next.  The fourth, the pending
-                register, is the one your handler reads and clears, and we'll come
+                register, is also the one your handler reads and clears, and we'll come back
                 to it when we write the handler.
             </p>
             <figure xml:id="fig-exti-signal-path">
@@ -662,7 +658,7 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
         <li><c>EXTI_EXTICRx</c>: the multiplexer. <em>Which port</em> is on this line.</li>
         <li><c>EXTI_FTSR1</c>: the edge detector. <em>Which edge</em> counts as an event.</li>
         <li><c>EXTI_IMR1</c>: the mask. Whether a detected event may <em>become an interrupt request</em> at all.</li>
-        <li><c>EXTI_FPR1</c>: the pending register. Records that it happened, so the request survives until your ISR acknowledges it.</li>
+        <li><c>EXTI_FPR1</c>: the pending register. Records that it happened, and the bit stays set until your handler clears it.</li>
         <li>The first three are <term>configured once</term>, and that is what we'll do next. The fourth is <term>read and cleared by your handler</term>, which we'll write afterwards.</li>
         <li>You also need to register your ISR with the NVIC, exactly as for the timer.</li>
     </ul>
@@ -679,9 +675,9 @@ void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
                 a register; the one that holds EXTI4 is the second, and how the
                 four are laid out and addressed is in
                 <xref ref="subsec-gpio-ref-exticr"/> for when you need it.  What
-                you need now is on one page of the <url href="external/stm32c031_rm.pdf">Reference Manual</url>: which byte
-                of <c>EXTI_EXTICR2</c> belongs to line EXTI4, and what code
-                selects a port.
+                you need now is on one page of the <url href="external/stm32c031_rm.pdf">Reference Manual</url>.
+                Which byte of <c>EXTI_EXTICR2</c> corresponds to line EXTI4, and
+                what code do you need to write into it to select a port?
             </p>
 
             <slide xml:id="sl-day9-checklist" room="yes">
@@ -801,9 +797,10 @@ EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos); // select port B
         <subsection xml:id="subsec-day9-ftsr-imr-nvic">
             <title>Part 4b: The Edge, the Mask, and the NVIC</title>
             <p>
-                Three steps remain, and after choosing the port they are a
-                relief: each is a single bit, and the bit number corresponds to
-                the line number.
+                Three steps remain, and each of them is much easier to program
+                than choosing the port.  The edge and the mask are a single bit
+                each, and the bit number corresponds to the line number.  The
+                NVIC is the one function call we already used for the timer.
             </p>
             <p>
                 <em>Which edge.</em>  The button pin idles HIGH and goes LOW
@@ -993,9 +990,8 @@ void pb4_exti_init(void) {
                 <c>EXTI_FPR1</c>.
             </p>
             <p>
-                It is also the programmer's job to clear this bit if it was set,
-                and how to do that is a question you can now answer before
-                looking.  Recall that we have encountered two different ways to
+                It is also the programmer's job to clear this bit if it was
+                set.  Recall that we have encountered two different ways to
                 clear a status bit: TIM14's flag was cleared by writing a
                 <em>0</em>, and the ADC's flags were cleared by writing a
                 <em>1</em>.  What decided
@@ -1068,9 +1064,9 @@ EXTI->FPR1 = ???               // today
 </slide>
 
             <p>
-                That gives the handler.  It checks the pending flag to find out
-                which line fired, then clears that flag, sets a flag of its own,
-                and leaves.  It has the same shape as the timer handler, with a
+                The handler therefore checks the pending flag to find out which
+                line fired, then clears that flag, sets a flag of its own, and
+                leaves.  It has the same shape as the timer handler, with a
                 test in front of it:
             </p>
             <program language="c"><code><![CDATA[
@@ -1129,7 +1125,8 @@ void EXTI4_15_IRQHandler(void){
         <subsection xml:id="subsec-day9-code">
             <title>Part 6: Writing counterResetButtonInt.c</title>
             <p>
-                Now assemble it.  <c>counterResetButtonInt.c</c> contains three
+                We are now ready to assemble the entire program.
+                <c>counterResetButtonInt.c</c> contains three
                 blocks of work: TODO 1 is the four EXTI/NVIC steps, in
                 <c>pb4_exti_init()</c>; TODO 2 is the handler; TODO 3 is the
                 shared flag.  Its loop is <c>counterResetButtonPolled.c</c>'s
@@ -1600,7 +1597,7 @@ void EXTI4_15_IRQHandler(void){
                 reset happens one iteration late instead of never.
             </p>
             <p>
-                One window does remain: a second press arriving between
+                One small vulnerability does remain: a second press arriving between
                 <c>if (buttonPushed)</c> and <c>buttonPushed = 0;</c> sets the
                 flag, and that clearing line then clears the new press along
                 with the first, so the second press is never acted on: the two
@@ -1873,10 +1870,7 @@ void TIM14_IRQHandler(void) {
                     rather than <c>GPIOA-&gt;ODR</c>: <c>BSRR</c> has no toggle
                     of its own, so keep the LED's state in a variable and set or
                     clear the pin from it, the way <c>redOn</c> does in the
-                    timer handler we looked at in class.  In one sentence: what
-                    would have to be added to this program before writing that
-                    toggle as <c>GPIOA-&gt;ODR ^= LED;</c> could lose an update
-                    to one of port A's pins?</p></statement>
+                    timer handler we looked at in class.</p></statement>
                 </task>
                 <task xml:id="act-gpio-hw-t3">
                     <statement><p>Optional housekeeping, nothing to submit: move
@@ -1941,7 +1935,7 @@ int ledOn = 0;                     // main() owns this; no ISR writes it
       else       { GPIOA->BSRR = GPIO_BSRR_BR5; }
     }
 ]]></code></program>
-    <note>The last part's answer: a second piece of code writing GPIOA-&gt;ODR on the other side of an interrupt, such as a second LED on port A driven from the TIM14 handler. As this program stands nothing else touches ODR, so ODR ^= LED would lose nothing yet.</note>
+    <note>Worth saying aloud: nothing else in this program writes GPIOA-&gt;ODR, so ODR ^= LED would work here too. We use BSRR because Lab 5's Additional Feature 1 has a timer handler flashing the red LED while main() drives the green one, with all three of the lab's LEDs on PA5-PA7, and there ODR can lose a toggle.</note>
 </slide>
 
             <p>
