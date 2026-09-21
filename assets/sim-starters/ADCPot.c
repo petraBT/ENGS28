@@ -5,7 +5,7 @@
  * the component bay, then click header
  * pin A0. Drag the knob to move the
  * wiper; the voltage on it is shown
- * beside the knob, which is what your
+ * under the knob, which is what your
  * DMM would read on the bench.
  *
  * A0 is PA0, and PA0 is ADC channel 0.
