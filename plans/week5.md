@@ -352,16 +352,26 @@ section, so Step 3 builds the split from scratch rather than lightly editing.
 interrupt; class programs it.  The reading says the EXTI multiplexes; class
 derives which register and which byte.
 
-**Homework (due Thursday):** the deck's Coding Challenge 1 —
-`counterResetButtonIntTimer.c`: replace `delay_ms()` in
-`counterResetButtonInt.c` with a 1-second timer interrupt, so the program has
-**two** interrupt sources and no blocking wait anywhere.  Deck slide 52 is the
-solution.  **Plus one line that exercises BSRR:** drive a
-counting-is-alive LED from `main()` with `GPIOA->BSRR` rather than `ODR`, and
-say in one sentence what that buys you once something else starts writing the
-same port.  Optional and nothing to submit: the modularization stretch and the
-deck's Coding Challenge 2 (`ADCPot` on a timer), a head start on Lab 5 which
-Day 10 opens by reviewing.
+**Homework (due Thursday), per Petra 2026-09-21:** `counterTwoButtons.c` —
+add the Nucleo's blue user button on PC13 to `counterResetButtonInt.c`, so that
+pressing it reverses the counting direction.  `delay_ms(1000)` **stays** in the
+loop.  PC13 shares `EXTI4_15_IRQHandler` with PB4, so the handler has to tell
+the two apart: a second init function and a second field in a different
+`EXTICR`.  Her own deck slide 43 is the solution.  **Plus the BSRR line:** the
+same blue press toggles the on-board LED on PA5, done *in the handler* so it is
+not up to a second late, with the state in a variable `main()` never writes.
+
+She cut the timer task to optional on 2026-09-21: *"that's just too much
+homework between Tuesday and Thursday."*  Optional and nothing to submit, all
+three: `counterResetButtonIntTimer.c` (the single-button version with
+`delay_ms()` replaced by a 1-second timer interrupt — this is the one Day 10's
+Part 1 reads two AI answers to, so it must stay single-button), the
+modularization stretch, and `ADCPot` on a timer.
+
+**Do not let the blue button go back to being only a stretch** (Petra,
+2026-09-21: *"This is where the actual learning happens so I am not happy to
+have this only be a stretch goal"*).  It stays in Part 6 as the "Done early?"
+task **and** is required homework; the slide says so on the wall.
 
 **Lab 5 needs (P-13 — checked, not taught):** Lab 5 does not require GPIO
 interrupts at all.  What it takes from Day 9 is the *timer*-interrupt homework
