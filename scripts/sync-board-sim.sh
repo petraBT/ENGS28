@@ -82,4 +82,11 @@ EOF
 
 echo
 echo "Done. Simulator at commit $SIM_REV$SIM_DIRTY is now in assets/board-sim/."
-echo "Rebuild the book (./build.sh) to see it, then commit assets/board-sim/."
+# ./build.sh would be the obvious thing to say here, and it is wrong: it
+# rebuilds only the reading book, leaving the authoring preview, the decks and
+# both instructor targets on whatever simulator they were last built with. A
+# change synced here is then invisible in exactly the preview used to check it.
+echo "Rebuild every target (./scripts/build-all.sh) to see it - ./build.sh"
+echo "refreshes the reading book alone and leaves the authoring preview, the"
+echo "decks and the instructor targets on the old simulator. Then commit"
+echo "assets/board-sim/."
