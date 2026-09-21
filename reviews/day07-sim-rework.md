@@ -116,3 +116,12 @@ Day 5 and Day 7 carry the short form word-for-word identically, deliberately.
 3. **In print** these paragraphs describe a downward arrow the PDF reader cannot
    see. Already true of Run and Step, so not new, but it is a question about all
    four paragraphs rather than about this sentence.
+
+### Her second round, 2026-09-21 — closed
+
+| Her point | Action |
+|---|---|
+| "Don't worry about page overrun on instructor only slides. They scroll." | `scripts/deck_fit.mjs` now flags an instructor-only slide `scroll` rather than `CLIP`, reading the `instructor` flags out of the deck file (the player numbers slides in JSON order, so entry *n* is slide *n+1*). The clearance is still measured and printed, so a deliberate check is still possible; only the verdict changes. Day 7 slide 32 now reads `scroll`. **Standing fact — do not re-raise an instructor-slide overrun at a gate.** |
+| The other homework labels should keep no quotation marks; only Day 7's, which is not collected | No change, which is how they were left. Recorded here so the six are not "fixed" later by someone reading the earlier note as a to-do. |
+| Add a sentence on Day 3 about the download button | Added to `ch-switches.ptx`, word-for-word the short form Days 5 and 7 carry. All four simulator paragraphs now say it. |
+| Keep Day 1 as is | Kept. The "nothing goes to a server" sentence stays out. |

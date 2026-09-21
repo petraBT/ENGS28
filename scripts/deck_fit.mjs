@@ -9,13 +9,21 @@
 // the writing space below it and not a clip.  Only last.getBoundingClientRect()
 // .bottom > body.bottom is a real loss.  CLIP = real, SOFT = padding only.
 //
+// INSTRUCTOR-ONLY slides are flagged `scroll`, never CLIP (Petra, 2026-09-21:
+// "Don't worry about page overrun on instructor only slides.  They scroll.").
+// They are read at the laptop rather than projected past the bottom of the
+// wall, so an overrun there is not a loss.  They are still measured and their
+// clearance still printed — the flag is the only thing that changes — so a
+// deliberate check of one is still possible, without the committee or a fit
+// sweep re-raising it every time.
+//
 // The deck player must be served somewhere; ./preview-slides.sh puts it on 8352.
 // Slide indices match the counter in the player's bottom-right corner.
 //
 //   node scripts/deck_fit.mjs day9 8352 --count=54
 //   node scripts/deck_fit.mjs day1 8352 --count=36 --shot=12,27 --outdir=/tmp/shots
 import { spawn } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -155,6 +163,24 @@ const MEASURE = `(() => {
            roomy: !!b && /roomy/.test(b.className || '') };
 })()`;
 
+// Which runtime indices are instructor-only, read from the deck file itself.
+// The player numbers slides from 1 in the order the JSON lists them, so the
+// entry at 0-based n is slide n+1.
+const instructorSlides = (() => {
+  try {
+    const raw = readFileSync(`assets/decks/${deck}.json`, 'utf8');
+    const parsed = JSON.parse(raw);
+    const list = Array.isArray(parsed) ? parsed : parsed.slides;
+    return new Set(
+      list.flatMap((entry, n) => (entry && entry.instructor ? [n + 1] : [])),
+    );
+  } catch {
+    // No deck file to hand (a different working directory, say). Report every
+    // overrun as a clip, which is the safe direction to be wrong in.
+    return new Set();
+  }
+})();
+
 const countArg = process.argv.find(a => a.startsWith('--count='));
 const limit = countArg ? Number(countArg.slice(8)) : (total || 60);
 const rows = [];
@@ -179,7 +205,13 @@ for (const r of rows) {
   if (r.kind === 'SUSPENDED') { console.log(`${String(r.i).padStart(2)}  SUSPENDED   ${t}`); continue; }
   const probs = r.problems.length ? r.problems.join('; ') : 'fits';
   const cl = r.clearance == null ? '    n/a' : `${String(r.clearance).padStart(5)}px`;
-  const flag = r.problems.length ? (r.clearance != null && r.clearance >= 0 ? 'SOFT' : 'CLIP') : '    ';
+  const flag = !r.problems.length
+    ? '      '
+    : instructorSlides.has(r.i)
+      ? 'scroll'
+      : r.clearance != null && r.clearance >= 0
+        ? 'SOFT  '
+        : 'CLIP  ';
   console.log(`${String(r.i).padStart(2)}  ${flag} last-clear ${cl}  ${probs}  | ${t}${r.cls ? '  [' + r.cls.trim() + ']' : ''}`);
 }
 
