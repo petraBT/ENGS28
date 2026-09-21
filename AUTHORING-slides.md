@@ -528,6 +528,19 @@ Five traps it exists to catch, all of which have produced a false "fits". The
 last two are not measurable at all, and are the reason the rule is **look at
 every slide that carries a figure**, not "run the snippet":
 
+- **A GLUE slide — and `deck_fit.mjs` did not measure one at all until
+  2026-09-21.** A `title`/`section`/`agenda`/`recap`/`notice`/`prompt` slide
+  renders in `#glue`, not `#ref`, so the script printed it as `glue` and moved
+  on; the last slide of every deck, which is nearly always the recap, had
+  therefore never been measured. Day 9's recap reached the wall two lines too
+  tall and Petra found it by looking. Two further details, both of which
+  produced a false "fits" on the way to fixing it: the loop ran `i < limit`, so
+  `--count=N` never reached the slide the player calls N; and `#glue`'s own box
+  extends **behind the bottom bar**, so comparing the last item against
+  `g.getBoundingClientRect().bottom` reports clearance for a bullet that is
+  visibly cut off. Measure against `#bar`'s top. Glue slides also had no
+  compact mode before that date — `"room": "compressed"` now tightens the item
+  gaps (margins only, never the type size or the leading).
 - **Suspended layout.** In a background or hidden window the browser stops
   computing layout, so every `clientHeight` reads 0 and the old one-line check
   returned `[0, 0]` for every slide regardless of content. Require

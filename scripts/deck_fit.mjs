@@ -107,7 +107,24 @@ const MEASURE = `(() => {
   const ref = document.querySelector('#ref');
   const title = (document.querySelector('#ref .deck-title') || document.querySelector('#stage h1, #stage h2') || {}).textContent || '';
   if (!ref || getComputedStyle(ref).display === 'none') {
-    return { kind: 'glue', title: (document.querySelector('#stage h1,#stage h2,#stage .title')||{}).textContent || '' };
+    const g = document.querySelector('#glue');
+    const gt = (document.querySelector('#glue .section-main, #glue .title-main, #glue h2')
+                || document.querySelector('#stage h1,#stage h2,#stage .title') || {}).textContent || '';
+    if (!g || getComputedStyle(g).display === 'none') return { kind: 'glue', title: gt };
+    if (g.clientHeight === 0) return { kind: 'SUSPENDED', title: gt };
+    const gout = [];
+    const gdy = g.scrollHeight - g.clientHeight;
+    if (gdy > 2) gout.push('body overflows ' + gdy + 'px down');
+    const gitems = g.querySelectorAll(':scope > ul > li, :scope > p, :scope > div');
+    const glast = gitems.length ? gitems[gitems.length - 1] : null;
+    let gclear = null;
+    const bar = document.querySelector('#bar');
+    const floor = bar ? bar.getBoundingClientRect().top
+                      : Math.min(g.getBoundingClientRect().bottom, window.innerHeight);
+    if (glast) gclear = Math.round(floor - glast.getBoundingClientRect().bottom);
+    if (gclear != null && gclear < 0) gout.push('last item ' + (-gclear) + 'px below the bar');
+    return { kind: 'ref', title: gt, problems: gout, clearance: gclear,
+             cls: 'glue ' + (g.className || '').replace(/\bslide\b|\bon\b/g, '').trim() };
   }
   const b = document.querySelector('#ref .ref-body');
   const out = [];
@@ -141,7 +158,7 @@ const MEASURE = `(() => {
 const countArg = process.argv.find(a => a.startsWith('--count='));
 const limit = countArg ? Number(countArg.slice(8)) : (total || 60);
 const rows = [];
-for (let i = 0; i < limit; i++) {
+for (let i = 1; i <= limit; i++) {
   await evaluate(`location.hash = '${i}'`);
   await sleep(320);
   await evaluate(`(async () => { if (window.MathJax && MathJax.typesetPromise) { try { await MathJax.typesetPromise() } catch(e){} } return true })()`);
