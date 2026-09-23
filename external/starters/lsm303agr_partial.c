@@ -16,7 +16,7 @@ void lsm303_AccelRegisterWrite(uint8_t RegisterAddress, uint8_t data) {
 }
 
 /**************************************************************************
- * Read one byte from an accelerometer register (Datasheet, Table 13)
+ * Read one byte from an accelerometer register (Datasheet, Table 22)
  */
 uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 	uint8_t data;

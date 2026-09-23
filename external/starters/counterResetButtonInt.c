@@ -41,7 +41,7 @@
  *   <date>   <your initials>   filled in TODOs 1-3
  *
  * -----------------------------------------------------------------------------
- * Three blanks to fill in.  Everything you need was in Parts 4 and 5:
+ * Three blocks of work to fill in.  We have gone through everything you need:
  *
  *   TODO 1   the four EXTI/NVIC switches      port, edge, mask, NVIC
  *   TODO 2   the handler itself               exact name from Table 40
@@ -73,7 +73,6 @@
 void pb4_exti_init(void);
 
 // TODO 3a -- declare the flag the ISR shares with main.
-//            Which keyword must the declaration carry, and why?
 
 
 int main(void) {
@@ -102,7 +101,7 @@ int main(void) {
             counter++;
         }
     }
-    return 1;
+    return 0;
 }
 
 void pb4_exti_init(void) {

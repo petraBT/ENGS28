@@ -112,5 +112,5 @@ int main(void) {
         i2c1_byteWrite(HT16K33_ADDR, data);
         delay_ms(250);
     }
-    return 1;
+    return 0;
 }
