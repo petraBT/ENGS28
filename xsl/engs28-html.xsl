@@ -282,7 +282,8 @@
        <sim starter="blinkySlowToFast"/>   assets/sim-starters/<name>.c
        <sim example="blinky"/>             a built-in example shipped with the
                                            simulator: blinky, blinky-delay,
-                                           button-external, printf-counter.
+                                           button-external, printf-counter,
+                                           adc-pot-starter, blinkyTimerPolled.
                                            Those are the STUDENT examples,
                                            which is all the
                                            book's copy of the simulator has;

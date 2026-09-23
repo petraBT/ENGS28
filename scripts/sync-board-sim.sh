@@ -66,7 +66,12 @@ cp dist-instructor/instructor-examples.json "$BOOK_DIR/instructor-only/sim-examp
 # --delete so the previous build's content-hashed assets/*.js don't pile up.
 echo "Copying dist/ -> assets/board-sim/ ..."
 mkdir -p "$DEST"
-rsync -a --delete "$SIM_REPO/dist/" "$DEST/"
+# embed-probe.c is a fixture for the simulator's own UI check (it exercises
+# the case where a ?src= file matches no examples-dropdown entry). It has to
+# sit in public/ for the dev server to serve it, which also sweeps it into
+# dist/ — but it is test scaffolding and has no business in a book students
+# download.
+rsync -a --delete --exclude 'starters/embed-probe.c' "$SIM_REPO/dist/" "$DEST/"
 
 # Record which commit of the simulator this copy came from, so a stale embed is
 # diagnosable from the book repo alone.

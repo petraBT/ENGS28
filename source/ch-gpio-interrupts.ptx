@@ -513,16 +513,16 @@ while(1) {
                 output is called EXTI0; pin 1 of every port feeds another,
                 EXTI1; and so on to EXTI15.  Sixteen lines, one per pin
                 <em>number</em>, and each of them can carry the signal from any
-                one port, which means PA4, PB4, PC4 and PD4 all compete for
-                EXTI4, and only one of them can have it at a time.
+                one port, which means PA13, PB13 and PC13 all compete for
+                EXTI13, and only one of them can have it at a time.
             </p>
             <figure xml:id="fig-exti-mux">
                 <caption>The EXTI's GPIO multiplexer (<url href="external/stm32c031_rm.pdf">RM0490</url> §12.3.3).  Pin
                 <m>n</m> of every port is an input to the multiplexer whose
                 output is line EXTI<m>n</m>, so there are sixteen lines rather
                 than one per pin.  Because each multiplexer has one output,
-                only one port can be selected on a given line at a time: PB4
-                and PC4 cannot both interrupt through EXTI4.</caption>
+                only one port can be selected on a given line at a time: PA4
+                and PB4 cannot both interrupt through EXTI4.</caption>
                 <image source="images/Day09-Interrupts(2)/exti_mux.svg" width="90%"/>
             </figure>
 
@@ -530,9 +530,9 @@ while(1) {
     <ul>
         <li>Recall from the reading that a timer, the ADC, a USART, etc each have one line into the NVIC per peripheral, and each occupy one row in the vector table. This concept cannot be extended to the 48 pins our processor has.</li>
         <li>The pins are therefore multiplexed first. Pin <em>n</em> of every port feeds one multiplexer, whose output is line EXTI<em>n</em>: sixteen lines, one per pin number.</li>
-        <li>Each multiplexer has one output, so <term>only one port at a time</term> can be on a given line: PB4 and PC4 cannot both interrupt through EXTI4.</li>
+        <li>Each multiplexer has one output, so <term>only one port at a time</term> can be on a given line: PA4 and PB4 cannot both interrupt through EXTI4.</li>
     </ul>
-    <caption>Find PB4's line: count along the top row to pin 4, then notice PA4, PC4 and PD4 queueing for the same output.</caption>
+    <caption>Every port's pin <em>n</em> arrives at the same multiplexer, and only one of them is passed through.</caption>
 </slide>
 
             <p>
@@ -1334,6 +1334,59 @@ int main(void) {
                 look at the code: you may need a larger capacitor, to increase
                 the RC (resistor-capacitor) time constant.
             </p>
+
+            <p>
+                Here is the same exercise in the simulator, for working on it
+                away from your Nucleo.  Click <em>+ Button</em> in the
+                component bay, the parts list to the right of the board, then
+                click the Arduino header pin labeled <c>D5</c>, which is PB4,
+                and hold it down to press it.  That one click closes the same
+                pushbutton you wired to PB4: one side to the pin, the other to
+                GND, with the pull-up inside the chip holding the pin HIGH
+                until the button connects it.  The debouncing capacitor across
+                the switch (<xref ref="fig-rc-debounce-circuit"/>) is not
+                modeled, so nothing here bounces.
+            </p>
+            <p>
+                All four switches are in the register panel,
+                <c>EXTI-&gt;EXTICR[1]</c>, <c>EXTI-&gt;FTSR1</c>,
+                <c>EXTI-&gt;IMR1</c> and <c>NVIC-&gt;ISER</c>, beside
+                <c>EXTI-&gt;FPR1</c>, as soon as your program touches the
+                EXTI.  <c>EXTI-&gt;IMR1</c> resets to 0xFFF8 0000, so look at
+                bit 4 rather than at the whole word.  When a press sets
+                <c>FPR1</c>'s bit and the counter still does not reset, the
+                EXTI half of the chain is working and the fault is past it:
+                the NVIC line, or the handler's name.
+            </p>
+            <p>
+                Run <c>counterResetButtonPolled.c</c> from the examples list
+                first.  A short tap sometimes resets the counter and sometimes
+                does not, and a press-and-hold always does, for the same
+                reason as on your board: the loop reads the pin once a second
+                and spends the rest of the time inside <c>delay_ms()</c>.
+                Then run your own version and tap it the same way.
+            </p>
+            <p>
+                Two words of caution.  This simulator does not optimize your
+                code, so a flag shared between the interrupt handler and
+                <c>main()</c> works here whether or not its declaration
+                carries <c>volatile</c>.  TODO 3 asks which keyword that
+                declaration must carry, and a counter that resets in this
+                window is not evidence that you have it right.  And an
+                interrupt here is taken between two C statements, never part
+                way through one, so the half-finished read-modify-write of
+                <xref ref="subsec-day9-race"/> cannot happen in this window:
+                that one has to be reasoned about rather than tried.
+            </p>
+            <p>
+                Nothing here is saved for you, so use the download button (the
+                downward arrow) to keep a copy of your work.  <em>Full
+                screen</em> opens the program in a new tab, and your code is
+                part of that tab's web address, so a bookmark of that tab
+                brings it back as it was when you pressed the button.
+            </p>
+
+            <sim starter="counterResetButtonInt" coolterm="yes" height="740"/>
 
             <slide xml:id="sl-day9-stretch">
     <p>Add the Nucleo's blue user button. It is on <c>PC13</c>, and pressing it should reverse the counting direction. This is also part of tonight's homework.</p>

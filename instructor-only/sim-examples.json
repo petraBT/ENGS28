@@ -2,12 +2,6 @@
   "marker": "engs28-sim-instructor-examples",
   "examples": [
     {
-      "id": "uart-keyboard",
-      "label": "Solution: Day 5 keyboard-controlled counter (RXNE)",
-      "needs": "Click the CoolTerm panel, then press u, d or r.",
-      "code": "#include \"ES28.h\"\n#include <stdio.h>\n#include \"uart.h\"\n\n// Non-blocking receive: if a byte is waiting, read it and act on it; if not,\n// skip straight to the print. Calling uart2_read() here instead would block\n// until a key arrived and freeze the 500 ms loop.\n\nint main(void) {\n    int count = 0;\n\n    uart2_init();\n    printf(\"Keyboard-controlled counter\\r\\n\");\n\n    while (1) {\n        if (USART2->ISR & USART_ISR_RXNE_RXFNE) {\n            char key = USART2->RDR & 0xFF;\n            if      (key == 'u' || key == 'U') count++;\n            else if (key == 'd' || key == 'D') count--;\n            else if (key == 'r' || key == 'R') count = 0;\n        }\n        printf(\"count = %d\\r\\n\", count);\n        delay_ms(500);\n    }\n    return 0;\n}\n"
-    },
-    {
       "id": "external-led-d4",
       "label": "Solution: Day 2 external LED on D4 (PB10)",
       "needs": "Add an LED to header pin D4.",
@@ -17,6 +11,12 @@
       "id": "button-onboard",
       "label": "Demo: on-board button (PC13) lights PA5",
       "code": "#include \"ES28.h\"\n\n#define LED_PIN  (1U << 5)        // PA5, on-board LED\n#define BTN_PIN  (1U << 13)       // PC13, on-board B1 button (active-low)\n\nint main(void) {\n    RCC->IOPENR  |= (1U << 0);    // GPIOA clock\n    RCC->IOPENR  |= (1U << 2);    // GPIOC clock\n\n    GPIOA->MODER |= (1U << 10);   // PA5 output\n    GPIOA->MODER &= ~(1U << 11);\n    GPIOC->MODER &= ~(3U << 26);  // PC13 input (B1 has an external pull-up)\n\n    while (1) {\n        if ((GPIOC->IDR & BTN_PIN) == 0)  // pressed reads 0\n            GPIOA->ODR |= LED_PIN;        // LED on\n        else\n            GPIOA->ODR &= ~LED_PIN;       // LED off\n    }\n    return 0;\n}\n"
+    },
+    {
+      "id": "uart-keyboard",
+      "label": "Solution: Day 5 keyboard-controlled counter (RXNE)",
+      "needs": "Click the CoolTerm panel, then press u, d or r.",
+      "code": "#include \"ES28.h\"\n#include <stdio.h>\n#include \"uart.h\"\n\n// Non-blocking receive: if a byte is waiting, read it and act on it; if not,\n// skip straight to the print. Calling uart2_read() here instead would block\n// until a key arrived and freeze the 500 ms loop.\n\nint main(void) {\n    int count = 0;\n\n    uart2_init();\n    printf(\"Keyboard-controlled counter\\r\\n\");\n\n    while (1) {\n        if (USART2->ISR & USART_ISR_RXNE_RXFNE) {\n            char key = USART2->RDR & 0xFF;\n            if      (key == 'u' || key == 'U') count++;\n            else if (key == 'd' || key == 'D') count--;\n            else if (key == 'r' || key == 'R') count = 0;\n        }\n        printf(\"count = %d\\r\\n\", count);\n        delay_ms(500);\n    }\n    return 0;\n}\n"
     },
     {
       "id": "printf-baud",
@@ -35,6 +35,18 @@
       "label": "Solution: Day 7 ADCPot.c (pot on A0)",
       "needs": "Attach a pot to A0 with + Pot, then drag the knob while it runs.",
       "code": "#include <stdio.h>\n#include \"ES28.h\"\n#include \"uart.h\"\n\n/* ADCPot.c, filled in. A0 is PA0, and PA0 is ADC channel 0 -- three naming\n * schemes that happen to agree here and do not agree for A3 (PB1, channel 18).\n */\n\nvoid     pa0_adc_init(void);\nvoid     start_conversion(void);\nuint16_t adc_read(void);\n\nint main(void) {\n    uint16_t sensor_value;\n    uart2_init();\n\n    printf(\"\\r\\nHello from STM32C0!\\r\\n\");\n    printf(\"Single conversion ADC test\\r\\n\");\n\n    pa0_adc_init();\n\n    while (1) {\n        start_conversion();\n        sensor_value = adc_read();\n        printf(\"Sensor value: %d\\r\\n\", sensor_value);\n        delay_ms(1000);\n    }\n    return 0;\n}\n\nvoid pa0_adc_init(void) {\n    // TODO 1 -- PA0 as an analog input: port clock, then the mode field\n    RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;\n    GPIOA->MODER &= ~GPIO_MODER_MODE0_Msk;\n    GPIOA->MODER |= (GPIO_ANALOG << GPIO_MODER_MODE0_Pos);\n\n    // TODO 2 -- the ADC's own clock\n    RCC->APBENR2 |= RCC_APBENR2_ADCEN;\n\n    // TODO 3 -- channel 0, with a plain = so nothing else stays selected\n    ADC1->CHSELR = ADC_CHSELR_CHSEL0;\n\n    // Enable the ADC module\n    ADC1->ISR = ADC_ISR_ADRDY;\n    ADC1->CR |= ADC_CR_ADEN;\n}\n\nvoid start_conversion(void) {\n    // TODO 4 -- wait for the converter to report itself ready\n    while (!(ADC1->ISR & ADC_ISR_ADRDY));\n\n    ADC1->CR |= ADC_CR_ADSTART;\n}\n\nuint16_t adc_read(void) {\n    // TODO 5 -- wait for the conversion to finish\n    while (!(ADC1->ISR & ADC_ISR_EOC));\n\n    return (uint16_t) ADC1->DR;\n}\n"
+    },
+    {
+      "id": "blinkyTimerInt-solution",
+      "label": "Solution: Day 8 blinkyTimerInt.c (TIM14 update interrupt)",
+      "needs": "Nothing to attach. The main loop never touches a timer register.",
+      "code": "#include <stdio.h>\n#include \"ES28.h\"\n#define LED (1U<<5)        // blinking the on-board LED\n#define PSC_FACTOR 12000   // 12 MHz/12000 = 1 kHz\n#define ARR_FACTOR 500     // 1 kHz/500 = 2 Hz\n\nvoid tim14_500ms_interrupt_init();\nvolatile int timerElapsed;             // TODO 4a: the shared flag, volatile\n\nint main(void) {\n    RCC->IOPENR |= RCC_IOPENR_GPIOAEN;\n    GPIOA->MODER &= ~GPIO_MODER_MODE5_Msk;\n    GPIOA->MODER |= (GPIO_OUTPUT << GPIO_MODER_MODE5_Pos);\n    GPIOA->ODR &= ~(LED);              // Start LED as off\n    timerElapsed = 0;                  // TODO 4b: initialize flag\n    tim14_500ms_interrupt_init();\n\n    while (1) {\n        if (timerElapsed) {            // TODO 4c: consume the flag\n            timerElapsed = 0;          //   clear flag\n            GPIOA->ODR ^= LED;         //   toggle LED\n        }\n    }\n    return 0;\n}\n\nvoid tim14_500ms_interrupt_init() {\n    __disable_irq();\n    RCC->APBENR2 |= RCC_APBENR2_TIM14EN;\n    TIM14->PSC = PSC_FACTOR - 1;\n    TIM14->ARR = ARR_FACTOR - 1;\n    TIM14->CNT = 0;\n    TIM14->DIER |= TIM_DIER_UIE;       // TODO 1: enable update interrupt\n    NVIC_EnableIRQ(TIM14_IRQn);        // TODO 2: enable in NVIC\n    TIM14->CR1 |= TIM_CR1_CEN;\n    __enable_irq();\n}\n\nvoid TIM14_IRQHandler(void) {          // TODO 3: exact vector-table name\n    __disable_irq();\n    TIM14->SR = ~TIM_SR_UIF;           //   clear UIF -- the Part 5 idiom\n    timerElapsed = 1;                  //   set global flag\n    __enable_irq();\n}\n"
+    },
+    {
+      "id": "counterResetButtonInt-solution",
+      "label": "Solution: Day 9 counterResetButtonInt.c (PB4 falling-edge EXTI)",
+      "needs": "Add a button to header pin D5, then tap it between two prints.",
+      "code": "#include <stdio.h>\n#include \"ES28.h\"\n#include \"uart.h\"\n\n#define MAXCOUNT  100\n\nvoid pb4_exti_init(void);\n\nvolatile int buttonPushed;              // TODO 3a\n\n\nint main(void) {\n    int counter = 0;\n\n    uart2_init();\n    printf(\"Hex \\tDecimal\\r\\n\");\n\n    pb4_exti_init();\n\n    buttonPushed = 0;                   // TODO 3b\n\n    while(1) {\n        printf(\"%x\\t%d\\r\\n\", counter, counter);\n        delay_ms(1000);\n\n        // TODO 3c -- one chain, so a press does not reset then increment.\n        if (buttonPushed) {\n            counter = 0; buttonPushed = 0;\n        } else if (counter == MAXCOUNT) {\n            counter = 0;\n        } else {\n            counter++;\n        }\n    }\n    return 0;\n}\n\nvoid pb4_exti_init(void) {\n    // Disable global interrupts while the EXTI is half-configured\n    __disable_irq();                        // given: no interrupts during setup\n\n    // Enable clock access to GPIOB, then PB4 as an input with a pull-up.\n    // This is the Day 3 configuration, unchanged.\n    RCC->IOPENR |= RCC_IOPENR_GPIOBEN;      // given: the Day 3 pin configuration\n    GPIOB->MODER &= ~GPIO_MODER_MODE4_Msk;\n    GPIOB->MODER |= (GPIO_INPUT << GPIO_MODER_MODE4_Pos);\n    GPIOB->PUPDR &= ~GPIO_PUPDR_PUPD4_Msk;\n    GPIOB->PUPDR |= (GPIO_PULLUP << GPIO_PUPDR_PUPD4_Pos);\n\n    EXTI->EXTICR[1] &= ~EXTI_EXTICR2_EXTI4_Msk;   // TODO 1a: which port\n    EXTI->EXTICR[1] |= (EXTI_PB << EXTI_EXTICR2_EXTI4_Pos);\n    EXTI->FTSR1 |= EXTI_FTSR1_FT4;                // TODO 1b: which edge\n    EXTI->IMR1  |= EXTI_IMR1_IM4;                 // TODO 1c: unmask\n    NVIC_EnableIRQ(EXTI4_15_IRQn);                // TODO 1d: the NVIC\n\n    // Setup done: allow interrupts again\n    __enable_irq();                         // given: setup done, interrupts on\n}\n\n// TODO 2 -- the handler, named exactly as the startup file has it.\nvoid EXTI4_15_IRQHandler(void){\n    __disable_irq();\n\n    if (EXTI->FPR1 & EXTI_FPR1_FPIF4) {   // a falling edge happened on EXTI4\n        EXTI->FPR1 = EXTI_FPR1_FPIF4;     // clear the pending flag: write 1\n        buttonPushed = 1;\n    }\n    __enable_irq();\n}\n"
     }
   ]
 }
