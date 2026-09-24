@@ -3,8 +3,8 @@
  *
  * Below is the button toggle written as
  * a state machine, with typedef enum and
- * switch, exactly as printed earlier in
- * this chapter.
+ * switch, as earlier in this chapter,
+ * using the names from toggleLED.c.
  *
  * Attach the button first: click
  * + Button in the component bay, then
@@ -36,37 +36,45 @@
  * needs your Nucleo and the AD2.
  */
 
-#include "ES28.h"
+#include "ES28.h"            // All the port definitions are here
 
-typedef enum { UNPRESSED, PRESSED } state_t;
+#define GPIOAEN        (1U<<0)    // Clock access to GPIOA (LED)
+#define GPIOBEN        (1U<<1)    // Clock access to GPIOB (button)
+
+#define LED_PIN        (1U<<5)    // LED on PA5     (D13)
+#define BUTTON_PIN     (1U<<4)    // Button on PB4 (D5)
+
+typedef enum {UNPRESSED, PRESSED} state_t;
 
 int main(void) {
-    // --- GPIO setup (GPIOA: LED on PA5; GPIOB: button on PB4) ---
-    RCC->IOPENR |= (1U << 0) | (1U << 1);  // enable GPIOA and GPIOB clocks
-    GPIOA->MODER &= ~(3U << 10);            // PA5 input (clear)
-    GPIOA->MODER |=  (1U << 10);            // PA5 output
-    GPIOB->MODER &= ~(3U << 8);             // PB4 input (pins reset to analog)
-    GPIOB->PUPDR |=  (1U << 8);             // PB4 pull-up bit [9:8] = 01
-    GPIOB->PUPDR &= ~(1U << 9);
-
     state_t state = UNPRESSED;
+    unsigned buttonPushed;
+    RCC->IOPENR |= (GPIOAEN | GPIOBEN); // Enable clock access
 
-    while (1) {
-        int btn = !(GPIOB->IDR & (1U << 4)); // 1 if pressed (active-low)
+    GPIOA->MODER |= (1U<<10);    // Configure PA5 as output pin
+    GPIOA->MODER &= ~(1U<<11);
 
-        switch (state) {
+    GPIOB->MODER &= ~(1U<<8);    // Configure PB4 as input pin
+    GPIOB->MODER &= ~(1U<<9);    // (not necessary since this is default reset value)
+
+    GPIOB->PUPDR |= (1U<<8);     // enable pull-up for PB4
+    GPIOB->PUPDR &= ~(1U<<9);
+
+    while(1) {
+        buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0);
+        switch(state) {
             case UNPRESSED:
-                if (btn) {
-                    GPIOA->ODR ^= (1U << 5); // toggle LED on press
+                if (buttonPushed) {
+                    GPIOA->ODR ^= LED_PIN;
                     state = PRESSED;
                 }
                 break;
             case PRESSED:
-                if (!btn) {
-                    state = UNPRESSED;        // wait for release
+                if (!buttonPushed) {
+                    state = UNPRESSED;
                 }
                 break;
         }
     }
-    return 0;
+    return 0;                    // never reached
 }

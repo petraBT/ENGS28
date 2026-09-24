@@ -32,11 +32,10 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # (starter file, chapter, a marker unique to the intended <program> block)
 STARTERS = [
-    # Day 4 Part 4's simulator is seeded with Part 2's typedef enum + switch
-    # listing (Petra's choice, 2026-09-24): a simulator-only starter, so the
-    # book listing is its only other copy.
-    ("assets/sim-starters/toggleLEDfsm.c", "source/ch-switches.ptx",
-     "// --- GPIO setup (GPIOA: LED on PA5; GPIOB: button on PB4) ---"),
+    # Not here: assets/sim-starters/toggleLEDfsm.c, Day 4 Part 4's simulator
+    # seed.  Petra (2026-09-24) had it taken from her Day 4 slides 10 and 12
+    # (her toggleLED setup and #defines, her typedef enum + switch loop) rather
+    # than from the Part 2 listing, so no <program> in the book is its copy.
     ("assets/starters/blinkyTimerPolled.c", "source/ch-timers-interrupts.ptx",
      "// Could do other stuff here, like poll a button."),
     ("assets/starters/blinkyTimerInt.c", "source/ch-timers-interrupts.ptx",
