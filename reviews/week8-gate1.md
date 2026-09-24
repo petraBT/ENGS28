@@ -51,7 +51,7 @@ the reading had just explained** (active learning).
 
 # checker-arc-fidelity
 
-**Tree:** everything from the live working tree at `/Users/dz00762/repos/ENGS28` (`assets/ClassSlidesOLD/` is gitignored and exists only there; the plans and ground truth are the committed versions on `main`). Her three decks mined with `scripts/pptx_mine.py`; the two Day 15 tables taken from ground truth §1 as instructed; the Fritzing images on Day 15 slide 30 and Day 16 slides 13 and 14 opened directly (two findings rest on them).
+**Tree:** everything from the live working tree at `/Users/dz00762/repos/ENGS28` (`ClassSlidesOLD/` is gitignored and exists only there; the plans and ground truth are the committed versions on `main`). Her three decks mined with `scripts/pptx_mine.py`; the two Day 15 tables taken from ground truth §1 as instructed; the Fritzing images on Day 15 slide 30 and Day 16 slides 13 and 14 opened directly (two findings rest on them).
 
 ### Verdict: PASS WITH CHANGES (all three days)
 

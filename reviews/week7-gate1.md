@@ -29,7 +29,7 @@ really 65. When a finding arrives in four dialects it is not four findings.
 
 # checker-arc-fidelity
 
-**Trees**: the three `.pptx` from `assets/ClassSlidesOLD/` read in full with speaker notes, plus `assets/images/Day13-I2C(3)/slide29_c59c860f.png`, `Day14-Accelerometer(2)/slide06_img2.png`, `slide06_img4.png`, `slide17_img1.png`, `slide17_img2.png`, and `assets/Labs/Lab7_ES28.pdf`.
+**Trees**: the three `.pptx` from `ClassSlidesOLD/` read in full with speaker notes, plus `assets/images/Day13-I2C(3)/slide29_c59c860f.png`, `Day14-Accelerometer(2)/slide06_img2.png`, `slide06_img4.png`, `slide17_img1.png`, `slide17_img2.png`, and `assets/Labs/Lab7_ES28.pdf`.
 
 **Headline**: the arc is carried faithfully — the most complete Gate 1 coverage of her decks so far, and both named ordering decisions are correct. But **`plans/day14.md` budgets 120 minutes against a 110-minute class**, and the one slide of hers that carries the week's arithmetic from Wednesday into Thursday (`accel_test.c`, her slide 10) is claimed in the coverage table and funded in no beat.
 

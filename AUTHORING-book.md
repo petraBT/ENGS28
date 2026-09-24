@@ -280,7 +280,7 @@ slot count, and should.
 
 ### P-12 Prefer the old annotated images
 
-`assets/ClassSlidesOLD/` is the authority for the intended in-class arc, and its
+`ClassSlidesOLD/` is the authority for the intended in-class arc, and its
 images carry teaching annotations — callouts, arrows, labelled regions — that the
 raw extracted media does not. The annotations live in the PowerPoint shape layer,
 so plain media extraction silently drops them.

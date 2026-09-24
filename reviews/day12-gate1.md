@@ -20,7 +20,7 @@ without a file-write tool.*
 
 ## checker-arc-fidelity
 
-*Everything read from the live working tree: `assets/ClassSlidesOLD/Day12-Motors(3).pptx`
+*Everything read from the live working tree: `ClassSlidesOLD/Day12-Motors(3).pptx`
 and `Day11x-Motors(2).pptx` (gitignored, present here), `plans/day12.md`,
 `plans/day12-ground-truth.md`, `source/ch-motors.ptx` at HEAD+working changes.
 Both decks mined; her slide images opened, not inferred.*

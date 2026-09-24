@@ -1,7 +1,7 @@
 # Day 8 — Timers and Interrupts
 
 Chapter: `source/ch-timers-interrupts.ptx` (Day 8 portion; Day 9 = EXTI, authored
-separately) · Old deck: `assets/ClassSlidesOLD/Day08-Interrupts.pptx` (52 slides)
+separately) · Old deck: `ClassSlidesOLD/Day08-Interrupts.pptx` (52 slides)
 · Downstream: **Lab 5** (`assets/Labs/Lab5_ES28.pdf`), Day 9, then motors/servos
 (TIM14 PWM).
 

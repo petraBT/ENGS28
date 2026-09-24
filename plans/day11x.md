@@ -19,7 +19,7 @@ the manual, figures and code-reading. Chapter `source/ch-motors.ptx`, a new sect
 at the placeholder near the end. Day 11 is passed — do not touch it.
 
 Ground truth: `plans/day11x-ground-truth.md`. Gate 1 review applied:
-`reviews/day11x-gate1.md`. Her deck: `assets/ClassSlidesOLD/Day11x-Motors(2).pptx`,
+`reviews/day11x-gate1.md`. Her deck: `ClassSlidesOLD/Day11x-Motors(2).pptx`,
 21 slides. Driver: `assets/starters/TTmotor_ramp.c`. Downstream: **Lab 6**.
 
 ---

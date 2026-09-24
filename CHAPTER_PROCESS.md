@@ -99,7 +99,7 @@ cannot be recovered from plausibility.
 The old deck is the authority for the **intended in-class arc**.
 
 ```bash
-python3 scripts/pptx_mine.py assets/ClassSlidesOLD/DayNN-Name.pptx
+python3 scripts/pptx_mine.py ClassSlidesOLD/DayNN-Name.pptx
 ```
 
 Extract:
@@ -115,7 +115,7 @@ Extract:
 - **Images, with their annotations rebuilt** (P-12):
 
 ```bash
-python3 scripts/pptx_annotate.py assets/ClassSlidesOLD/DayNN-Name.pptx --slide 17
+python3 scripts/pptx_annotate.py ClassSlidesOLD/DayNN-Name.pptx --slide 17
 ```
 
 The annotations are PowerPoint shapes layered over the picture; plain media

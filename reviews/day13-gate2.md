@@ -20,7 +20,7 @@ follows the reports.
 
 ## checker-arc-fidelity — Verdict: MAJOR
 
-**Provenance.** `assets/ClassSlidesOLD/Day13-I2C(3).pptx` and the extracted media read from the live working tree; sources clean at fff69bf.  I opened her slide 5, 8, 9, 14 (all four images), 19/21 and the rebuilt `stemma_wiring.svg`, `i2c_bus_two_wires.svg` and `display_wiring_ad2.svg` rather than working from mined text.
+**Provenance.** `ClassSlidesOLD/Day13-I2C(3).pptx` and the extracted media read from the live working tree; sources clean at fff69bf.  I opened her slide 5, 8, 9, 14 (all four images), 19/21 and the rebuilt `stemma_wiring.svg`, `i2c_bus_two_wires.svg` and `display_wiring_ad2.svg` rather than working from mined text.
 
 No blocker: every gating step of hers reaches the room in words, and every in-class paragraph in the draft has a slide behind it.  One MAJOR: a picture-teaching of hers that the figure-manifest decision took out and nothing replaced.
 

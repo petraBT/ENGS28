@@ -18,6 +18,7 @@ python3 scripts/check_rules.py --quiet source/*.ptx
 python3 scripts/check_deck.py assets/decks/*.json
 python3 scripts/check_starters.py
 python3 scripts/check_instructor_only.py
+python3 scripts/check_not_published.py
 ```
 
 `./build.sh` alone refreshes the reading book and leaves the preview, the decks

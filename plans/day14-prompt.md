@@ -16,7 +16,7 @@ Paste this into a fresh session in `~/repos/ENGS28`. Read first, in order:
 
 **Voice references:** Day 11's passed prose, Day 12's post-redo prose, the
 frozen specimens. Mine her deck
-(`python3 scripts/pptx_mine.py "assets/ClassSlidesOLD/Day14-Accelerometer(2).pptx"`).
+(`python3 scripts/pptx_mine.py "ClassSlidesOLD/Day14-Accelerometer(2).pptx"`).
 
 ## Both former gating checks are resolved (2026-08-27)
 

@@ -14,7 +14,7 @@ Sources used: `assets/stm32c031_rm.pdf` (RM0490 Rev 3, read with pypdf),
 `assets/datasheets/ee-sx67.pdf`, `assets/Labs/Lab6_ES28.pdf`,
 `assets/starters/TTmotor_ramp.c`, `assets/starters/sysinit.c`,
 `assets/starters/counterResetButtonInt.c`, `assets/starters/ES28.h`,
-`assets/ClassSlidesOLD/Day12-Motors(3).pptx` and `Day11x-Motors(2).pptx`,
+`ClassSlidesOLD/Day12-Motors(3).pptx` and `Day11x-Motors(2).pptx`,
 and every Day 12 figure rendered at full size (Chrome headless at the SVG's own
 viewBox — `qlmanage` crops these figures and misleads).
 

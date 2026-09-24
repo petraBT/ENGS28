@@ -152,7 +152,7 @@ notes, not prescriptions — you decide the details:
 - It should check the **book prose and the slide text together** — a `<slide>`
   block and the paragraph it condenses must not sound like different people.
 - Consider whether it also owns "did you reuse what she already wrote?" — her old
-  decks in `assets/ClassSlidesOLD/` are full of her own phrasing, and the draft
+  decks in `ClassSlidesOLD/` are full of her own phrasing, and the draft
   kept inventing replacements for text that already existed.
 
 **Strengthen `checker-technical-accuracy` to check reasoning, not just values.**

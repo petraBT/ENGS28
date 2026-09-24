@@ -36,7 +36,7 @@ plan through Gate 1 and **no prose**: its section is the OWES comment in
 owes, and one thing moved there on 2026-09-05: **the UNPLUG-before-rewiring
 rule and the power-up order (USB first, then the adapter) are stated on Day
 15x, not on Day 15**, because Day 15x is where the wiring happens. Her original
-deck is `assets/ClassSlidesOLD/Day15x-Servos(2).pptx` (six slides, re-shows of
+deck is `ClassSlidesOLD/Day15x-Servos(2).pptx` (six slides, re-shows of
 Day 15's 27 to 30). Figures that already exist: `towerProPowering.png` (Day 15
 Part 6, xref it, never re-add it), `towerProPot.png` (hers, for the
 pot-plus-servo wiring, `fig-servo-pot-wiring`, not yet placed), Day 15's two

@@ -796,7 +796,7 @@ are Prompt 2's open items from `a219c3b`, not mine, and I have not touched them.
 
 ## 4. Already written — reuse instead of invent
 
-`assets/ClassSlidesOLD/Day05X-InputOutputDatasheets.pptx`, 15 slides, mined.
+`ClassSlidesOLD/Day05X-InputOutputDatasheets.pptx`, 15 slides, mined.
 Three real reuse findings; speaker notes were the richest source, as usual.
 
 - **The "you can navigate any datasheet quickly" claim** (line 47) — she already

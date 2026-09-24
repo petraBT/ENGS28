@@ -1,7 +1,7 @@
 # Step 0 — Ground truth for the Day 9 / 9x / 10 week
 
 Covers `source/ch-gpio-interrupts.ptx` (Day 9) and `source/ch-i2c.ptx`
-(Days 9x and 10).  Sources: `assets/ClassSlidesOLD/Day09-Interrupts(2).pptx`
+(Days 9x and 10).  Sources: `ClassSlidesOLD/Day09-Interrupts(2).pptx`
 (60 slides), `Day09X-I2C.pptx` (32), `Day10-I2C(2).pptx` (56), plus
 `Day13-I2C(3).pptx` (32) for the scope decision.  Downstream: **Lab 5**
 (`assets/Labs/Lab5_ES28.pdf`, due Tue 10 Feb 2026) and **Lab 6**.

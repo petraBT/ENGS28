@@ -3,7 +3,7 @@
 Scope: Day 12's in-class section only. Body prose (written 2026-08-25) checked line by line
 against: `assets/datasheets/ee-sx67.pdf` (Omron EE-SX47/67, CSM_EE-SX47/67_DS_E_13_2),
 RM0490 Rev 3, DS13867 Rev 3, UM2953 Rev 1, `assets/Labs/Lab6_ES28.pdf` (Doc Rev 0x5a9a),
-`assets/starters/*.c`, `assets/ClassSlidesOLD/Day12-Motors(3).pptx`, `source/ch-i2c.ptx`,
+`assets/starters/*.c`, `ClassSlidesOLD/Day12-Motors(3).pptx`, `source/ch-i2c.ptx`,
 `source/ch-gpio-interrupts.ptx`, `source/ch-timers-interrupts.ptx`, and every figure rendered.
 
 ### Verdict: BLOCKER

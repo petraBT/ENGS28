@@ -271,7 +271,7 @@ her wording.
   proportional to how fast the shaft is turning"* — and `fig-photointerrupter-video`
   — *"the rate the pulses arrive at is proportional to the speed of the shaft."*
 - **"one arm of the U holds an LED and the other holds a phototransistor"**
-  (2272–2274) — she already wrote it: `assets/ClassSlidesOLD/Day12-Motors(3).pptx`
+  (2272–2274) — she already wrote it: `ClassSlidesOLD/Day12-Motors(3).pptx`
   slide 5, speaker note — *"It's the U-shaped object that's wrapped around the
   slotted wheel. It has an LED on one side and a photosensor on the other side."*
 - **"In this reading we'll work out how to turn that rate into a number"**

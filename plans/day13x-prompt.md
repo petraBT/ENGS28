@@ -18,7 +18,7 @@ Paste this into a fresh session in `~/repos/ENGS28`. Read first, in order:
 
 **Voice references:** Day 11's passed prose, Day 12's post-redo prose, the
 frozen specimens. Mine her deck first
-(`python3 scripts/pptx_mine.py assets/ClassSlidesOLD/Day13x-Accelerometer.pptx`);
+(`python3 scripts/pptx_mine.py ClassSlidesOLD/Day13x-Accelerometer.pptx`);
 her speaker notes on slides 8 (sensitivity, zero-g) and 17 (auto-increment)
 carry the teaching voice. Slide 5/6 notes contain pasted-AI residue — mine
 ideas, never the text.

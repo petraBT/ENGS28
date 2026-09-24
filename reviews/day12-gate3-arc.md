@@ -2,7 +2,7 @@
 
 Reviewer: `reviewer-source-arc`. Scope: `<section xml:id="sec-motors-day12">`
 (`source/ch-motors.ptx`, lines 2534–3772) against `assets/decks/day12.json` (40
-entries, 30 refs), with `assets/ClassSlidesOLD/Day12-Motors(3).pptx` as the arc
+entries, 30 refs), with `ClassSlidesOLD/Day12-Motors(3).pptx` as the arc
 authority. Day 11 and Day 11x untouched; the pre-class reading
 (`sec-speed-before-class`) read only as the source of `fig-photointerrupter-beam`
 and `fig-rpm-formula`. All trees are the live working tree.

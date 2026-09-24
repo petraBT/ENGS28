@@ -9,9 +9,9 @@ lab spanning both chapters, due Tuesday March 3, 2026.
 
 Sources mined:
 
-- `assets/ClassSlidesOLD/Day15-Servos.pptx` — 31 slides (`--arc`, whole, `--code`)
-- `assets/ClassSlidesOLD/Day15x-Servos(2).pptx` — 6 slides, all re-shows of Day 15's 27–30
-- `assets/ClassSlidesOLD/Day16-Photosensors.pptx` — 16 slides
+- `ClassSlidesOLD/Day15-Servos.pptx` — 31 slides (`--arc`, whole, `--code`)
+- `ClassSlidesOLD/Day15x-Servos(2).pptx` — 6 slides, all re-shows of Day 15's 27–30
+- `ClassSlidesOLD/Day16-Photosensors.pptx` — 16 slides
 - `assets/Labs/Lab8_ES28.pdf` — 10 pages, read in full (§4)
 - `assets/datasheets/Servosg90_datasheet.pdf`, `CdS-photocell-PDV-P8001.pdf`,
   `Adafruit-photocells.pdf` (Petra, 2026-09-02) — §3

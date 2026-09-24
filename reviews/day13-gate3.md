@@ -108,7 +108,7 @@ Files: deck `/Users/dz00762/repos/ENGS28/assets/decks/day13.json`; slide bodies 
 
 ## Verdict: MAJOR
 
-Both trees are live (`assets/ClassSlidesOLD/Day13-I2C(3).pptx`, `source/ch-accelerometers.ptx`, `assets/decks/day13.json` — all from the working tree at `/Users/dz00762/repos/ENGS28`). Her deck mined clean, 32 slides. One old deck maps to this day.
+Both trees are live (`ClassSlidesOLD/Day13-I2C(3).pptx`, `source/ch-accelerometers.ptx`, `assets/decks/day13.json` — all from the working tree at `/Users/dz00762/repos/ENGS28`). Her deck mined clean, 32 slides. One old deck maps to this day.
 
 ---
 
@@ -630,7 +630,7 @@ Not a BLOCKER: the day's opening paragraph is substantially hers, "we" is presen
 - **DIO and VIN.** Neither is expanded anywhere in the book — `ch-i2c.ptx` uses DIO0/DIO1 bare in text you passed, and `ch-ble.ptx` uses VIN bare. Expand on first use in this chapter ("DIO0 — digital input/output channel 0", "VIN — voltage in"), or is bare the house style for instrument-panel and silkscreen labels?
 - **Part 6's opening.** The owed debrief paragraph is blocked on Q3. Should Part 6 also get a one-sentence lead (see the reuse section), or is opening straight into the activity intentional here?
 
-Files: `/Users/dz00762/repos/ENGS28/source/ch-accelerometers.ptx`, `/Users/dz00762/repos/ENGS28/assets/decks/day13.json`, specimens at `/Users/dz00762/repos/ENGS28/plans/day10-voice-reference.diff`, `/Users/dz00762/repos/ENGS28/plans/day9x-voice-reference.md`, `/Users/dz00762/repos/ENGS28/plans/day8-voice-reference.diff`, calibration prose at `/Users/dz00762/repos/ENGS28/source/ch-motors.ptx`, old deck at `/Users/dz00762/repos/ENGS28/assets/ClassSlidesOLD/Day13-I2C(3).pptx`.
+Files: `/Users/dz00762/repos/ENGS28/source/ch-accelerometers.ptx`, `/Users/dz00762/repos/ENGS28/assets/decks/day13.json`, specimens at `/Users/dz00762/repos/ENGS28/plans/day10-voice-reference.diff`, `/Users/dz00762/repos/ENGS28/plans/day9x-voice-reference.md`, `/Users/dz00762/repos/ENGS28/plans/day8-voice-reference.diff`, calibration prose at `/Users/dz00762/repos/ENGS28/source/ch-motors.ptx`, old deck at `/Users/dz00762/repos/ENGS28/ClassSlidesOLD/Day13-I2C(3).pptx`.
 
 ---
 

@@ -110,7 +110,7 @@ Per the continuation rule, **read before re-deriving**:
 
 Two source decks feed Day 12, and neither alone has the whole day:
 
-1. **`assets/ClassSlidesOLD/Day12-Motors(3).pptx`** (10 slides) — the review
+1. **`ClassSlidesOLD/Day12-Motors(3).pptx`** (10 slides) — the review
    discussion of `TTmotor_ramp.c`, the photointerrupter wiring and its scope
    trace, the "on paper" RPM-conversion exercise, and the full Lab 6 hardware/
    firmware checklist. Thin (this deck alone is maybe 30–40 minutes of taught
@@ -120,7 +120,7 @@ Two source decks feed Day 12, and neither alone has the whole day:
    budget the Part-by-part time honestly with real open build/lab time as one
    of the Parts, the way a chapter names its crucial step and still leaves room
    (P-2/P-3), rather than padding the taught arc to fill 110 minutes.
-2. **`assets/ClassSlidesOLD/Day11x-Motors(2).pptx`, slides 20–21** — the table
+2. **`ClassSlidesOLD/Day11x-Motors(2).pptx`, slides 20–21** — the table
    discussion (detect pulses → count them → convert to rpm → can you get
    direction from them?) and the shaft-position decoding arithmetic, Δθ = 2π /
    #slots. These were explicitly moved to Day 12 at Day 11x's Gate 1 (see the

@@ -66,7 +66,7 @@ teach"* versus *"this doesn't read right."*
   hand-authored / dropped and why. P-12 existed on Day 11 and was skipped, and
   skipping it looked identical to doing it.
 
-## Her deck — `assets/ClassSlidesOLD/Day11x-Motors(2).pptx`, 21 slides
+## Her deck — `ClassSlidesOLD/Day11x-Motors(2).pptx`, 21 slides
 
 The arc, mined:
 

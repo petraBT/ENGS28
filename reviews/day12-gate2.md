@@ -483,7 +483,7 @@ same file (both through her hand), `plans/day10-voice-reference.diff`,
 `plans/day9x-voice-reference.md`, `plans/day8-voice-reference.diff`,
 `plans/day11x-handover.md`, `AUTHORING-book.md` S-11…S-29 / L-12…L-16,
 `AUTHORING-slides.md` § "What no rule covers". Reuse pass run against
-`assets/ClassSlidesOLD/Day12-Motors(3).pptx` (all 10 slides, speaker notes
+`ClassSlidesOLD/Day12-Motors(3).pptx` (all 10 slides, speaker notes
 included) and `Day11x-Motors(2).pptx` slides 19–21. Gate 1.5's seven rewrites
 re-checked as applied, not re-derived.
 

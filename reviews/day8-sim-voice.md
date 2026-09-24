@@ -5,7 +5,7 @@ Specimens: `plans/day10-voice-reference.diff`, `plans/day9x-voice-reference.md`,
 `plans/day8-voice-reference.diff` (her own hand pass over *this* chapter).
 Ground truth compared: `source/ch-adc.ptx` 1246–1265 (her passed `<sim>` prose),
 `assets/starters/blinkyTimerInt.c`, `assets/sim-starters/ADCPot.c`,
-`assets/ClassSlidesOLD/Day08-Interrupts.pptx` slides 41–46.
+`ClassSlidesOLD/Day08-Interrupts.pptx` slides 41–46.
 
 ### Verdict: MAJOR
 

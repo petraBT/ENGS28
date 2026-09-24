@@ -56,7 +56,7 @@ The post-mortem, so this week does not repeat it:
 
 ## The week, as her decks teach it
 
-Three decks: `assets/ClassSlidesOLD/Day13-I2C(3).pptx` (32 slides),
+Three decks: `ClassSlidesOLD/Day13-I2C(3).pptx` (32 slides),
 `Day13x-Accelerometer.pptx` (19), `Day14-Accelerometer(2).pptx` (21). The
 sensor is the **LSM303AGR** on a STEMMA breakout — *not* the LIS3DH
 (`assets/datasheets/lis3dh.pdf` is Day 5X worksheet material; do not cite it

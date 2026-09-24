@@ -204,8 +204,8 @@ For each substantial passage — a comparison, a definition, a worked example, a
 diagnostic list, a code idiom — check whether the old deck already says it:
 
 ```bash
-python3 scripts/pptx_mine.py assets/ClassSlidesOLD/DayNN-Name.pptx --arc
-python3 scripts/pptx_mine.py assets/ClassSlidesOLD/DayNN-Name.pptx --slides 12,13
+python3 scripts/pptx_mine.py ClassSlidesOLD/DayNN-Name.pptx --arc
+python3 scripts/pptx_mine.py ClassSlidesOLD/DayNN-Name.pptx --slides 12,13
 ```
 
 Speaker notes are the richest source in the deck; read them, not just the slide

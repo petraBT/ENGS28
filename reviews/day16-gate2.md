@@ -210,7 +210,7 @@ Two predictions for one idea, one of them empty (P-6's actual test — "does the
 
 # checker-arc-fidelity
 
-Mined her deck from the live working tree (`assets/ClassSlidesOLD/Day16-Photosensors.pptx`, 16 slides, gitignored but present); chapter, plan and ground truth from the same tree at `main`. Her titles are hers, not inferred.
+Mined her deck from the live working tree (`ClassSlidesOLD/Day16-Photosensors.pptx`, 16 slides, gitignored but present); chapter, plan and ground truth from the same tree at `main`. Her titles are hers, not inferred.
 
 ### Verdict: MAJOR
 
@@ -295,7 +295,7 @@ Nothing else in the in-class section is unnamed.
 
 Her whole Thursday reaches the chapter: the LDR and its physics, the nonlinearity with the −0.6 log-log relation, the resistance-sensor family, the divider with her exact commit question, Lab 8 §2 done in class as D1–D8 with no answers printed, the cups, the clips, the recreate step, **the pot's removal and the servo check both at Part 2's opening as the re-plan requires**, her end-state Fritzing, and her two closing sentences as the titles of Part 5's two activities — her wording reused rather than paraphrased on slides 3, 4, 5, 6, 7, 9, 11, 12, 13 and 15. Deliberately dropped and recorded: slide 16 (survey, course admin), slides 1–2 (glue), slide 10's 7805/9 V sentence (her Day 12 ruling), slide 4's footcandle curve-drawing recipe and slide 6's vendor links (asides). Also checked: no protected number from D1–D8 appears in student prose, no example terminal readings, the bounds and K are left to the student, `check_rules.py` is clean, all ten cross-chapter xrefs resolve, and the in-class section is 22 body paragraphs against the passed `sec-servo-day15`'s 37 over the same 110 minutes.
 
-Files: `/Users/dz00762/repos/ENGS28/source/ch-photosensors.ptx`, `/Users/dz00762/repos/ENGS28/plans/day16.md`, `/Users/dz00762/repos/ENGS28/plans/week8-ground-truth.md`, `/Users/dz00762/repos/ENGS28/assets/ClassSlidesOLD/Day16-Photosensors.pptx`, `/Users/dz00762/repos/ENGS28/assets/images/Day16-Photosensors/`.
+Files: `/Users/dz00762/repos/ENGS28/source/ch-photosensors.ptx`, `/Users/dz00762/repos/ENGS28/plans/day16.md`, `/Users/dz00762/repos/ENGS28/plans/week8-ground-truth.md`, `/Users/dz00762/repos/ENGS28/ClassSlidesOLD/Day16-Photosensors.pptx`, `/Users/dz00762/repos/ENGS28/assets/images/Day16-Photosensors/`.
 
 ---
 

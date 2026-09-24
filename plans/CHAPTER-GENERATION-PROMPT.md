@@ -182,7 +182,7 @@ slides that say, worse, something she had already written well. If a slide reads
 as *terser than the prose it condenses*, that is backwards — go and find her
 sentence.
 
-Same for figures: `assets/ClassSlidesOLD/` images carry teaching annotations in
+Same for figures: `ClassSlidesOLD/` images carry teaching annotations in
 the PowerPoint shape layer that plain extraction drops (P-12). Rebuild with
 `pptx_annotate.py --max-text 200`, then **look at the result** — and when it
 disagrees with the original, **ask for the original** rather than patching the

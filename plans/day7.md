@@ -1,6 +1,6 @@
 # Day 7 — Analog-to-Digital Conversion
 
-Chapter: `source/ch-adc.ptx` · Old deck: `assets/ClassSlidesOLD/Day07-ADC.pptx`
+Chapter: `source/ch-adc.ptx` · Old deck: `ClassSlidesOLD/Day07-ADC.pptx`
 (35 slides) · Downstream: **Lab 4** (`assets/Labs/Lab4_ES28.pdf`)
 
 **Revision 2** — rebuilt after Gate 1. See "What Gate 1 changed" at the end.

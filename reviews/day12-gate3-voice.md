@@ -373,7 +373,7 @@ problem here, redundancy and two punchlines are.
 
 ### Already written — reuse instead of invent
 
-Checked `assets/ClassSlidesOLD/Day12-Motors(3).pptx` (slides 4–10 and every
+Checked `ClassSlidesOLD/Day12-Motors(3).pptx` (slides 4–10 and every
 speaker note) and `Day11x-Motors(2).pptx` slides 20–21, which were moved here at
 Day 11x's Gate 1. The reuse is in good shape:
 

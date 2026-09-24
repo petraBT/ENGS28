@@ -201,7 +201,7 @@ None of these is a slide invented to absorb a layout problem.
 
 The room gets, in her order: the divider and her question with its reveal, the nonlinearity on her own plot, the unit-to-unit caveat, Lab 8 §2 in the lab's own words with both figures, the servo recall on Day 15's powering drawing, the cups, the clips, the recreate step, her ultimate setup, and her "read §4 and discuss" — sixteen for sixteen, with slides 3 and 6 moved to the reading and slide 16 dropped, both on Petra's own pass-2 instruction, and her slide 13's pot clause relocated to Part 2 by her, also checked. Constraints: **protected list clean** — no D1 resistance rows, no measured values, no expected voltages, no tracker loop code and no `K_DIV`/`updateServo`/`adc_setChannel` anywhere in `output/web/` or `output/web-deck/`; all of it confined to five `<instructor>` blocks, verified stripped. **B-18**: ten body paragraphs across five Parts against Day 11's passed 25, and 20 student-facing content slides for 110 minutes — the additions over her arc are the two-loops pair, `sl-day16-compare`'s two bullets, `sl-day16-bounds`, Part 5, and the instructor blocks, each named in the plan's pass blocks. **B-19**: not an x-day; the pot rule and the competing-light warning are each stated once.
 
-Files: `/Users/dz00762/repos/ENGS28/assets/decks/day16.json`, `/Users/dz00762/repos/ENGS28/source/ch-photosensors.ptx`, `/Users/dz00762/repos/ENGS28/plans/day16.md`, `/Users/dz00762/repos/ENGS28/assets/ClassSlidesOLD/Day16-Photosensors.pptx`, `/Users/dz00762/repos/ENGS28/assets/images/Day16-Photosensors/`.
+Files: `/Users/dz00762/repos/ENGS28/assets/decks/day16.json`, `/Users/dz00762/repos/ENGS28/source/ch-photosensors.ptx`, `/Users/dz00762/repos/ENGS28/plans/day16.md`, `/Users/dz00762/repos/ENGS28/ClassSlidesOLD/Day16-Photosensors.pptx`, `/Users/dz00762/repos/ENGS28/assets/images/Day16-Photosensors/`.
 
 ---
 
@@ -221,7 +221,7 @@ Files: `/Users/dz00762/repos/ENGS28/assets/decks/day16.json`, `/Users/dz00762/re
 
 - **[MINOR, extra emphasis]** The same pattern as finding 1 shows up for the pre-class reading specifically: `act-day16-direction` (#6) is the room's first return to the photocell divider after last night's reading, and it is pure text — no re-shown circuit, no callouts, nothing but the question. A student who didn't retain the reading's figure has nothing to look at while working the divider formula at the table. This is the single highest-value slide in the deck to fix under finding 1, since it is also the first "did the reading land" checkpoint of the day.
 
-Files reviewed: `/Users/dz00762/repos/ENGS28/assets/decks/day16.json`, `/Users/dz00762/repos/ENGS28/source/ch-photosensors.ptx` (`sec-photo-day16`, lines 403–952), `/Users/dz00762/repos/ENGS28/assets/ClassSlidesOLD/Day16-Photosensors.pptx` (slides 7, 8, 9, 12, 13, 14 mined for comparison), and rendered screenshots of deck slides 5–29 at 1600×900 via headless Chrome against the local player.
+Files reviewed: `/Users/dz00762/repos/ENGS28/assets/decks/day16.json`, `/Users/dz00762/repos/ENGS28/source/ch-photosensors.ptx` (`sec-photo-day16`, lines 403–952), `/Users/dz00762/repos/ENGS28/ClassSlidesOLD/Day16-Photosensors.pptx` (slides 7, 8, 9, 12, 13, 14 mined for comparison), and rendered screenshots of deck slides 5–29 at 1600×900 via headless Chrome against the local player.
 
 ---
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Mine an old ENGS 28 lecture deck for its arc, speaker notes, and code.
 
-Step 1 of CHAPTER_PROCESS.md.  The old decks in assets/ClassSlidesOLD/ are the
+Step 1 of CHAPTER_PROCESS.md.  The old decks in ClassSlidesOLD/ are the
 authority for the intended in-class arc, and their speaker notes are frequently
 the richest source of teaching material in the whole repository -- explanations,
 analogies, and live demonstrations that exist nowhere else.
 
-    python3 scripts/pptx_mine.py assets/ClassSlidesOLD/Day07-ADC.pptx
+    python3 scripts/pptx_mine.py ClassSlidesOLD/Day07-ADC.pptx
     python3 scripts/pptx_mine.py <deck> --slides 13,15,26   # just these
     python3 scripts/pptx_mine.py <deck> --code              # only code-ish slides
 

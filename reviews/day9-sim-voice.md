@@ -103,7 +103,7 @@ place that says why a press is a falling edge.
 - A¶2, "The tap is missed here" — she already wrote it: `sl-day9-missed` — "A short tap sometimes resets the counter and sometimes does not; a press-and-hold always does." And `act-gpio-int-t5` — "give the button the same short tap that the polled version missed."
 - C1/C2, what to do about a bad port code — she already wrote it: the Part 6 ladder, item 2 — "A port code left at 0 selects port A, which is a pin you are not pressing."
 - Correctly reused already, leave alone: A¶1's opening sentence; the whole download / *Full screen* / bookmark paragraph; the register-panel sentence pattern; "One word of caution:"; the ISR expansion; the dropdown label format; B5's "As given, this file does not compile" (new, and right — her starter's `if ( /* TODO 3c */ )` genuinely does not compile, and nothing she wrote says so).
-- `assets/ClassSlidesOLD/Day09-*.pptx` offers nothing the chapter does not already carry better for this text; the sim paragraph has no old-deck analogue.
+- `ClassSlidesOLD/Day09-*.pptx` offers nothing the chapter does not already carry better for this text; the sim paragraph has no old-deck analogue.
 
 ### For Petra, not for me
 

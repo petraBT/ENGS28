@@ -31,7 +31,10 @@ MARKERS = ("engs28-sim-instructor-examples",)
 PUBLISHED_DIRS = ("assets",)
 
 # Binary and generated trees not worth scanning (and never authored by hand).
-SKIP_DIRS = {"ClassSlidesOLD", "ClassSlidesNEW", "board-sim"}
+# (ClassSlidesOLD/NEW used to be listed here, when they still sat under assets/
+# and were being published; they now live at the repo root, which this walk
+# never reaches.  check_not_published.py keeps them out.)
+SKIP_DIRS = {"board-sim"}
 
 
 def main() -> int:

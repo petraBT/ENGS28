@@ -31,7 +31,7 @@ Days 15 and 15x are done: the book and deck passed by Petra through three
 passes (commits through `2794e32`). Students arrive on Thursday with the
 servo wired on the regulator board's 5 V and following the potentiometer on
 A0; the x-hour was for whoever did not finish. Her Day 16 deck is
-`assets/ClassSlidesOLD/Day16-Photosensors.pptx` (16 slides; ground truth §1
+`ClassSlidesOLD/Day16-Photosensors.pptx` (16 slides; ground truth §1
 has them, and §6 the figure decisions). Her Thursday, in her own words and
 her deck: the photocell and its nonlinearity, the divider, Lab 8 §2 done in
 class (deliverables 1 to 8), the arm assembled, the pot removed once the

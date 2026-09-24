@@ -125,10 +125,18 @@ git push
 ```
 
 `output/` is git-ignored, and so are the two PowerPoint folders —
-`assets/ClassSlidesOLD/` (123 MB) and `assets/ClassSlidesNEW/` (12 MB), both
+`ClassSlidesOLD/` (123 MB) and `ClassSlidesNEW/` (12 MB), both
 listed in `.gitignore`. They are the source Step 1 mines, and they live only on
 this machine. Binaries are permanent once committed, so watch `git status` and
 decide deliberately rather than sweeping anything in with `git add -A`.
+
+Both sit at the **repo root, not under `assets/`**, and that is not cosmetic.
+PreTeXt copies everything under `assets/` into every target's `external/`,
+including the one `pretext deploy` publishes — so while they lived at
+`assets/ClassSlidesOLD/` all 28 of her original decks were being served
+publicly from `gh-pages`, linked from nothing but fetchable by anyone who
+guessed the path. `scripts/check_not_published.py` now refuses any `.pptx`,
+`.key` or `.docx` under `assets/`; run it with the other checks.
 
 ## Deploying
 
@@ -141,6 +149,92 @@ Unlike the C-Programming book — whose deploy reads the working tree directly �
 here deploying goes through git, so commit and push first. That includes
 `assets/board-sim/`: the simulator is published as part of the book, so an
 unsynced or uncommitted simulator change simply doesn't ship (see above).
+
+`pretext deploy` builds the **`web`** target only, and it ignores `build.sh`
+entirely — it runs its own build. So every guard `build.sh` performs has to
+exist as a check on the *source tree* as well, which is what
+`check_instructor_only.py` and `check_not_published.py` are for. It also copies
+the working tree's `assets/`, not the committed one, so a git-ignored file
+sitting there is published all the same.
+
+### Where the site actually lives
+
+Worth knowing before talking to Computing, because it is not what it looks like:
+
+- `engs20book.thayer.dartmouth.edu` is **not a redirect**. It is a DNS `CNAME`
+  to `petrabt.github.io`, and GitHub Pages serves it directly under the
+  Dartmouth hostname.
+- The custom domain is set on the **user-site repo**, `petraBT/petrabt.github.io`
+  (its `CNAME` file and its Pages setting). GitHub applies a user-site custom
+  domain to *every* project site owned by the account, which is why each book
+  hangs beneath it as a path: `/ENGS28/`, `/C-Programming/`.
+- The TLS certificate is issued and renewed by GitHub for that hostname.
+- If the zone ever moves behind a Cloudflare **proxy** (orange cloud), GitHub
+  can no longer answer the renewal challenge and the certificate quietly
+  expires. The record must stay **DNS-only**.
+
+The student book is `https://engs20book.thayer.dartmouth.edu/ENGS28/`.
+
+### Moving this book to its own hostname
+
+The plan (2026-09-23) is one hostname per book, each serving at its own root:
+`engs28book.thayer.dartmouth.edu` for this one, `engs20book…` repointed at the
+Cloudflare Pages project that now hosts ENGS 20. A custom domain on *this* repo
+overrides the user-site one, so the book lands at `/` and no other book appears
+beneath it.
+
+**When that happens, set `cname` in `project.ptx`:**
+
+```xml
+<project ptx-version="2" cname="engs28book.thayer.dartmouth.edu">
+```
+
+Not optional, and not the same as setting it in GitHub's web UI. `pretext
+deploy` publishes through `ghp_import`, which issues `deleteall` and rebuilds
+`gh-pages` from scratch on every deploy — it writes a `CNAME` file only when the
+project carries a `cname`. Set it in the UI alone and the next deploy silently
+deletes it, and the custom domain stops resolving with nothing in the git
+history to explain why.
+
+### What is NOT deployed yet
+
+`pretext deploy` ships `web`, whose pages carry **no slides** — the `<slide>`
+blocks are only rendered by the deck targets. `external/class.html` and
+`external/decks/` do reach the published site (they live under `assets/`), so
+the deck player and its contents page are up there and every deck fails to
+load. Publishing the decks means giving `web-deck` a `deploy-dir` in
+`project.ptx` so one deploy ships both. **Undecided — Petra is choosing where
+the decks should live.**
+
+## Slide PDFs for students to take notes on
+
+```sh
+./make-slide-pdfs.sh                 # every deck
+./make-slide-pdfs.sh day1 day3 day6  # just these
+./make-slide-pdfs.sh --no-build      # reuse the last web-deck build
+```
+
+One PDF per deck in `output/slide-pdfs/`, one landscape page per slide, at
+13.333 × 7.5 in — PowerPoint's own 16:9 page, so printing to letter landscape
+just works. The text is vector, so it stays sharp and stays selectable.
+
+**Run it whenever.** It rebuilds the student deck from source first, so a slide
+edited a minute ago is in the PDF. That is the point: the decks change up to
+the last minute, and there is no staleness to remember. It uses its own port
+(8362) and does not disturb `./preview-slides.sh` or the review server, so it
+is safe to run mid-review.
+
+**Student view only, three times over.** The `web-deck` build strips
+instructor-only slides from the HTML, `filter_student_decks.py` drops them from
+the deck JSON, and the player is driven with `&student`. A handout is the one
+artifact where a leaked solution cannot be taken back.
+
+It drives headless Chrome over raw CDP (`scripts/deck_pdf.mjs`), for the same
+reason `deck_fit.mjs` does — a hidden browser pane suspends layout and the
+slides come out wrong. Concatenation is `scripts/pdf_concat.py`, which
+deliberately does **not** use ghostscript: `gs -sDEVICE=pdfwrite` rebuilds
+embedded font subsets and silently lost the `|` from a bitwise-OR listing.
+Both scripts' headers carry the evidence; read them before changing either.
 
 ## Watching without the preview
 

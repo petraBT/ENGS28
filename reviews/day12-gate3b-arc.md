@@ -4,8 +4,8 @@ Reviewer: `reviewer-source-arc`. Scope: `<section xml:id="sec-motors-day12">`
 (`source/ch-motors.ptx`:2539–3746, 28 body paragraphs) and
 `<section xml:id="sec-motors-reference">` (:3760–4145) against
 `assets/decks/day12.json` (40 entries, 30 refs), with
-`assets/ClassSlidesOLD/Day12-Motors(3).pptx` (10 slides) and
-`assets/ClassSlidesOLD/Day11x-Motors(2).pptx` slides 20–21 as the arc authority.
+`ClassSlidesOLD/Day12-Motors(3).pptx` (10 slides) and
+`ClassSlidesOLD/Day11x-Motors(2).pptx` slides 20–21 as the arc authority.
 All trees are the live working tree; `source/ch-motors.ptx` is read at its
 uncommitted state. `check_deck.py` and `check_rules.py` both pass clean.
 

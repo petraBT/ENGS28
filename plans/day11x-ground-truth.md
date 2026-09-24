@@ -63,7 +63,7 @@ carefully will ask.
 
 ---
 
-## 2. Her deck — `assets/ClassSlidesOLD/Day11x-Motors(2).pptx`, 21 slides
+## 2. Her deck — `ClassSlidesOLD/Day11x-Motors(2).pptx`, 21 slides
 
 Mined arc:
 

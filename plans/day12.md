@@ -30,7 +30,7 @@ Chapter `source/ch-motors.ptx`, at the placeholder after `sec-motors-day11x`.
 
 Ground truth: `plans/day12-ground-truth.md`. Gate 1 review and its consolidated
 change list: `reviews/day12-gate1.md` — **applied in this revision**. Her decks:
-`assets/ClassSlidesOLD/Day12-Motors(3).pptx` (10 slides) and
+`ClassSlidesOLD/Day12-Motors(3).pptx` (10 slides) and
 `Day11x-Motors(2).pptx` slides **20–21**, moved here at Day 11x's Gate 1.
 Downstream: **Lab 6**, due Tuesday 17 February 2026.
 

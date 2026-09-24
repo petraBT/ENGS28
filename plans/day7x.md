@@ -1,6 +1,6 @@
 # Day 7x — Debugging Embedded Programs
 
-Chapter: `source/ch-debugging.ptx` · Old deck: `assets/ClassSlidesOLD/Day07x-Debugging.pptx`
+Chapter: `source/ch-debugging.ptx` · Old deck: `ClassSlidesOLD/Day07x-Debugging.pptx`
 (22 slides) · Downstream: **Lab 4 in flight** (`assets/Labs/Lab4_ES28.pdf`), Day 8
 (timers/interrupts) benefits from debugger fluency.
 

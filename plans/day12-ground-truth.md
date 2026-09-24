@@ -80,7 +80,7 @@ such for Gate 1 rather than slipped in.
 
 ## 3. Her decks, mined — both of them
 
-### 3a. `assets/ClassSlidesOLD/Day12-Motors(3).pptx`, 10 slides
+### 3a. `ClassSlidesOLD/Day12-Motors(3).pptx`, 10 slides
 
 | # | Title | Notes |
 | --- | --- | --- |
@@ -118,7 +118,7 @@ pullup on that pin."*
 That first sentence is her own statement of an **open-collector output**, and it
 is the day's best continuity payoff — see §7.
 
-### 3b. `assets/ClassSlidesOLD/Day11x-Motors(2).pptx`, slides 20–21
+### 3b. `ClassSlidesOLD/Day11x-Motors(2).pptx`, slides 20–21
 
 Moved here whole at Day 11x's Gate 1.
 

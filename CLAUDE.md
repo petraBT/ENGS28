@@ -60,6 +60,7 @@ python3 scripts/check_rules.py --quiet source/*.ptx
 python3 scripts/check_deck.py assets/decks/*.json
 python3 scripts/check_starters.py
 python3 scripts/check_instructor_only.py
+python3 scripts/check_not_published.py
 ```
 
 `check_instructor_only.py` guards the deploy path: instructor-only files must
@@ -67,17 +68,26 @@ live in `instructor-only/`, never under `assets/`, which PreTeXt copies into
 every target's `external/` including the published one. `build.sh` checks its
 own output too, but `pretext deploy` builds on its own and never runs it.
 
+`check_not_published.py` guards the same path by extension rather than by
+content: no `.pptx`, `.key` or `.docx` under `assets/`. Her original decks
+(`ClassSlidesOLD/`) were public on `gh-pages` for exactly this reason until
+2026-09-23 — git-ignored in `main`, which hid them from `git status` but not
+from the deploy, because deploy copies the working tree.
+
 ---
 
 ## Repository structure
 
 ```
 source/            PreTeXt XML source, one file per chapter
-assets/
-  ClassSlidesOLD/  Petra's original PowerPoint decks — the ground truth for the
+ClassSlidesOLD/    Petra's original PowerPoint decks — the ground truth for the
                    in-class arc and for driver code. Mine with scripts/pptx_mine.py;
-                   rebuild annotated figures with scripts/pptx_annotate.py
-  ClassSlidesNEW/  Decks as rebuilt for the book
+                   rebuild annotated figures with scripts/pptx_annotate.py.
+                   AT THE REPO ROOT, deliberately: anything under assets/ is
+                   copied into every target's external/ and published, and these
+                   are her unpublished originals. check_not_published.py enforces it.
+ClassSlidesNEW/    Decks as rebuilt for the book — same reason, same place
+assets/
   images/DayNN-*/  Figures, one folder per day
   decks/           Deck playlists (<id>.json) + index.json
   starters/        Real driver and starter .c files handed to students

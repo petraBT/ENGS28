@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rebuild the annotated figures from an old ENGS 28 lecture deck.
 
-The teaching annotations in assets/ClassSlidesOLD/ -- the callouts naming which
+The teaching annotations in ClassSlidesOLD/ -- the callouts naming which
 pin each CHSELR bit selects, the labelled blocks on the SAR diagram, the arrows
 onto a scope trace -- are PowerPoint *shapes layered over* the picture.  Plain
 media extraction pulls out only the picture underneath, which is why the images

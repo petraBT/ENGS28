@@ -13,7 +13,7 @@ been planned for sleep modes; last year there was no time for it and the
 x-hour was project time, so build the sleep-modes material, but it may not
 be used.  Thursday is project demos and the wrap-up."
 
-Sources mined: `assets/ClassSlidesOLD/Day17-BLE.pptx` (26 slides),
+Sources mined: `ClassSlidesOLD/Day17-BLE.pptx` (26 slides),
 `Day17x-Sleep Modes.pptx` (25 slides), `Day19-Topics.pptx` (8 slides —
 **verified: it is last year's demo-day wrap-up**, not a topics survey);
 `assets/Labs/Lab9B_ES28.pdf` (9 pages, read in full);

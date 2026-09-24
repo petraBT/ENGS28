@@ -6,9 +6,9 @@ starter library, and `source/ch-i2c.ptx`. Chapter: `source/ch-accelerometers.ptx
 
 Sources mined:
 
-- `assets/ClassSlidesOLD/Day13-I2C(3).pptx` — 32 slides
-- `assets/ClassSlidesOLD/Day13x-Accelerometer.pptx` — 19 slides
-- `assets/ClassSlidesOLD/Day14-Accelerometer(2).pptx` — 21 slides
+- `ClassSlidesOLD/Day13-I2C(3).pptx` — 32 slides
+- `ClassSlidesOLD/Day13x-Accelerometer.pptx` — 19 slides
+- `ClassSlidesOLD/Day14-Accelerometer(2).pptx` — 21 slides
 - `assets/Labs/Lab7_ES28.pdf` — 5 pages, read in full (§4)
 - `assets/starters/i2c.c` — the I2C library, already in the repo and already
   taught (Days 9x/10)

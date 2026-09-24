@@ -10,8 +10,8 @@ One chapter, `source/ch-i2c.ptx`, covering two class days:
 
 | Day | Topic | Old deck |
 |---|---|---|
-| 9x | I2C: the protocol and the peripheral | `assets/ClassSlidesOLD/Day09X-I2C.pptx` (32 slides) |
-| 10 | The HT16K33 and its device driver | `assets/ClassSlidesOLD/Day10-I2C(2).pptx` (56 slides) |
+| 9x | I2C: the protocol and the peripheral | `ClassSlidesOLD/Day09X-I2C.pptx` (32 slides) |
+| 10 | The HT16K33 and its device driver | `ClassSlidesOLD/Day10-I2C(2).pptx` (56 slides) |
 
 **Day 13 is not yours.** It was moved to `ch-accelerometers.ptx` by Petra's
 decision — `ch-i2c.ptx` keeps only the generic I2C register-read/write transfer

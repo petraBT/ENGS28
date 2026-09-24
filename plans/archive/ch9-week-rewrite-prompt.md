@@ -20,9 +20,9 @@ These are three days but **two chapters**:
 
 | Day | Topic | File | Old deck |
 |---|---|---|---|
-| 9 | GPIO interrupts (EXTI) | `source/ch-gpio-interrupts.ptx` | `assets/ClassSlidesOLD/Day09-Interrupts(2).pptx` |
-| 9x | I2C | `source/ch-i2c.ptx` | `assets/ClassSlidesOLD/Day09X-I2C.pptx` |
-| 10 | I2C + 7-segment | `source/ch-i2c.ptx` | `assets/ClassSlidesOLD/Day10-I2C(2).pptx` |
+| 9 | GPIO interrupts (EXTI) | `source/ch-gpio-interrupts.ptx` | `ClassSlidesOLD/Day09-Interrupts(2).pptx` |
+| 9x | I2C | `source/ch-i2c.ptx` | `ClassSlidesOLD/Day09X-I2C.pptx` |
+| 10 | I2C + 7-segment | `source/ch-i2c.ptx` | `ClassSlidesOLD/Day10-I2C(2).pptx` |
 
 ### How to scope it
 

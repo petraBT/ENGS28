@@ -84,7 +84,7 @@ You also own a third check, from `AUTHORING-visual.md` Rule 3:
 
 ## What you are given
 
-- `assets/ClassSlidesOLD/DayNN-*.pptx` — hers. The authority for the arc.
+- `ClassSlidesOLD/DayNN-*.pptx` — hers. The authority for the arc.
 - `plans/dayNN.md` and the outline — at Gate 1.
 - `source/ch-NAME.ptx` — the chapter. At Gate 2 this is your target; at Gate 3 it
   is the middle term between her arc and the deck.
@@ -93,7 +93,7 @@ You also own a third check, from `AUTHORING-visual.md` Rule 3:
 If the day maps to more than one old deck (`Day11`, `Day11x`, `Day12`), read all
 of them and say which one each finding comes from.
 
-**`assets/ClassSlidesOLD/` is gitignored.** It exists only in the live working
+**`ClassSlidesOLD/` is gitignored.** It exists only in the live working
 tree, never in a worktree or a checked-out revision. If you are reviewing a
 checkout, take the `.pptx` from the live repo and everything else from the
 checkout — and say in your report which tree each came from. If the `.pptx` is
@@ -108,7 +108,7 @@ is not.
 
 ```bash
 # her arc: titles in order, plus the speaker notes, which are half the content
-python3 scripts/pptx_mine.py assets/ClassSlidesOLD/DayNN-Name.pptx
+python3 scripts/pptx_mine.py ClassSlidesOLD/DayNN-Name.pptx
 
 # the new deck, in projection order
 python3 -c "import json,sys; d=json.load(open(sys.argv[1])); [print(i+1, s.get('type'), s.get('slide',''), '|', s.get('title','')) for i,s in enumerate(d['slides'])]" assets/decks/dayNN.json

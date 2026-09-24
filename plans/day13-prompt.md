@@ -23,7 +23,7 @@ Paste this into a fresh session in `~/repos/ENGS28`. Read first, in order:
 **Voice references, in order:** Day 11's passed prose in `ch-motors.ptx`,
 then Day 12's post-redo prose, then the three frozen specimens. Reuse her
 sentences from the mined deck (`scratch: python3 scripts/pptx_mine.py
-"assets/ClassSlidesOLD/Day13-I2C(3).pptx"`) before writing your own (P-12).
+"ClassSlidesOLD/Day13-I2C(3).pptx"`) before writing your own (P-12).
 
 ## The ordering for this session — the pilot ordering, now standard
 

@@ -122,7 +122,7 @@ writing around it.
   scanner in the new Day 9x depends on it. If it cannot, say so in your report
   and design the activity around what the API actually provides. **Do not
   invent a return value** (B-6).
-- `python3 scripts/pptx_mine.py "assets/ClassSlidesOLD/Day09X-I2C.pptx"` and the
+- `python3 scripts/pptx_mine.py "ClassSlidesOLD/Day09X-I2C.pptx"` and the
   same for `Day10-I2C(2).pptx`. The old decks are the authority for the
   intended arc and often carry real driver code as text.
 - **Figures: check every rebuilt one by eye, and prefer Petra's originals.**

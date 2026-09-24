@@ -3,7 +3,7 @@
 Covers **Day 11 only** of `source/ch-motors.ptx`. Days 11x and 12 are separate
 sessions; their material is noted here only where it fixes Day 11's hand-off.
 
-**Sources mined:** `assets/ClassSlidesOLD/Day11-Motors.pptx` (30 slides),
+**Sources mined:** `ClassSlidesOLD/Day11-Motors.pptx` (30 slides),
 `Day11x-Motors(2).pptx` (21) for the driver code and the 11x/12 boundary,
 `Day12-Motors(3).pptx` (10) for the boundary. Downstream: **Lab 6**
 (`assets/Labs/Lab6_ES28.pdf`, due Tue 17 Feb 2026). Reference: **RM0490**
