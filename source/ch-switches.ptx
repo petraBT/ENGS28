@@ -1965,39 +1965,47 @@ int main(void) {
             </figure>
 
             <program language="c"><code><![CDATA[
-#include "ES28.h"
+#include "ES28.h"            // All the port definitions are here
 
-typedef enum { UNPRESSED, PRESSED } state_t;
+#define GPIOAEN        (1U<<0)    // Clock access to GPIOA (LED)
+#define GPIOBEN        (1U<<1)    // Clock access to GPIOB (button)
+
+#define LED_PIN        (1U<<5)    // LED on PA5     (D13)
+#define BUTTON_PIN     (1U<<4)    // Button on PB4 (D5)
+
+typedef enum {UNPRESSED, PRESSED} state_t;
 
 int main(void) {
-    // --- GPIO setup (GPIOA: LED on PA5; GPIOB: button on PB4) ---
-    RCC->IOPENR |= (1U << 0) | (1U << 1);  // enable GPIOA and GPIOB clocks
-    GPIOA->MODER &= ~(3U << 10);            // PA5 input (clear)
-    GPIOA->MODER |=  (1U << 10);            // PA5 output
-    GPIOB->MODER &= ~(3U << 8);             // PB4 input (pins reset to analog)
-    GPIOB->PUPDR |=  (1U << 8);             // PB4 pull-up bit [9:8] = 01
-    GPIOB->PUPDR &= ~(1U << 9);
-
     state_t state = UNPRESSED;
+    unsigned buttonPushed;
+    RCC->IOPENR |= (GPIOAEN | GPIOBEN); // Enable clock access
 
-    while (1) {
-        int btn = !(GPIOB->IDR & (1U << 4)); // 1 if pressed (active-low)
+    GPIOA->MODER |= (1U<<10);    // Configure PA5 as output pin
+    GPIOA->MODER &= ~(1U<<11);
 
-        switch (state) {
+    GPIOB->MODER &= ~(1U<<8);    // Configure PB4 as input pin
+    GPIOB->MODER &= ~(1U<<9);    // (not necessary since this is default reset value)
+
+    GPIOB->PUPDR |= (1U<<8);     // enable pull-up for PB4
+    GPIOB->PUPDR &= ~(1U<<9);
+
+    while(1) {
+        buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0);
+        switch(state) {
             case UNPRESSED:
-                if (btn) {
-                    GPIOA->ODR ^= (1U << 5); // toggle LED on press
+                if (buttonPushed) {
+                    GPIOA->ODR ^= LED_PIN;
                     state = PRESSED;
                 }
                 break;
             case PRESSED:
-                if (!btn) {
-                    state = UNPRESSED;        // wait for release
+                if (!buttonPushed) {
+                    state = UNPRESSED;
                 }
                 break;
         }
     }
-    return 0;
+    return 0;                    // never reached
 }
 ]]></code></program>
 
@@ -2021,20 +2029,23 @@ int main(void) {
             <slide xml:id="sl-day4-enum-switch">
                 <p>The same logic in C: <c>typedef enum</c> + <c>switch</c>:</p>
                 <program language="c"><code><![CDATA[
-typedef enum { UNPRESSED, PRESSED } state_t;
+typedef enum {UNPRESSED, PRESSED} state_t;
 state_t state = UNPRESSED;
-while (1) {
-    int btn = !(GPIOB->IDR & (1U << 4));   // 1 if pressed (active-low)
-    switch (state) {
-    case UNPRESSED:
-        if (btn) {
-            GPIOA->ODR ^= (1U << 5);   // toggle LED on press
-            state = PRESSED;
-        }
-        break;
-    case PRESSED:
-        if (!btn) state = UNPRESSED;    // wait for release
-        break;
+...
+while(1) {
+    buttonPushed = ((GPIOB->IDR & BUTTON_PIN) == 0);
+    switch(state) {
+        case UNPRESSED:
+            if (buttonPushed) {
+                GPIOA->ODR ^= LED_PIN;
+                state = PRESSED;
+            }
+            break;
+        case PRESSED:
+            if (!buttonPushed) {
+                state = UNPRESSED;
+            }
+            break;
     }
 }
 ]]></code></program>
@@ -2175,8 +2186,9 @@ while (1) {
                 </task>
             </activity>
 
-            <!-- The seed is her Day 4 slides 10 and 12 (toggleLED setup and
-                 #defines, typedef enum + switch loop), not a blinkyCNT counter
+            <!-- The seed is the Part 2 listing, which is her Day 4 slides 10 and
+                 12 (toggleLED setup and #defines, typedef enum + switch loop),
+                 not a blinkyCNT counter
                  (Petra, 2026-09-24): the counter is sl-day3-cnt-solution,
                  instructor-only and Lab 1's graded BlinkCNT.  Nothing here may name the states
                  of the pause/resume machine, their number, or the sliced delay;
@@ -2184,11 +2196,9 @@ while (1) {
                  wants the blocking-delay failure met once.  reviews/day4-sim-gate.md -->
             <p>
                 The simulator below is seeded with the button toggle written as a
-                state machine, with <c>typedef enum</c> and <c>switch</c>, so you
-                can work on the pause/resume counter away from your Nucleo.  It is
-                the program from <xref ref="subsec-day4-fsm-lecture"/>, written with
-                the names from <c>toggleLED.c</c>: <c>LED_PIN</c>,
-                <c>BUTTON_PIN</c> and <c>buttonPushed</c>.  Attach the button
+                state machine, with <c>typedef enum</c> and <c>switch</c>, as it is
+                printed in <xref ref="subsec-day4-fsm-lecture"/>, so you can work on
+                the pause/resume counter away from your Nucleo.  Attach the button
                 first: click <em>+ Button</em> in the component bay, then click the
                 Arduino header pin D5 (PB4).  Each press toggles the on-board LED.
                 For the counter, attach three LEDs the way you wired them in Lab 1:

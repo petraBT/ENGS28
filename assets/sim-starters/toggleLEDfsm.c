@@ -3,8 +3,8 @@
  *
  * Below is the button toggle written as
  * a state machine, with typedef enum and
- * switch, as earlier in this chapter,
- * using the names from toggleLED.c.
+ * switch, exactly as printed earlier in
+ * this chapter.
  *
  * Attach the button first: click
  * + Button in the component bay, then
