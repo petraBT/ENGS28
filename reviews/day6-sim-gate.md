@@ -68,10 +68,15 @@ This affected every embed, not just this one.
 1. **Pre-existing caption, `fig-moder-macros-ref`** (`ch-transistors.ptx:501`):
    "CMSIS macro naming conventions for common GPIO configurations." The image
    is `ES28.h`'s own `#define`s (`GPIO_INPUT` … `GPIO_AF15`). Those are not
-   CMSIS, and the image shows no `_Pos`/`_Msk` pattern. Outside this embed's
-   scope, so it was not changed.
+   CMSIS, and the image shows no `_Pos`/`_Msk` pattern. **DONE (2026-09-25),
+   at her request:** the caption now says it shows the `ES28.h` GPIO constants
+   (MODER modes, PUPDR pull settings, AF0 to AF15), that they are not CMSIS
+   names, and that each is shifted into place with a CMSIS `_Pos`. Checked by
+   `checker-technical-accuracy` (OK, one MINOR wording point applied). The
+   figure has no slide, so there was nothing to mirror.
 2. **The student dropdown already carries task 2's answer.** The Day 9 entries
    (`counterResetButtonPolled`, `counterResetButtonInt`) contain
    `RCC->IOPENR |= RCC_IOPENR_GPIOBEN;`. Task 2's hint makes it a one-step
    analogy from the UART driver anyway, so the impact is low. Removing those
-   entries would cost Day 9 its embed seeds.
+   entries would cost Day 9 its embed seeds. **Her ruling (2026-09-25):
+   keep as is.**
