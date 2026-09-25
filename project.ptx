@@ -12,8 +12,22 @@
          prose, never the condensed form, and never the instructor-only notes or
          solutions a slide may inline. Only the "web-deck" target renders them
          (as hidden <div>s the classroom deck player extracts). -->
+    <!-- The reading book, and THE TARGET `pretext deploy` PUBLISHES.
+         It renders <slide> blocks (deck.slides=render) for one reason: the
+         deck player, external/class.html, extracts a slide out of the book
+         page named in the deck JSON. assets/ is copied into every target, so
+         the player and the deck lists were already on the published site,
+         but the pages beside them had no slides in them. 498 of the 945
+         slides (53%, every one backed by a <slide> rather than an activity
+         or a figure) failed with "Slide … not found" for anyone opening the
+         deployed decks.
+         Rendering them here costs about 4 kB a page and nothing visually:
+         the divs carry `hidden` and external/deck.css keeps them out of the
+         reading view, exactly as in web-deck.
+         Instructor slides are still NOT rendered. deck.solutions is unset,
+         so the XSL strips them before the HTML, as it always did here. -->
     <target name="web" format="html" xsl="engs28-html.xsl">
-      <stringparams html.css.extra="external/book.css" />
+      <stringparams html.css.extra="external/deck.css external/book.css" deck.slides="render" />
     </target>
     <target name="print" format="pdf" xsl="engs28-latex.xsl" />
     <!-- Authoring build: "web" plus the click-to-source helper, assets/ptx-edit.js.
@@ -37,11 +51,18 @@
     <target name="web-instructor" format="html" xsl="engs28-html.xsl">
       <stringparams html.css.extra="external/book.css" book.solutions="render" />
     </target>
-    <!-- Classroom-deck build: the reading "web" content, but with <slide> blocks
-         RENDERED as hidden <div class="deck-slide"> (deck.slides=render) and the
-         CSS that keeps them out of the reading view (assets/deck.css ->
-         external/deck.css). The deck player (external/class.html) extracts those
-         hidden blocks by xml:id. This is the build the player reads. -->
+    <!-- Classroom-deck build: <slide> blocks RENDERED as hidden
+         <div class="deck-slide"> (deck.slides=render) plus the CSS that keeps
+         them out of the reading view (assets/deck.css -> external/deck.css).
+         The deck player (external/class.html) extracts those hidden blocks by
+         xml:id.
+         Since 2026-09-25 this is byte-for-byte what "web" above also produces,
+         because the published site needs a working player too. It is kept as a
+         separate target because two things build it into their own directory
+         and expect it there: scripts/build-deck.sh (which also filters the deck
+         lists) and make-slide-pdfs.sh, which prints handouts from it while you
+         may be serving something else out of output/web. If you ever make the
+         two differ, make_slide_pdfs and the published decks will differ too. -->
     <target name="web-deck" format="html" xsl="engs28-html.xsl">
       <stringparams html.css.extra="external/deck.css external/book.css" deck.slides="render" />
     </target>
