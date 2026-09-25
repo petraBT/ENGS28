@@ -665,6 +665,14 @@
         // (solutions, reveals) are dropped. The plain URL is the in-class /
         // instructor version and shows everything.
         var studentView = params.has('student') || params.get('audience') === 'student'
+        /* Set from the deck JSON, not the URL: filter_student_decks.py stamps
+           `studentBuild` into a build whose instructor slides were removed at
+           BUILD time. There is then no second audience to offer, so the player
+           stops advertising one — no "Instructor view" lede, no switch link,
+           no "(student)" in the title. This is what makes the published deck
+           fit for a public site; on a localhost instructor build the flag is
+           absent and everything behaves as before. */
+        var studentBuild = false
         // ?notes shows each slide's instructor-only <note> / presenterNote.
         // Never in the student view, and never on the projector unless asked
         // for — but it is also what makes a note clickable, and so editable.
@@ -1858,23 +1866,30 @@
           fetch('decks/index.json', FETCH_OPTS)
             .then(function (r) { if (!r.ok) throw new Error('no decks/index.json (' + r.status + ')'); return r.json() })
             .then(function (index) {
+              if (index.studentBuild) { studentBuild = true; studentView = true }
               var parts = ['<h1>ENGS 28 — Class decks</h1>']
               // One audience switch for the whole page, rather than a link per
               // row: thirteen of those fragmented the list and made the decks
               // themselves harder to scan, which is the one thing this page is
               // for. Switching re-renders every link below.
-              parts.push('<p class="lede">' +
-                (studentView
-                  ? 'Student view — instructor-only slides are dropped.'
-                  : 'Instructor view — every slide, including instructor-only ones.') +
-                // Keep ?notes across the switch: losing it silently would look
-                // like the notes flag had stopped working.
-                ' <a class="swap" href="class.html' +
-                (studentView
-                  ? (params.has('notes') ? '?notes' : '')
-                  : '?student' + (params.has('notes') ? '&notes' : '')) + '">' +
-                (studentView ? 'Switch to instructor view' : 'Switch to student view') +
-                '</a></p><ol>')
+              // On a studentBuild there is no other audience to switch TO, and
+              // saying so would tell a public reader that a hidden instructor
+              // version exists. So the whole line goes.
+              if (!studentBuild) {
+                parts.push('<p class="lede">' +
+                  (studentView
+                    ? 'Student view — instructor-only slides are dropped.'
+                    : 'Instructor view — every slide, including instructor-only ones.') +
+                  // Keep ?notes across the switch: losing it silently would look
+                  // like the notes flag had stopped working.
+                  ' <a class="swap" href="class.html' +
+                  (studentView
+                    ? (params.has('notes') ? '?notes' : '')
+                    : '?student' + (params.has('notes') ? '&notes' : '')) + '">' +
+                  (studentView ? 'Switch to instructor view' : 'Switch to student view') +
+                  '</a></p>')
+              }
+              parts.push('<ol>')
               index.decks.forEach(function (d) {
                 var href = 'class.html?deck=' + encodeURIComponent(d.id) + suffix
                 parts.push('<li class="' + d.kind + '">')
@@ -1913,6 +1928,10 @@
           .then(function (r) { if (!r.ok) throw new Error('no deck "' + deckId + '" (' + r.status + ')'); return r.json() })
           .then(function (d) {
             deck = d
+            // Before any use of studentView below: a build whose instructor
+            // slides were stripped at build time is student-only whatever the
+            // URL says, so the badge, the notes and the title suffix all go.
+            if (deck.studentBuild) { studentBuild = true; studentView = true }
             if (!deck.slides || !deck.slides.length) throw new Error('deck has no slides')
             // Annotation keys by the slide's position in the FULL deck,
             // assigned before the student filter below — see inkKey().
@@ -1923,7 +1942,11 @@
             // build time; do that before publishing a deck to students.
             if (studentView) deck.slides = deck.slides.filter(function (s) { return !s.instructor })
             if (!deck.slides.length) throw new Error('this deck has no student slides')
-            document.title = 'ENGS 28 — ' + (deck.title || deckId) + (studentView ? ' (student)' : '')
+            // "(student)" distinguishes the two views while both exist. On a
+            // studentBuild only one does, so the suffix is just noise in a
+            // student's tab and their bookmarks.
+            document.title = 'ENGS 28 — ' + (deck.title || deckId) +
+              (studentView && !studentBuild ? ' (student)' : '')
             if (!location.hash) location.hash = '1'
             render()
           })

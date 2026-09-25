@@ -30,15 +30,29 @@ import sys
 
 
 def filter_deck(path):
-    """Drop instructor slides from one deck file. Returns how many went."""
+    """Drop instructor slides from one deck file. Returns how many went.
+
+    Also stamps `studentBuild`, which the player reads to know it is running
+    against a build that HAS no instructor slides -- so it drops the audience
+    switch instead of announcing "Instructor view" on a public site. Stamped
+    on every deck, including ones that had nothing to drop, because the flag
+    describes the BUILD and not this one file.
+    """
     with open(path, encoding="utf-8") as fh:
         deck = json.load(fh)
     slides = deck.get("slides", [])
     kept = [s for s in slides if not s.get("instructor")]
     dropped = len(slides) - len(kept)
-    if not dropped:
-        return 0
+    # Presenter notes are hers and are never projected, but they live in the
+    # deck JSON, which PreTeXt copies to external/ and the deploy publishes --
+    # so 349 of them were being served, readable by fetching the file directly,
+    # no ?notes needed. Dropped here with the instructor slides.
+    # NOT `note`: that one is the text a prompt slide SHOWS. Only
+    # `presenterNote` is the private one.
+    for s in kept:
+        s.pop("presenterNote", None)
     deck["slides"] = kept
+    deck["studentBuild"] = True
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(deck, fh, indent=2, ensure_ascii=False)
         fh.write("\n")
@@ -62,6 +76,9 @@ def filter_index(path):
         with open(deck_path, encoding="utf-8") as fh:
             entry["slides"] = len(json.load(fh).get("slides", []))
         entry["instructorOnly"] = 0
+    # The contents page reads this before any deck is chosen, so it needs the
+    # flag too -- that page is where "Instructor view" was being announced.
+    index["studentBuild"] = True
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(index, fh, indent=2, ensure_ascii=False)
         fh.write("\n")
