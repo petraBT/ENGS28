@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -857,6 +858,50 @@ void SevenSeg_number(uint16_t num, uint8_t *display_buffer);
 </div>
 <div class="para" id="subsec-day10-driver-10">
 <em class="emphasis">Nothing, or the wrong thing, on the display?</em>  Work down the layers rather than around them.  Does <code class="code-inline tex2jax_ignore">writeFirstDigit.c</code> still put an <code class="code-inline tex2jax_ignore">E</code> up?  If yes, the bus, the init and the RAM addressing are all fine and the fault is in <code class="code-inline tex2jax_ignore">SevenSeg_write()</code> or in how the buffer was filled. A display showing four garbled characters usually means the buffer is right but shifted: check that you sent <code class="code-inline tex2jax_ignore">2*HT16K33_NBUF</code> bytes and started at <code class="code-inline tex2jax_ignore">HT16K33_ADDR_PTR</code>, not that you got the segment patterns wrong.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day10-driver-10" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-driver-todo" data-deck-room="compressed"><div class="deck-slide-body">
+<div class="para" id="sl-day10-driver-todo-1">
+<code class="code-inline tex2jax_ignore">SevenSegPartial.c</code> has three functions left in it, and their prototypes are already in the header. Two use the one-byte write style you used in <code class="code-inline tex2jax_ignore">SevenSeg_init()</code> in order to send commands to the display.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-driver-todo-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">void SevenSeg_blink(uint8_t rate) {
+    // TODO 2 -- one byte: display-setup command, display-on bit, rate
+}
+
+void SevenSeg_dim(uint8_t brightness) {
+    // TODO 3 -- one byte: the dimming command, plus the brightness
+}
+
+void SevenSeg_write(uint8_t *display_buffer) {
+    // TODO 4 -- ONE call.  Every byte in one transaction, from
+    //           HT16K33_ADDR_PTR.  Go through the i2c library.
+}
+</code></pre></div>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-ladder">
+<div class="deck-slide-body">
+<div class="para" id="sl-day10-ladder-1">Nothing, or the wrong thing, on the display? Work down the layers rather than around them.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-ladder-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day10-ladder-2">
+<li id="sl-day10-ladder-2-1">
+<div class="para" id="p-derived-sl-day10-ladder-2-1">1: Does <code class="code-inline tex2jax_ignore">writeFirstDigit.c</code> still put an <code class="code-inline tex2jax_ignore">E</code> up? If yes, the bus, the init and the RAM addressing are all fine and the fault is in <code class="code-inline tex2jax_ignore">SevenSeg_write()</code> or in how the buffer was filled.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-ladder-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-ladder-2-2">
+<div class="para" id="p-derived-sl-day10-ladder-2-2">2: A display showing four garbled characters usually means the buffer is right but <dfn class="terminology">shifted</dfn>: check that you sent <code class="code-inline tex2jax_ignore">2*HT16K33_NBUF</code> bytes and started at <code class="code-inline tex2jax_ignore">HT16K33_ADDR_PTR</code>, not that you got the segment patterns wrong.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-ladder-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-ladder-2-3">
+<div class="para" id="p-derived-sl-day10-ladder-2-3">3: Nothing at all, and <code class="code-inline tex2jax_ignore">writeFirstDigit.c</code> also shows nothing: does the program keep running, or does it stop on its first I2C call? Neither is visible from the outside, so pause it in the debugger and see where it is. <dfn class="terminology">Stopped inside <code class="code-inline tex2jax_ignore">i2c1_byteWrite()</code> means nobody acknowledged</dfn>: the wires, the power, or the address you passed. <dfn class="terminology">Still looping means the bus answered</dfn>, so the fault is above it: check that <code class="code-inline tex2jax_ignore">SevenSeg_init()</code> is called, and that its three commands are the ones you derived.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-ladder-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-ladder-2-4">
+<div class="para" id="p-derived-sl-day10-ladder-2-4">4: Still stuck?  We’re here to help!</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-ladder-2-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">Each step rules out a layer: start at the one you know worked.</div>
+<div class="deck-slide-note">Stays up for all of Part 8c.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 10.3.11: Part 8c: The Rest of the Driver"><a tabindex="-1" href="#subsec-day10-driver" title="Copy heading and permalink for Subsection 10.3.11: Part 8c: The Rest of the Driver" aria-label="Copy heading and permalink for Subsection 10.3.11: Part 8c: The Rest of the Driver">🔗</a></div>
 </section>

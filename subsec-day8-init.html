@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -864,6 +865,76 @@ TIM14-&gt;ARR = ARR_FACTOR - 1;
     TIM14-&gt;CR1 |= TIM_CR1_CEN;
 }
 </code></pre></div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-reg-clock" data-deck-ref="fig-apbenr2-tim14"><div class="deck-slide-body">
+<div class="para" id="sl-day8-reg-clock-1">
+<dfn class="terminology">1. The clock.</dfn><div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-reg-clock-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day8-reg-clock-2">
+<li id="sl-day8-reg-clock-2-1">
+<div class="para" id="p-derived-sl-day8-reg-clock-2-1"><code class="code-inline tex2jax_ignore">RCC-&gt;APBENR2 |= RCC_APBENR2_TIM14EN;</code></div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-reg-clock-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-reg-clock-2-2">
+<div class="para" id="p-derived-sl-day8-reg-clock-2-2">Like every peripheral, TIM14 is unreachable until its clock is enabled: before this line, TIM14’s registers do not respond.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-reg-clock-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-reg-clock-2-3">
+<div class="para" id="p-derived-sl-day8-reg-clock-2-3">Same register as the ADC’s clock enable.  All five timers live on the APB bus.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-reg-clock-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-reg-pscarr" data-deck-ref="fig-tim14-psc-arr"><div class="deck-slide-body">
+<div class="para" id="sl-day8-reg-pscarr-1">
+<dfn class="terminology">2, 3, 4. Rate, range, clean start.</dfn><div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-reg-pscarr-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day8-reg-pscarr-2">
+<li id="sl-day8-reg-pscarr-2-1">
+<div class="para" id="p-derived-sl-day8-reg-pscarr-2-1">
+<code class="code-inline tex2jax_ignore">TIM14-&gt;PSC = 12000 - 1;</code>, the counter ticks at 1 kHz: one tick per millisecond.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-reg-pscarr-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-reg-pscarr-2-2">
+<div class="para" id="p-derived-sl-day8-reg-pscarr-2-2">
+<code class="code-inline tex2jax_ignore">TIM14-&gt;ARR = 500 - 1;</code>, wrap every 500 ticks: 500 ms per update event.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-reg-pscarr-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-reg-pscarr-2-3">
+<div class="para" id="p-derived-sl-day8-reg-pscarr-2-3">Minus one, both times: the divider is PSC + 1, and counting runs 0 through ARR <em class="emphasis">inclusive</em>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-reg-pscarr-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-reg-pscarr-2-4">
+<div class="para" id="p-derived-sl-day8-reg-pscarr-2-4">
+<code class="code-inline tex2jax_ignore">TIM14-&gt;CNT = 0;</code>, never start a period from a leftover count.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-reg-pscarr-2-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-regmap" data-deck-ref="fig-tim14-regmap-polled">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">CEN starts the counter; UIF rises each time it wraps. Clearing UIF is your job.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-init-code">
+<div class="deck-slide-body">
+<div class="para" id="sl-day8-init-code-1">
+<dfn class="terminology">5. Go.</dfn> Assembled in order (clock, rate, range, clean start, enable):<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-init-code-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">void tim14_500ms_init() {
+    // enable clock access to timer 14 (on APB bus)
+    RCC-&gt;APBENR2 |= RCC_APBENR2_TIM14EN;
+    // Set prescaler value
+    TIM14-&gt;PSC = PSC_FACTOR - 1;   // starts counting at 0
+    // Set auto-reload value
+    TIM14-&gt;ARR = ARR_FACTOR - 1;
+    // Clear counter
+    TIM14-&gt;CNT = 0;
+    // Enable timer
+    TIM14-&gt;CR1 |= TIM_CR1_CEN;
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">Five writes, run once. After this, the timer needs nothing from the CPU.</div>
+</div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 8.2.3: Part 3: Five Lines of Initialization"><a tabindex="-1" href="#subsec-day8-init" title="Copy heading and permalink for Subsection 8.2.3: Part 3: Five Lines of Initialization" aria-label="Copy heading and permalink for Subsection 8.2.3: Part 3: Five Lines of Initialization">🔗</a></div>
 </section>
 </div>

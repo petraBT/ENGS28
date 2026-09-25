@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -818,19 +819,96 @@ eBookConfig.enable_chatcodes =  false;
 </div>
 <figure class="figure figure-like" id="fig-accel-one-byte"><div class="image-box" style="width: 76%; margin-left: 12%; margin-right: 12%;"><img src="external/images/Day13x-Accelerometer/one_byte_example.svg" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">12.3.21<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>The reading 0x4000 as it sits in the two data registers, all 16 bits.  In low-power mode only the top byte carries valid bits (0x40 = 64), and the low byte is zeros: that is what left-justified means.  At ±2 g in low-power mode each step is 15.625 mg, so 64 steps is 1000 mg, one g.<div class="autopermalink" aria-hidden="true" data-description="Figure 12.3.21"><a tabindex="-1" href="#fig-accel-one-byte" title="Copy heading and permalink for Figure 12.3.21" aria-label="Copy heading and permalink for Figure 12.3.21">🔗</a></div></figcaption>
-</figure>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day13x-one-byte">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day13x-one-byte-1">
+<li id="sl-day13x-one-byte-1-1">
+<div class="para" id="p-derived-sl-day13x-one-byte-1-1">The acceleration readings are put in the data registers of the accelerometer’s memory, at a register address we can look up in the datasheet, which calls it a <dfn class="terminology">sub-address</dfn> (SUB).</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-one-byte-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day13x-one-byte-1-2">
+<div class="para" id="p-derived-sl-day13x-one-byte-1-2">Each axis’s reading is 16 bits wide (two bytes), and by default the reading is stored in them <dfn class="terminology">left-justified</dfn>: the valid bits are at the top of the 2-byte word, and zeros fill in below.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-one-byte-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day13x-one-byte-1-3">
+<div class="para" id="p-derived-sl-day13x-one-byte-1-3">Example: In low-power mode there are 8 valid bits, so only the top byte actually carries relevant information.  Suppose the two bytes contain the reading 0x4000: the top byte is 0x40 = 64.  In low-power mode with a full-scale range of ±2 g, each step is 4 g / 2⁸ = 15.625 mg, so this reading corresponds to an acceleration of 64 × 15.625 mg = 1000 mg: one g.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-one-byte-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+<div class="image-box" style="width: 80%; margin-left: 10%; margin-right: 10%;"><img src="external/images/Day13x-Accelerometer/one_byte_example.svg" class="contained"></div>
+</div>
+<div class="deck-slide-note">≈ 3 min, one idea at a time: where the readings live, then left-justified, then one byte unsigned — read the top byte, scale by the step size.  No sign yet and no three-mode picture yet, on purpose.  The picture shows 0x4000 as its 16 bits, top byte labeled.  0x4000 → +1000 mg is the number the flip example will mirror.</div>
+</div>
 <div class="para" id="subsec-day13x-data-format-5">So far we read the data as unsigned, but acceleration has a direction, and the sensor’s output is therefore given as a <dfn class="terminology">two’s complement</dfn> number.  We have not needed this encoding until now, so here is a quick review: the top bit of a two’s complement number is worth its usual amount made <em class="emphasis">negative</em>, and every other bit keeps its usual value.  The idea is easier to see in 4 bits (<a href="subsec-day13x-data-format.html#fig-accel-sign" class="xref" data-knowl="./knowl/xref/fig-accel-sign.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 12.3.23">Figure 12.3.23</a>): 0b0010 corresponds to a decimal value of 2 regardless of whether or not we are in two’s complement (since the top bit is 0), whereas the number 0b1110 corresponds to −8 + 4 + 2 = −2, because the top bit is worth −8 and the rest are ordinary.  A number with its top bit set is therefore negative: the top bit contributes its negative weight, and the remaining bits are read as usual and add to it: 0b1110 is −8 + 0b110 = −8 + 6 = −2.  In our 16-bit readings the top bit is bit 15, worth −2¹⁵.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13x-data-format-5" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <figure class="figure figure-like" id="fig-accel-sign"><div class="image-box" style="width: 80%; margin-left: 10%; margin-right: 10%;"><img src="external/images/Day13x-Accelerometer/sign_bit_weights.svg" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">12.3.23<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>Two’s complement, in 4 bits and in 16.  Left: the number 0b1110, read with its bit weights: the top weight is −8 rather than +8, so the value is −8 + 4 + 2 = −2. Right: in the sensor’s 16-bit readings the same rule makes bit 15 worth −2¹⁵, and every other bit keeps its usual value.<div class="autopermalink" aria-hidden="true" data-description="Figure 12.3.23"><a tabindex="-1" href="#fig-accel-sign" title="Copy heading and permalink for Figure 12.3.23" aria-label="Copy heading and permalink for Figure 12.3.23">🔗</a></div></figcaption>
-</figure>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day13x-sign">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day13x-sign-1">
+<li id="sl-day13x-sign-1-1">
+<div class="para" id="p-derived-sl-day13x-sign-1-1">So far we read the data as unsigned, but acceleration has a direction, and the sensor’s output is therefore given as a <dfn class="terminology">two’s complement</dfn> number: bit 15 is worth −2¹⁵, not +2¹⁵.  Every other bit keeps its usual value.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-sign-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day13x-sign-1-2">
+<div class="para" id="p-derived-sl-day13x-sign-1-2">The same idea is easier to see in 4 bits: 0b0010 corresponds to a decimal value of 2 regardless of whether or not we are in two’s complement (since the top bit is 0), whereas the number 0b1110 corresponds to −8 + 4 + 2 = −2, because the top bit is worth −8 and the rest are ordinary.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-sign-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day13x-sign-1-3">
+<div class="para" id="p-derived-sl-day13x-sign-1-3">A number with its top bit set is therefore negative: the top bit contributes its negative weight, and the remaining bits are read as usual and add to it: 0b1110 is −8 + 0b110 = −8 + 6 = −2.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-sign-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+<div class="image-box" style="width: 64%; margin-left: 18%; margin-right: 18%;"><img src="external/images/Day13x-Accelerometer/sign_bit_weights.svg" class="contained"></div>
+</div>
+<div class="deck-slide-note">≈ 3 min — FIRST teaching, not review: nothing before this week has decoded a signed bit pattern.  Land the one fact (the top bit’s value is negative) and its consequence (negative top weight plus the remaining bits), both shown in 4 bits before anyone sees 16 — point at the crossed-out weight in the picture as you say it.</div>
+</div>
 <div class="para" id="subsec-day13x-data-format-8">We’ll work the whole conversion once, on the reading 0xC000, step by step.  Assume we are in low-power mode at a full-scale range of ±2 g. In binary the reading is 0b1100 0000 0000 0000, and bit 15 is set, so the value is negative.  The top byte carries the reading: 0xC0 = 0b1100 0000, whose top bit is worth −128 while the remaining bits are 0b100 0000 = 64, so the value is −128 + 64 = −64.  Scaling by the step size gives −64 × 15.625 mg = −1000 mg: minus one g, comfortably inside the ±2000 mg the range allows.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13x-data-format-8" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13x-worked">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13x-worked-1">The reading is 0xC000.  Assume we are in low-power mode at a full-scale range of ±2 g.  We convert it step by step:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13x-worked-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ol class="decimal" id="sl-day13x-worked-2">
+<li id="sl-day13x-worked-2-1">
+<div class="para" id="p-derived-sl-day13x-worked-2-1">Write the binary: 0xC000 = 0b1100 0000 0000 0000.  Bit 15 is set, so the value is negative.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 1"><a tabindex="-1" href="#sl-day13x-worked-2-1" title="Copy heading and permalink for Item 1" aria-label="Copy heading and permalink for Item 1">🔗</a></div>
+</li>
+<li id="sl-day13x-worked-2-2">
+<div class="para" id="p-derived-sl-day13x-worked-2-2">Read the top byte (low-power mode): 0xC0 = 0b1100 0000.  The top bit is worth −128, and the remaining bits are 0b100 0000 = 64, so the value is −128 + 64 = −64.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 2"><a tabindex="-1" href="#sl-day13x-worked-2-2" title="Copy heading and permalink for Item 2" aria-label="Copy heading and permalink for Item 2">🔗</a></div>
+</li>
+<li id="sl-day13x-worked-2-3">
+<div class="para" id="p-derived-sl-day13x-worked-2-3">Scale by the step size: −64 × 15.625 mg = <em class="emphasis">−1000 mg</em>: minus one g, comfortably inside the ±2000 mg the range allows.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 3"><a tabindex="-1" href="#sl-day13x-worked-2-3" title="Copy heading and permalink for Item 3" aria-label="Copy heading and permalink for Item 3">🔗</a></div>
+</li>
+</ol>
+</div>
+<div class="deck-slide-note">≈ 2 min, worked TOGETHER on the board, top to bottom — this is the model for the conversion the room does alone shortly.  The sign step is the previous slide’s rule applied at 8 bits: negative top-bit weight plus the remaining bits.  The plausibility check is said out loud.  The next slide’s formula gets the same answer from the whole 16-bit word.</div>
 </div>
 <div class="para" id="subsec-day13x-data-format-10">The other two modes work the same way. <a href="subsec-day13x-data-format.html#fig-accel-data-format" class="xref" data-knowl="./knowl/xref/fig-accel-data-format.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 12.3.26">Figure 12.3.26</a> shows all three writing their valid bits into the same 16-bit word, with one equation per mode.  To convert a raw reading, shift the zero bits off the bottom, then multiply by that mode’s step size.  Every one of the three simplifies to the same thing: <span class="process-math">\(a = 4g \cdot \mathrm{raw} / 2^{16}\text{.}\)</span>  This works because the valid bits always start at bit 15, so the shift and the step size always cancel to 2¹⁶.  The same reading decoded this way gives the same answer: as a whole 16-bit word, 0xC000 is −32768 + 16384 = −16384, and 4 g × (−16384) / 2¹⁶ = −1000 mg, the number the top-byte route gave.  When no mode is stated, this is the route to use: the whole 16-bit word, with the collapsed formula.  Two things to keep in mind.  The 4 g in this formula is the ±2 g range: choose a different full-scale range and the constant changes with it, so it is not always the same formula.  And if we store the raw reading in a signed C data type such as <code class="code-inline tex2jax_ignore">int16_t</code> (an integer, not an unsigned), then the whole two’s complement interpretation is automatically taken care of.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13x-data-format-10" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <figure class="figure figure-like" id="fig-accel-data-format"><div class="image-box" style="width: 80%; margin-left: 10%; margin-right: 10%;"><img src="external/images/Day13x-Accelerometer/data_format_rows.svg" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">12.3.26<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>The three resolution modes write their valid bits into the same 16-bit word, always starting at bit 15: low-power mode fills 8 bits, normal 10, high-resolution 12, with zeros below.  Bit 15 is the sign, worth −2¹⁵, so one formula converts the raw word in every mode: <span class="process-math">\(a = \mathrm{FS} \cdot \mathrm{raw} / 2^{16}\text{,}\)</span> where FS is the full-scale range, 4 g here.<div class="autopermalink" aria-hidden="true" data-description="Figure 12.3.26"><a tabindex="-1" href="#fig-accel-data-format" title="Copy heading and permalink for Figure 12.3.26" aria-label="Copy heading and permalink for Figure 12.3.26">🔗</a></div></figcaption>
-</figure>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day13x-collapse" data-deck-ref="fig-accel-data-format" data-deck-stack="yes">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day13x-collapse-1">
+<li id="sl-day13x-collapse-1-1">
+<div class="para" id="p-derived-sl-day13x-collapse-1-1">To convert a raw reading, shift the zero bits off the bottom, then multiply by that mode’s step size.  The three equations in the figure do exactly this, one per mode.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-collapse-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day13x-collapse-1-2">
+<div class="para" id="p-derived-sl-day13x-collapse-1-2">Every one of them simplifies to the same thing: a = 4g · raw / 2¹⁶.  This works because the valid bits always start at bit 15, so the shift and the step size always cancel to 2¹⁶.  (The 4 g is the ±2 g range: a different full-scale range changes the constant.)</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-collapse-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day13x-collapse-1-3">
+<div class="para" id="p-derived-sl-day13x-collapse-1-3">If we store the raw reading in a signed C data type such as <code class="code-inline tex2jax_ignore">int16_t</code> (an integer, not an unsigned), the two’s complement interpretation is automatically taken care of.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13x-collapse-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">≈ 2 min. Her slide 15’s three bit-rows, with the zeros visible and each mode’s equation at the end of its own row — show the algebra on one row and say the other two collapse the same way.  Close the loop on 0xC000: 4 g × (−16384) / 2¹⁶ = −1000 mg, the same answer the top-byte route gave.  The punchline is one formula in every mode.</div>
+</div>
 <div class="para" id="subsec-day13x-data-format-13">The units of the sensor’s output are g (1 g = 9.8 m/s²), so multiplying by 1000 gives milli-g, and for the ±2 g range the conversion is<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13x-data-format-13" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="code-box"><pre class="program clipboardable"><code class="language-c">a = (4 * ACCEL_raw * 1000) &gt;&gt; 16;              // in mg
@@ -843,6 +921,23 @@ eBookConfig.enable_chatcodes =  false;
 a = (ACC_FS * ACCEL_raw * MILLI) &gt;&gt; ACC_REGISTERWIDTH;
 </code></pre></div>
 <div class="para" id="subsec-day13x-data-format-15">The shift right by 16 does the divide by 2¹⁶ (shifting a signed value has one subtlety, which <a href="sec-accel-reference.html" class="internal" title="Section 12.6: Reference: The LSM303AGR and Floating Point">Section 12.6</a> spells out), and the <code class="code-inline tex2jax_ignore">#define</code> names are the ones tomorrow’s test program, <code class="code-inline tex2jax_ignore">accel_test.c</code>, uses.  Note that <code class="code-inline tex2jax_ignore">a</code> here is a signed integer, not an unsigned type, so the sign survives the arithmetic.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13x-data-format-15" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13x-mg-formula">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13x-mg-formula-1">In milli-g, for the ±2 g range, the conversion is<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13x-mg-formula-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">a = (4 * ACCEL_raw * 1000) &gt;&gt; 16;              // in mg
+
+// or, with names instead of magic numbers:
+#define ACC_FS            4                    // full-scale range, in g
+#define ACC_REGISTERWIDTH 16
+#define MILLI             1000
+
+a = (ACC_FS * ACCEL_raw * MILLI) &gt;&gt; ACC_REGISTERWIDTH;
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">The units of the output are g (1 g = 9.8 m/s²), so multiplying by 1000 gives milli-g, and the shift by 16 does the divide by 2¹⁶.</div>
+<div class="deck-slide-note">≈ 1 min, her slide 16.  The #defines are accel_test.c’s, verbatim; tomorrow’s scaling line in accel_test.c is this computation, done once per axis.</div>
 </div>
 <article class="activity project-like" id="act-day13x-convert"><h2 class="heading">
 <span class="type">Activity</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">12.3.3</span><span class="period heading-divison-mark heading-divison-mark__period">.</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="title">Convert a reading.</span>
@@ -867,6 +962,29 @@ a = (ACC_FS * ACCEL_raw * MILLI) &gt;&gt; ACC_REGISTERWIDTH;
 </blockquote>
 <div class="para" id="subsec-day13x-data-format-21">So if we want to read multiple registers successively in one transaction, starting at 0x28 (where the low byte of the x-acceleration is stored), we need to use <code class="code-inline tex2jax_ignore">0x28 | (1&lt;&lt;7)</code> for the register address from which to start reading.  The accelerometer then advances to the next data register after every byte.  This is Table 23 of <a href="subsec-i2c-ref-transfer-pattern.html#fig-i2c-transfer-pattern" class="xref" data-knowl="./knowl/xref/fig-i2c-transfer-pattern.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 10.4.4">Figure 10.4.4</a>, the multi-byte read: the controller acknowledges each data byte (MAK) so the target serves the next register, and a final not-acknowledge (NMAK) ends the transfer.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13x-data-format-21" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day13x-autoincrement">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13x-autoincrement-1">The accelerations along the three axes arrive in six data registers at successive sub-addresses, listed in <code class="code-inline tex2jax_ignore">lsm303agr.h</code>, and you can read all six bytes in one transfer, starting at 0x28.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13x-autoincrement-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">#define LSM303_OUT_X_L_A           0x28
+#define LSM303_OUT_X_H_A           0x29
+#define LSM303_OUT_Y_L_A           0x2A
+#define LSM303_OUT_Y_H_A           0x2B
+#define LSM303_OUT_Z_L_A           0x2C
+#define LSM303_OUT_Z_H_A           0x2D
+</code></pre></div>
+<div class="para" id="sl-day13x-autoincrement-3">But note the datasheet’s own wording (§6.1.1), where “LSb” and “MSb” are the least and most significant bits: “an 8-bit sub-address (SUB) is transmitted: the 7 LSb represent the actual register address while the MSB enables address auto increment.  If the MSb of the SUB field is ‘1’, the SUB (register address) is automatically increased to allow multiple data read/writes.”<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13x-autoincrement-3" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="para" id="sl-day13x-autoincrement-4">So if we want to read multiple registers successively in one transaction, starting at 0x28 (where the low byte of the x-acceleration is stored), we need to use <code class="code-inline tex2jax_ignore">0x28 | (1&lt;&lt;7)</code> for the register address from which to start reading.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13x-autoincrement-4" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+</div>
+<div class="deck-slide-note">≈ 1 min, her slide 17’s shape: the addresses from the header, and the datasheet’s auto-increment rule in its own words.  The transfer tables are the next slide.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13x-autoincrement-tables">
+<div class="deck-slide-body"><div class="image-box" style="width: 94%; margin-left: 3%; margin-right: 3%;"><img src="external/images/Day13-I2C(3)/i2c_transfer_reads.svg" class="contained"></div></div>
+<div class="deck-slide-caption">Table 22 is yesterday’s single-register read; Table 23 is today’s: after each DATA byte the controller ACKs (MAK) and the chip serves the next register, until the final NACK (the tables’ Master is our controller, their Slave our target).</div>
+<div class="deck-slide-note">≈ 1 min. The gloss line under Table 23 is the auto-increment rule.</div>
+</div>
 <div class="para" id="subsec-day13x-data-format-24">
 <code class="code-inline tex2jax_ignore">lsm303agr.h</code> declares a structure that holds one three-axis reading, and a pointer to a variable of this type is what <code class="code-inline tex2jax_ignore">lsm303_AccelReadRaw()</code> fills in:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13x-data-format-24" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
@@ -889,6 +1007,31 @@ a = (ACC_FS * ACCEL_raw * MILLI) &gt;&gt; ACC_REGISTERWIDTH;
 }
 </code></pre></div>
 <div class="para" id="subsec-day13x-data-format-28">The line <code class="code-inline tex2jax_ignore">result-&gt;x = ((int16_t) data[1] &lt;&lt; 8) | ((int16_t) data[0]);</code> widens each byte, moves the high byte up eight places, ORs them, and stores the result in an <code class="code-inline tex2jax_ignore">int16_t</code>, which is where bit 15 becomes the sign. This is a different use of the shift and OR operators than we have seen so far: here they build a wider signed value out of two array elements, rather than setting a bit inside a register.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13x-data-format-28" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13x-readraw">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13x-readraw-1">
+<code class="code-inline tex2jax_ignore">lsm303agr.h</code> declares a structure for one three-axis reading, and <code class="code-inline tex2jax_ignore">lsm303_AccelReadRaw()</code>, given to you, fills it: one six-byte auto-increment read, then each pair of bytes is assembled low-byte-first (<code class="code-inline tex2jax_ignore">data[0]</code> is <code class="code-inline tex2jax_ignore">OUT_X_L_A</code>) into a signed 16-bit value.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13x-readraw-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">typedef struct {
+	int16_t x;
+	int16_t y;
+	int16_t z;
+} lsm303AccelData_s;
+
+void lsm303_AccelReadRaw(lsm303AccelData_s *result) {
+	uint8_t data[6];
+
+	i2c1_memRead(LSM303_ADDRESS_ACCEL, LSM303_OUT_X_L_A | (1&lt;&lt;7), 6, &amp;data[0]);
+
+	result-&gt;x = ((int16_t) data[1] &lt;&lt; 8) | ((int16_t) data[0]);
+	result-&gt;y = ((int16_t) data[3] &lt;&lt; 8) | ((int16_t) data[2]);
+	result-&gt;z = ((int16_t) data[5] &lt;&lt; 8) | ((int16_t) data[4]);
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">This function uses i2c.c and lsm303agr.h: it is the device-driver layer from Day 10, now for the accelerometer.</div>
+<div class="deck-slide-note">≈ 2 min.  The listing is abridged for the wall (the file’s comment blocks are off it); the full file arrives tomorrow as lsm303agr_partial.c.  Low byte first: data[0] is OUT_X_L_A.  The shift and OR build a wider signed value from two array elements — a new use of familiar operators, worth saying out loud.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 12.3.4: Part 4: The Data Format"><a tabindex="-1" href="#subsec-day13x-data-format" title="Copy heading and permalink for Subsection 12.3.4: Part 4: The Data Format" aria-label="Copy heading and permalink for Subsection 12.3.4: Part 4: The Data Format">🔗</a></div>
 </section>

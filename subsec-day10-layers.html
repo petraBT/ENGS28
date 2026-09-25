@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -826,6 +827,30 @@ eBookConfig.enable_chatcodes =  false;
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">10.3.28<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>The four layers of a firmware design.  At the bottom, the microcontroller’s own registers.  Above them the interface drivers, the only code that reaches a machine register: <code class="code-inline tex2jax_ignore">i2c.c</code>, <code class="code-inline tex2jax_ignore">uart.c</code> and <code class="code-inline tex2jax_ignore">adc.c</code> here. Above those the device drivers, which reach a device’s registers only through an interface driver and never touch a machine register. For example, <code class="code-inline tex2jax_ignore">stdio.c</code> is a device driver that uses the interface driver <code class="code-inline tex2jax_ignore">uart.c</code>. Without <code class="code-inline tex2jax_ignore">stdio.c</code> we wouldn’t have a <code class="code-inline tex2jax_ignore">printf()</code> function. At the very top we have <code class="code-inline tex2jax_ignore">main()</code>, which calls devices through their drivers and knows about neither kind of register. The box labeled <code class="code-inline tex2jax_ignore">device.c</code> in this image is what you will be working on for the seven-segment display. You’ll communicate with the display via its backpack chip over I2C, but only through the <code class="code-inline tex2jax_ignore">i2c.c</code> interface driver.<div class="autopermalink" aria-hidden="true" data-description="Figure 10.3.28"><a tabindex="-1" href="#fig-firmware-layers" title="Copy heading and permalink for Figure 10.3.28" aria-label="Copy heading and permalink for Figure 10.3.28">🔗</a></div></figcaption>
 </figure>
 <div class="para" id="subsec-day10-layers-7">You are given parts of the device driver in a file called <code class="code-inline tex2jax_ignore">SevenSegPartial.c</code> - as the name suggests, this file is unfinished.  When it is done you will rename it <code class="code-inline tex2jax_ignore">SevenSeg.c</code> and move it into <code class="code-inline tex2jax_ignore">mylib</code> beside <code class="code-inline tex2jax_ignore">i2c.c</code>, so that it is ready for Lab 5.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day10-layers-7" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-layers">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day10-layers-1">
+<li id="sl-day10-layers-1-1">
+<div class="para" id="p-derived-sl-day10-layers-1-1">Imagine a program that takes measurements via the ADC and puts those onto the seven-segment display. To communicate with the display (or with the ADC for that matter) you wouldn’t really want to have to program the machine registers (<code class="code-inline tex2jax_ignore">I2C1-&gt;CR2</code>, <code class="code-inline tex2jax_ignore">GPIOB-&gt;MODER</code>) from your main program. Rather, we have <dfn class="terminology">interface drivers</dfn>: <code class="code-inline tex2jax_ignore">uart.c</code>, <code class="code-inline tex2jax_ignore">adc.c</code>, <code class="code-inline tex2jax_ignore">i2c.c</code>, the only files that should touch a machine register.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-layers-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-layers-1-2">
+<div class="para" id="p-derived-sl-day10-layers-1-2">But there is another layer yet. When programming the display it would be much more convenient to use commands such as <code class="code-inline tex2jax_ignore">SevenSeg_blink()</code> and <code class="code-inline tex2jax_ignore">SevenSeg_dim()</code> than to think about all the I2C commands behind them. That’s where the <dfn class="terminology">device drivers</dfn> come in, and that is the layer you write today.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-layers-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-layers-1-3">
+<div class="para" id="p-derived-sl-day10-layers-1-3">A device driver knows about <dfn class="terminology">one device</dfn>: its commands, its addresses, its quirks. It does not know how the bytes get there. <code class="code-inline tex2jax_ignore">SevenSegPartial.c</code>, the file you are about to open, may call <code class="code-inline tex2jax_ignore">i2c1_byteWrite()</code> as often as it likes and may not touch <code class="code-inline tex2jax_ignore">I2C1-&gt;CR2</code> even once. On top is <code class="code-inline tex2jax_ignore">main()</code>, which calls <code class="code-inline tex2jax_ignore">SevenSeg_write()</code> and has no idea there is a bus involved at all.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-layers-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">The layering argument is the part of this beat that is not cuttable: the same driver runs unchanged on any board whose I2C library offers those five functions, and the day you move to a different microcontroller you rewrite i2c.c and nothing else. The file is called Partial because it arrives unfinished. Finished, it becomes SevenSeg.c in mylib beside i2c.c, ready for Lab 5 — that is tonight’s housekeeping, and it is worth saying out loud here as well as in Part 10.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-layers-fig" data-deck-ref="fig-firmware-layers">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">The four layers, and the rule in the middle: a device driver reaches a device’s registers only through an interface driver, and never touches a machine register itself. The box drawn <code class="code-inline tex2jax_ignore">device.c</code> is the one you are about to write, for the seven-segment display.</div>
+<div class="deck-slide-note">Image-dominant so the boxes are readable from the back. Walk it bottom to top once — registers, interface drivers, device drivers, main() — and point out that stdio.c sitting on uart.c is the same shape they have been using all term without noticing.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 10.3.9: Part 8a: Layers, and What You Are Replacing"><a tabindex="-1" href="#subsec-day10-layers" title="Copy heading and permalink for Subsection 10.3.9: Part 8a: Layers, and What You Are Replacing" aria-label="Copy heading and permalink for Subsection 10.3.9: Part 8a: Layers, and What You Are Replacing">🔗</a></div>
 </section>

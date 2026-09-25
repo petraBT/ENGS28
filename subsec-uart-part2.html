@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -857,6 +858,61 @@ int uart2_read(void) {
 }
 // ─────────────────────────────────────────────────────────────────
 </code></pre></div>
+<div class="deck-slide" hidden="hidden" id="sl-uart-jigsaw">
+<div class="deck-slide-body">
+<div class="para" id="sl-uart-jigsaw-1">We’ll annotate the driver in groups.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-uart-jigsaw-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-uart-jigsaw-2">
+<li id="sl-uart-jigsaw-2-1">
+<div class="para" id="p-derived-sl-uart-jigsaw-2-1">Below is <code class="code-inline tex2jax_ignore">uart.c</code> with all of its comments stripped out. Annotate your section: what each line does, and why it is necessary.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-uart-jigsaw-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-uart-jigsaw-2-2">
+<div class="para" id="p-derived-sl-uart-jigsaw-2-2">Groups A &amp; B take <code class="code-inline tex2jax_ignore">uart2_init</code> (the GPIO and alternate-function lines, then the clock, BRR and CR1). Groups C &amp; D take <code class="code-inline tex2jax_ignore">uart2_write</code> and <code class="code-inline tex2jax_ignore">uart2_read</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-uart-jigsaw-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-uart-jigsaw-2-3">
+<div class="para" id="p-derived-sl-uart-jigsaw-2-3">Then pair up across the split and teach your section to each other.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-uart-jigsaw-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">Timing: about 8 minutes to annotate, then about 8 minutes to teach. Cold-call the listener, not the teacher.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-uart-driver-stripped"><div class="deck-slide-body">
+<div class="para" id="sl-uart-driver-stripped-1">Groups A and B, <code class="code-inline tex2jax_ignore">uart2_init</code>:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-uart-driver-stripped-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">#define APB_CLK 12000000U
+#define BAUD_RATE   9600U
+void uart2_init(void) {
+    // -- Group A --
+    RCC-&gt;IOPENR |= RCC_IOPENR_GPIOAEN;
+    GPIOA-&gt;MODER &amp;= ~((3U&lt;&lt;4) | (3U&lt;&lt;6));
+    GPIOA-&gt;MODER |=  ((2U&lt;&lt;4) | (2U&lt;&lt;6));
+    GPIOA-&gt;AFR[0] &amp;= ~((0xFU&lt;&lt;8) | (0xFU&lt;&lt;12));
+    GPIOA-&gt;AFR[0] |=  ((1U&lt;&lt;8) | (1U&lt;&lt;12));
+    // -- Group B --
+    RCC-&gt;APBENR1 |= RCC_APBENR1_USART2EN;
+    USART2-&gt;BRR = APB_CLK / BAUD_RATE;
+    USART2-&gt;CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+}
+</code></pre></div>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-uart-driver-stripped-cd"><div class="deck-slide-body">
+<div class="para" id="sl-uart-driver-stripped-cd-1">Groups C and D, <code class="code-inline tex2jax_ignore">uart2_write</code> and <code class="code-inline tex2jax_ignore">uart2_read</code>:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-uart-driver-stripped-cd-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">// -- Group C --
+void uart2_write(int ch) {
+    while (!(USART2-&gt;ISR &amp; USART_ISR_TXE_TXFNF)) {}
+    USART2-&gt;TDR = (ch &amp; 0xFF);
+}
+// -- Group D --
+int uart2_read(void) {
+    while (!(USART2-&gt;ISR &amp; USART_ISR_RXNE_RXFNE)) {}
+    return USART2-&gt;RDR &amp; 0xFF;
+}
+</code></pre></div>
+</div></div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 3.2.3: Part 2: How Does the UART Driver Work?"><a tabindex="-1" href="#subsec-uart-part2" title="Copy heading and permalink for Subsection 3.2.3: Part 2: How Does the UART Driver Work?" aria-label="Copy heading and permalink for Subsection 3.2.3: Part 2: How Does the UART Driver Work?">🔗</a></div>
 </section>
 </div>

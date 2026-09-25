@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -874,6 +875,94 @@ i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
 <div class="para" id="subsec-day10-commands-11">Every name used above is a <code class="code-inline tex2jax_ignore">#define</code> in <code class="code-inline tex2jax_ignore">SevenSegPartial.h</code>, and every one of them is one field of the command table, which is why a line of driver code reads the way the datasheet row does: the command, OR’ed with its options. That is the structure to copy the next time you write one of these: the datasheet’s own layout becomes the header file’s layout.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day10-commands-11" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="para" id="subsec-day10-commands-12">Sending the three command bytes is the first function of your seven segment driver.  It has to run before the display will show anything at all, and it is three calls long.  You write it in <a href="subsec-day10-first-digit.html" class="internal" title="Subsection 10.3.10: Part 8b: SevenSeg_init(), and One Digit">Subsection 10.3.10</a>.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day10-commands-12" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-cmd-table" data-deck-ref="fig-ht16k33-cmd-table">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">The HT16K33’s command table, on <dfn class="terminology">pages 24–25 of its datasheet</dfn>. The eight middle columns are the bits of a one-byte command, D15 down to D8, and the magenta line divides them: left of it the fixed bits that are the <dfn class="terminology">command</dfn>, right of it the <dfn class="terminology">options</dfn> you fill in. An X is a don’t-care that we write as 0. The display pointer row below is for writing to the display RAM. The chip has more commands than these, but they are for scanning a keypad and we will not be sending any of them.</div>
+<div class="deck-slide-note">Figure-focus deliberately: the bit cells have to be readable from the back. The command/options divide is the whole idea of the part — the header file’s names are those two halves, and the next two slides do nothing but exploit it.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-cmd-derive"><div class="deck-slide-body">
+<div class="para" id="sl-day10-cmd-derive-1">Work these out as binary and then write them as hex. All three rows are in the HT16K33’s command table, pages 24–25 of its datasheet.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-cmd-derive-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">system setup     0b0010 X X X S        S = oscillator on/off
+display setup    0b1000 X B1 B0 D      D = display on;  B1 B0 = blink rate
+dimming set      0b1110 P3 P2 P1 P0    duty cycle in sixteenths:
+                                       0000 is 1/16, 1111 is 16/16
+
+fixed 0 or 1 = the command identity;  a name = your option;
+X = ignored, write it as 0
+</code></pre></div>
+<ul class="disc" id="sl-day10-cmd-derive-3">
+<li id="sl-day10-cmd-derive-3-1">
+<div class="para" id="p-derived-sl-day10-cmd-derive-3-1">System setup is <code class="code-inline tex2jax_ignore">0b0010 X X X S</code>. What byte turns the <dfn class="terminology">oscillator on</dfn>?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-cmd-derive-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-cmd-derive-3-2">
+<div class="para" id="p-derived-sl-day10-cmd-derive-3-2">Display setup is <code class="code-inline tex2jax_ignore">0b1000 X B1 B0 D</code>. What byte turns the display <dfn class="terminology">on and not blinking</dfn>? What byte would turn it on and blinking at 1 Hz?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-cmd-derive-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-cmd-derive-3-3">
+<div class="para" id="p-derived-sl-day10-cmd-derive-3-3">Dimming set is <code class="code-inline tex2jax_ignore">0b1110 P3 P2 P1 P0</code>. What byte gives <dfn class="terminology">full brightness</dfn>? Half?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-cmd-derive-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-cmd-derive-3-4">
+<div class="para" id="p-derived-sl-day10-cmd-derive-3-4">All three are one-byte writes to the device. Which <dfn class="terminology">I2C library</dfn> function sends one, and what are its two arguments?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-cmd-derive-3-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-cmd-answer">
+<div class="deck-slide-body">
+<div class="para" id="sl-day10-cmd-answer-1">Let’s look more closely at the first one, turning on the oscillator. The four bits left of the magenta line are the command and never change; the four to the right are the options, and the only one that means anything here is S, the oscillator. Write each half as its own byte and OR them together, and you do not have to invent the names, because <code class="code-inline tex2jax_ignore">SevenSegPartial.h</code> already has a <code class="code-inline tex2jax_ignore">#define</code> for every field of that table.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-cmd-answer-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">the HT16K33 command table, datasheet pp. 24-25:
+  system setup    0 0 1 0 | X X X S      the row, and its magenta line
+                  command | options
+SevenSegPartial.h, the header you are given:
+    #define HT16K33_SYSTEM_CMD   0x20      // System setup
+    #define HT16K33_OSC_ON       0x01      //   S = 1, oscillator on
+
+the command             0b0010 0000 = 0x20     HT16K33_SYSTEM_CMD
+the option, S = 1       0b0000 0001 = 0x01     HT16K33_OSC_ON
+                    OR  -------------------
+                        0b0010 0001 = 0x21
+
+i2c1_byteWrite(HT16K33_ADDR, HT16K33_SYSTEM_CMD | HT16K33_OSC_ON);
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">The <code class="code-inline tex2jax_ignore">|</code> in that call <em class="emphasis">is</em> the magenta line: the command name supplies the top bits, the option name supplies the bottom bits, and OR merges them into the one byte that goes on the wire. You never write <code class="code-inline tex2jax_ignore">0x21</code> anywhere.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-cmd-answer-rest">
+<div class="deck-slide-body">
+<div class="para" id="sl-day10-cmd-answer-rest-1">The other two are built the same way, out of the same header’s <code class="code-inline tex2jax_ignore">#define</code>s, and changing an option moves only the bottom bits.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-cmd-answer-rest-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">... and the rest of SevenSegPartial.h, one name per field:
+display setup     0b1000 0000 = 0x80     HT16K33_DISPLAY_CMD
+  display on      0b0000 0001 = 0x01     HT16K33_DISPLAY_ON
+  not blinking    0b0000 0000 = 0x00     HT16K33_BLINK_OFF
+              OR  -------------------
+                  0b1000 0001 = 0x81
+
+dimming set       0b1110 0000 = 0xE0     HT16K33_BRIGHT_CMD
+  full, 16/16     0b0000 1111 = 0x0f     P3 P2 P1 P0 all set
+              OR  -------------------
+                  0b1110 1111 = 0xEF
+blinking at 1 Hz  0b1000 0101 = 0x85     HT16K33_BLINK_1HZ, B1 B0 = 1 0
+half brightness   0b1110 0111 = 0xE7     0111 -&gt; 7 -&gt; (7+1)/16 = 8/16
+</code></pre></div>
+<ul class="disc" id="sl-day10-cmd-answer-rest-3">
+<li id="sl-day10-cmd-answer-rest-3-1">
+<div class="para" id="p-derived-sl-day10-cmd-answer-rest-3-1">Watch the duty cycle: it counts from one and not zero, so half is <code class="code-inline tex2jax_ignore">0111</code> and not <code class="code-inline tex2jax_ignore">1000</code>. And <code class="code-inline tex2jax_ignore">0xE7</code> is what <code class="code-inline tex2jax_ignore">helloDisplay.c</code> has been sending: the display you have been watching has been at <dfn class="terminology">half brightness</dfn> all along.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-cmd-answer-rest-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">These three bytes are the first function of your driver, <code class="code-inline tex2jax_ignore">SevenSeg_init()</code>, which you write once we have looked at the display RAM and the pins.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-cmd-wire" data-deck-ref="fig-ht16k33-addr-frame">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">And this is one of those calls on the wire, the transaction you captured yesterday, with the byte you have just derived sitting in the command-code field. START, the seven address bits that are <code class="code-inline tex2jax_ignore">0x70</code>, the write bit, the display’s ACK, the one command byte, a second ACK, STOP.</div>
+<div class="deck-slide-note">Close Part 4 on this. They captured this exact shape yesterday without knowing what the command byte said, and they have now worked out all three. It is also the picture Part 7b opens i2c1_byteWrite() against, so they will have seen it three times by then.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 10.3.4: Part 4: Reading the Command Table"><a tabindex="-1" href="#subsec-day10-commands" title="Copy heading and permalink for Subsection 10.3.4: Part 4: Reading the Command Table" aria-label="Copy heading and permalink for Subsection 10.3.4: Part 4: Reading the Command Table">🔗</a></div>
 </section>

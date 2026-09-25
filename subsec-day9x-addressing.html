@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -853,6 +854,36 @@ eBookConfig.enable_chatcodes =  false;
 </div>
 <div class="para" id="subsec-day9x-addressing-10">A few notes about a failed transaction: If you use an incorrect address, the NACK you receive is not an error message from the device: it is the <em class="emphasis">absence</em> of an answer, and it looks exactly the same whether the address is wrong, the device has no power, or the SDA wire is not connected.  Also note that the controller will keep clocking anyway until it has sent all nine pulses since it doesn’t know until the ninth pulse whether anyone responded.  On Thursday we’ll look at this on the oscilloscope to deepen our understanding.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9x-addressing-10" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day9x-decoded" data-deck-ref="fig-i2c-scope-decoded">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">Your own trace, with the address phase read off it: 1 1 1 0 0 0 0 is the 7-bit address 0x70, and the bit circled in red is the R/W bit, 0 for a write. Then the ACK.</div>
+<div class="deck-slide-note">Show this after they have committed their eight values. The red circle is the eighth bit, not the ACK — the ACK is the green label after it.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day9x-address-shift"><div class="deck-slide-body">
+<div class="para" id="sl-day9x-address-shift-1">
+<dfn class="terminology">The address you write and the byte on the wire are not the same number.</dfn> This is the number you just read off your own trace.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9x-address-shift-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">0x70  is a SEVEN-bit address:      1 1 1 0 0 0 0
+
+on the wire:      1 1 1 0 0 0 0    0
+                  \___address___/  R/W:  0 = write, 1 = read
+</code></pre></div>
+<ul class="disc" id="sl-day9x-address-shift-3">
+<li id="sl-day9x-address-shift-3-1">
+<div class="para" id="p-derived-sl-day9x-address-shift-3-1">Read those eight bits as a byte and you get <dfn class="terminology">0xE0</dfn>, not 0x70. Nothing is wrong: the address is in the top seven bits and the bottom bit is the direction.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9x-address-shift-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9x-address-shift-3-2">
+<div class="para" id="p-derived-sl-day9x-address-shift-3-2">
+<code class="code-inline tex2jax_ignore">i2c1_byteWrite()</code> did the shift for you. On Thursday we’ll look at <code class="code-inline tex2jax_ignore">i2c1_byteWrite()</code> more carefully and see where this shift happens.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9x-address-shift-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9x-address-shift-3-3">
+<div class="para" id="p-derived-sl-day9x-address-shift-3-3">Careful: datasheets are not consistent about which of these two numbers they print. A 7-bit address is at most <code class="code-inline tex2jax_ignore">0x7F</code>, so any address quoted above that (<code class="code-inline tex2jax_ignore">0xE0</code>, say) cannot be the 7-bit form and must be the shifted one. Shift it back before you <code class="code-inline tex2jax_ignore">#define</code> it.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9x-address-shift-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 10.1.6: Part 4: The Number on the Wire"><a tabindex="-1" href="#subsec-day9x-addressing" title="Copy heading and permalink for Subsection 10.1.6: Part 4: The Number on the Wire" aria-label="Copy heading and permalink for Subsection 10.1.6: Part 4: The Number on the Wire">🔗</a></div>
 </section>
 </div>

@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -850,6 +851,81 @@ TIM14-&gt;SR = ~TIM_SR_UIF;     // today: a 0 at the flag, 1s everywhere else
 </div>
 <div class="para" id="subsec-day8-rcw0-10">One postscript.  Could you have cleared UIF with the read-modify-write Day 7 forbade, <code class="code-inline tex2jax_ignore">TIM14-&gt;SR &amp;= ~TIM_SR_UIF;</code>?  Here, mostly yes: the write-back sends a 1 to every flag that read as 1, no effect on <code class="code-inline tex2jax_ignore">rc_w0</code> bits, and a 0 to every flag that read as 0, which was already clear.  The damage Day 7 warned about does not occur.  It is still the weaker habit, twice over.  On an <code class="code-inline tex2jax_ignore">rc_w1</code> register it is destructive.  That was the ADC’s case.  And even here, if the hardware raises another flag in this register between the read and the write-back, the 0 written over it clears it and the event is silently lost.  Once your own interrupts start landing in the middle of your own main loop, that stops being hypothetical.  Clear status flags by assigning a mask.  The interrupt version of today’s program, coming next, does exactly that.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day8-rcw0-10" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-waitwhat" data-deck-room="yes"><div class="deck-slide-body">
+<div class="para" id="sl-day8-waitwhat-1">
+<dfn class="terminology">Take a look at how we clear the TIM_SR_UIF flag in TIM14-&gt;SR and compare to how we cleared the ADC_ISR_ADRDY flag:</dfn><div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-waitwhat-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">ADC1-&gt;ISR = ADC_ISR_ADRDY;   // Day 7: a 1 at the flag, 0s everywhere else
+TIM14-&gt;SR = ~TIM_SR_UIF;     // today: a 0 at the flag, 1s everywhere else
+</code></pre></div>
+<ul class="disc" id="sl-day8-waitwhat-3">
+<li id="sl-day8-waitwhat-3-1">
+<div class="para" id="p-derived-sl-day8-waitwhat-3-1">The ADC_ISR_ADRDY flag is cleared by writing a <dfn class="terminology">1</dfn> to the flag bit. Today’s clear puts a <dfn class="terminology">0</dfn> at the TIM_SR_UIF bit to clear it, and 1s over every other bit.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-waitwhat-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-waitwhat-3-2">
+<div class="para" id="p-derived-sl-day8-waitwhat-3-2">Discuss at your table: what could possibly be going on here?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-waitwhat-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-waitwhat-3-3">
+<div class="para" id="p-derived-sl-day8-waitwhat-3-3"><dfn class="terminology">Commit before we look anything up: what must be different about these two registers for opposite masks to both be correct?</dfn></div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-waitwhat-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-sr-rcw0" data-deck-ref="fig-tim14-sr">
+<div class="deck-slide-body">
+<div class="para" id="sl-day8-sr-rcw0-1">
+<dfn class="terminology">The answer: UIF is rc_w0.</dfn><div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-sr-rcw0-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day8-sr-rcw0-2">
+<li id="sl-day8-sr-rcw0-2-1">
+<div class="para" id="p-derived-sl-day8-sr-rcw0-2-1">RM0490 §1.2: <code class="code-inline tex2jax_ignore">rc_w0</code> = read; clear by writing 0. <dfn class="terminology">Writing 1 has no effect.</dfn>
+</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-sr-rcw0-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-sr-rcw0-2-2">
+<div class="para" id="p-derived-sl-day8-sr-rcw0-2-2">Day 7’s ADC flags were <code class="code-inline tex2jax_ignore">rc_w1</code>, the mirror image: clear by writing 1; writing 0 does nothing.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-sr-rcw0-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-sr-rcw0-2-3">
+<div class="para" id="p-derived-sl-day8-sr-rcw0-2-3">A clearing mask carries the <dfn class="terminology">clearing</dfn> value at your flag and the <dfn class="terminology">no-effect</dfn> value everywhere else, which is why the two masks are opposites.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-sr-rcw0-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-sr-rcw0-2-4">
+<div class="para" id="p-derived-sl-day8-sr-rcw0-2-4">The peripherals split between the two conventions. To know which to use you need to consult the reference manual.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-sr-rcw0-2-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">Same mechanism as Day 7, opposite polarity: the access type decides the mask.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-moral"><div class="deck-slide-body">
+<div class="para" id="sl-day8-moral-1">
+<dfn class="terminology">Postscript: would an &amp;= have been as big of an issue here as an |= would have been for ADC_ISR_ADRDY?</dfn><div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-moral-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">TIM14-&gt;SR &amp;= ~TIM_SR_UIF;    // read-modify-write: mostly harmless on rc_w0 ...
+</code></pre></div>
+<ul class="disc" id="sl-day8-moral-3">
+<li id="sl-day8-moral-3-1">
+<div class="para" id="p-derived-sl-day8-moral-3-1">The write-back sends 1s to set flags (no effect on <code class="code-inline tex2jax_ignore">rc_w0</code>) and 0s to clear ones (already clear), so here, no damage.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-moral-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-moral-3-2">
+<div class="para" id="p-derived-sl-day8-moral-3-2">But using the equivalent <code class="code-inline tex2jax_ignore">|=</code> on a <code class="code-inline tex2jax_ignore">rc_w1</code> is destructive, as we saw for ADC_ISR.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-moral-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-moral-3-3">
+<div class="para" id="p-derived-sl-day8-moral-3-3">And if hardware raises another flag between the read and the write-back, the 0 written over it clears it: the event is lost.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-moral-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-moral-3-4">
+<div class="para" id="p-derived-sl-day8-moral-3-4">
+<dfn class="terminology">Clear status flags by assigning a mask and not by using a compound assignment.</dfn> You’ll use this in the ISR you write next.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-moral-3-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 8.2.5: Part 5: Clearing Status Registers"><a tabindex="-1" href="#subsec-day8-rcw0" title="Copy heading and permalink for Subsection 8.2.5: Part 5: Clearing Status Registers" aria-label="Copy heading and permalink for Subsection 8.2.5: Part 5: Clearing Status Registers">🔗</a></div>
 </section>
 </div>

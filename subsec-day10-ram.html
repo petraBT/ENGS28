@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -886,7 +887,97 @@ eBookConfig.enable_chatcodes =  false;
 </div>
 <figure class="figure figure-like" id="fig-ht16k33-page-write"><div class="image-box" style="width: 98%; margin-left: 1%; margin-right: 1%;"><img src="external/images/Day10-I2C(2)/ht16k33_page_write_annotated.png" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">10.3.14<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>Writing the whole display in one transaction: the HT16K33 datasheet calls this a page write, on page 22.  After the START and the address comes one command byte, and because the display data address pointer command is 0 0 0 0 A3 A2 A1 A0, a command byte of 0x00 means “start at display RAM address 0”. Every data byte after it is stored where the pointer is and moves the pointer on by one, so ten data bytes fill addresses 0 through 9.  Each byte is acknowledged, and one STOP ends the whole transaction. It is the same transaction as the single command in <a href="subsec-day9x-addressing.html#fig-ht16k33-addr-frame" class="xref" data-knowl="./knowl/xref/fig-ht16k33-addr-frame.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 10.1.22">Figure 10.1.22</a>, annotated the same way, with the data bytes added after the command byte.<div class="autopermalink" aria-hidden="true" data-description="Figure 10.3.14"><a tabindex="-1" href="#fig-ht16k33-page-write" title="Copy heading and permalink for Figure 10.3.14" aria-label="Copy heading and permalink for Figure 10.3.14">🔗</a></div></figcaption>
-</figure><div class="autopermalink" aria-hidden="true" data-description="Subsection 10.3.5: Part 5: The Display RAM, and the Byte That Is Always Zero"><a tabindex="-1" href="#subsec-day10-ram" title="Copy heading and permalink for Subsection 10.3.5: Part 5: The Display RAM, and the Byte That Is Always Zero" aria-label="Copy heading and permalink for Subsection 10.3.5: Part 5: The Display RAM, and the Byte That Is Always Zero">🔗</a></div>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day10-com-row" data-deck-ref="fig-backpack-com-row">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">Every LED sits where one COM line crosses one ROW line: the COM line is which digit, and the ROW line is which segment. So bit k of the byte at display RAM address 2n is the LED where COMn crosses ROWk. The chip says ROW because it is built to drive a rectangular matrix; on our display <dfn class="terminology">ROW means segment</dfn>, and they are arranged around a figure eight rather than in a row of anything.</div>
+<div class="deck-slide-note">Say the ROW warning out loud here — it is the one name on this chip that actively misleads, and it comes back in the RAM map and in the dimming command’s "pulse width of ROW". The colon line is the other thing worth pointing at, but do NOT say which ROW it is on: the figure leaves all eight crossings open on purpose, because finding it is their experiment a few slides from now. The answer is in the book’s instructor block if you need it.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-ram" data-deck-ref="fig-display-ram-map">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day10-ram-1">
+<li id="sl-day10-ram-1-1">
+<div class="para" id="p-derived-sl-day10-ram-1-1">The display RAM holds sixteen bytes, <dfn class="terminology">two per common line</dfn>: ROW0–ROW7 in the first and ROW8–ROW15 in the second. A seven-segment digit uses only the first eight bits (called rows here) of each common line, so <dfn class="terminology">the second byte of every pair is always 0 for us</dfn>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-ram-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-ram-1-2">
+<div class="para" id="p-derived-sl-day10-ram-1-2">That leaves five even addresses carrying anything: <code class="code-inline tex2jax_ignore">0x00</code>, <code class="code-inline tex2jax_ignore">0x02</code>, <code class="code-inline tex2jax_ignore">0x04</code>, <code class="code-inline tex2jax_ignore">0x06</code>, <code class="code-inline tex2jax_ignore">0x08</code> (digit 1, digit 2, <dfn class="terminology">the colon</dfn>, digit 3, digit 4). The colon sits in the middle because that is where it is located on the display.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-ram-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-ram-1-3">
+<div class="para" id="p-derived-sl-day10-ram-1-3">Within a digit’s byte, the LED segments are listed in same order you used yesterday: <code class="code-inline tex2jax_ignore">0b</code> DP g f e d c b a. To light a <code class="code-inline tex2jax_ignore">0</code> you put <code class="code-inline tex2jax_ignore">0b00111111</code> in the D7–D0 byte.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-ram-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">Two bytes per position, and we write the odd one as 0 every time.</div>
+<div class="deck-slide-note">Do not re-derive the bit order here — they wrote a digit’s byte with it yesterday. The beat is the SECOND byte: sixteen LEDs per common line, a seven-segment digit uses eight. Why it still has to be sent comes three slides on.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-pattern" data-deck-ref="fig-segment-map" data-deck-room="yes"><div class="deck-slide-body">
+<div class="para" id="sl-day10-pattern-1">Start on paper, not by writing code. The buffer is ten bytes, <code class="code-inline tex2jax_ignore">display_buffer[0]</code> through <code class="code-inline tex2jax_ignore">display_buffer[9]</code>.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-pattern-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day10-pattern-2">
+<li id="sl-day10-pattern-2-1">
+<div class="para" id="p-derived-sl-day10-pattern-2-1">Fill in all ten bytes to light <dfn class="terminology">every segment and every decimal point of all four digits</dfn>, as drawn here. Write each byte in binary.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pattern-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-pattern-2-2">
+<div class="para" id="p-derived-sl-day10-pattern-2-2">Now fill in all ten to display <code class="code-inline tex2jax_ignore">0 1 2 3</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pattern-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-pattern-2-3">
+<div class="para" id="p-derived-sl-day10-pattern-2-3">Which byte would you change to add a decimal point after the second digit, and what would you change it to?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pattern-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-pattern-answer"><div class="deck-slide-body">
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">all segments:   [0] 0b11111111   [2] 0b11111111   [6] 0b11111111   [8] 0b11111111
+                [1] [3] [4] [5] [7] [9]  all 0
+
+  "0 1 2 3":    [0] 0b00111111   a b c d e f
+                [2] 0b00000110   b c
+                [6] 0b01011011   a b d e g
+                [8] 0b01001111   a b c d g
+
+decimal point after digit 2:  set bit 7 of display_buffer[2]
+</code></pre></div>
+<ul class="disc" id="sl-day10-pattern-answer-2">
+<li id="sl-day10-pattern-answer-2-1">
+<div class="para" id="p-derived-sl-day10-pattern-answer-2-1">This is worth deriving once by hand, after which you will use the <code class="code-inline tex2jax_ignore">numbertable[]</code> array in the header, which holds the sixteen patterns for 0 through F.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pattern-answer-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-pattern-answer-2-2">
+<div class="para" id="p-derived-sl-day10-pattern-answer-2-2">That leaves two questions. The first is <em class="emphasis">what lights the colon?</em> We know it is the pair at address 4, because that is COM2, but <dfn class="terminology">which bit within that byte is not on the datasheet pages we have</dfn>. It is worth two minutes of experiment, and tonight’s clock needs the answer.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pattern-answer-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-pointer"><div class="deck-slide-body">
+<ul class="disc" id="sl-day10-pointer-1">
+<li id="sl-day10-pointer-1-1">
+<div class="para" id="p-derived-sl-day10-pointer-1-1">The second question is <dfn class="terminology">why send the zeros at all,</dfn> if the second byte of every pair does nothing? To write to the display RAM you use <dfn class="terminology">a pointer that holds the address of the RAM to which you’d like to write</dfn>. We set it to the start of the display RAM, and each write operation that is part of the same I2C transaction <dfn class="terminology">automatically advances the pointer to the next byte</dfn>. This is what the datasheet means by the display data address pointer.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pointer-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-pointer-1-2">
+<div class="para" id="p-derived-sl-day10-pointer-1-2">It is why writing ten bytes from address 0 fills addresses 0 through 9. The zeros are not decoration; they are what moves the pointer past the odd addresses so that the next real byte lands on the next digit. Leave them out and the second digit’s pattern goes to address 1, which is the top (unused) half of digit 1.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pointer-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-pointer-1-3">
+<div class="para" id="p-derived-sl-day10-pointer-1-3">All ten bytes go in <dfn class="terminology">one</dfn> transaction, and they have to: a STOP ends the transaction, and after a STOP the next write starts over with a new address.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pointer-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-pointer-1-4">
+<div class="para" id="p-derived-sl-day10-pointer-1-4">The library call for “address the device, say where inside it, and send this many bytes” is <code class="code-inline tex2jax_ignore">i2c1_memWrite()</code>, the multi-byte function you have already called without knowing what it did, and this is what it was for.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-pointer-1-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-pointer-fig" data-deck-ref="fig-ht16k33-page-write">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">The same transaction as the single command in Part 4, with the data bytes added after the command byte: START, <code class="code-inline tex2jax_ignore">0x70</code>, write, ACK, then the one command byte that says <em class="emphasis">start at address 0</em>, then ten data bytes each acknowledged, then one STOP. One command byte says where to start; every data byte after it moves the pointer on by one.</div>
+<div class="deck-slide-note">Put this beside the Part 4 picture in their heads — same START, same address, same command-byte slot, and then it keeps going. That is the whole difference between byteWrite and memWrite, drawn.</div>
+</div>
+<div class="autopermalink" aria-hidden="true" data-description="Subsection 10.3.5: Part 5: The Display RAM, and the Byte That Is Always Zero"><a tabindex="-1" href="#subsec-day10-ram" title="Copy heading and permalink for Subsection 10.3.5: Part 5: The Display RAM, and the Byte That Is Always Zero" aria-label="Copy heading and permalink for Subsection 10.3.5: Part 5: The Display RAM, and the Byte That Is Always Zero">🔗</a></div>
 </section>
 </div>
 <div id="ptx-content-footer" class="ptx-content-footer">

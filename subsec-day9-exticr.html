@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -816,6 +817,65 @@ eBookConfig.enable_chatcodes =  false;
 </h1>
 <div class="para" id="subsec-day9-exticr-2">PB4 has to win the competition for line EXTI4, and the register that decides it is <code class="code-inline tex2jax_ignore">EXTI_EXTICR2</code>.  There are four of these registers between them covering all sixteen lines, four lines to a register; the one that holds EXTI4 is the second, and how the four are laid out and addressed is in <a href="subsec-gpio-ref-exticr.html" class="internal" title="Subsection 9.3.1: The Four EXTICR Registers, in General">Subsection 9.3.1</a> for when you need it.  What you need now is on one page of the <a class="external" href="external/stm32c031_rm.pdf" target="_blank">Reference Manual</a>. Which byte of <code class="code-inline tex2jax_ignore">EXTI_EXTICR2</code> corresponds to line EXTI4, and what code do you need to write into it to select a port?<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-exticr-2" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-checklist" data-deck-room="yes">
+<div class="deck-slide-body">
+<div class="para" id="sl-day9-checklist-1">The button is on PB4.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-checklist-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ol class="decimal" id="sl-day9-checklist-2">
+<li id="sl-day9-checklist-2-1">
+<div class="para" id="p-derived-sl-day9-checklist-2-1">Configure PB4 as an input pin with pull-up, as per usual (we did this earlier).</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 1"><a tabindex="-1" href="#sl-day9-checklist-2-1" title="Copy heading and permalink for Item 1" aria-label="Copy heading and permalink for Item 1">🔗</a></div>
+</li>
+<li id="sl-day9-checklist-2-2">
+<div class="para" id="p-derived-sl-day9-checklist-2-2">Tell the EXTI multiplexer <dfn class="terminology">which port</dfn> (A, B, C, ...) is on line EXTI4, via <code class="code-inline tex2jax_ignore">EXTI_EXTICRx</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 2"><a tabindex="-1" href="#sl-day9-checklist-2-2" title="Copy heading and permalink for Item 2" aria-label="Copy heading and permalink for Item 2">🔗</a></div>
+</li>
+<li id="sl-day9-checklist-2-3">
+<div class="para" id="p-derived-sl-day9-checklist-2-3">Tell the EXTI we are looking for a <dfn class="terminology">falling edge</dfn> on line EXTI4, via <code class="code-inline tex2jax_ignore">EXTI_FTSR1</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 3"><a tabindex="-1" href="#sl-day9-checklist-2-3" title="Copy heading and permalink for Item 3" aria-label="Copy heading and permalink for Item 3">🔗</a></div>
+</li>
+<li id="sl-day9-checklist-2-4">
+<div class="para" id="p-derived-sl-day9-checklist-2-4">Tell the EXTI to <dfn class="terminology">unmask</dfn> line EXTI4 so the event is actually noticed, via <code class="code-inline tex2jax_ignore">EXTI_IMR1</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 4"><a tabindex="-1" href="#sl-day9-checklist-2-4" title="Copy heading and permalink for Item 4" aria-label="Copy heading and permalink for Item 4">🔗</a></div>
+</li>
+<li id="sl-day9-checklist-2-5">
+<div class="para" id="p-derived-sl-day9-checklist-2-5">Tell the <dfn class="terminology">NVIC</dfn> to enable interrupts on line EXTI4, via <code class="code-inline tex2jax_ignore">NVIC_EnableIRQ()</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 5"><a tabindex="-1" href="#sl-day9-checklist-2-5" title="Copy heading and permalink for Item 5" aria-label="Copy heading and permalink for Item 5">🔗</a></div>
+</li>
+</ol>
+</div>
+<div class="deck-slide-note">Petra’s own running device. Shown once, here. Do not carry it into Part 6 — the ladder owns that screen.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-exticr-generic" data-deck-colwidths="28%,18%,18%,18%,18%"><div class="deck-slide-body">
+<div class="para" id="sl-day9-exticr-generic-1">Which port is on a line is set in <code class="code-inline tex2jax_ignore">EXTI_EXTICRx</code> (x = 1, 2, 3, 4). Four registers cover the sixteen lines, EXTI0 to EXTI15, four lines to a register, so line EXTI4 is in the second one, <code class="code-inline tex2jax_ignore">EXTI_EXTICR2</code>. The register uses 1 byte per line:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-exticr-generic-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="tabular-box natural-width"><table class="tabular">
+<tr class="header-horizontal">
+<th scope="col" class="c m b1 r1 l1 t1 lines">bits</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">[31:24]</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">[23:16]</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">[15:8]</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">[7:0]</th>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">EXTI_EXTICR2</code></td>
+<td class="c m b1 r1 l0 t0 lines">EXTI7</td>
+<td class="c m b1 r1 l0 t0 lines">EXTI6</td>
+<td class="c m b1 r1 l0 t0 lines">EXTI5</td>
+<td class="c m b1 r1 l0 t0 lines"><dfn class="terminology">EXTI4</dfn></td>
+</tr>
+</table></div>
+<ul class="disc" id="sl-day9-exticr-generic-3">
+<li id="sl-day9-exticr-generic-3-1">
+<div class="para" id="p-derived-sl-day9-exticr-generic-3-1">So line EXTI4 is the <dfn class="terminology">lowest byte</dfn> of <code class="code-inline tex2jax_ignore">EXTI_EXTICR2</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-generic-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exticr-generic-3-2">
+<div class="para" id="p-derived-sl-day9-exticr-generic-3-2">Each byte holds a <dfn class="terminology">port code</dfn>, a number saying which port drives that line. The reference manual lists them, and finding the one for port B is the next task.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-generic-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <article class="activity project-like" id="act-gpio-exticr-lookup"><h2 class="heading">
 <span class="type">Activity</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">9.2.2</span><span class="period heading-divison-mark heading-divison-mark__period">.</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="title">Which Register, Which Byte, Which Code.</span>
 </h2>
@@ -861,6 +921,55 @@ eBookConfig.enable_chatcodes =  false;
 <div class="code-box"><pre class="program clipboardable"><code class="language-c">EXTI-&gt;EXTICR[1] &amp;= ~EXTI_EXTICR2_EXTI4_Msk;             // clear the EXTI4 field
 EXTI-&gt;EXTICR[1] |= (EXTI_PB &lt;&lt; EXTI_EXTICR2_EXTI4_Pos); // select port B
 </code></pre></div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-exticr-answer" data-deck-ref="fig-exticr2-portb" data-deck-stack="yes">
+<div class="deck-slide-body">
+<div class="para" id="sl-day9-exticr-answer-1">
+<dfn class="terminology">Port B is 0x01</dfn>: PA 0x00, PB 0x01, PC 0x02, PD 0x03, PF 0x05, with 0x04 reserved because no STM32C0 has a port E.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-exticr-answer-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day9-exticr-answer-2">
+<li id="sl-day9-exticr-answer-2-1">
+<div class="para" id="p-derived-sl-day9-exticr-answer-2-1">The reference manual numbers its four registers <code class="code-inline tex2jax_ignore">EXTI_EXTICR1</code> to <code class="code-inline tex2jax_ignore">EXTI_EXTICR4</code>. The device header declares them as one C array, <code class="code-inline tex2jax_ignore">EXTI-&gt;EXTICR[ ]</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-answer-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exticr-answer-2-2">
+<div class="para" id="p-derived-sl-day9-exticr-answer-2-2">C numbers array elements from 0, so <code class="code-inline tex2jax_ignore">EXTI_EXTICR1</code> to <code class="code-inline tex2jax_ignore">EXTI_EXTICR4</code> are <code class="code-inline tex2jax_ignore">EXTI-&gt;EXTICR[0]</code> to <code class="code-inline tex2jax_ignore">EXTI-&gt;EXTICR[3]</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-answer-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exticr-answer-2-3">
+<div class="para" id="p-derived-sl-day9-exticr-answer-2-3">Ours is <code class="code-inline tex2jax_ignore">EXTI_EXTICR2</code>, so we write <code class="code-inline tex2jax_ignore">EXTI-&gt;EXTICR[1]</code>: index <dfn class="terminology">one</dfn>, not two.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-answer-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exticr-answer-2-4">
+<div class="para" id="p-derived-sl-day9-exticr-answer-2-4">Writing <code class="code-inline tex2jax_ignore">[2]</code> configures line EXTI8 instead. It builds cleanly, and the button simply never interrupts.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-answer-2-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">REVEAL, after the lookup activity. The index slip is the one worth dwelling on — it is silent.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-exticr-code"><div class="deck-slide-body">
+<div class="para" id="sl-day9-exticr-code-1">Selecting port B for EXTI4 therefore looks like this in code:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-exticr-code-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">EXTI-&gt;EXTICR[1] &amp;= ~EXTI_EXTICR2_EXTI4_Msk;             // clear the EXTI4 field
+EXTI-&gt;EXTICR[1] |= (EXTI_PB &lt;&lt; EXTI_EXTICR2_EXTI4_Pos); // select port B
+</code></pre></div>
+<ul class="disc" id="sl-day9-exticr-code-3">
+<li id="sl-day9-exticr-code-3-1">
+<div class="para" id="p-derived-sl-day9-exticr-code-3-1">
+<code class="code-inline tex2jax_ignore">_Msk</code> and <code class="code-inline tex2jax_ignore">_Pos</code> come from the device header, <code class="code-inline tex2jax_ignore">stm32c031xx.h</code>, and name the field’s bits and its starting position, so you never write 0xFF or 0 by hand.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-code-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exticr-code-3-2">
+<div class="para" id="p-derived-sl-day9-exticr-code-3-2">
+<code class="code-inline tex2jax_ignore">EXTI_PB</code> is the port code, defined for us in <code class="code-inline tex2jax_ignore">ES28.h</code>. <code class="code-inline tex2jax_ignore">EXTI_PC</code> is there too, for the blue user button.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-code-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exticr-code-3-3">
+<div class="para" id="p-derived-sl-day9-exticr-code-3-3">Clear first, then set: the field is eight bits wide, and <code class="code-inline tex2jax_ignore">|=</code> alone would leave whatever was already there.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exticr-code-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 9.2.4: Part 4a: Choosing the Port (EXTI_EXTICR2)"><a tabindex="-1" href="#subsec-day9-exticr" title="Copy heading and permalink for Subsection 9.2.4: Part 4a: Choosing the Port (EXTI_EXTICR2)" aria-label="Copy heading and permalink for Subsection 9.2.4: Part 4a: Choosing the Port (EXTI_EXTICR2)">🔗</a></div>
 </section>
 </div>

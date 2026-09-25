@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -838,7 +839,23 @@ eBookConfig.enable_chatcodes =  false;
 </div>
 <figure class="figure figure-like" id="fig-three-rates"><div class="image-box" style="width: 94%; margin-left: 3%; margin-right: 3%;"><img src="external/images/Day12-Motors(3)/fig-three-rates.svg" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">11.5.14<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>The three rates the Lab 6 program has to keep, drawn over one second: the loop asks the time on every pass, the potentiometer is read every 10 ms, and the count becomes an rpm once a second.  The pulses along the bottom arrive when the shaft brings a slot around, which lines up with none of the three.  The tick marks are schematic.<div class="autopermalink" aria-hidden="true" data-description="Figure 11.5.14"><a tabindex="-1" href="#fig-three-rates" title="Copy heading and permalink for Figure 11.5.14" aria-label="Copy heading and permalink for Figure 11.5.14">🔗</a></div></figcaption>
-</figure>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day12-three-rates" data-deck-ref="fig-three-rates" data-deck-stack="yes">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day12-three-rates-1">
+<li id="sl-day12-three-rates-1-1">
+<div class="para" id="p-derived-sl-day12-three-rates-1-1">By the end of Lab 6 your program has three jobs, and they run at three different rates: sample the potentiometer 100 times a second, notice every pulse from the sensor as it arrives, and put a new number on the display.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day12-three-rates-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day12-three-rates-1-2">
+<div class="para" id="p-derived-sl-day12-three-rates-1-2">
+<code class="code-inline tex2jax_ignore">delay_ms()</code> can only do one of them at a time. While it is counting out its milliseconds, the program is doing nothing else at all, which is the same problem we watched a polled button counter have.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day12-three-rates-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">The pulses along the bottom line up with none of the three rates.</div>
+<div class="deck-slide-note">≈ 1 min. Do not explain milliseconds() yet — the next slide is the code. The Day 9 callback is the one to lean on: they have already seen a loop miss an event because it was busy waiting.</div>
+</div>
 <div class="para" id="subsec-day12-main-loop-8">
 <code class="code-inline tex2jax_ignore">milliseconds()</code> is a function you have actually had all term, in <code class="code-inline tex2jax_ignore">sysinit.c</code>, and we just have never opened it.  SysTick is a counter built into the processor core itself rather than a peripheral like TIM14, and it is what <code class="code-inline tex2jax_ignore">delay_ms()</code> uses to produce a (blocking) delay. SysTick itself is interrupt based, and its handler, which is called every time one millisecond has passed, simply increases the <code class="code-inline tex2jax_ignore">currentMilliseconds</code> count by one.  All <code class="code-inline tex2jax_ignore">milliseconds()</code> does is return that count to you.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day12-main-loop-8" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
@@ -865,6 +882,61 @@ inline uint32_t milliseconds(void) {
 </code></pre></div>
 <div class="para" id="subsec-day12-main-loop-11">SysTick is another timer, with its own registers (Day 8’s was TIM14), but it has the same shape as Day 8’s: a counter, an interrupt when it reaches the end, and a handler that runs each time.  <code class="code-inline tex2jax_ignore">SysTick-&gt;LOAD</code> gets 12000 − 1 because the clock is 12 MHz, and 12 MHz divided by 12000 is 1 kHz, which is one interrupt every millisecond.  <code class="code-inline tex2jax_ignore">SystemInit()</code> calls <code class="code-inline tex2jax_ignore">SysTickInit()</code> before <code class="code-inline tex2jax_ignore">main()</code> starts, so the count is already running before your first line of code does.  And <code class="code-inline tex2jax_ignore">milliseconds()</code> does not wait for anything: it returns a number immediately, so asking what time it is costs one memory read, and you can afford to ask on every pass.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day12-main-loop-11" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day12-milliseconds">
+<div class="deck-slide-body">
+<div class="para" id="sl-day12-milliseconds-1">
+<code class="code-inline tex2jax_ignore">milliseconds()</code> is a function you have actually had all term, in <code class="code-inline tex2jax_ignore">sysinit.c</code>, and we just have never opened it. SysTick is a counter built into the processor core itself rather than a peripheral like TIM14, and it is what <code class="code-inline tex2jax_ignore">delay_ms()</code> uses to produce a (blocking) delay. SysTick itself is interrupt based, and its handler, which is called every time one millisecond has passed, simply increases the <code class="code-inline tex2jax_ignore">currentMilliseconds</code> count by one. All <code class="code-inline tex2jax_ignore">milliseconds()</code> does is return that count to you. <code class="code-inline tex2jax_ignore">SystemInit()</code> calls <code class="code-inline tex2jax_ignore">SysTickInit()</code> before <code class="code-inline tex2jax_ignore">main()</code> starts, so the count is already running when your code begins.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day12-milliseconds-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">static uint32_t currentMilliseconds = 0;
+
+void SysTick_Handler(void) {          // runs once every millisecond
+	currentMilliseconds++;
+}
+inline uint32_t milliseconds(void) {  // milliseconds since the board came up
+	return currentMilliseconds;
+}
+void SysTickInit(void) {
+	SysTick-&gt;LOAD = 12000 - 1;                    // 12 MHz / 12000 = 1 kHz
+	SysTick-&gt;CTRL |= SysTick_CTRL_CLKSOURCE_Msk;  // Select the processor clock
+	SysTick-&gt;CTRL |= SysTick_CTRL_TICKINT_Msk;    // Enable the interrupt
+	SysTick-&gt;CTRL |= SysTick_CTRL_ENABLE_Msk;     // Turn it on.
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 3 min. Three things to draw out. It is the same SHAPE as Day 8 — counter, interrupt, handler — but SysTick is a second timer and this is the first time the course has opened it; do not say "nothing new here", because the registers are new. delay_ms() has always been built on it — this is what it has been reading all term. And milliseconds() does not wait for anything: it returns a number immediately, so asking the time costs nothing. The listing here is abridged from sysinit.c: the comments are ours, SystemInit() and delay_ms() are left out, and SysTickInit() is shown above the handler. Every line of code is the file’s. The caption this slide used to carry was dropped when Petra’s pass 1 lengthened the paragraph: it said only what the paragraph and the listing’s own comments now say (lever 2).</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day12-naive-loop" data-deck-room="compressed">
+<div class="deck-slide-body">
+<div class="para" id="sl-day12-naive-loop-1">Here is a first attempt at the loop. The potentiometer is sampled at 100 Hz, which is what Lab 6 asks for, and the sensor’s pin is read in the same beat.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day12-naive-loop-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">#define SENSOR_PIN  (1U&lt;&lt;15)          // the photointerrupter, on PA15 (D7)
+    uint32_t last_sample = 0;
+    uint8_t  now, before = 1;
+    uint16_t pulses = 0, speed = 0;
+    while (1) {
+        if (milliseconds() - last_sample &gt;= 10) {          // every 10 ms
+            last_sample = milliseconds();
+            start_conversion();                            // the potentiometer
+            speed = adc_read();
+            if (GPIOA-&gt;IDR &amp; SENSOR_PIN)                    // the sensor's output
+                now = 1;
+            else
+                now = 0;
+            if (before == 1 &amp;&amp; now == 0)                   // a falling edge?
+                pulses++;
+            before = now;
+        }
+    }
+</code></pre></div>
+<ul class="disc" id="sl-day12-naive-loop-3">
+<li id="sl-day12-naive-loop-3-1">
+<div class="para" id="p-derived-sl-day12-naive-loop-3-1">Suppose the wheel is taking a slot past the beam 60 times a second. After one second of this loop, what does <code class="code-inline tex2jax_ignore">pulses</code> hold?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day12-naive-loop-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">≈ 2 min, predict before revealing. The answer is: fewer than it should, and not by a fixed amount. The loop looks at the pin 100 times a second, and each look tells it only what the pin is doing at that instant — a slot that arrives and leaves between two looks is never seen at all. Draw the pulse train on the board and put 10 ms tick marks under it. The precise statement is worth getting right: the read has to happen more often than the SHORTER of the pulse’s HIGH time and its LOW time, and that is set by how wide the slots are compared to the spokes, not by the pulse rate on its own.</div>
+</div>
 <div class="para" id="subsec-day12-main-loop-14">So the loop asks the time on every pass; when 10 ms have gone by it samples the potentiometer and commands the motor, and when a second has gone by it converts the pulse count and sends it to the display.  What is left to place is the read of the sensor’s pin, and the obvious place (inside the 10 ms step, where everything else already happens) does not work. Reading a pin tells you only what that pin is doing at the instant you read it, so a pulse that arrives and leaves between two reads is never seen at all.  As <a href="subsec-day12-main-loop.html#fig-three-rates" class="xref" data-knowl="./knowl/xref/fig-three-rates.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 11.5.14">Figure 11.5.14</a> shows, the pulses line up with none of the loop’s three rates, so the count comes out low by a different amount each time, not by a fixed fraction you could divide back out.  Polling fast enough is a condition on the pulse’s HIGH and LOW times rather than on its rate; see <a href="subsec-motors-ref-counting.html" class="internal" title="Subsection 11.6.7: Polling or an Interrupt">Subsection 11.6.7</a>.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day12-main-loop-14" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <article class="activity project-like" id="act-day12-poll-or-interrupt"><h2 class="heading">
@@ -880,6 +952,27 @@ inline uint32_t milliseconds(void) {
 <dfn class="terminology">Taking a falling-edge interrupt on PA15.</dfn>  You have set one up before, for the button on PB4.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day12-main-loop-17" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="para" id="subsec-day12-main-loop-18">We’ll use the interrupt.  Whether polling is fast enough depends on the pulse’s HIGH and LOW times rather than on the pulse rate you measured, and those times depend on how wide the slots are compared with the spokes between them, which nobody has measured, and which changes if you swap a wheel.  The interrupt does not depend on any of that: the pulse is counted whatever else the loop is doing, at any speed this motor reaches.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day12-main-loop-18" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day12-two-answers">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day12-two-answers-1">
+<li id="sl-day12-two-answers-1-1">
+<div class="para" id="p-derived-sl-day12-two-answers-1-1">
+<dfn class="terminology">Read the pin every pass.</dfn> Move the read out of the 10 ms beat so the loop looks at it as fast as it can go, and use <code class="code-inline tex2jax_ignore">milliseconds()</code> only to decide when to sample the potentiometer and when to close the one-second counting window. This works, and it costs a promise: nothing anywhere in the loop may ever block, for as long as the program lives.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day12-two-answers-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day12-two-answers-1-2">
+<div class="para" id="p-derived-sl-day12-two-answers-1-2">
+<dfn class="terminology">Take a falling-edge interrupt on PA15.</dfn> This is what we set up for the button on PB4, with 15 in place of 4, and PA15 is on the same handler you already wrote, <code class="code-inline tex2jax_ignore">EXTI4_15_IRQHandler</code>. The port selection is in <code class="code-inline tex2jax_ignore">EXTI_EXTICR4</code>, which the Reference Manual gives in section 12.5.6; section 12.5.9 there is only the register map.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day12-two-answers-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day12-two-answers-1-3">
+<div class="para" id="p-derived-sl-day12-two-answers-1-3">The second one is the one this course goes with, and the reason is not the arithmetic. The arithmetic depends on how fast this particular motor turns and how wide these particular slots are. The interrupt does not: the pulse is counted whatever else the loop is doing, at any speed.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day12-two-answers-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">≈ 3 min. The body prose no longer explains volatile or lists the five EXTI writes — Petra, 2026-08-26: "You are doing the work for them. This is THEIR work." The answers live in inst-day12-main-loop-sketch and in subsec-motors-ref-counting; do not hand them over here. Take three or four answers from the room BEFORE this slide goes up — the commit is the only place all day where a student makes this decision themselves. Describe the polled answer honestly rather than dismissing it: it is what Lab 6’s text allows, and at these rates it works. What retires it is not that it fails here but that whether it fails depends on numbers nobody measured.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 11.5.4: Part 4: A Loop That Does Three Things at Three Rates"><a tabindex="-1" href="#subsec-day12-main-loop" title="Copy heading and permalink for Subsection 11.5.4: Part 4: A Loop That Does Three Things at Three Rates" aria-label="Copy heading and permalink for Subsection 11.5.4: Part 4: A Loop That Does Three Things at Three Rates">🔗</a></div>
 </section>

@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -842,6 +843,72 @@ if( !(I2C1-&gt;ISR &amp; I2C_ISR_NACKF) ) {       // Make sure ACK received
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">10.3.25<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>RM0490’s transfer diagram for a controller writing two bytes with automatic end mode, with the parts named.  The setup step programs the address, the byte count and AUTOEND and sets START; the hardware then puts the START condition, the address and the R/W bit on the wire and collects the ACK.  TXIS rises once per byte, each time the transmit data register is free: that is the flag <code class="code-inline tex2jax_ignore">i2c1_byteWrite()</code> waits on before writing <code class="code-inline tex2jax_ignore">I2C1-&gt;TXDR</code>.  NBYTES holds the programmed count, 2 for the whole of this transfer, and once that many bytes have gone out, AUTOEND puts the STOP on the wire without any further help from the program.<div class="autopermalink" aria-hidden="true" data-description="Figure 10.3.25"><a tabindex="-1" href="#fig-i2c-master-tx" title="Copy heading and permalink for Figure 10.3.25" aria-label="Copy heading and permalink for Figure 10.3.25">🔗</a></div></figcaption>
 </figure>
 <div class="para" id="subsec-day10-bytewrite-9">Everything below <code class="code-inline tex2jax_ignore">I2C1-&gt;CR2</code> is done by the I2C hardware. Nothing in this library counts clock edges or times a pulse; it sets up a transaction, and the peripheral shifts the bits out, generates the START and the STOP, releases SDA for the ACK slot and reports what came back.  What is left for software is describing the transaction and reading the flags. <a href="subsec-i2c-ref-hardware.html" class="internal" title="Subsection 10.4.7: What Is Under I2C1-&gt;CR2">Subsection 10.4.7</a> has the peripheral’s own block diagram, if you want to see what the peripheral’s state machine is made of.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day10-bytewrite-9" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-bytewrite"><div class="deck-slide-body">
+<div class="para" id="sl-day10-bytewrite-1">
+<code class="code-inline tex2jax_ignore">i2c1_byteWrite()</code> produced the trace you captured yesterday, and is short enough to read in full. Here is its sending half:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-bytewrite-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">// use "=" to ensure all other bits are cleared
+I2C1-&gt;CR2  = (deviceAddr&lt;&lt;1)
+             | (1U &lt;&lt; I2C_CR2_NBYTES_Pos)  // sending one byte only
+             | I2C_CR2_AUTOEND             // Stop condition after transfer
+             | I2C_CR2_START;              // Send Start condition
+while( !(I2C1-&gt;ISR &amp; I2C_ISR_BUSY) );      // Wait until Start is received
+
+if( !(I2C1-&gt;ISR &amp; I2C_ISR_NACKF) ) {       // Make sure ACK received
+    while( !(I2C1-&gt;ISR &amp; I2C_ISR_TXIS) );  // Wait for TX to be ready
+    I2C1-&gt;TXDR = data;                     // put data in send register
+}
+</code></pre></div>
+<ul class="disc" id="sl-day10-bytewrite-3">
+<li id="sl-day10-bytewrite-3-1">
+<div class="para" id="p-derived-sl-day10-bytewrite-3-1">Five fields go into <code class="code-inline tex2jax_ignore">I2C_CR2</code> in that one assignment, describing the <dfn class="terminology">entire transaction before any of it happens</dfn>: <em class="emphasis">who</em> (the address, shifted left by one into SADD), <em class="emphasis">which direction</em> (RD_WRN, 0 here, meaning write - not mentioned in code since it’s 0), <em class="emphasis">how many bytes</em> (NBYTES, we use 1 here), <em class="emphasis">what to do at the end</em> (AUTOEND sends the STOP for you), and <em class="emphasis">go</em> (START). Writing that last bit is what puts the START condition on the wire; everything you watched on the oscilloscope followed from this one line.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-bytewrite-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-cr2-fig" data-deck-ref="fig-i2c-cr2">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">The five boxed fields are the whole of that one assignment. SADD holds the address in bits 7 down to 1, which is what the <code class="code-inline tex2jax_ignore">&lt;&lt;1</code> is for; RD_WRN is the direction; NBYTES is how many data bytes; AUTOEND lets the hardware send the STOP; and writing START is what starts the transaction.</div>
+<div class="deck-slide-note">Worth pausing on SADD: the address sits in bits 7:1 and bit 0 is a don’t-care here, because the direction comes from RD_WRN rather than from the bottom bit. That is the register-level version of the 0x70-vs-0xE0 thing they worked out yesterday.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-cr2-assign"><div class="deck-slide-body">
+<div class="para" id="sl-day10-cr2-assign-1">Notice the <code class="code-inline tex2jax_ignore">=</code>, which we use here for a specific reason.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-cr2-assign-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">I2C1-&gt;CR2  = (deviceAddr&lt;&lt;1) | ... ;    // states the whole transaction
+I2C1-&gt;CR2 |= (deviceAddr&lt;&lt;1) | ... ;    // ORs it onto the LAST one
+</code></pre></div>
+<ul class="disc" id="sl-day10-cr2-assign-3">
+<li id="sl-day10-cr2-assign-3-1">
+<div class="para" id="p-derived-sl-day10-cr2-assign-3-1">
+<code class="code-inline tex2jax_ignore">I2C_CR2</code> is a <dfn class="terminology">control</dfn> register and the danger is what is <dfn class="terminology">left over</dfn> in the register from the previous transaction.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-cr2-assign-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-cr2-assign-3-2">
+<div class="para" id="p-derived-sl-day10-cr2-assign-3-2">The address, the direction and the byte count from the previous transaction are all still sitting in it, and <code class="code-inline tex2jax_ignore">|=</code> cannot clear a bit, so an <code class="code-inline tex2jax_ignore">|=</code> here would leave the old address ORed with the new one.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-cr2-assign-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-cr2-assign-3-3">
+<div class="para" id="p-derived-sl-day10-cr2-assign-3-3">Assigning the whole mask overwrites every bit and therefore fills in the desired transaction completely.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-cr2-assign-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-master-tx" data-deck-ref="fig-i2c-master-tx" data-deck-stack="yes">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day10-master-tx-1">
+<li id="sl-day10-master-tx-1-1">
+<div class="para" id="p-derived-sl-day10-master-tx-1-1">The two waits (blocking <code class="code-inline tex2jax_ignore">while</code> loops) are there to ensure the peripheral is ready for the next step. The <code class="code-inline tex2jax_ignore">I2C_ISR_BUSY</code> flag comes up when the START has actually appeared on the bus, and the <code class="code-inline tex2jax_ignore">I2C_ISR_TXIS</code> flag, transmit interrupt status, comes up when the transmit register is empty and the hardware is ready for the byte, which happens <dfn class="terminology">after the address has been sent and acknowledged</dfn>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-master-tx-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-master-tx-1-2">
+<div class="para" id="p-derived-sl-day10-master-tx-1-2">Reading a byte has a similar shape with three changes: <code class="code-inline tex2jax_ignore">I2C_CR2_RD_WRN</code> needs to be set, we wait on <code class="code-inline tex2jax_ignore">I2C_ISR_RXNE</code> instead of <code class="code-inline tex2jax_ignore">TXIS</code>, and we take the data out of the receive data register via <code class="code-inline tex2jax_ignore">*data = I2C1-&gt;RXDR;</code> instead of the write.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-master-tx-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">The manual’s own picture of that sequence, albeit for sending two bytes rather than one: set-up, then the hardware does the START, the address and the ACK by itself, and TXIS signals when each byte can go.</div>
+<div class="deck-slide-note">The point to make: nothing in the library counts a clock edge or times a pulse. It describes a transaction and reads flags; a state machine in silicon does the rest. Once NBYTES bytes have been transferred, AUTOEND issues the STOP.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 10.3.8: Part 7b: Opening i2c1_byteWrite()"><a tabindex="-1" href="#subsec-day10-bytewrite" title="Copy heading and permalink for Subsection 10.3.8: Part 7b: Opening i2c1_byteWrite()" aria-label="Copy heading and permalink for Subsection 10.3.8: Part 7b: Opening i2c1_byteWrite()">🔗</a></div>
 </section>

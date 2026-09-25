@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -826,6 +827,17 @@ void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax);
 void tim14_pwm_set(uint16_t pulse);
 #endif /* TIM_H_ */
 </code></pre></div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-files">
+<div class="deck-slide-body">
+<div class="para" id="sl-day15-files-1">The program is <code class="code-inline tex2jax_ignore">Day15_servo_template.c</code>, and it comes with a timer driver in two files, <code class="code-inline tex2jax_ignore">tim.c</code> and <code class="code-inline tex2jax_ignore">tim.h</code>. It also uses your own ADC driver, the <code class="code-inline tex2jax_ignore">adc.c</code> and <code class="code-inline tex2jax_ignore">adc.h</code> you built in Lab 5. The template is complete except for the five <code class="code-inline tex2jax_ignore">#define</code> lines whose values you just chose and one line in the loop, the map from the potentiometer’s reading to a pulse width. Here is the header, <code class="code-inline tex2jax_ignore">tim.h</code>, and the three functions it declares:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day15-files-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">void tim16_ms_interrupt_init(int milliseconds);
+void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax);
+void tim14_pwm_set(uint16_t pulse);
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. Three files plus their own adc.c/adc.h; the include guard is left off the slide.</div>
+</div>
 <div class="para" id="subsec-day15-program-5">The TIM14 functions in the timer library, <code class="code-inline tex2jax_ignore">tim.c</code>, are the ones we used (<a href="subsec-day11x-driver.html" class="internal" title="Subsection 11.3.4: Part 4: Reading the Driver">Subsection 11.3.4</a>), with two changes.  The prescale factor and the counter’s top value are now parameters, passed in from the program, rather than <code class="code-inline tex2jax_ignore">#define</code> lines at the top of the driver.  And <code class="code-inline tex2jax_ignore">tim14_pwm_set()</code> no longer checks its value: it used to check that the value it was given was within the range the counter can represent before writing it to <code class="code-inline tex2jax_ignore">CCR1</code>; here it writes the value it is given.  The range check is now in the program, in <code class="code-inline tex2jax_ignore">updateServo()</code>, where the range is <code class="code-inline tex2jax_ignore">SERVO_MIN</code> to <code class="code-inline tex2jax_ignore">SERVO_MAX</code>.  Every other register write in <code class="code-inline tex2jax_ignore">tim14_pa7_pwm_init()</code> is the same as before; the whole file is printed in <a href="subsec-servo-ref-driver.html" class="internal" title="Subsection 13.4.3: The Driver: tim.c">Subsection 13.4.3</a>, and <a href="subsec-day11x-hardware.html#fig-tim14-register-map" class="xref" data-knowl="./knowl/xref/fig-tim14-register-map.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 11.3.12">Figure 11.3.12</a> has the registers.  Here are the lines of <code class="code-inline tex2jax_ignore">tim14_pa7_pwm_init()</code> that take the two numbers, and the whole of <code class="code-inline tex2jax_ignore">tim14_pwm_set()</code>.  The initialization writes <code class="code-inline tex2jax_ignore">ARR = timerMax-1</code>, so <code class="code-inline tex2jax_ignore">PWM_TIMER_MAX</code> is the number of counts in one period, and <code class="code-inline tex2jax_ignore">tim14_pwm_set()</code> writes <code class="code-inline tex2jax_ignore">CCR1 = value</code>, so the value is the number of counts the pin is HIGH, the same convention as before.  <code class="code-inline tex2jax_ignore">SERVO_MID</code> is the middle of the range; the loop does not use it, but it is the number that parks the horn at its center.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day15-program-5" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="code-box"><pre class="program clipboardable"><code class="language-c">void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
@@ -858,6 +870,98 @@ void tim14_pwm_set(uint16_t pulse);
 </code></pre></div>
 <div class="para" id="subsec-day15-program-9">The limit in <code class="code-inline tex2jax_ignore">tim14_pwm_set()</code> used to be the timer’s: the largest count the counter can represent.  The servo’s safe range, 1 ms to 2 ms, is much narrower than that, and it is a property of the servo, not of the timer.  Outside that range the servo drives against its own mechanical stops.  So the program, which is written for this servo, applies the limit, in <code class="code-inline tex2jax_ignore">updateServo()</code>, and every value reaches <code class="code-inline tex2jax_ignore">CCR1</code> through that function.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day15-program-9" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-tim-c-1">
+<div class="deck-slide-body">
+<div class="para" id="sl-day15-tim-c-1-1">The whole of <code class="code-inline tex2jax_ignore">tim.c</code>, with its comments left out, in two halves. First the tick timer and the one-line write of <code class="code-inline tex2jax_ignore">CCR1</code>:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day15-tim-c-1-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">#include "tim.h"
+#include "ES28.h"
+#define TIM16_PSC_FACTOR	12000          // 12 MHz / 12000 = 1 kHz
+
+void tim16_ms_interrupt_init(int milliseconds) {
+	RCC-&gt;APBENR2 |= RCC_APBENR2_TIM16EN;
+	TIM16-&gt;PSC = TIM16_PSC_FACTOR - 1;
+	TIM16-&gt;ARR = milliseconds - 1;
+	TIM16-&gt;CNT = 0;
+	TIM16-&gt;DIER |= TIM_DIER_UIE;
+	NVIC_EnableIRQ(TIM16_IRQn);
+	TIM16-&gt;CR1 |= TIM_CR1_CEN;
+}
+
+void tim14_pwm_set(uint16_t value) {
+	TIM14-&gt;CCR1 = value;
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. The whole picture before the two changes. The book’s Reference section prints the file with its comments.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-tim-c-2">
+<div class="deck-slide-body">
+<div class="para" id="sl-day15-tim-c-2-1">And the TIM14 setup, every register write of which is Day 11x’s:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day15-tim-c-2-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">// tim.c, second half: tim14_pa7_pwm_init() whole
+void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
+	RCC-&gt;IOPENR |=  RCC_IOPENR_GPIOAEN;
+	GPIOA-&gt;MODER &amp;= ~GPIO_MODER_MODE7_Msk;
+	GPIOA-&gt;MODER |= GPIO_ALTERNATE &lt;&lt; GPIO_MODER_MODE7_Pos;
+	GPIOA-&gt;AFR[0] &amp;= ~GPIO_AFRL_AFSEL7_Msk;
+	GPIOA-&gt;AFR[0] |= GPIO_AF4 &lt;&lt; GPIO_AFRL_AFSEL7_Pos;
+	RCC-&gt;APBENR2 |= RCC_APBENR2_TIM14EN;
+	TIM14-&gt;PSC = prescaleFactor-1;
+	TIM14-&gt;ARR = timerMax-1;
+	TIM14-&gt;CCR1 = 0;
+	TIM14-&gt;CCMR1 &amp;= ~TIM_CCMR1_OC1M_Msk;
+	TIM14-&gt;CCMR1 |= TIM_OC1_PWM1 &lt;&lt; TIM_CCMR1_OC1M_Pos;
+	TIM14-&gt;CCMR1 &amp;= ~TIM_CCMR1_CC1S_Msk;
+	TIM14-&gt;CCMR1 |= TIM_CC1_OUTPUT &lt;&lt; TIM_CCMR1_CC1S_Pos;
+	TIM14-&gt;CCER |= TIM_CCER_CC1E;
+	TIM14-&gt;EGR |= TIM_EGR_UG;
+	TIM14-&gt;CR1 |= TIM_CR1_CEN;
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. Do not re-walk the register writes; the two changes are the next slide.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-driver-numbers">
+<div class="deck-slide-body">
+<div class="para" id="sl-day15-driver-numbers-1">The TIM14 functions in the timer library, <code class="code-inline tex2jax_ignore">tim.c</code>, are the ones we used before, with two changes. First, the prescale factor and the counter’s top value are now parameters of <code class="code-inline tex2jax_ignore">tim14_pa7_pwm_init()</code>, passed in from the program, rather than <code class="code-inline tex2jax_ignore">#define</code> lines at the top of the driver. The initialization writes <code class="code-inline tex2jax_ignore">ARR = timerMax-1</code>, so <code class="code-inline tex2jax_ignore">PWM_TIMER_MAX</code> is the number of counts in one period, and <code class="code-inline tex2jax_ignore">tim14_pwm_set()</code> writes <code class="code-inline tex2jax_ignore">CCR1 = value</code>, so the value is the number of counts the pin is HIGH, the same convention as before. Second, <code class="code-inline tex2jax_ignore">tim14_pwm_set()</code> no longer checks its value against the counter’s range: it writes the value it is given.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day15-driver-numbers-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">void tim14_pa7_pwm_init(uint16_t prescaleFactor, uint16_t timerMax) {
+	// ... the pin and the clock setup, as before ...
+	TIM14-&gt;PSC = prescaleFactor-1;
+	TIM14-&gt;ARR = timerMax-1;      // timerMax counts per period
+	TIM14-&gt;CCR1 = 0;
+	// ... the PWM mode and the enables, as before ...
+}
+
+void tim14_pwm_set(uint16_t value) {
+	TIM14-&gt;CCR1 = value;          // HIGH for exactly 'value' counts; no range check
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. Comments abridged on the slide; the listing in the book carries the file’s own. SERVO_MID, which the loop does not use, is the number that parks the horn at its center. Page back to the register map on the What Timer 14 will do slide if anyone wants the registers.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-range-check">
+<div class="deck-slide-body">
+<div class="para" id="sl-day15-range-check-1">The range check is now in the program, in <code class="code-inline tex2jax_ignore">updateServo()</code>, and every value reaches <code class="code-inline tex2jax_ignore">CCR1</code> through that function.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day15-range-check-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">void updateServo(uint16_t value) {
+	if (value&gt;SERVO_MAX)
+		value = SERVO_MAX;
+	else if (value &lt; SERVO_MIN)
+		value = SERVO_MIN;
+	tim14_pwm_set(value);
+}
+</code></pre></div>
+<ul class="disc" id="sl-day15-range-check-3">
+<li id="sl-day15-range-check-3-1">
+<div class="para" id="p-derived-sl-day15-range-check-3-1">The limit in <code class="code-inline tex2jax_ignore">tim14_pwm_set()</code> used to be the timer’s: the largest count the counter can represent. The servo’s safe range, 1 ms to 2 ms, is much narrower than that, and it is a property of the servo, not of the timer. Outside that range the servo drives against its own mechanical stops. So the program, which is written for this servo, applies the limit.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day15-range-check-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">≈ 1 min.</div>
+</div>
 <div class="para" id="subsec-day15-program-14">The program reads the potentiometer on your breadboard (the knob, not the one inside the servo) twice a second.  TIM14 is used to create the pulse, so the timing tick for the potentiometer reading comes from a second timer, TIM16 (<a class="external" href="external/stm32c031_rm.pdf" target="_blank">Reference Manual</a> §18, <em class="emphasis">General-purpose timers (TIM16/TIM17)</em>). <code class="code-inline tex2jax_ignore">tim16_ms_interrupt_init()</code> is the periodic-interrupt setup from Day 8 (<a href="subsec-day8-interrupt-prog.html" class="internal" title="Subsection 8.2.6: Part 6: Programming an Interrupt">Subsection 8.2.6</a>) on a different timer, with the period as a parameter; the listing below follows the Day 8 setup line for line. TIM16’s interrupt is position 21 in the vector table (<a href="subsec-timers-ref-family.html" class="internal" title="Subsection 8.3.7: The Rest of the Timer Family">Subsection 8.3.7</a>), and the startup file’s name for that slot is <code class="code-inline tex2jax_ignore">TIM16_IRQHandler()</code>.  The handler raises <code class="code-inline tex2jax_ignore">timerFlag</code>, and the main loop takes one reading and lowers it again.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day15-program-14" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="code-box"><pre class="program clipboardable"><code class="language-c">void tim16_ms_interrupt_init(int milliseconds) {
@@ -883,7 +987,40 @@ void tim14_pwm_set(uint16_t pulse);
 	TIM16-&gt;CR1 |= TIM_CR1_CEN;
 }
 </code></pre></div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-tim16">
+<div class="deck-slide-body">
+<div class="para" id="sl-day15-tim16-1">The program reads the potentiometer on your breadboard (the knob, not the one inside the servo) twice a second. TIM14 is used to create the pulse, so the timing tick for the potentiometer reading comes from a second timer, TIM16 (Reference Manual §18, <em class="emphasis">General-purpose timers (TIM16/TIM17)</em>). <code class="code-inline tex2jax_ignore">tim16_ms_interrupt_init()</code> is the periodic-interrupt setup from Day 8 on a different timer, with the period as a parameter.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day15-tim16-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">void tim16_ms_interrupt_init(int milliseconds) {
+	RCC-&gt;APBENR2 |= RCC_APBENR2_TIM16EN;   // clock access to timer 16
+	TIM16-&gt;PSC = TIM16_PSC_FACTOR - 1;     // 12000: a 1 kHz count
+	TIM16-&gt;ARR = milliseconds - 1;
+	TIM16-&gt;CNT = 0;
+	TIM16-&gt;DIER |= TIM_DIER_UIE;           // update interrupt
+	NVIC_EnableIRQ(TIM16_IRQn);
+	TIM16-&gt;CR1 |= TIM_CR1_CEN;
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">The Day 8 setup, on TIM16.</div>
+<div class="deck-slide-note">≈ 1 min. Comments abridged on the slide. Day 8 recall; do not re-walk the six steps.</div>
+</div>
 <div class="para" id="subsec-day15-program-17">One line of code remains: the map from a potentiometer reading, 0 to 4095, onto a pulse width between <code class="code-inline tex2jax_ignore">SERVO_MIN</code> and <code class="code-inline tex2jax_ignore">SERVO_MAX</code>.  One C fact to keep in mind when you write it: <code class="code-inline tex2jax_ignore">/</code> on two integers discards the remainder, so the order in which you multiply and divide matters.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day15-program-17" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-map">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day15-map-1">
+<li id="sl-day15-map-1-1">
+<div class="para" id="p-derived-sl-day15-map-1-1">One line of code remains: the map from a potentiometer reading, 0 to 4095, onto a pulse width between SERVO_MIN and SERVO_MAX.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day15-map-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day15-map-1-2">
+<div class="para" id="p-derived-sl-day15-map-1-2">One C fact to keep in mind when you write it: <code class="code-inline tex2jax_ignore">/</code> on two integers discards the remainder, so the order in which you multiply and divide matters.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day15-map-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">≈ 1 min, then the map activity and its reveal. Do not work an example on the wall: the map is their work.</div>
 </div>
 <article class="activity project-like" id="act-day15-map"><h2 class="heading">
 <span class="type">Activity</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">13.2.7</span><span class="period heading-divison-mark heading-divison-mark__period">.</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="title">Map the potentiometer onto the pulse.</span>
@@ -965,6 +1102,51 @@ void TIM16_IRQHandler(void) {
     __enable_irq();
 }
 </code></pre></div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-template">
+<div class="deck-slide-body">
+<div class="para" id="sl-day15-template-1">Here is the program as you download it: the defines and the setup first. The five <code class="code-inline tex2jax_ignore">#define</code> values are blank. Fill in the numbers you chose.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day15-template-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">#define PWM_PSC_FACTOR              // prescaler
+#define PWM_TIMER_MAX               // 20 ms
+#define SERVO_MIN                   // 1 ms
+#define SERVO_MID                   // 1.5 ms
+#define SERVO_MAX                   // 2 ms
+#define MAXADC          4096        // 12-bit converter
+
+    uint16_t pot_value = 0;
+    uint16_t pwm_value = SERVO_MIN;
+
+    uart2_init();
+    tim14_pa7_pwm_init(PWM_PSC_FACTOR, PWM_TIMER_MAX);
+    pa0_adc_init();
+    timerFlag = 0;
+    tim16_ms_interrupt_init(500);
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. The defines are the five blanks; the three init calls are where they go.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day15-template-loop">
+<div class="deck-slide-body">
+<div class="para" id="sl-day15-template-loop-1">And the loop, with its one blank.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day15-template-loop-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">    while(1) {
+        if(timerFlag==1) {
+            start_conversion();
+            pot_value = adc_read();         // Pot value (0 to MAXADC-1)
+
+/*******************/
+            pwm_value =                     // Map pot_value to pwm_value
+/*******************/
+
+            updateServo(pwm_value);         // Update the PWM
+            printf("pot_value=%d, \tpwm_value=%d\n\r", pot_value, pwm_value);
+            timerFlag=0;                    // Put the flag down
+        }
+    }
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. The whole file, with its header and the handler, is in the book and on Canvas.</div>
+</div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 13.2.4: Part 4: Reading the Program"><a tabindex="-1" href="#subsec-day15-program" title="Copy heading and permalink for Subsection 13.2.4: Part 4: Reading the Program" aria-label="Copy heading and permalink for Subsection 13.2.4: Part 4: Reading the Program">🔗</a></div>
 </section>
 </div>

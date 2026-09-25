@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -985,6 +986,525 @@ int main(void) {
 <div class="para" id="subsec-day1-blinky-walkthrough-25">
 <dfn class="terminology">Steps 3 and 4: Drive PA5 high and low.</dfn> The register here is <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR</code>, the <dfn class="terminology">Output Data Register</dfn> for Port A, which holds whether each pin is HIGH (3.3 V, indicated by a <code class="code-inline tex2jax_ignore">1</code> in the corresponding bit) or LOW (0 V, indicated by a <code class="code-inline tex2jax_ignore">0</code>). <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR |= LED_PIN</code> sets bit 5 to <code class="code-inline tex2jax_ignore">1</code>, pulling PA5 to 3.3 V and turning the LED on. <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR &amp;= ~LED_PIN</code> clears bit 5 to <code class="code-inline tex2jax_ignore">0</code>, pulling PA5 to 0 V and turning the LED off. Inside <code class="code-inline tex2jax_ignore">while(1)</code>, these two operations alternate forever, which makes the LED blink.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day1-blinky-walkthrough-25" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-four-steps">
+<div class="deck-slide-body">
+<div class="para" id="sl-day1-four-steps-1">We are blinking the green LED on the Nucleo board itself, which is wired to PA5 (Port A, bit 5).<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-four-steps-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ol class="decimal" id="sl-day1-four-steps-2">
+<li id="sl-day1-four-steps-2-1">
+<div class="para" id="p-derived-sl-day1-four-steps-2-1">Turn on the clock to GPIO Port A (peripherals are off by default).</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 1"><a tabindex="-1" href="#sl-day1-four-steps-2-1" title="Copy heading and permalink for Item 1" aria-label="Copy heading and permalink for Item 1">🔗</a></div>
+</li>
+<li id="sl-day1-four-steps-2-2">
+<div class="para" id="p-derived-sl-day1-four-steps-2-2">Set PA5 to output mode so we can drive it HIGH or LOW.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 2"><a tabindex="-1" href="#sl-day1-four-steps-2-2" title="Copy heading and permalink for Item 2" aria-label="Copy heading and permalink for Item 2">🔗</a></div>
+</li>
+<li id="sl-day1-four-steps-2-3">
+<div class="para" id="p-derived-sl-day1-four-steps-2-3">
+<em class="emphasis">In the loop:</em> set bit 5 HIGH → LED on, then wait.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 3"><a tabindex="-1" href="#sl-day1-four-steps-2-3" title="Copy heading and permalink for Item 3" aria-label="Copy heading and permalink for Item 3">🔗</a></div>
+</li>
+<li id="sl-day1-four-steps-2-4">
+<div class="para" id="p-derived-sl-day1-four-steps-2-4">
+<em class="emphasis">In the loop:</em> clear bit 5 LOW → LED off, then wait.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 4"><a tabindex="-1" href="#sl-day1-four-steps-2-4" title="Copy heading and permalink for Item 4" aria-label="Copy heading and permalink for Item 4">🔗</a></div>
+</li>
+</ol>
+<div class="para" id="sl-day1-four-steps-3">Steps 1–2 run <em class="emphasis">once</em> at startup. Steps 3 and 4 repeat <em class="emphasis">together, forever</em> inside <code class="code-inline tex2jax_ignore">while (1)</code>, which makes the LED blink.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-four-steps-3" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+</div>
+<div class="deck-slide-note">Embedded is the exception to "never write an infinite loop": setup runs once, then the device works forever. <code class="code-inline tex2jax_ignore">return 0</code> is unreachable.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-code"><div class="deck-slide-body">
+<div class="para" id="sl-day1-code-1">Set up once, then blink forever:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-code-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">#include "stm32c0xx.h"          // All register definitions are here
+#define GPIOAEN  (1U &lt;&lt; 0)      // RCC-&gt;IOPENR bit 0: clock for GPIOA
+#define LED_PIN  (1U &lt;&lt; 5)      // GPIOA bit 5: the on-board LED
+
+int main(void) {
+    RCC-&gt;IOPENR  |= GPIOAEN;     // Step 1: enable GPIOA clock
+    GPIOA-&gt;MODER |= (1U &lt;&lt; 10);  // Step 2a: set   bit 10
+    GPIOA-&gt;MODER &amp;= ~(1U &lt;&lt; 11); // Step 2b: clear bit 11 → PA5 output
+
+    while (1) {
+        GPIOA-&gt;ODR |= LED_PIN;   // Step 3: bit 5 = 1 → LED on
+        for (int i = 0; i &lt; 100000; i++);
+        GPIOA-&gt;ODR &amp;= ~LED_PIN;  // Step 4: bit 5 = 0 → LED off
+        for (int i = 0; i &lt; 100000; i++);
+    }
+    return 0;                    // never reached
+}
+</code></pre></div>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-why-bits"><div class="deck-slide-body">
+<ul class="disc" id="sl-day1-why-bits-1">
+<li id="sl-day1-why-bits-1-1">
+<div class="para" id="p-derived-sl-day1-why-bits-1-1">One 32-bit register contains many independent settings: for example, the <code class="code-inline tex2jax_ignore">MODER</code> register holds the mode of all 16 pins in a port at once, and a pin’s mode determines whether that pin acts as an input, an output, or something else.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-why-bits-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-why-bits-1-2">
+<div class="para" id="p-derived-sl-day1-why-bits-1-2">To change the mode of one pin you must change its <em class="emphasis">two</em> bits and leave the other 30 exactly as they were.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-why-bits-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-why-bits-1-3">
+<div class="para" id="p-derived-sl-day1-why-bits-1-3">A plain <code class="code-inline tex2jax_ignore">reg = value</code> writes all 32 bits at once: it would overwrite every other setting in the register.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-why-bits-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-why-bits-1-4">
+<div class="para" id="p-derived-sl-day1-why-bits-1-4">Bitwise operators let you change <em class="emphasis">exactly</em> the bits you mean and leave every other bit alone.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-why-bits-1-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-register" data-deck-colwidths="12%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%,5.5%"><div class="deck-slide-body">
+<div class="para" id="sl-day1-register-1">The simplest of blinky’s registers is <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR</code>, the <dfn class="terminology">Output Data Register</dfn> for Port A, which holds whether a pin is HIGH (3.3 V, indicated by a <code class="code-inline tex2jax_ignore">1</code> in the corresponding bit) or LOW (0 V, indicated by a <code class="code-inline tex2jax_ignore">0</code>). A register is just a row of bits, and in ODR each bit is one pin’s on/off switch (bit <em class="emphasis">n</em> drives pin PA<em class="emphasis">n</em>):<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-register-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="tabular-box natural-width"><table class="tabular">
+<tr class="header-horizontal">
+<th scope="col" class="c m b1 r1 l1 t1 lines">bit</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">15</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">14</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">13</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">12</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">11</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">10</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">9</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">8</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">7</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">6</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">5</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">4</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">3</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">2</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">1</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">0</th>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">pin</td>
+<td class="c m b1 r1 l0 t0 lines">PA15</td>
+<td class="c m b1 r1 l0 t0 lines">PA14</td>
+<td class="c m b1 r1 l0 t0 lines">PA13</td>
+<td class="c m b1 r1 l0 t0 lines">PA12</td>
+<td class="c m b1 r1 l0 t0 lines">PA11</td>
+<td class="c m b1 r1 l0 t0 lines">PA10</td>
+<td class="c m b1 r1 l0 t0 lines">PA9</td>
+<td class="c m b1 r1 l0 t0 lines">PA8</td>
+<td class="c m b1 r1 l0 t0 lines">PA7</td>
+<td class="c m b1 r1 l0 t0 lines">PA6</td>
+<td class="c m b1 r1 l0 t0 lines">PA5</td>
+<td class="c m b1 r1 l0 t0 lines">PA4</td>
+<td class="c m b1 r1 l0 t0 lines">PA3</td>
+<td class="c m b1 r1 l0 t0 lines">PA2</td>
+<td class="c m b1 r1 l0 t0 lines">PA1</td>
+<td class="c m b1 r1 l0 t0 lines">PA0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">ODR</code></td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+</table></div>
+<ul class="disc" id="sl-day1-register-3">
+<li id="sl-day1-register-3-1">
+<div class="para" id="p-derived-sl-day1-register-3-1">Bit 5 = PA5 = the on-board LED: the <code class="code-inline tex2jax_ignore">1</code> in bit 5 is what turns it on.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-register-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-shift-mask"><div class="deck-slide-body">
+<div class="para" id="sl-day1-shift-mask-1">
+<dfn class="terminology">From blinky.c:</dfn> <code class="code-inline tex2jax_ignore">#define LED_PIN (1U &lt;&lt; 5)</code><div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-shift-mask-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="para" id="sl-day1-shift-mask-2">That line uses the <dfn class="terminology">left shift</dfn> operator, <code class="code-inline tex2jax_ignore">&lt;&lt;</code>. Writing <code class="code-inline tex2jax_ignore">1U &lt;&lt; n</code> shifts the value 1 left by <code class="code-inline tex2jax_ignore">n</code> bit positions, leaving a single <code class="code-inline tex2jax_ignore">1</code> at position <code class="code-inline tex2jax_ignore">n</code> and zeros everywhere else:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-shift-mask-2" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">1U       = 0b 0000 0000 0000 0000 0000 0000 0000 0001   (bit  0)
+1U &lt;&lt;  5 = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit  5)
+1U &lt;&lt; 10 = 0b 0000 0000 0000 0000 0000 0100 0000 0000   (bit 10)
+</code></pre></div>
+<ul class="disc" id="sl-day1-shift-mask-4">
+<li id="sl-day1-shift-mask-4-1">
+<div class="para" id="p-derived-sl-day1-shift-mask-4-1">The <code class="code-inline tex2jax_ignore">U</code> makes it an unsigned 32-bit value, so that the leading bit isn’t interpreted as a way to indicate a negative number, which could lead to unintended shift behavior around that bit.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-shift-mask-4-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-shift-mask-4-2">
+<div class="para" id="p-derived-sl-day1-shift-mask-4-2">This 32-bit number with all zeros and a single <code class="code-inline tex2jax_ignore">1</code> in the bit we care about is called a <dfn class="terminology">bit mask</dfn>. Naming it with <code class="code-inline tex2jax_ignore">#define</code> makes your code more readable than a bare <code class="code-inline tex2jax_ignore">(1U&lt;&lt;5)</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-shift-mask-4-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-or-operator"><div class="deck-slide-body">
+<div class="para" id="sl-day1-or-operator-1">To turn the LED on in the <code class="code-inline tex2jax_ignore">while</code> loop, we have to set bit 5 of ODR and leave the other bits exactly as they are, and bitwise OR is the operator that does that. First the operator on its own: <code class="code-inline tex2jax_ignore">|</code> compares two values one column at a time, and the result bit is <code class="code-inline tex2jax_ignore">1</code> if <em class="emphasis">either</em> input bit is <code class="code-inline tex2jax_ignore">1</code>:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-or-operator-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="sidebyside">
+<div class="sbsrow" style="margin-left:2%;margin-right:2%;grid-template-columns:58.3333333333333% 33.3333333333333%;column-gap:8%;">
+<div class="sbspanel sbspanel--middle middle" style=""><pre class="program clipboardable"><code class="language-c">  0b 0000 1111
+| 0b 1010 0000
+--------------
+= 0b 1010 1111
+</code></pre></div>
+<div class="sbspanel fixed-width sbspanel--middle middle" style=""><table class="tabular">
+<tr class="header-horizontal">
+<th scope="col" class="c m b1 r1 l1 t1 lines">A</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">B</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">A | B</th>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+</tr>
+</table></div>
+</div>
+</div>
+<div class="para" id="sl-day1-or-operator-3">Each column is independent: there is no carrying like in addition.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-or-operator-3" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-set-bit" data-deck-colwidths="26%,9.25%,9.25%,9.25%,9.25%,9.25%,9.25%,9.25%,9.25%"><div class="deck-slide-body">
+<div class="para" id="sl-day1-set-bit-1">
+<dfn class="terminology">From blinky.c:</dfn> <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR |= LED_PIN;</code><div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-set-bit-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="para" id="sl-day1-set-bit-2">What we want is to set one individual bit in a register without touching any of the others. <code class="code-inline tex2jax_ignore">reg |= mask</code>, which is shorthand for <code class="code-inline tex2jax_ignore">reg = reg | mask</code>, does exactly that: it sets the mask’s <code class="code-inline tex2jax_ignore">1</code>-bits and leaves every other bit alone. Turn PA5 on without disturbing PA2:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-set-bit-2" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="tabular-box natural-width"><table class="tabular">
+<tr class="header-horizontal">
+<th scope="col" class="c m b1 r1 l1 t1 lines">bit</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">7</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">6</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">5</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">4</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">3</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">2</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">1</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">0</th>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">ODR</code></td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">| LED_PIN</code></td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">= ODR</code></td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+</table></div>
+<ul class="disc" id="sl-day1-set-bit-4">
+<li id="sl-day1-set-bit-4-1">
+<div class="para" id="p-derived-sl-day1-set-bit-4-1">Values of <code class="code-inline tex2jax_ignore">1</code> in the mask force that bit to <code class="code-inline tex2jax_ignore">1</code>; values of <code class="code-inline tex2jax_ignore">0</code> in the mask leave the bit as-is, so bit 5 turns on and PA2 stays on.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-set-bit-4-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-set-bit-4-2">
+<div class="para" id="p-derived-sl-day1-set-bit-4-2">
+<code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR |= LED_PIN;</code> turns the LED on and touches nothing else.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-set-bit-4-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-and-operator"><div class="deck-slide-body">
+<div class="para" id="sl-day1-and-operator-1">To turn the LED back off we need to clear the corresponding bit (that is, set it to <code class="code-inline tex2jax_ignore">0</code>) in ODR, and that takes two operators. Bitwise <code class="code-inline tex2jax_ignore">&amp;</code> (AND) keeps a <code class="code-inline tex2jax_ignore">1</code> only where <em class="emphasis">both</em> inputs are <code class="code-inline tex2jax_ignore">1</code>, so AND with <code class="code-inline tex2jax_ignore">0</code> forces a bit to <code class="code-inline tex2jax_ignore">0</code>, and AND with <code class="code-inline tex2jax_ignore">1</code> leaves it unchanged:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-and-operator-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="sidebyside">
+<div class="sbsrow" style="margin-left:2%;margin-right:2%;grid-template-columns:58.3333333333333% 33.3333333333333%;column-gap:8%;">
+<div class="sbspanel sbspanel--middle middle" style=""><pre class="program clipboardable"><code class="language-c">  0b 1010 1111
+&amp; 0b 1111 0111
+--------------
+= 0b 1010 0111
+</code></pre></div>
+<div class="sbspanel fixed-width sbspanel--middle middle" style=""><table class="tabular">
+<tr class="header-horizontal">
+<th scope="col" class="c m b1 r1 l1 t1 lines">A</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">B</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">A &amp; B</th>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+</tr>
+</table></div>
+</div>
+</div>
+<div class="para" id="sl-day1-and-operator-3">To clear one bit we need a mask that is <code class="code-inline tex2jax_ignore">0</code> in just that spot, and that is what <code class="code-inline tex2jax_ignore">~</code> builds:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-and-operator-3" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c"> LED_PIN = 0b 0000 0000 0000 0000 0000 0000 0010 0000   (bit 5 is 1)
+~LED_PIN = 0b 1111 1111 1111 1111 1111 1111 1101 1111   (bit 5 is 0, the rest are 1s)
+</code></pre></div>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-clear-bit" data-deck-colwidths="26%,9.25%,9.25%,9.25%,9.25%,9.25%,9.25%,9.25%,9.25%"><div class="deck-slide-body">
+<div class="para" id="sl-day1-clear-bit-1">
+<dfn class="terminology">From blinky.c:</dfn> <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR &amp;= ~LED_PIN;</code><div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-clear-bit-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="para" id="sl-day1-clear-bit-2">Clearing works the same way on the register. <code class="code-inline tex2jax_ignore">~</code> flips the mask to a single <code class="code-inline tex2jax_ignore">0</code>, then <code class="code-inline tex2jax_ignore">reg &amp;= ~mask</code> clears just that bit. Turn PA5 off, keep PA2:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-clear-bit-2" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="tabular-box natural-width"><table class="tabular">
+<tr class="header-horizontal">
+<th scope="col" class="c m b1 r1 l1 t1 lines">bit</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">7</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">6</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">5</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">4</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">3</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">2</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">1</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">0</th>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">ODR</code></td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">&amp; ~LED_PIN</code></td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">= ODR</code></td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+</table></div>
+<ul class="disc" id="sl-day1-clear-bit-4">
+<li id="sl-day1-clear-bit-4-1">
+<div class="para" id="p-derived-sl-day1-clear-bit-4-1">
+<code class="code-inline tex2jax_ignore">~LED_PIN</code> is all <code class="code-inline tex2jax_ignore">1</code>s except a <code class="code-inline tex2jax_ignore">0</code> at bit 5. AND with <code class="code-inline tex2jax_ignore">1</code> keeps a bit; AND with <code class="code-inline tex2jax_ignore">0</code> forces it low, so bit 5 clears and PA2 stays on.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-clear-bit-4-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-clear-bit-4-2">
+<div class="para" id="p-derived-sl-day1-clear-bit-4-2">
+<code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR &amp;= ~LED_PIN;</code> turns the LED off and touches nothing else.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-clear-bit-4-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-bits-practice" data-deck-room="yes">
+<div class="deck-slide-body">
+<div class="para" id="sl-day1-bits-practice-1">Predict each one, then we’ll check them together:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-bits-practice-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ol class="decimal" id="sl-day1-bits-practice-2">
+<li id="sl-day1-bits-practice-2-1">
+<div class="para" id="p-derived-sl-day1-bits-practice-2-1">What is <code class="code-inline tex2jax_ignore">1U &lt;&lt; 3</code> in binary? Which bit is set? In hex?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 1"><a tabindex="-1" href="#sl-day1-bits-practice-2-1" title="Copy heading and permalink for Item 1" aria-label="Copy heading and permalink for Item 1">🔗</a></div>
+</li>
+<li id="sl-day1-bits-practice-2-2">
+<div class="para" id="p-derived-sl-day1-bits-practice-2-2">Start with <code class="code-inline tex2jax_ignore">x = 0b0000 0001</code>. What is <code class="code-inline tex2jax_ignore">x</code> after <code class="code-inline tex2jax_ignore">x |= (1U &lt;&lt; 2)</code>?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 2"><a tabindex="-1" href="#sl-day1-bits-practice-2-2" title="Copy heading and permalink for Item 2" aria-label="Copy heading and permalink for Item 2">🔗</a></div>
+</li>
+<li id="sl-day1-bits-practice-2-3">
+<div class="para" id="p-derived-sl-day1-bits-practice-2-3">Start with <code class="code-inline tex2jax_ignore">x = 0b1111 1111</code>. What is <code class="code-inline tex2jax_ignore">x</code> after <code class="code-inline tex2jax_ignore">x &amp;= ~(1U &lt;&lt; 4)</code>?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 3"><a tabindex="-1" href="#sl-day1-bits-practice-2-3" title="Copy heading and permalink for Item 3" aria-label="Copy heading and permalink for Item 3">🔗</a></div>
+</li>
+<li id="sl-day1-bits-practice-2-4">
+<div class="para" id="p-derived-sl-day1-bits-practice-2-4">Why use <code class="code-inline tex2jax_ignore">|=</code> and <code class="code-inline tex2jax_ignore">&amp;= ~</code> instead of just writing the whole value with <code class="code-inline tex2jax_ignore">=</code>?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item 4"><a tabindex="-1" href="#sl-day1-bits-practice-2-4" title="Copy heading and permalink for Item 4" aria-label="Copy heading and permalink for Item 4">🔗</a></div>
+</li>
+</ol>
+</div>
+<div class="deck-slide-note">Quick warm-up before the hands-on activity — take predictions from the room, then reveal.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-step1"><div class="deck-slide-body">
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">RCC-&gt;IOPENR |= GPIOAEN;    // GPIOAEN is (1U &lt;&lt; 0) — the mask for bit 0
+</code></pre></div>
+<ul class="disc" id="sl-day1-step1-2">
+<li id="sl-day1-step1-2-1">
+<div class="para" id="p-derived-sl-day1-step1-2-1">
+<code class="code-inline tex2jax_ignore">IOPENR</code> (I/O Port Enable Register) is another row of bits, but here each bit is one whole <em class="emphasis">port’s</em> clock: bit 0 = Port A, bit 1 = Port B, bit 2 = Port C.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step1-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-step1-2-2">
+<div class="para" id="p-derived-sl-day1-step1-2-2">A <code class="code-inline tex2jax_ignore">1</code> in that bit turns the port’s clock on, which gives the port power so its pins can be used. A <code class="code-inline tex2jax_ignore">0</code> turns it off, which saves power but leaves that port’s pins unusable.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step1-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-step1-2-3">
+<div class="para" id="p-derived-sl-day1-step1-2-3">
+<code class="code-inline tex2jax_ignore">GPIOAEN</code> is just <code class="code-inline tex2jax_ignore">(1U &lt;&lt; 0)</code>, the mask for bit 0, so this line sets bit 0 and switches on Port A’s clock.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step1-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-step1-2-4">
+<div class="para" id="p-derived-sl-day1-step1-2-4">Every port’s clock is <em class="emphasis">disabled</em> at reset to save power; until its clock is enabled, reads and writes to that port’s registers do nothing.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step1-2-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-step1-2-5">
+<div class="para" id="p-derived-sl-day1-step1-2-5">So Step 1 must come <em class="emphasis">before</em> any <code class="code-inline tex2jax_ignore">GPIOA-&gt;MODER</code> or <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR</code> access.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step1-2-5" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-step2" data-deck-colwidths="16%,7%,7%,7%,7%,7%,7%,7%,7%,7%,7%,7%,7%"><div class="deck-slide-body">
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">GPIOA-&gt;MODER |=  (1U &lt;&lt; 10);   // Step 2a: set   bit 10
+GPIOA-&gt;MODER &amp;= ~(1U &lt;&lt; 11);   // Step 2b: clear bit 11  → PA5 output
+</code></pre></div>
+<div class="para" id="sl-day1-step2-2">
+<code class="code-inline tex2jax_ignore">MODER</code> is Port A’s <dfn class="terminology">Mode Register</dfn>, and it holds <em class="emphasis">two</em> bits per pin, so 16 pins fill one 32-bit register: pin 0 has bits 0 and 1, pin 1 has bits 2 and 3, and in general pin <em class="emphasis">n</em> has bits 2<em class="emphasis">n</em> and 2<em class="emphasis">n</em>+1. PA5 therefore has bits 10 and 11:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day1-step2-2" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="tabular-box natural-width"><table class="tabular">
+<tr class="header-horizontal">
+<th scope="col" class="c m b1 r1 l1 t1 lines">bit</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">11</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">10</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">9</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">8</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">7</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">6</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">5</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">4</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">3</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">2</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">1</th>
+<th scope="col" class="c m b1 r1 l0 t1 lines">0</th>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines">pin</td>
+<td class="c m b1 r1 l0 t0 lines">PA5</td>
+<td class="c m b1 r1 l0 t0 lines">PA5</td>
+<td class="c m b1 r1 l0 t0 lines">PA4</td>
+<td class="c m b1 r1 l0 t0 lines">PA4</td>
+<td class="c m b1 r1 l0 t0 lines">PA3</td>
+<td class="c m b1 r1 l0 t0 lines">PA3</td>
+<td class="c m b1 r1 l0 t0 lines">PA2</td>
+<td class="c m b1 r1 l0 t0 lines">PA2</td>
+<td class="c m b1 r1 l0 t0 lines">PA1</td>
+<td class="c m b1 r1 l0 t0 lines">PA1</td>
+<td class="c m b1 r1 l0 t0 lines">PA0</td>
+<td class="c m b1 r1 l0 t0 lines">PA0</td>
+</tr>
+<tr>
+<td class="c m b1 r1 l1 t0 lines"><code class="code-inline tex2jax_ignore">MODER</code></td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">1</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+<td class="c m b1 r1 l0 t0 lines">0</td>
+</tr>
+</table></div>
+<ul class="disc" id="sl-day1-step2-4">
+<li id="sl-day1-step2-4-1">
+<div class="para" id="p-derived-sl-day1-step2-4-1">Output mode is <code class="code-inline tex2jax_ignore">01</code>, so write a <code class="code-inline tex2jax_ignore">1</code> into bit 10 and a <code class="code-inline tex2jax_ignore">0</code> into bit 11, which is exactly what the two lines above do. Setting bit 10 alone is not enough: Port A’s MODER resets to <code class="code-inline tex2jax_ignore">0xEBFF FFFF</code>, so <em class="emphasis">both</em> of PA5’s bits are <code class="code-inline tex2jax_ignore">1</code> at reset and the pair reads <code class="code-inline tex2jax_ignore">11</code>, which is analog mode. Bit 11 has to be cleared explicitly.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step2-4-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-step2-4-2">
+<div class="para" id="p-derived-sl-day1-step2-4-2">The four modes a pair can hold are <code class="code-inline tex2jax_ignore">00</code> input, <code class="code-inline tex2jax_ignore">01</code> output, <code class="code-inline tex2jax_ignore">10</code> alternate function and <code class="code-inline tex2jax_ignore">11</code> analog.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step2-4-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day1-step34"><div class="deck-slide-body">
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">while (1) {
+    GPIOA-&gt;ODR |=  LED_PIN;   // Step 3: bit 5 = 1 → 3.3 V → LED on
+    for (int i = 0; i &lt; 100000; i++);          // delay
+    GPIOA-&gt;ODR &amp;= ~LED_PIN;   // Step 4: bit 5 = 0 → 0 V  → LED off
+    for (int i = 0; i &lt; 100000; i++);          // delay
+}
+</code></pre></div>
+<ul class="disc" id="sl-day1-step34-2">
+<li id="sl-day1-step34-2-1">
+<div class="para" id="p-derived-sl-day1-step34-2-1">
+<code class="code-inline tex2jax_ignore">ODR</code> is the <dfn class="terminology">Output Data Register</dfn>: bit 5 defines PA5’s voltage.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step34-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-step34-2-2">
+<div class="para" id="p-derived-sl-day1-step34-2-2">Set bit 5 → LED on; clear bit 5 → LED off. The two delay loops slow the processor down by keeping it busy, so that we can see the blinking.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step34-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day1-step34-2-3">
+<div class="para" id="p-derived-sl-day1-step34-2-3">Inside <code class="code-inline tex2jax_ignore">while (1)</code> they alternate forever, which makes the LED blink.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day1-step34-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <article class="activity project-like" id="act-day1-bit-ops"><h2 class="heading">
 <span class="type">Activity</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">1.2.2</span><span class="period heading-divison-mark heading-divison-mark__period">.</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="title">Bit Manipulation Practice.</span>
 </h2>

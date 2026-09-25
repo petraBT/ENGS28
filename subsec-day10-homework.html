@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -977,6 +978,133 @@ void pb4_exti_init(void) {
 </div>
 <div class="para" id="subsec-day10-homework-11">
 <dfn class="terminology">Gemini’s program does not use the timer interrupt at all.</dfn>  Look at its <code class="code-inline tex2jax_ignore">tim14_init()</code>: no <code class="code-inline tex2jax_ignore">TIM_DIER_UIE</code>, no <code class="code-inline tex2jax_ignore">NVIC_EnableIRQ()</code>, and no timer ISR: the only handler in the file is the button’s <code class="code-inline tex2jax_ignore">EXTI4_15_IRQHandler</code>.  The main loop polls <code class="code-inline tex2jax_ignore">TIM14-&gt;SR</code> instead, which is the <em class="emphasis">polled</em> version we started from.  It works, it is not what was asked for, and reading the code is the only way to notice: on the screen only the printing rate gives it away.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day10-homework-11" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-ai-chatgpt" data-deck-room="compressed">
+<div class="deck-slide-body">
+<div class="para" id="sl-day10-ai-chatgpt-1">Both of the programs that follow are answers to Tuesday’s optional extension, <code class="code-inline tex2jax_ignore">counterResetButtonIntTimer.c</code>: the button-reset counter with <code class="code-inline tex2jax_ignore">delay_ms()</code> replaced by a one-second timer interrupt, so that the program blocks on nothing. Each was produced by asking an AI assistant to do it. Both would compile, and you’ll pick one of them to look at more closely. This is ChatGPT’s, in full.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-ai-chatgpt-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">/* counterResetButtonIntTimer.c -- ChatGPT */
+#include &lt;stdio.h&gt;
+#include "ES28.h"
+#include "uart.h"
+#define MAXCOUNT 100
+void pb4_exti_init(void);
+void tim14_init(void);
+volatile int buttonPushed;
+volatile int timerElapsed;
+
+int main(void) {
+  int counter = 0;
+  uart2_init();
+  printf("Counter demo\r\n");
+  printf("Hex \tDecimal\r\n");
+  pb4_exti_init();
+  tim14_init();
+  buttonPushed = 0;
+  timerElapsed = 0;
+  while (1) {
+    if (timerElapsed) {
+      timerElapsed = 0;
+      printf("%x\t%d\r\n", counter, counter);
+      if (buttonPushed) {
+        counter = 0;
+        buttonPushed = 0;
+      } else if (counter == MAXCOUNT - 1) {
+        counter = 0;
+      } else {
+        counter++;
+      }
+    }
+  }
+  return 0;
+}
+
+void TIM14_IRQHandler(void) {
+    if (TIM14-&gt;SR &amp; TIM_SR_UIF) {
+        TIM14-&gt;SR &amp;= ~TIM_SR_UIF;      // Clear PR flag
+        timerElapsed = 1;
+    }
+}
+
+void tim14_init(void) {
+    RCC-&gt;APBENR2 |= RCC_APBENR2_TIM14EN;
+    TIM14-&gt;PSC = 48000 - 1;
+    TIM14-&gt;ARR = 1000 - 1;
+    TIM14-&gt;SR &amp;= ~TIM_SR_UIF;
+    TIM14-&gt;DIER |= TIM_DIER_UIE;
+    NVIC_EnableIRQ(TIM14_IRQn);
+    TIM14-&gt;CR1 |= TIM_CR1_CEN;
+}
+
+void EXTI4_15_IRQHandler(void){
+    // unchanged from our code
+}
+
+void pb4_exti_init(void) {
+    // unchanged from our code
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-note">The whole program, so nothing has to be taken on trust — scroll the listing to reach tim14_init(), which is where two of the five findings are. The two stubs at the bottom are marked "unchanged from our code" by the assistant itself; that is its text, not an abridgement.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-ai-gemini" data-deck-room="compressed">
+<div class="deck-slide-body">
+<div class="para" id="sl-day10-ai-gemini-1">Here is Gemini’s answer to the same assignment, in full.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-ai-gemini-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">/* counterResetButtonIntTimer.c -- Gemini */
+#include &lt;stdio.h&gt;
+#include "ES28.h"
+#include "uart.h"
+#define MAXCOUNT 100
+void pb4_exti_init(void);
+void tim14_init(void);
+volatile int buttonPushed;
+
+int main(void) {
+  int counter = 0;
+  // Initialize peripherals
+  uart2_init();
+  pb4_exti_init();
+  tim14_init();
+  buttonPushed = 0;
+  printf("Counter ...\r\n");
+  printf("Hex \tDecimal\r\n");
+  while(1) {
+    if (TIM14-&gt;SR &amp; TIM_SR_UIF) {
+      TIM14-&gt;SR &amp;= ~TIM_SR_UIF;        // Clear PR flag
+      printf("%x\t%d\r\n", counter, counter);
+      // Logic for counting and button reset
+      if (buttonPushed) {
+        counter = 0;
+        buttonPushed = 0;
+      } else if (counter &gt;= MAXCOUNT - 1) {
+        counter = 0;
+      } else {
+        counter++;
+      }
+    }
+  }
+  return 0;
+}
+
+void tim14_init(void) {
+    RCC-&gt;APBENR2 |= RCC_APBENR2_TIM14EN;
+    TIM14-&gt;PSC = 16000 - 1;
+    TIM14-&gt;ARR = 1000 - 1;
+    TIM14-&gt;EGR |= TIM_EGR_UG;
+    TIM14-&gt;CR1 |= TIM_CR1_CEN;
+}
+
+void EXTI4_15_IRQHandler(void){
+    // unchanged from our code
+}
+
+void pb4_exti_init(void) {
+    // unchanged from our code
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-note">Also complete. This one is shorter than ChatGPT’s for a reason the room is meant to find: there is no TIM14_IRQHandler in it anywhere, and no UIE and no NVIC_EnableIRQ in tim14_init(). Both listings stay reachable while the groups work, so nobody has to remember a line. A working reference copy is on Canvas and goes to the whole room before groups form, so that a student whose homework did not run has something to compare against and never has to say so out loud.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 10.3.1: Part 1: Homework Review, and Two AI Solutions"><a tabindex="-1" href="#subsec-day10-homework" title="Copy heading and permalink for Subsection 10.3.1: Part 1: Homework Review, and Two AI Solutions" aria-label="Copy heading and permalink for Subsection 10.3.1: Part 1: Homework Review, and Two AI Solutions">🔗</a></div>
 </section>

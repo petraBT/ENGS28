@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -855,6 +856,61 @@ uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
 }
 </code></pre></div>
 <div class="para" id="subsec-day13-what-ran-4">The program has the same shape as the programs we have been writing all term: initialize the two peripherals, print a startup message, and then a loop that does one thing once a second: read WHO_AM_I, compare what came back to the number 0x33, and print one of two lines.  The only function it defines besides <code class="code-inline tex2jax_ignore">main()</code>, <code class="code-inline tex2jax_ignore">lsm303_AccelRegisterRead()</code>, is a single call into the I2C library from <a href="ch-i2c.html" class="internal" title="Chapter 10: I2C: A Two-Wire Bus, and a Display Driver">Chapter 10</a>: <code class="code-inline tex2jax_ignore">i2c1_memRead()</code>, asked for one byte from one register. Receiving 0x33 back from the accelerometer as the contents of the WHO_AM_I register verifies the whole read path: the wiring, the device address, the protocol and the code all had to work for that value to arrive.  If it prints <code class="code-inline tex2jax_ignore">Could not connect to accelerometer</code> instead, that is data too.  The analyzer we are about to put on the bus shows exactly what the wire is doing.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13-what-ran-4" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13-whoami-main">
+<div class="deck-slide-body"><div class="code-box"><pre class="program clipboardable"><code class="language-c">#define LSM303_ADDRESS_ACCEL       (0x32 &gt;&gt; 1)
+#define LSM303_WHO_AM_I_A		   0x0F	  		// default value: 0x33 (00110011)
+uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress);
+
+int main(void) {
+	uint8_t who_am_i = 0;
+	i2c1_init();
+	uart2_init();
+	printf("LSM303AGR initialization test \n\r");
+	while(1) {
+		who_am_i = lsm303_AccelRegisterRead(LSM303_WHO_AM_I_A);
+		if( who_am_i == 0x33 ) {
+			printf("Accelerometer initialized! \n\r");
+		}
+		else {
+			printf("Could not connect to accelerometer \n\r");
+		}
+		delay_ms(1000);
+	}
+	return 0;
+}
+</code></pre></div></div>
+<div class="deck-slide-note">≈ 3 min. Walk it top down: the loop reads WHO_AM_I once a second, forever. Say out loud that the address is written (0x32 &gt;&gt; 1) — and that we are not explaining the shift yet; the analyzer will. The listing is abridged for the wall (#includes, the address comment and the blank lines are off it); the full file is in the book and in Src.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13-whoami-read">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13-whoami-read-1">Recall that the I2C library contains five functions: <code class="code-inline tex2jax_ignore">i2c1_init()</code>, <code class="code-inline tex2jax_ignore">i2c1_byteWrite()</code>, <code class="code-inline tex2jax_ignore">i2c1_byteRead()</code>, <code class="code-inline tex2jax_ignore">i2c1_memWrite()</code> and <code class="code-inline tex2jax_ignore">i2c1_memRead()</code>.  To read the contents of a register from the accelerometer we use <code class="code-inline tex2jax_ignore">i2c1_memRead()</code>, via the following function:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13-whoami-read-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">/* Read one byte from an accelerometer register (Datasheet, Table 22) */
+uint8_t lsm303_AccelRegisterRead(uint8_t RegisterAddress) {
+	uint8_t data;
+	i2c1_memRead(LSM303_ADDRESS_ACCEL, RegisterAddress, 1, &amp;data);
+
+ 	return data;
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. Five functions, named once on the wall — this is the one that does register reads.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13-whoami-proves">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day13-whoami-proves-1">
+<li id="sl-day13-whoami-proves-1-1">
+<div class="para" id="p-derived-sl-day13-whoami-proves-1-1">Receiving 0x33 back from the accelerometer as the contents of the WHO_AM_I register verifies the whole read path: the wiring, the device address, the protocol, and the code all had to work for that value to arrive.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13-whoami-proves-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day13-whoami-proves-1-2">
+<div class="para" id="p-derived-sl-day13-whoami-proves-1-2">It is not yet evidence about how the sensor is configured, since the control registers are still at their power-on defaults, and setting them up is work still ahead of us.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13-whoami-proves-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">≈ 2 min. This is the reading’s WHO_AM_I point, said once in class: proof of communication, not of configuration.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 12.2.3: Part 3: What Just Ran"><a tabindex="-1" href="#subsec-day13-what-ran" title="Copy heading and permalink for Subsection 12.2.3: Part 3: What Just Ran" aria-label="Copy heading and permalink for Subsection 12.2.3: Part 3: What Just Ran">🔗</a></div>
 </section>

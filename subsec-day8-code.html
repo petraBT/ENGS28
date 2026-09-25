@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -967,6 +968,81 @@ void tim14_500ms_interrupt_init() {
     </style>
 <div class="sim-embed">
 <iframe title="ENGS 28 board simulator" src="external/board-sim/index.html?embed=1&amp;src=../sim-starters/blinkyTimerInt.c" width="100%" height="740" style="position: absolute; top: -9999em; visibility: hidden; border: none;" onload="this.style.position='static'; this.style.visibility='visible';"></iframe><p class="sim-embed-links"><a href="external/board-sim/index.html?src=../sim-starters/blinkyTimerInt.c" target="_blank">Open the simulator in a new tab</a></p>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-skeleton">
+<div class="deck-slide-body">
+<div class="para" id="sl-day8-skeleton-1">
+<dfn class="terminology">blinkyTimerInt.c: the polled program with its core moved.</dfn> The five init lines are the ones already running on your board. Blanks 1 and 2 are here, in the init; blanks 3 and 4 are on the next slide.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-skeleton-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">// TODO 1   raise an interrupt per update      TIM14-&gt;DIER
+// TODO 2   let it through the controller      NVIC_EnableIRQ( ... )
+
+void tim14_500ms_interrupt_init() {
+    __disable_irq();               // given: no interrupts during setup
+    RCC-&gt;APBENR2 |= RCC_APBENR2_TIM14EN;
+    TIM14-&gt;PSC = PSC_FACTOR - 1;
+    TIM14-&gt;ARR = ARR_FACTOR - 1;
+    TIM14-&gt;CNT = 0;
+
+    // TODO 1 -- enable the update interrupt in the timer itself
+
+    // TODO 2 -- enable TIM14's line in the NVIC
+
+    TIM14-&gt;CR1 |= TIM_CR1_CEN;
+    __enable_irq();                // given: setup done, interrupts on
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">Blanks 1 and 2: two lines, both inside the init you already have.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-skeleton-isr">
+<div class="deck-slide-body">
+<div class="para" id="sl-day8-skeleton-isr-1">
+<dfn class="terminology">blinkyTimerInt.c, continued: blanks 3 and 4.</dfn> Neither one lives in the init: the handler is a function of its own, and the flag is what connects it to <code class="code-inline tex2jax_ignore">main()</code>.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-skeleton-isr-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">// TODO 3   the handler itself     exact name, copied from startup file
+// TODO 4   the shared flag        declare / initialize / consume; one keyword matters
+
+// TODO 3 -- the ISR: exact name; no arguments, no return value.
+//           Inside (bracketed by __disable_irq()/__enable_irq()), do TWO things:
+//           clear UIF the Part 5 way (TIM14-&gt;SR = ~TIM_SR_UIF;), set your own (volatile!) flag.
+
+// TODO 4 -- in main: the timer registers appear NOWHERE in the loop.
+//           When your flag is set: clear it, toggle the LED.
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">Everything new was on the last four slides. The full file is on Canvas.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day8-ladder">
+<div class="deck-slide-body">
+<div class="para" id="sl-day8-ladder-1">
+<dfn class="terminology">LED not blinking? Walk through the steps in order.</dfn> Board completely dead: no LED, no serial output at all? Jump straight to step 3.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day8-ladder-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day8-ladder-2">
+<li id="sl-day8-ladder-2-1">
+<div class="para" id="p-derived-sl-day8-ladder-2-1">1.  Build clean? <code class="code-inline tex2jax_ignore">blinkyTimerInt.c</code> <dfn class="terminology">included</dfn>, <code class="code-inline tex2jax_ignore">blinkyTimerPolled.c</code> <dfn class="terminology">excluded</dfn>, via <em class="emphasis">Resource Configurations → Exclude from Build</em>?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-ladder-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-ladder-2-2">
+<div class="para" id="p-derived-sl-day8-ladder-2-2">2.  Swap back for a moment: does the <dfn class="terminology">polled</dfn> version still blink? If yes, your timer config is fine: the fault is in the interrupt path (steps 3 and 4).</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-ladder-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-ladder-2-3">
+<div class="para" id="p-derived-sl-day8-ladder-2-3">3.  ISR name <dfn class="terminology">exactly</dfn> <code class="code-inline tex2jax_ignore">TIM14_IRQHandler</code>, copied from the startup file? A near-miss builds and links with zero warnings, and the board may look completely dead rather than merely dark.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-ladder-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-ladder-2-4">
+<div class="para" id="p-derived-sl-day8-ladder-2-4">4.  <dfn class="terminology">Both</dfn> enables present? UIE in <code class="code-inline tex2jax_ignore">TIM14-&gt;DIER</code> <em class="emphasis">and</em> <code class="code-inline tex2jax_ignore">NVIC_EnableIRQ(TIM14_IRQn)</code>. Either alone is silence.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-ladder-2-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day8-ladder-2-5">
+<div class="para" id="p-derived-sl-day8-ladder-2-5">Done early instead? 250 ms toggle <em class="emphasis">without touching PSC</em>; then <em class="emphasis">without touching ARR</em>. Now imagine your clock was running at 48 MHz (which our chip can do): how could you make the 250 ms or 500 ms blink rate work?</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day8-ladder-2-5" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">Four steps, in order: each one rules out a layer.</div>
+<div class="deck-slide-note">Stays up for all of Part 7. Out of time: the solution slide is next, and the file goes to Canvas after class.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 8.2.7: Part 7: Writing blinkyTimerInt.c"><a tabindex="-1" href="#subsec-day8-code" title="Copy heading and permalink for Subsection 8.2.7: Part 7: Writing blinkyTimerInt.c" aria-label="Copy heading and permalink for Subsection 8.2.7: Part 7: Writing blinkyTimerInt.c">🔗</a></div>
 </section>

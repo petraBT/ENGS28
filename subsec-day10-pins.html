@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -868,6 +869,97 @@ eBookConfig.enable_chatcodes =  false;
 <div class="para" id="subsec-day10-pins-13">The alternate function selection consists of two 32-bit registers (<code class="code-inline tex2jax_ignore">AFR[0]</code> and <code class="code-inline tex2jax_ignore">AFR[1]</code>), the first one for pins 0–7 and the second one for pins 8–15. So PB8 and PB9 are configured in <code class="code-inline tex2jax_ignore">AFR[1]</code>. The reference manual calls this register for the higher-numbered pins <code class="code-inline tex2jax_ignore">GPIOx_AFRH</code>, which is why the field names read <code class="code-inline tex2jax_ignore">GPIO_AFRH_AFSEL8</code>.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day10-pins-13" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="para" id="subsec-day10-pins-14">The four <code class="code-inline tex2jax_ignore">TIMINGR</code> lines we will leave alone.  They set how long SCL spends HIGH, how long it spends LOW, and how long the peripheral waits around the edges before it changes or samples SDA, and the values are the ones this board needs at 100 kHz. <a href="subsec-i2c-ref-timingr.html" class="internal" title="Subsection 10.4.6: Where the TIMINGR Numbers Come From">Subsection 10.4.6</a> works out where <code class="code-inline tex2jax_ignore">PRESC</code> comes from and checks <code class="code-inline tex2jax_ignore">SCLL</code> and <code class="code-inline tex2jax_ignore">SCLH</code> against the bus speed, which is worth reading the day you move this code to a board whose clock runs at a different speed.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day10-pins-14" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-pins" data-deck-ref="fig-i2c-pins">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">I2C1’s SCL and SDA come out on several pin pairs. We use the boxed one: PB8 for SCL and PB9 for SDA, which are D15 and D14 on the header.</div>
+<div class="deck-slide-note">Figure-focus deliberately: with bullets above it this pinout projects at about 380 px and PB8/PB9 are four pixels tall, which is exactly what the slide asks the room to find. The alternate-function points are on the next slide.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-af6"><div class="deck-slide-body">
+<div class="para" id="sl-day10-af6-1">Getting a peripheral’s signal onto a pin is the alternate-function mechanism you first used for the UART.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-af6-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day10-af6-2">
+<li id="sl-day10-af6-2-1">
+<div class="para" id="p-derived-sl-day10-af6-2-1">Put the pin in alternate function mode with <code class="code-inline tex2jax_ignore">MODER</code>, then choose <em class="emphasis">which</em> alternate function with <code class="code-inline tex2jax_ignore">AFR</code>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-af6-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-af6-2-2">
+<div class="para" id="p-derived-sl-day10-af6-2-2">The number to choose is in the <dfn class="terminology">datasheet</dfn>, not the reference manual, DS13867 Table 15, <em class="emphasis">Port B alternate function mapping</em>, where the PB8 row and the PB9 row both name I2C1 under <dfn class="terminology">AF6</dfn>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-af6-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-af6-table" data-deck-ref="fig-stm32-af-pb8-pb9">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">Two rows in red, one column in red, and the answer is where they meet. This is the whole lookup, and it is the one to repeat for any peripheral you want on any pin. Note that PB6 and PB7 carry I2C1 on AF6 as well, the pinout figure’s several pin pairs, in table form.</div>
+<div class="deck-slide-note">Show the lookup, not the answer: the row first, then across to the column, then read the cell. Pin functions live in the datasheet and the reference manual will not tell you this, which is the datasheet-literacy beat for the day.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-opendrain" data-deck-room="yes"><div class="deck-slide-body">
+<div class="para" id="sl-day10-opendrain-1">One thing that is new is that rather than being in push-pull mode, both pins have to be configured <dfn class="terminology">open-drain</dfn>. This is accomplished via the GPIO output type register <code class="code-inline tex2jax_ignore">GPIOx_OTYPER</code> (RM0490 §6.4.2): a 1 in bit y means pin y is open-drain, and 0, the reset value, means push-pull.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-opendrain-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">GPIOB-&gt;OTYPER |= (GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9);
+
+push-pull:    writing 1 drives the pin to 3.3 V, 0 drives it to 0 V
+open-drain:   writing 0 pulls the pin LOW; writing 1 lets go, and the
+              external pull-up sets the level
+</code></pre></div>
+<ul class="disc" id="sl-day10-opendrain-3">
+<li id="sl-day10-opendrain-3-1">
+<div class="para" id="p-derived-sl-day10-opendrain-3-1">This behavior is necessary on the I2C bus: <dfn class="terminology">SDA changes hands every ninth bit</dfn>. On a write the controller drives eight bits then lets go of the data line and the device drives the acknowledge, on a read it is the other way round. Letting go means letting the line float, not forcing it to ground or 3.3 V.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-opendrain-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-opendrain-3-2">
+<div class="para" id="p-derived-sl-day10-opendrain-3-2"><dfn class="terminology">Before we look: if both ends were push-pull for that one moment, one driving HIGH and one driving LOW, what would happen across the data wire?</dfn></div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-opendrain-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-opendrain-fig" data-deck-ref="fig-open-drain">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">A short circuit. Left: both ends push-pull, 3.3 V straight to ground through two transistors, and nothing decides the level. Right: the same disagreement open-drain, the only path from the supply is through the pull-up, and the wire reads LOW.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-opendrain-more"><div class="deck-slide-body">
+<div class="para" id="sl-day10-opendrain-more-1">This is also why the pull-up matters.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-opendrain-more-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day10-opendrain-more-2">
+<li id="sl-day10-opendrain-more-2-1">
+<div class="para" id="p-derived-sl-day10-opendrain-more-2-1">The <dfn class="terminology">ACK</dfn> works because of the pull-up and the open-drain configuration, and so do two other features: <dfn class="terminology">several controllers</dfn> can share one bus, which we will see soon, and a device can <dfn class="terminology">hold SCL LOW</dfn> to ask for more time, which we will not be using. The Reference section has both. If there were no pull-up anywhere then the line could never be released HIGH (nothing on an open-drain bus drives HIGH), so the level would simply be undefined.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-opendrain-more-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day10-opendrain-more-2-2">
+<div class="para" id="p-derived-sl-day10-opendrain-more-2-2">Pull-ups are typically 5 kΩ to 10 kΩ, but we don’t have to use external ones, because both devices we use in this course come on breakout boards that carry their own. This is definitely something you need to check on the datasheet of anything you build on your own. The value for the pull-up is squeezed from both ends: <dfn class="terminology">too small</dfn> and the device pulling LOW cannot sink enough current to hold the line below threshold; <dfn class="terminology">too large</dfn> and the resistor charges the bus capacitance too slowly to get back up before the next clock edge.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-opendrain-more-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day10-init-code" data-deck-room="compressed">
+<div class="deck-slide-body">
+<div class="para" id="sl-day10-init-code-1">We configure the pins first, then the peripheral. <code class="code-inline tex2jax_ignore">PE</code>, which enables the peripheral, is cleared before <code class="code-inline tex2jax_ignore">TIMINGR</code> is touched and set again after since the timing register may only be written while the peripheral is disabled.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day10-init-code-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">RCC-&gt;IOPENR |= RCC_IOPENR_GPIOBEN;                       // clock to GPIOB
+GPIOB-&gt;MODER = (GPIOB-&gt;MODER &amp; ~GPIO_MODER_MODE8_Msk)    // alternate function
+             | (GPIO_ALTERNATE &lt;&lt; GPIO_MODER_MODE8_Pos);
+GPIOB-&gt;AFR[1] = ((GPIOB-&gt;AFR[1]) &amp; ~GPIO_AFRH_AFSEL8_Msk)   // ... which one:
+              | (GPIO_AF6 &lt;&lt; GPIO_AFRH_AFSEL8_Pos);         // AF6
+      // ... the same two lines again for PB9 ...
+GPIOB-&gt;OTYPER |= (GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9);    // open drain
+RCC-&gt;APBENR1 |= RCC_APBENR1_I2C1EN;   // clock to I2C1
+I2C1-&gt;CR1 &amp;= ~I2C_CR1_PE;             // TIMINGR is writable only when
+I2C1-&gt;TIMINGR &amp;= 0x0;                 //   the peripheral is disabled
+I2C1-&gt;TIMINGR |= (0x2 &lt;&lt; I2C_TIMINGR_PRESC_Pos);
+I2C1-&gt;TIMINGR |= (0x4 &lt;&lt; I2C_TIMINGR_SCLDEL_Pos) | (0x2 &lt;&lt; I2C_TIMINGR_SDADEL_Pos);
+I2C1-&gt;TIMINGR |= (0xf &lt;&lt; I2C_TIMINGR_SCLH_Pos) | (0x13 &lt;&lt; I2C_TIMINGR_SCLL_Pos);
+I2C1-&gt;CR1 |= I2C_CR1_PE;              // ... and enable again
+</code></pre></div>
+<ul class="disc" id="sl-day10-init-code-3">
+<li id="sl-day10-init-code-3-1">
+<div class="para" id="p-derived-sl-day10-init-code-3-1">
+<code class="code-inline tex2jax_ignore">AFR[0]</code> is for pins 0–7 and <code class="code-inline tex2jax_ignore">AFR[1]</code> pins 8–15, so PB8 and PB9 use <code class="code-inline tex2jax_ignore">AFR[1]</code>, which the manual calls <code class="code-inline tex2jax_ignore">GPIOx_AFRH</code>, hence <code class="code-inline tex2jax_ignore">GPIO_AFRH_AFSEL8</code>. <dfn class="terminology">The four <code class="code-inline tex2jax_ignore">TIMINGR</code> lines</dfn> set how long SCL spends HIGH and LOW and how long it waits around the edges, at the values this board needs for 100 kHz. The Reference section derives them.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day10-init-code-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">Abridged: PB9’s MODER and AFR lines are dropped so the function fits legibly. The book carries the full version — say so. TIMINGR is deliberately not taught (Petra, 2026-08-07). If somebody asks where 0x2 comes from, the one-line answer is that the prescaler divides I2CCLK down to 4 MHz and 12/4 − 1 = 2; the derivation and the three RM0490 tables are in Reference.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 10.3.6: Part 6: The Pins, and Why They Must Be Open-Drain"><a tabindex="-1" href="#subsec-day10-pins" title="Copy heading and permalink for Subsection 10.3.6: Part 6: The Pins, and Why They Must Be Open-Drain" aria-label="Copy heading and permalink for Subsection 10.3.6: Part 6: The Pins, and Why They Must Be Open-Drain">🔗</a></div>
 </section>

@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -827,7 +828,50 @@ eBookConfig.enable_chatcodes =  false;
 </div>
 <figure class="figure figure-like" id="fig-exti-imr1"><div class="image-box" style="width: 72%; margin-left: 14%; margin-right: 14%;"><img src="external/images/Day09-Interrupts(2)/exti_imr1.svg" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">9.2.11<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span><code class="code-inline tex2jax_ignore">EXTI_IMR1</code>, the CPU wakeup with interrupt mask register (RM0490 §12.5.7, offset 0x080).  One bit per line: 1 lets a detected event on that line request an interrupt, 0 masks it.  Every GPIO line, IM0 through IM15, is masked at reset, so an unset bit here is the quietest possible bug: the edge is detected, nothing is recorded in <code class="code-inline tex2jax_ignore">EXTI_FPR1</code>, and nothing ever happens.  (The reset value is 0xFFF8 0000: the direct peripheral lines 19, 23, 25 and 31 are unmasked at reset, which is why the top of the register is not all zeros.)<div class="autopermalink" aria-hidden="true" data-description="Figure 9.2.11"><a tabindex="-1" href="#fig-exti-imr1" title="Copy heading and permalink for Figure 9.2.11" aria-label="Copy heading and permalink for Figure 9.2.11">🔗</a></div></figcaption>
-</figure>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day9-ftsr" data-deck-ref="fig-exti-ftsr1" data-deck-stack="yes">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day9-ftsr-1">
+<li id="sl-day9-ftsr-1-1">
+<div class="para" id="p-derived-sl-day9-ftsr-1-1">The button pin idles HIGH and goes LOW when the button is pressed, so the <dfn class="terminology">button press creates a falling edge</dfn>. We need to notify the EXTI that we are looking for a falling edge on EXTI4.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-ftsr-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-ftsr-1-2">
+<div class="para" id="p-derived-sl-day9-ftsr-1-2">
+<code class="code-inline tex2jax_ignore">EXTI_FTSR1</code> is the <dfn class="terminology">falling trigger selection register</dfn>, RM0490 §12.5.2. It is the edge-detection stage of the EXTI signal path, and it decides, per line, whether a falling edge counts as an event.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-ftsr-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-ftsr-1-3">
+<div class="para" id="p-derived-sl-day9-ftsr-1-3">Each bit <code class="code-inline tex2jax_ignore">FT0</code>–<code class="code-inline tex2jax_ignore">FT15</code> in <code class="code-inline tex2jax_ignore">EXTI_FTSR1</code> corresponds to one EXTI line, and setting the bit enables falling-edge detection. The bit number <em class="emphasis">corresponds to</em> the line number.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-ftsr-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">Setting FT4 is what makes a press on PB4 an event at all. <code class="code-inline tex2jax_ignore">EXTI_RTSR1</code> is the matching rising-edge register, which we do not need today.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-imr" data-deck-ref="fig-exti-imr1" data-deck-stack="yes">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day9-imr-1">
+<li id="sl-day9-imr-1-1">
+<div class="para" id="p-derived-sl-day9-imr-1-1">Detecting an edge and requesting an interrupt are <dfn class="terminology">deliberately separate</dfn>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-imr-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-imr-1-2">
+<div class="para" id="p-derived-sl-day9-imr-1-2">
+<code class="code-inline tex2jax_ignore">EXTI_IMR1</code> is the <dfn class="terminology">interrupt mask register</dfn>. One bit in it decides, per line, whether that line’s events are allowed through.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-imr-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-imr-1-3">
+<div class="para" id="p-derived-sl-day9-imr-1-3">If an edge is detected on a line that is masked in <code class="code-inline tex2jax_ignore">EXTI_IMR1</code>, the event does not generate an interrupt request to the NVIC. For a masked line, the falling edge does not set the corresponding bit in <code class="code-inline tex2jax_ignore">EXTI_FPR1</code>, the <dfn class="terminology">falling edge pending register</dfn>. For an unmasked line, the pending bit is set and the EXTI logic then generates the interrupt request that is sent to the NVIC.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-imr-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-imr-1-4">
+<div class="para" id="p-derived-sl-day9-imr-1-4">Every GPIO line is masked at reset, so a missing bit here is the <dfn class="terminology">quietest possible bug</dfn>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-imr-1-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">Set IM4 and a detected event on line 4 may finally ask for the CPU.</div>
+</div>
 <div class="para" id="subsec-day9-ftsr-imr-nvic-9">
 <em class="emphasis">Whether the NVIC will listen.</em>  This is the timer’s second enable, unchanged.  The CMSIS (Cortex Microcontroller Software Interface Standard) function takes the constant built from Table 40’s acronym, and for us that is the row covering lines 4 through 15:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-ftsr-imr-nvic-9" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
@@ -862,6 +906,66 @@ NVIC_EnableIRQ(EXTI4_15_IRQn);   // let the request reach the CPU
     __enable_irq();                         // Enable global interrupts
 }
 </code></pre></div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-four-switches"><div class="deck-slide-body">
+<div class="para" id="sl-day9-four-switches-1">Everything that has to be true so that a press on PB4 reaches the handler:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-four-switches-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">EXTI-&gt;EXTICR[1] &amp;= ~EXTI_EXTICR2_EXTI4_Msk;             // 1. port B ...
+EXTI-&gt;EXTICR[1] |= (EXTI_PB &lt;&lt; EXTI_EXTICR2_EXTI4_Pos); //    ... on line EXTI4
+EXTI-&gt;FTSR1 |= EXTI_FTSR1_FT4;   // 2. a falling edge counts as an event
+EXTI-&gt;IMR1  |= EXTI_IMR1_IM4;    // 3. unmask the line, so the event may ask
+NVIC_EnableIRQ(EXTI4_15_IRQn);   // 4. and the NVIC will deliver it
+</code></pre></div>
+<ul class="disc" id="sl-day9-four-switches-3">
+<li id="sl-day9-four-switches-3-1">
+<div class="para" id="p-derived-sl-day9-four-switches-3-1">
+<code class="code-inline tex2jax_ignore">EXTI_EXTICR2</code>: <dfn class="terminology">which port</dfn> is on line EXTI4. Without it the line listens to some other port’s pin 4.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-switches-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-switches-3-2">
+<div class="para" id="p-derived-sl-day9-four-switches-3-2">
+<code class="code-inline tex2jax_ignore">EXTI_FTSR1</code>: <dfn class="terminology">which edge</dfn> counts. Without it nothing is ever detected.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-switches-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-switches-3-3">
+<div class="para" id="p-derived-sl-day9-four-switches-3-3">
+<code class="code-inline tex2jax_ignore">EXTI_IMR1</code>: the <dfn class="terminology">mask</dfn>. Without it the edge is detected and goes no further.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-switches-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-switches-3-4">
+<div class="para" id="p-derived-sl-day9-four-switches-3-4">
+<code class="code-inline tex2jax_ignore">NVIC_EnableIRQ()</code>: the <dfn class="terminology">NVIC</dfn>. Without it the request never reaches the CPU.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-switches-3-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-switches-3-5">
+<div class="para" id="p-derived-sl-day9-four-switches-3-5">Forget any one of the four and there is no error, no warning, and no interrupt.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-switches-3-5" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-init-code">
+<div class="deck-slide-body">
+<div class="para" id="sl-day9-init-code-1">Here is <code class="code-inline tex2jax_ignore">pb4_exti_init()</code> in full:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-init-code-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">void pb4_exti_init(void) {
+    __disable_irq();
+    RCC-&gt;IOPENR |= RCC_IOPENR_GPIOBEN;      // clock to GPIOB
+    GPIOB-&gt;MODER &amp;= ~GPIO_MODER_MODE4_Msk;  // PB4 as input
+    GPIOB-&gt;MODER |= (GPIO_INPUT &lt;&lt; GPIO_MODER_MODE4_Pos);
+    GPIOB-&gt;PUPDR &amp;= ~GPIO_PUPDR_PUPD4_Msk;  // pull-up on PB4
+    GPIOB-&gt;PUPDR |= (GPIO_PULLUP &lt;&lt; GPIO_PUPDR_PUPD4_Pos);
+
+    EXTI-&gt;EXTICR[1] &amp;= ~EXTI_EXTICR2_EXTI4_Msk;             // 1. which port
+    EXTI-&gt;EXTICR[1] |= (EXTI_PB &lt;&lt; EXTI_EXTICR2_EXTI4_Pos);
+    EXTI-&gt;FTSR1 |= EXTI_FTSR1_FT4;                          // 2. which edge
+    EXTI-&gt;IMR1  |= EXTI_IMR1_IM4;                           // 3. unmask
+    NVIC_EnableIRQ(EXTI4_15_IRQn);                          // 4. the NVIC
+
+    __enable_irq();
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">The top part configures the pin as an input pin. The bottom part sets it up to be able to interrupt on a falling edge.</div>
+</div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 9.2.5: Part 4b: The Edge, the Mask, and the NVIC"><a tabindex="-1" href="#subsec-day9-ftsr-imr-nvic" title="Copy heading and permalink for Subsection 9.2.5: Part 4b: The Edge, the Mask, and the NVIC" aria-label="Copy heading and permalink for Subsection 9.2.5: Part 4b: The Edge, the Mask, and the NVIC">🔗</a></div>
 </section>
 </div>

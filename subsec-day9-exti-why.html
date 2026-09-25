@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -818,19 +819,129 @@ eBookConfig.enable_chatcodes =  false;
 </div>
 <figure class="figure figure-like" id="fig-exti-mux"><div class="image-box" style="width: 90%; margin-left: 5%; margin-right: 5%;"><img src="external/images/Day09-Interrupts(2)/exti_mux.svg" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">9.2.2<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>The EXTI’s GPIO multiplexer (<a class="external" href="external/stm32c031_rm.pdf" target="_blank">RM0490</a> §12.3.3).  Pin <span class="process-math">\(n\)</span> of every port is an input to the multiplexer whose output is line EXTI<span class="process-math">\(n\text{,}\)</span> so there are sixteen lines rather than one per pin.  Because each multiplexer has one output, only one port can be selected on a given line at a time: PA4 and PB4 cannot both interrupt through EXTI4.<div class="autopermalink" aria-hidden="true" data-description="Figure 9.2.2"><a tabindex="-1" href="#fig-exti-mux" title="Copy heading and permalink for Figure 9.2.2" aria-label="Copy heading and permalink for Figure 9.2.2">🔗</a></div></figcaption>
-</figure>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day9-exti-mux" data-deck-ref="fig-exti-mux" data-deck-stack="yes">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day9-exti-mux-1">
+<li id="sl-day9-exti-mux-1-1">
+<div class="para" id="p-derived-sl-day9-exti-mux-1-1">Recall from the reading that a timer, the ADC, a USART, etc each have one line into the NVIC per peripheral, and each occupy one row in the vector table. This concept cannot be extended to the 48 pins our processor has.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-mux-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exti-mux-1-2">
+<div class="para" id="p-derived-sl-day9-exti-mux-1-2">The pins are therefore multiplexed first. Pin <em class="emphasis">n</em> of every port feeds one multiplexer, whose output is line EXTI<em class="emphasis">n</em>: sixteen lines, one per pin number.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-mux-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exti-mux-1-3">
+<div class="para" id="p-derived-sl-day9-exti-mux-1-3">Each multiplexer has one output, so <dfn class="terminology">only one port at a time</dfn> can be on a given line: PA4 and PB4 cannot both interrupt through EXTI4.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-mux-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">Every port’s pin <em class="emphasis">n</em> arrives at the same multiplexer, and only one of them is passed through.</div>
+</div>
 <div class="para" id="subsec-day9-exti-why-5">Sixteen lines is a large reduction from forty-eight pins, and it is still more room than the NVIC has to give.  Its vector table is shared with every other peripheral on the chip (the timers, the ADC, the USARTs, I2C), so the EXTI is allocated <em class="emphasis">three</em> positions in that table rather than sixteen. So there is an additional condensing step.  The sixteen lines are grouped onto three interrupt requests: EXTI0 and EXTI1 raise IRQ5, EXTI2 and EXTI3 raise IRQ6, and EXTI4 through EXTI15, twelve lines, all raise IRQ7.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-exti-why-5" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="para" id="subsec-day9-exti-why-6">Those three requests are the three vector-table entries.  Look them up the same way we looked up TIM14 for the timer, RM0490 §11.3, Table 40 (<a href="subsec-day9-exti-why.html#fig-vector-table-exti" class="xref" data-knowl="./knowl/xref/fig-vector-table-exti.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 9.2.3">Figure 9.2.3</a>), and you find <code class="code-inline tex2jax_ignore">EXTI0_1</code> at position 5 with priority 12, <code class="code-inline tex2jax_ignore">EXTI2_3</code> at position 6 with priority 13, and <code class="code-inline tex2jax_ignore">EXTI4_15</code> at position 7 with priority 14.  (The lower the priority number, the higher the priority.)  Our button is on PB4, so it arrives on EXTI4, so it arrives at <code class="code-inline tex2jax_ignore">EXTI4_15_IRQHandler</code>, the same function that would run for a pin on EXTI11.  We’ll deal with the consequence when we write the handler: it has to find out which line actually fired.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-exti-why-6" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-exti-vector-share"><div class="deck-slide-body">
+<div class="para" id="sl-day9-exti-vector-share-1">Sixteen lines is still more room than the NVIC has to give. Its vector table is shared with every other peripheral on the chip (the timers, the ADC, the USARTs, I2C), so the EXTI is allocated <dfn class="terminology">three</dfn> positions in it, not sixteen. So there is an additional condensing step:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-exti-vector-share-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">EXTI0, EXTI1       -&gt;  IRQ5,  priority 12
+EXTI2, EXTI3       -&gt;  IRQ6,  priority 13
+EXTI4 ... EXTI15   -&gt;  IRQ7,  priority 14    &lt;- our button, with eleven others
+</code></pre></div>
+<ul class="disc" id="sl-day9-exti-vector-share-3">
+<li id="sl-day9-exti-vector-share-3-1">
+<div class="para" id="p-derived-sl-day9-exti-vector-share-3-1">The lower the priority number, the higher the priority of the interrupt.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-vector-share-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exti-vector-share-3-2">
+<div class="para" id="p-derived-sl-day9-exti-vector-share-3-2">PB4 is on line EXTI4, so its request is IRQ7, and so is the request of every other line from 4 to 15. <dfn class="terminology">Twelve lines, one handler.</dfn>
+</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-vector-share-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exti-vector-share-3-3">
+<div class="para" id="p-derived-sl-day9-exti-vector-share-3-3">So the handler cannot assume what it was called for. For example, if you have a button on PB4 and another one on PC7, then both of these would call the same ISR. This means that inside the ISR it is the programmer’s job to first check which pin actually fired.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-vector-share-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <figure class="figure figure-like" id="fig-vector-table-exti"><div class="image-box" style="width: 90%; margin-left: 5%; margin-right: 5%;"><img src="external/images/Day09-Interrupts(2)/vector_table_exti.svg" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">9.2.3<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>The three EXTI rows as part of RM0490’s Table 40, the vector table.  <code class="code-inline tex2jax_ignore">EXTI0_1</code> is position 5, <code class="code-inline tex2jax_ignore">EXTI2_3</code> is position 6, and <code class="code-inline tex2jax_ignore">EXTI4_15</code>, the one PB4 uses, is position 7, with priority 14 and vector address 0x0000_005C.  Sixteen EXTI lines are served by these three entries.  The naming rule is the one the timer used: take the acronym from this table and append <code class="code-inline tex2jax_ignore">_IRQn</code> for the NVIC constant.  Handler names are sometimes non-standard, though this one is not, so the safest source for a handler name is the project’s startup file, <code class="code-inline tex2jax_ignore">startup_stm32c031c6tx.s</code>.<div class="autopermalink" aria-hidden="true" data-description="Figure 9.2.3"><a tabindex="-1" href="#fig-vector-table-exti" title="Copy heading and permalink for Figure 9.2.3" aria-label="Copy heading and permalink for Figure 9.2.3">🔗</a></div></figcaption>
-</figure>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day9-exti-vectors" data-deck-ref="fig-vector-table-exti">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">An excerpt of the vector table in the reference manual. Position 7 lists the interrupt we use for EXTI4.</div>
+<div class="deck-slide-note">Same lookup as the timer’s TIM14: RM0490 §11.3, Table 40. Thirty seconds, on the projector.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-exti-names"><div class="deck-slide-body">
+<div class="para" id="sl-day9-exti-names-1">Table 40 gives an acronym, and the NVIC constant is built from it.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-exti-names-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">Table 40, position 7:   EXTI4_15
+NVIC_EnableIRQ(EXTI4_15_IRQn);       // _IRQn        the NVIC constant
+void EXTI4_15_IRQHandler(void) { }   // _IRQHandler  the function you write
+</code></pre></div>
+<ul class="disc" id="sl-day9-exti-names-3">
+<li id="sl-day9-exti-names-3-1">
+<div class="para" id="p-derived-sl-day9-exti-names-3-1">This is the same lookup that gave us <code class="code-inline tex2jax_ignore">TIM14_IRQn</code> for the timer, on a different row of the same table.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-names-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-exti-names-3-2">
+<div class="para" id="p-derived-sl-day9-exti-names-3-2">The <code class="code-inline tex2jax_ignore">EXTI4_15_IRQn</code> constant, which is what we use to register the interrupt with the NVIC, is built from the acronym in the table by adding <code class="code-inline tex2jax_ignore">_IRQn</code> to it. The handler name is <dfn class="terminology">sometimes non-standard</dfn> (though not in this case), and so it is safest to look it up in the project’s startup file, <code class="code-inline tex2jax_ignore">startup_stm32c031c6tx.s</code>, which carries one <code class="code-inline tex2jax_ignore">.word</code> per vector-table slot:</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-names-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+<div class="code-box"><pre class="program clipboardable"><code class="language-none">.word EXTI0_1_IRQHandler          /* EXTI line 0 and 1 interrupt */
+.word EXTI2_3_IRQHandler          /* EXTI line 2 and 3 interrupt */
+.word EXTI4_15_IRQHandler         /* EXTI line 4 and 15 interrupt */
+</code></pre></div>
+<ul class="disc" id="sl-day9-exti-names-5">
+<li id="sl-day9-exti-names-5-1">
+<div class="para" id="p-derived-sl-day9-exti-names-5-1">Read that file, never edit it: find the name, select it, <dfn class="terminology">copy</dfn> it. A wrong handler name is silent: it builds and links without a warning, and your function is simply never called.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-exti-names-5-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <div class="para" id="subsec-day9-exti-why-11">Inside the EXTI block itself, the path from a pin to an interrupt request runs through four register-controlled stages (<a href="subsec-day9-exti-why.html#fig-exti-signal-path" class="xref" data-knowl="./knowl/xref/fig-exti-signal-path.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 9.2.5">Figure 9.2.5</a>).  The multiplexer picks the port.  An edge-detection circuit decides whether this is an edge worth reacting to.  A mask decides whether a detected edge is allowed to become an interrupt request at all.  And a pending register records that it happened, so that the EXTI logic then generates the interrupt request that is sent to the NVIC.  Each stage has its own register. We’ll configure the first three next.  The fourth, the pending register, is also the one your handler reads and clears, and we’ll come back to it when we write the handler.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-exti-why-11" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <figure class="figure figure-like" id="fig-exti-signal-path"><div class="image-box" style="width: 95%; margin-left: 2.5%; margin-right: 2.5%;"><img src="external/images/Day09-Interrupts(2)/exti_signal_path.png" class="contained"></div>
 <figcaption><span class="type">Figure</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">9.2.5<span class="period heading-divison-mark heading-divison-mark__period">.</span></span><span class="space heading-divison-mark heading-divison-mark__space"> </span>The EXTI’s configurable-event trigger logic (RM0490 §12.3.1, Figure 24), annotated: the parts this course does not use are grayed out, and the path a button press takes is drawn in blue. The press enters the multiplexer, which <code class="code-inline tex2jax_ignore">EXTI_EXTICRx</code> has pointed at port B; the asynchronous edge-detection circuit reacts to it according to <code class="code-inline tex2jax_ignore">EXTI_FTSR1</code>; the AND gate passes it only if <code class="code-inline tex2jax_ignore">EXTI_IMR1</code> has unmasked the line; it is recorded in the pending request register <code class="code-inline tex2jax_ignore">EXTI_FPR1</code>; and it leaves the EXTI as an <dfn class="terminology">IRQ</dfn>, which is what reaches the <dfn class="terminology">NVIC</dfn> inside the Cortex-M0+ at the bottom.  Note the second, identical-looking AND gate and mask register above the blue path: the <em class="emphasis">event</em> path, <code class="code-inline tex2jax_ignore">EXTI_EMR1</code>, which this course does not use.  The rest of the grayed-out machinery handles rising edges, software-triggered events, and waking the chip from a low-power state.<div class="autopermalink" aria-hidden="true" data-description="Figure 9.2.5"><a tabindex="-1" href="#fig-exti-signal-path" title="Copy heading and permalink for Figure 9.2.5" aria-label="Copy heading and permalink for Figure 9.2.5">🔗</a></div></figcaption>
-</figure><div class="autopermalink" aria-hidden="true" data-description="Subsection 9.2.3: Part 3: Why the EXTI Sits Between the Pin and the NVIC"><a tabindex="-1" href="#subsec-day9-exti-why" title="Copy heading and permalink for Subsection 9.2.3: Part 3: Why the EXTI Sits Between the Pin and the NVIC" aria-label="Copy heading and permalink for Subsection 9.2.3: Part 3: Why the EXTI Sits Between the Pin and the NVIC">🔗</a></div>
+</figure><div class="deck-slide" hidden="hidden" id="sl-day9-exti-path" data-deck-ref="fig-exti-signal-path">
+<div class="deck-slide-body"></div>
+<div class="deck-slide-caption">Follow the blue line from the button press: multiplexer, edge detector, mask, pending register, and out as an IRQ to the NVIC. One register per stage.</div>
+<div class="deck-slide-note">Two AND gates look alike here. The blue line goes through EXTI_IMR1 (the interrupt path); the one above it is EXTI_EMR1 (the event path), which we do not use. Say that, then say the rest of the gray is rising edges, software triggers and low-power wakeup, so nobody thinks they are missing something.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-four-stages"><div class="deck-slide-body">
+<ul class="disc" id="sl-day9-four-stages-1">
+<li id="sl-day9-four-stages-1-1">
+<div class="para" id="p-derived-sl-day9-four-stages-1-1">
+<code class="code-inline tex2jax_ignore">EXTI_EXTICRx</code>: the multiplexer. <em class="emphasis">Which port</em> is on this line.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-stages-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-stages-1-2">
+<div class="para" id="p-derived-sl-day9-four-stages-1-2">
+<code class="code-inline tex2jax_ignore">EXTI_FTSR1</code>: the edge detector. <em class="emphasis">Which edge</em> counts as an event.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-stages-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-stages-1-3">
+<div class="para" id="p-derived-sl-day9-four-stages-1-3">
+<code class="code-inline tex2jax_ignore">EXTI_IMR1</code>: the mask. Whether a detected event may <em class="emphasis">become an interrupt request</em> at all.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-stages-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-stages-1-4">
+<div class="para" id="p-derived-sl-day9-four-stages-1-4">
+<code class="code-inline tex2jax_ignore">EXTI_FPR1</code>: the pending register. Records that it happened, and the bit stays set until your handler clears it.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-stages-1-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-stages-1-5">
+<div class="para" id="p-derived-sl-day9-four-stages-1-5">The first three are <dfn class="terminology">configured once</dfn>, and that is what we’ll do next. The fourth is <dfn class="terminology">read and cleared by your handler</dfn>, which we’ll write afterwards.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-stages-1-5" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-four-stages-1-6">
+<div class="para" id="p-derived-sl-day9-four-stages-1-6">You also need to register your ISR with the NVIC, exactly as for the timer.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-four-stages-1-6" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="autopermalink" aria-hidden="true" data-description="Subsection 9.2.3: Part 3: Why the EXTI Sits Between the Pin and the NVIC"><a tabindex="-1" href="#subsec-day9-exti-why" title="Copy heading and permalink for Subsection 9.2.3: Part 3: Why the EXTI Sits Between the Pin and the NVIC" aria-label="Copy heading and permalink for Subsection 9.2.3: Part 3: Why the EXTI Sits Between the Pin and the NVIC">🔗</a></div>
 </section>
 </div>
 <div id="ptx-content-footer" class="ptx-content-footer">

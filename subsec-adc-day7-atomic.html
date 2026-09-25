@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -858,7 +859,58 @@ GPIOA-&gt;ODR &amp;= ~LED_PIN;   // clear bit 5 -- LED off
 <div class="para" id="insight-adc-rc-w1-2">The reference manual labels every register field with how it may be accessed: <code class="code-inline tex2jax_ignore">rw</code> for ordinary read-write bits, <code class="code-inline tex2jax_ignore">r</code> for read-only, <code class="code-inline tex2jax_ignore">rs</code> for bits you can set but not clear (writing 0 does nothing, and <code class="code-inline tex2jax_ignore">ADEN</code> and <code class="code-inline tex2jax_ignore">ADSTART</code> are both <code class="code-inline tex2jax_ignore">rs</code>), <code class="code-inline tex2jax_ignore">rc_w1</code> for read, cleared by writing 1, and <code class="code-inline tex2jax_ignore">rc_w0</code> for the opposite convention, cleared by writing 0.  The digit in the name tells you which value does the clearing, so it is worth reading rather than assuming.  When you come across a status register you have not used before, check the access type before you decide how to clear a flag.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#insight-adc-rc-w1-2" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Insight 6.2.11: Reading the access type"><a tabindex="-1" href="#insight-adc-rc-w1" title="Copy heading and permalink for Insight 6.2.11: Reading the access type" aria-label="Copy heading and permalink for Insight 6.2.11: Reading the access type">🔗</a></div>
-</article><div class="autopermalink" aria-hidden="true" data-description="Subsection 6.2.6: Part 5: Wait, How Did That Clear the Bit?"><a tabindex="-1" href="#subsec-adc-day7-atomic" title="Copy heading and permalink for Subsection 6.2.6: Part 5: Wait, How Did That Clear the Bit?" aria-label="Copy heading and permalink for Subsection 6.2.6: Part 5: Wait, How Did That Clear the Bit?">🔗</a></div>
+</article><div class="deck-slide" hidden="hidden" id="sl-adc-wait-what">
+<div class="deck-slide-body">
+<div class="para" id="sl-adc-wait-what-1">This line is in your code, and it works:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-adc-wait-what-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">ADC1-&gt;ISR = ADC_ISR_ADRDY;   // "clear the ready bit"
+</code></pre></div>
+<div class="para" id="sl-adc-wait-what-3">But in Blinky, clearing a bit looked like this:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-adc-wait-what-3" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">GPIOA-&gt;ODR &amp;= ~LED_PIN;      // clear bit 5
+</code></pre></div>
+<div class="para" id="sl-adc-wait-what-5">The ADC line is a plain assignment of a mask with bit 0 <em class="emphasis">set</em>. How does that <em class="emphasis">clear</em> anything?<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-adc-wait-what-5" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+</div>
+<div class="deck-slide-note">Let them sit with it. Do not answer yet — the puzzlement is the teaching.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-adc-rc-w1"><div class="deck-slide-body">
+<div class="para" id="sl-adc-rc-w1-1">
+<dfn class="terminology">rc_w1</dfn>: read, cleared by writing 1.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-adc-rc-w1-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-adc-rc-w1-2">
+<li id="sl-adc-rc-w1-2-1">
+<div class="para" id="p-derived-sl-adc-rc-w1-2-1">Write a <span class="deck-clr-green">1</span> to the bit → it <dfn class="terminology">clears</dfn>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-adc-rc-w1-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-adc-rc-w1-2-2">
+<div class="para" id="p-derived-sl-adc-rc-w1-2-2">Write a <span class="deck-clr-blue">0</span> to the bit → <dfn class="terminology">nothing happens</dfn>. It keeps its value.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-adc-rc-w1-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+<div class="para" id="sl-adc-rc-w1-3">So <code class="code-inline tex2jax_ignore">ADC1-&gt;ISR = ADC_ISR_ADRDY;</code> sends a 1 to bit 0 and a 0 to all the rest: bit 0 clears, every other bit is left exactly as it was.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-adc-rc-w1-3" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="para" id="sl-adc-rc-w1-4">The register is not being overwritten. It is being sent one instruction per bit.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-adc-rc-w1-4" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-adc-why-not-rmw" data-deck-ref="fig-adc-rmw-damage" data-deck-stack="yes"><div class="deck-slide-body">
+<ul class="disc" id="sl-adc-why-not-rmw-1">
+<li id="sl-adc-why-not-rmw-1-1">
+<div class="para" id="p-derived-sl-adc-why-not-rmw-1-1">
+<code class="code-inline tex2jax_ignore">&amp;= ~</code> is a <dfn class="terminology">read</dfn>, a modify, and a <dfn class="terminology">write-back of all 32 bits</dfn>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-adc-why-not-rmw-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-adc-why-not-rmw-1-2">
+<div class="para" id="p-derived-sl-adc-why-not-rmw-1-2">That write-back sends a <span class="deck-clr-red">1</span> to every flag that was already set, and here 1 means <em class="emphasis">clear</em>. Those events are lost.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-adc-why-not-rmw-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-adc-why-not-rmw-1-3">
+<div class="para" id="p-derived-sl-adc-why-not-rmw-1-3">And it sends a <span class="deck-clr-orange">0</span> to ADRDY, the bit you were trying to clear, which does nothing at all.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-adc-why-not-rmw-1-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="autopermalink" aria-hidden="true" data-description="Subsection 6.2.6: Part 5: Wait, How Did That Clear the Bit?"><a tabindex="-1" href="#subsec-adc-day7-atomic" title="Copy heading and permalink for Subsection 6.2.6: Part 5: Wait, How Did That Clear the Bit?" aria-label="Copy heading and permalink for Subsection 6.2.6: Part 5: Wait, How Did That Clear the Bit?">🔗</a></div>
 </section>
 </div>
 <div id="ptx-content-footer" class="ptx-content-footer">

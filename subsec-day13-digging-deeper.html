@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -845,7 +846,84 @@ eBookConfig.enable_chatcodes =  false;
 </article>
 <div class="para" id="subsec-day13-digging-deeper-6">Two different things on this bus are both called a NACK, a not-acknowledge.  The NACK on your trace is the <em class="emphasis">controller’s</em>, and it is part of a successful read: the controller asked for one byte, got it, and deliberately does not acknowledge, which tells the target to stop sending. The other kind is the one we saw and produced with the display: nothing pulls SDA LOW during the acknowledge bit, and the wire simply stays HIGH.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13-digging-deeper-6" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day13-two-nacks">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day13-two-nacks-1">
+<li id="sl-day13-two-nacks-1-1">
+<div class="para" id="p-derived-sl-day13-two-nacks-1-1">The NACK on your trace is the <em class="emphasis">controller’s</em>, and it is part of a successful read: one byte was asked for, one byte arrived, and by not acknowledging, the controller ends the read.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13-two-nacks-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day13-two-nacks-1-2">
+<div class="para" id="p-derived-sl-day13-two-nacks-1-2">The other kind of NACK comes from nobody at all: if no device recognizes the address, nothing pulls SDA LOW during the acknowledge bit, and the wire simply stays HIGH.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day13-two-nacks-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">≈ 2 min. Name both kinds now — the second one is about to be produced on purpose.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13-transfer-pattern">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13-transfer-pattern-1">The datasheet’s own drawing of what you captured, in four tables: its <em class="emphasis">Master</em> row is our controller, its <em class="emphasis">Slave</em> row our target.  The write transfers first:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13-transfer-pattern-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="image-box" style="width: 92%; margin-left: 4%; margin-right: 4%;"><img src="external/images/Day13-I2C(3)/i2c_transfer_writes.svg" class="contained"></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. Say the vocabulary once, off the lead line. Two Digging Deeper answers live here: the controller sends the address, and the register address goes out as SUB.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13-transfer-reads">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13-transfer-reads-1">Table 22 is the shape your trace has, and NMAK is the N on your trace.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13-transfer-reads-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="image-box" style="width: 92%; margin-left: 4%; margin-right: 4%;"><img src="external/images/Day13-I2C(3)/i2c_transfer_reads.svg" class="contained"></div>
+</div>
+<div class="deck-slide-note">≈ 1 min. The last Digging Deeper answer: the data comes back from the target in the read half. Where the table draws SR, a repeated START, our trace shows a STOP and a fresh START — the close-up slide already showed it. If anyone asks whether ours is wrong: Day 10’s answer. A STOP frees the bus, and with a second controller on it the register pointer you just set could be changed before you read. One controller here, so it is safe.</div>
+</div>
 <div class="para" id="subsec-day13-digging-deeper-10">The transfer diagram in <a href="subsec-i2c-ref-transfer-pattern.html#fig-i2c-transfer-pattern" class="xref" data-knowl="./knowl/xref/fig-i2c-transfer-pattern.html" data-reveal-label="Reveal" data-close-label="Close" title="Figure 10.4.4">Figure 10.4.4</a> is the datasheet’s own drawing of what you captured: §6.1.1, Tables 20–23, and Table 22 is the shape your trace has.  Three more questions can be answered from its rows: who sends the address, where we tell the accelerometer which register to read from, and where the accelerometer puts the register’s contents on the data line.  Where our trace shows a STOP and a fresh START between the two halves of the read, the datasheet draws a repeated START; the register-level walk of <code class="code-inline tex2jax_ignore">i2c1_memRead()</code> in <a href="subsec-i2c-ref-library.html" class="internal" title="Subsection 10.4.9: The Library, and Where It Cuts Corners">Subsection 10.4.9</a> shows exactly where our library makes that choice, and why it matters on a bus with two controllers.  The NACK you found on your own trace is in neither half of that listing: the library describes the whole transaction in advance, how many bytes (NBYTES) and what to do at the end (AUTOEND).  The I2C hardware puts the acknowledge bits and the STOP on the wire.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day13-digging-deeper-10" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13-memread-write">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13-memread-write-1">Everything you captured came from one function, <code class="code-inline tex2jax_ignore">i2c1_memRead()</code>.  Here is the half of it that produces your trace’s <em class="emphasis">first</em> transaction:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13-memread-write-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">void i2c1_memRead(uint8_t deviceAddr, uint8_t registerAddr, uint8_t nbytes, uint8_t *data) {
+	// Ping target address for writing 1 byte (the register address)
+	I2C1-&gt;CR2 = (deviceAddr&lt;&lt;1)                  // target address
+			    | (1U &lt;&lt; I2C_CR2_NBYTES_Pos)     // for registerAddr
+				| I2C_CR2_AUTOEND                // Send Stop condition after transfer
+			    | I2C_CR2_START;				 // Send Start condition
+	while( !(I2C1-&gt;ISR &amp; I2C_ISR_BUSY) );		 // Wait until Start is received
+
+	if( !(I2C1-&gt;ISR &amp; I2C_ISR_NACKF) ) {		  // Make sure ACK received
+		// Send register address
+		while( !(I2C1-&gt;ISR &amp; I2C_ISR_TXIS) );     // Wait for Tx to be ready
+		I2C1-&gt;TXDR = registerAddr;			      // Send register address
+	}
+</code></pre></div>
+</div>
+<div class="deck-slide-note">≈ 3 min, the first in-class walk of this code (the fact it explains — stop-then-start — is Day 10’s). One write to CR2 describes the whole transaction before any of it happens: who, how many bytes, AUTOEND, START — Day 10’s byteWrite pattern. Trailing comments are shortened for the wall; the full commentary is in i2c.c and the ch-i2c Reference.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day13-memread-read">
+<div class="deck-slide-body">
+<div class="para" id="sl-day13-memread-read-1">Then the same function starts over (a second CR2 write, this time with the read bit), and that is your trace’s <em class="emphasis">second</em> transaction:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day13-memread-read-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">	// Restart, with read request for n bytes
+	I2C1-&gt;CR2 = (deviceAddr&lt;&lt;1)                  // target address
+			    | (nbytes &lt;&lt; I2C_CR2_NBYTES_Pos) // will read n bytes
+				| I2C_CR2_RD_WRN                 // ping for reading
+			    | I2C_CR2_AUTOEND                // Send Stop condition after transfer
+				| I2C_CR2_START;				 // Send Start condition
+	while( !(I2C1-&gt;ISR &amp; I2C_ISR_BUSY) );		 // Wait until Start is received
+
+	// Read the data
+	if( !(I2C1-&gt;ISR &amp; I2C_ISR_NACKF) ) {			// Make sure ACK received
+		for(uint8_t i=0; i&lt;nbytes; i++) {
+			while( !(I2C1-&gt;ISR &amp; I2C_ISR_RXNE) );		// Wait for Rx to be ready
+			data[i] = I2C1-&gt;RXDR;						// Read the data
+		}
+	}
+}
+</code></pre></div>
+</div>
+<div class="deck-slide-caption">The acknowledge bits and the STOP are not written by this function.  It describes the whole transaction to the peripheral in advance, how many bytes (NBYTES) and what to do at the end (AUTOEND).  The I2C hardware puts them on the wire.</div>
+<div class="deck-slide-note">≈ 3 min. RD_WRN is the only new field — which is what put the device address on your screen twice. The register-level detail is in the ch-i2c Reference; match each piece to the trace as you go.</div>
 </div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 12.2.5: Part 5: Digging Deeper"><a tabindex="-1" href="#subsec-day13-digging-deeper" title="Copy heading and permalink for Subsection 12.2.5: Part 5: Digging Deeper" aria-label="Copy heading and permalink for Subsection 12.2.5: Part 5: Digging Deeper">🔗</a></div>
 </section>

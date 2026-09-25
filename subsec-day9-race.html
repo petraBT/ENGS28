@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -865,6 +866,52 @@ void EXTI4_15_IRQHandler(void){
 </code></pre></div>
 </div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-two-solutions">
+<div class="deck-slide-body">
+<div class="para" id="sl-day9-two-solutions-1">The left program resets the counter in the ISR; the right one sets a flag and lets <code class="code-inline tex2jax_ignore">main()</code> do the reset.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-two-solutions-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="sidebyside">
+<div class="sbsrow" style="margin-left:2%;margin-right:2%;grid-template-columns:45.8333333333333% 45.8333333333333%;column-gap:8%;">
+<div class="sbspanel sbspanel--top top" style=""><pre class="program clipboardable"><code class="language-c">volatile int counter;
+int main(void) {
+  pb4_exti_init();
+  counter = 0;
+  while(1) {
+    counter++;
+  }
+  return 0;
+}
+void EXTI4_15_IRQHandler(void){
+ if (EXTI-&gt;FPR1 &amp; EXTI_FPR1_FPIF4){
+   EXTI-&gt;FPR1 = EXTI_FPR1_FPIF4;
+   counter = 0;
+ }
+}
+</code></pre></div>
+<div class="sbspanel sbspanel--top top" style=""><pre class="program clipboardable"><code class="language-c">volatile int buttonPushed = 0;
+int main(void) {
+  int counter = 0;
+  pb4_exti_init();
+  while(1) {
+    if (buttonPushed) {
+      counter = 0;
+      buttonPushed = 0;
+    } else { counter++; }
+  }
+  return 0;
+}
+void EXTI4_15_IRQHandler(void){
+ if (EXTI-&gt;FPR1 &amp; EXTI_FPR1_FPIF4){
+   EXTI-&gt;FPR1 = EXTI_FPR1_FPIF4;
+   buttonPushed = 1;
+ }
+}
+</code></pre></div>
+</div>
+</div>
+</div>
+<div class="deck-slide-note">There is no right answer yet — say so. They are about to find out why the obvious one fails, and a wrong guess here is the expected outcome. Both listings are abridged: uart2_init() and the printf are dropped, and buttonPushed is initialized in its declaration, so the two fit side by side.</div>
+</div>
 <article class="activity project-like" id="act-gpio-two-solutions"><h2 class="heading">
 <span class="type">Activity</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">9.2.5</span><span class="period heading-divison-mark heading-divison-mark__period">.</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="title">Which One Would You Use?</span>
 </h2>
@@ -899,6 +946,62 @@ void EXTI4_15_IRQHandler(void){
 </div>
 <div class="para" id="subsec-day9-race-11">The moral is a distinction worth carrying out of this course. An ISR setting a <dfn class="terminology">control signal</dfn>, a flag saying “this happened”, cannot corrupt it.  <code class="code-inline tex2jax_ignore">main()</code> writes that flag too, but both sides only ever <em class="emphasis">store</em> a whole value into it, never read it, change it and write it back, so neither can be caught half-finished by the other; the worst that can happen is that two events merge, as above.  An ISR changing <dfn class="terminology">data</dfn> that the main program also changes is a different thing entirely: when it fails (rarely) it does so silently.  Rare and silent is the worst combination a bug can have.  Be very careful about modifying shared data in an ISR; often the right answer is not to.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-race-11" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-disassembly" data-deck-room="compressed"><div class="deck-slide-body">
+<div class="para" id="sl-day9-disassembly-1">The difference is not style: in either program <code class="code-inline tex2jax_ignore">counter++</code> is one line of C that becomes several machine instructions. Here is the version with the <dfn class="terminology">counter reset in the ISR</dfn>, the left-hand one:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-disassembly-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-none">; the LEFT-hand program:  main()  while(1) { counter++; }    the ISR  counter = 0;
+
+0800013e:   ldr     r3, [pc, #12]    ; load the ADDRESS of counter into r3
+08000140:   ldr     r3, [r3, #0]     ; load the VALUE of counter into r3
+08000142:   adds    r2, r3, #1       ; r2 = r3 + 1        &lt;-- interrupted HERE?
+08000144:   ldr     r3, [pc, #4]     ; load the address of counter again
+08000146:   str     r2, [r3, #0]     ; store r2 back into counter
+</code></pre></div>
+<ul class="disc" id="sl-day9-disassembly-3">
+<li id="sl-day9-disassembly-3-1">
+<div class="para" id="p-derived-sl-day9-disassembly-3-1">Suppose the button press lands after the counter value is fetched. The CPU stacks its state, including r3, runs the ISR, which sets <code class="code-inline tex2jax_ignore">counter</code> to 0, and returns.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-disassembly-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-disassembly-3-2">
+<div class="para" id="p-derived-sl-day9-disassembly-3-2">The state is restored and execution resumes at the <code class="code-inline tex2jax_ignore">adds</code>. <dfn class="terminology">r3 still holds the old count.</dfn> One is added to it. It is stored.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-disassembly-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-disassembly-3-3">
+<div class="para" id="p-derived-sl-day9-disassembly-3-3">
+<dfn class="terminology">The reset is gone</dfn>, the counter carries on from where it was, and there is no error and no warning anywhere.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-disassembly-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-disassembly-3-4">
+<div class="para" id="p-derived-sl-day9-disassembly-3-4">The <dfn class="terminology">right-hand</dfn> program cannot fail this way: <code class="code-inline tex2jax_ignore">main()</code> only ever <em class="emphasis">stores</em> to the flag, so there is no stale copy to write back. Interrupted during <code class="code-inline tex2jax_ignore">counter++</code>, the flag is still set next time round, and the reset happens one iteration late instead of never.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-disassembly-3-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-moral">
+<div class="deck-slide-body">
+<div class="para" id="sl-day9-moral-1">Distinguish between data signals and control signals (flags).<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-moral-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day9-moral-2">
+<li id="sl-day9-moral-2-1">
+<div class="para" id="p-derived-sl-day9-moral-2-1">An ISR setting a <dfn class="terminology">control signal</dfn>, a flag saying “this happened”, cannot corrupt it. <code class="code-inline tex2jax_ignore">main()</code> writes that flag too, but both sides only ever <em class="emphasis">store</em> a whole value into it, never read it, change it and write it back, so neither can be caught half-finished by the other.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-moral-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-moral-2-2">
+<div class="para" id="p-derived-sl-day9-moral-2-2">An ISR changing <dfn class="terminology">data</dfn> that the main program also changes is a different thing entirely: when it fails (rarely) it does so silently. Rare and silent is the worst combination a bug can have.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-moral-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-moral-2-3">
+<div class="para" id="p-derived-sl-day9-moral-2-3">Be very careful about modifying shared data in an ISR. Often the right answer is not to.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-moral-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-moral-2-4">
+<div class="para" id="p-derived-sl-day9-moral-2-4">Some fine print: the flag pattern does not avoid every issue. If a second press arrives between <code class="code-inline tex2jax_ignore">if (buttonPushed)</code> and <code class="code-inline tex2jax_ignore">buttonPushed = 0;</code>, that clearing line clears the new press along with the first, and the second press is never acted on. The reference section of this chapter explains how to prevent even this.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-moral-2-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-note">Say aloud: one event is lost, but no count is corrupted. That is a much milder failure than the left-hand program’s.</div>
+</div>
 <div class="para" id="subsec-day9-race-14">Now look back at the homework we reviewed at the start of class. That ISR contained <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR ^= LED;</code>, and it worked.  But <code class="code-inline tex2jax_ignore">^=</code> is a read-modify-write, exactly like <code class="code-inline tex2jax_ignore">counter++</code>: read <code class="code-inline tex2jax_ignore">ODR</code>, flip one bit in the copy, write the whole register back.  The reason it worked is that nothing else in that program touched <code class="code-inline tex2jax_ignore">ODR</code>, so there was never anything to lose.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-race-14" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
 <div class="para" id="subsec-day9-race-15">That assumption does not survive the next thing you build.  In Lab 5, one of the additional features has a green LED lit while the temperature is below the set point, and a red LED flashing at 1 Hz once it is above: the flashing timed by a timer, the green driven from the main loop, and all three of the lab’s LEDs on PA5, PA6 and PA7.  One port, one <code class="code-inline tex2jax_ignore">ODR</code>, two pieces of code writing it.  Here is the shape of it, and it is worth reading slowly:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-race-15" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
@@ -910,6 +1013,31 @@ GPIOA-&gt;ODR |= GREEN;                GPIOA-&gt;ODR ^= RED;
 </div>
 <div class="para" id="subsec-day9-race-18">The fix is in a note at the bottom of the ODR page, the reference manual (<a class="external" href="external/stm32c031_rm.pdf" target="_blank">RM0490</a>) §6.4.6.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-race-18" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-odr-race"><div class="deck-slide-body">
+<div class="para" id="sl-day9-odr-race-1">Now look back at the homework we reviewed at the start of class. That ISR contained <code class="code-inline tex2jax_ignore">GPIOA-&gt;ODR ^= LED;</code>, and it worked. <code class="code-inline tex2jax_ignore">^=</code> is a read-modify-write, exactly like <code class="code-inline tex2jax_ignore">counter++</code>: read ODR, flip one bit in the copy, write the whole register back. It worked because <dfn class="terminology">nothing else in that program touched ODR</dfn>.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-odr-race-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">// in main():                      // in the timer ISR:
+GPIOA-&gt;ODR |= GREEN;               GPIOA-&gt;ODR ^= RED;
+</code></pre></div>
+<ul class="disc" id="sl-day9-odr-race-3">
+<li id="sl-day9-odr-race-3-1">
+<div class="para" id="p-derived-sl-day9-odr-race-3-1">This is Lab 5’s Additional Feature 1: a green LED driven from the main loop, a red LED flashed at 1 Hz by a timer, and the lab’s three LEDs all on PA5–PA7. One port, <dfn class="terminology">one ODR</dfn>, two pieces of code writing it.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-odr-race-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-odr-race-3-2">
+<div class="para" id="p-derived-sl-day9-odr-race-3-2">If the interrupt lands after <code class="code-inline tex2jax_ignore">main()</code> has read ODR but before it writes back, the ISR’s change to the red LED is in the register and absent from the copy <code class="code-inline tex2jax_ignore">main()</code> is holding, and the write-back overwrites it. The red LED misses a toggle.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-odr-race-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-odr-race-3-3">
+<div class="para" id="p-derived-sl-day9-odr-race-3-3">This bug would happen only sometimes, and not in a repeatable fashion. This makes it very difficult to find this kind of bug.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-odr-race-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-odr-race-3-4">
+<div class="para" id="p-derived-sl-day9-odr-race-3-4"><dfn class="terminology">What would you want the hardware to give you here so that you could avoid this issue?</dfn></div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-odr-race-3-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <article class="activity project-like" id="act-gpio-bsrr"><h2 class="heading">
 <span class="type">Activity</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">9.2.6</span><span class="period heading-divison-mark heading-divison-mark__period">.</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="title">Find the Fix, Then Write It.</span>
 </h2>
@@ -962,6 +1090,57 @@ void TIM14_IRQHandler(void) {
 </code></pre></div>
 <div class="para" id="subsec-day9-race-27">Nothing here reads <code class="code-inline tex2jax_ignore">ODR</code>, so nothing here can lose <code class="code-inline tex2jax_ignore">main()</code>’s green LED, and nothing in <code class="code-inline tex2jax_ignore">main()</code> writes <code class="code-inline tex2jax_ignore">redOn</code>, so nothing there can lose the red one.  That is the same distinction arriving a second time, in hardware: the ISR and <code class="code-inline tex2jax_ignore">main()</code> exchange a control signal rather than sharing data.  The remaining small print (what happens if you write a 1 to both <code class="code-inline tex2jax_ignore">BSy</code> and <code class="code-inline tex2jax_ignore">BRy</code>, and the <code class="code-inline tex2jax_ignore">GPIOx_BRR</code> register that duplicates BSRR’s upper half) is in <a href="subsec-gpio-ref-odr-bsrr.html" class="internal" title="Subsection 9.3.4: ODR, BSRR, and the Pin’s Own Circuit">Subsection 9.3.4</a>.<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#subsec-day9-race-27" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
 </div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-bsrr"><div class="deck-slide-body">
+<div class="para" id="sl-day9-bsrr-1">RM0490 §6.4.6, under ODR, says: “For atomic bit set/reset, the OD bits can be individually set and/or reset by writing to the GPIOx_BSRR register.”<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-bsrr-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">GPIOA-&gt;BSRR = GPIO_BSRR_BS5;   // PA5 high -- one write, no read
+GPIOA-&gt;BSRR = GPIO_BSRR_BR5;   // PA5 low  -- one write, no read
+</code></pre></div>
+<ul class="disc" id="sl-day9-bsrr-3">
+<li id="sl-day9-bsrr-3-1">
+<div class="para" id="p-derived-sl-day9-bsrr-3-1">The <dfn class="terminology">bit set/reset register</dfn> is 32 bits covering 16 pins twice: 1 to <code class="code-inline tex2jax_ignore">BSy</code> in bits [15:0] <em class="emphasis">sets</em> pin y’s output bit, 1 to <code class="code-inline tex2jax_ignore">BRy</code> in bits [31:16] <em class="emphasis">clears</em> it. Writing 0 anywhere does nothing at all.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-bsrr-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-bsrr-3-2">
+<div class="para" id="p-derived-sl-day9-bsrr-3-2">Both halves are <dfn class="terminology">write-only</dfn>: a read always returns 0. This is what RM0490 calls an <dfn class="terminology">atomic bit set/reset</dfn>. The pin is set or cleared by a single write, with no read first, so the operation happens whole or not at all and an interrupt cannot land in the middle of it.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-bsrr-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-bsrr-3-3">
+<div class="para" id="p-derived-sl-day9-bsrr-3-3">
+<code class="code-inline tex2jax_ignore">ODR |= GREEN</code> must read the register to preserve the other fifteen pins. <code class="code-inline tex2jax_ignore">BSRR = GPIO_BSRR_BS5</code> does not, because the bits it does not mention are bits it does not touch.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-bsrr-3-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-bsrr-3-4">
+<div class="para" id="p-derived-sl-day9-bsrr-3-4">One write can set some pins and clear others and disturb no other pin.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-bsrr-3-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-bsrr-limits"><div class="deck-slide-body">
+<div class="para" id="sl-day9-bsrr-limits-1">BSRR has no toggle. There is a set half, a clear half and nothing that inverts, so BSRR does not directly replace <code class="code-inline tex2jax_ignore">ODR ^= LED</code>. What it does is make the set and the clear uninterruptible. Here is the toggle written using BSRR, on Lab 5’s red LED (PA6):<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-bsrr-limits-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">volatile int redOn = 0;        // the ISR owns this; main() never writes it
+
+void TIM14_IRQHandler(void) {
+    __disable_irq();
+    TIM14-&gt;SR = ~TIM_SR_UIF;
+    redOn = !redOn;                        // flip our own copy of the state ...
+    if (redOn) { GPIOA-&gt;BSRR = GPIO_BSRR_BS6; }   // ... then one write,
+    else       { GPIOA-&gt;BSRR = GPIO_BSRR_BR6; }   //     set it or clear it
+    __enable_irq();
+}
+</code></pre></div>
+<ul class="disc" id="sl-day9-bsrr-limits-3">
+<li id="sl-day9-bsrr-limits-3-1">
+<div class="para" id="p-derived-sl-day9-bsrr-limits-3-1">Nothing here reads <code class="code-inline tex2jax_ignore">ODR</code>, so nothing here can lose <code class="code-inline tex2jax_ignore">main()</code>’s green LED. Nothing in <code class="code-inline tex2jax_ignore">main()</code> writes <code class="code-inline tex2jax_ignore">redOn</code>, so nothing there can lose the red one.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-bsrr-limits-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-bsrr-limits-3-2">
+<div class="para" id="p-derived-sl-day9-bsrr-limits-3-2">Keep the pin’s state in a variable that only one side ever writes: here the ISR owns <code class="code-inline tex2jax_ignore">redOn</code> and <code class="code-inline tex2jax_ignore">main()</code> never touches it. Then drive the pin with BSRR. The ISR and <code class="code-inline tex2jax_ignore">main()</code> are exchanging a <dfn class="terminology">control signal</dfn> rather than sharing data, which is the same distinction we drew earlier today, now in hardware.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-bsrr-limits-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <div class="autopermalink" aria-hidden="true" data-description="Subsection 9.2.8: Part 7: Changing Data in an ISR, and GPIOx_BSRR"><a tabindex="-1" href="#subsec-day9-race" title="Copy heading and permalink for Subsection 9.2.8: Part 7: Changing Data in an ISR, and GPIOx_BSRR" aria-label="Copy heading and permalink for Subsection 9.2.8: Part 7: Changing Data in an ISR, and GPIOx_BSRR">🔗</a></div>
 </section>
 </div>

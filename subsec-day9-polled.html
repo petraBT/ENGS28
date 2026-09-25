@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
 <link href="_static/pretext/css/theme.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="external/deck.css">
 <link rel="stylesheet" type="text/css" href="external/book.css">
 <script type="module">import { startMathJax } from './_static/pretext/js/dist/mathjax_startup.js';
 startMathJax({
@@ -851,6 +852,68 @@ int main(void) {
     return 0;
 }
 </code></pre></div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-missed" data-deck-room="yes"><div class="deck-slide-body">
+<div class="para" id="sl-day9-missed-1">A short tap sometimes resets the counter and sometimes does not; a press-and-hold always does. Why?<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-missed-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<ul class="disc" id="sl-day9-missed-2">
+<li id="sl-day9-missed-2-1">
+<div class="para" id="p-derived-sl-day9-missed-2-1">The program was inside <code class="code-inline tex2jax_ignore">delay_ms()</code>, not looking.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-missed-2-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-missed-2-2">
+<div class="para" id="p-derived-sl-day9-missed-2-2">Polling reads a <dfn class="terminology">level</dfn>, so it can only see a press that is still happening at the one instant it looks.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-missed-2-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-missed-2-3">
+<div class="para" id="p-derived-sl-day9-missed-2-3">A tap that starts and ends inside the delay leaves nothing behind for the program to find.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-missed-2-3" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-missed-2-4">
+<div class="para" id="p-derived-sl-day9-missed-2-4">The fix has the shape we used for the timer: instead of the program checking over and over, let the GPIO hardware tell the CPU when the press happens.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-missed-2-4" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-wiring-check" data-deck-ref="fig-rc-debounce-circuit" data-deck-stack="yes">
+<div class="deck-slide-body">
+<ul class="disc" id="sl-day9-wiring-check-1">
+<li id="sl-day9-wiring-check-1-1">
+<div class="para" id="p-derived-sl-day9-wiring-check-1-1">We’ll re-use the button circuit with internal pull-up and debouncing capacitor (see the picture below). If you no longer have this wired on your breadboard, rebuild it now, with the button on D5.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-wiring-check-1-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-wiring-check-1-2">
+<div class="para" id="p-derived-sl-day9-wiring-check-1-2">Open our earlier <code class="code-inline tex2jax_ignore">button.c</code> and compile/run to verify everything is still working as expected.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-wiring-check-1-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div>
+<div class="deck-slide-caption">Check the board against the picture: the button is on D5 (PB4) and the debouncing capacitor runs from D5 to GND.</div>
+</div>
+<div class="deck-slide" hidden="hidden" id="sl-day9-polled-code"><div class="deck-slide-body">
+<div class="para" id="sl-day9-polled-code-1">Below is an excerpt from the program we are about to run (<code class="code-inline tex2jax_ignore">counterResetButtonPolled.c</code>). It reads the button <em class="emphasis">once</em> per loop iteration:<div class="autopermalink" aria-hidden="true" data-description="Paragraph"><a tabindex="-1" href="#sl-day9-polled-code-1" title="Copy heading and permalink for Paragraph" aria-label="Copy heading and permalink for Paragraph">🔗</a></div>
+</div>
+<div class="code-box"><pre class="program clipboardable"><code class="language-c">while(1) {
+    printf("%x\t%d\r\n", counter, counter);
+    delay_ms(1000);                                  // 1000 ms of not looking
+    buttonPushed = ((GPIOB-&gt;IDR &amp; BUTTON_PIN) == 0); // &lt;- the one look
+    if ( (buttonPushed) || (counter == MAXCOUNT) ) {
+        counter = 0;
+    } else {
+        counter++;
+    }
+}
+</code></pre></div>
+<ul class="disc" id="sl-day9-polled-code-3">
+<li id="sl-day9-polled-code-3-1">
+<div class="para" id="p-derived-sl-day9-polled-code-3-1">The pin read is the same one we used before: recall that the internal pull-up holds PB4 HIGH when the button is open, so <dfn class="terminology">pressed</dfn> corresponds to IDR (Input Data Register) bit 4 reading <dfn class="terminology">0</dfn>.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-polled-code-3-1" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+<li id="sl-day9-polled-code-3-2">
+<div class="para" id="p-derived-sl-day9-polled-code-3-2">We are checking (<dfn class="terminology">polling</dfn>) the button during each loop iteration.</div>
+<div class="autopermalink" aria-hidden="true" data-description="Item"><a tabindex="-1" href="#sl-day9-polled-code-3-2" title="Copy heading and permalink for Item" aria-label="Copy heading and permalink for Item">🔗</a></div>
+</li>
+</ul>
+</div></div>
 <article class="activity project-like" id="act-gpio-polled-run"><h2 class="heading">
 <span class="type">Activity</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="codenumber">9.2.1</span><span class="period heading-divison-mark heading-divison-mark__period">.</span><span class="space heading-divison-mark heading-divison-mark__space"> </span><span class="title">Watch the Counter Miss a Press.</span>
 </h2>
