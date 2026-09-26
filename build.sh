@@ -28,6 +28,37 @@ pretext build web "$@"
 # Same fix the student deck build already uses.
 python3 scripts/filter_student_decks.py output/web
 
+# A short URL for the decks. The player is external/class.html, because PreTeXt
+# copies everything in assets/ to external/ and there is no way to place a file
+# at the site root from source. So write one here, after the build: `pretext
+# build` only overwrites the files it generates and never empties the output
+# directory (only `pretext clean` does that), and `pretext deploy` ships this
+# directory verbatim -- so a file written here reaches the published site and
+# survives later rebuilds.
+#
+#   https://engs28book.thayer.dartmouth.edu/slides.html
+#   https://engs28book.thayer.dartmouth.edu/slides.html?deck=day1
+#
+# The script runs first and carries the query string and fragment across, so a
+# link to a particular deck still lands on that deck. The meta refresh is the
+# no-JavaScript fallback and cannot carry them, so it lands on the deck list
+# rather than failing. Both are relative, so this works on any host.
+cat > output/web/slides.html <<'REDIRECT'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ENGS 28 — Class Slides</title>
+<script>location.replace('external/class.html' + location.search + location.hash)</script>
+<meta http-equiv="refresh" content="0; url=external/class.html">
+<link rel="canonical" href="external/class.html">
+</head>
+<body style="font-family: system-ui, sans-serif; margin: 3em auto; max-width: 32em">
+<p>Taking you to the <a href="external/class.html">ENGS 28 class slides</a>.</p>
+</body>
+</html>
+REDIRECT
+
 # LAST LINE OF DEFENCE for the one target that gets published. `pretext deploy`
 # ships output/web, and two kinds of instructor material could reach it by
 # accident: the board simulator's instructor examples (kept out of assets/ for

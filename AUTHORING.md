@@ -196,15 +196,36 @@ project carries a `cname`. Set it in the UI alone and the next deploy silently
 deletes it, and the custom domain stops resolving with nothing in the git
 history to explain why.
 
-### What is NOT deployed yet
+### The decks are published with the book
 
-`pretext deploy` ships `web`, whose pages carry **no slides** — the `<slide>`
-blocks are only rendered by the deck targets. `external/class.html` and
-`external/decks/` do reach the published site (they live under `assets/`), so
-the deck player and its contents page are up there and every deck fails to
-load. Publishing the decks means giving `web-deck` a `deploy-dir` in
-`project.ptx` so one deploy ships both. **Undecided — Petra is choosing where
-the decks should live.**
+There is no second deploy. The `web` target renders `<slide>` blocks, so the
+book pages `pretext deploy` ships carry the slides the player extracts, and
+the player and the deck lists were always up there under `external/`. Before
+2026-09-25 they were not: `web` stripped the slides, and 498 of the 945 — 53% —
+failed with *Slide … not found* for anyone opening the deployed decks.
+
+```
+<host>/slides.html                  the deck list  (short URL, written by build.sh)
+<host>/slides.html?deck=day1        one deck
+<host>/slides.html?deck=day9#12     straight to a slide
+<host>/external/class.html          what those redirect to
+```
+
+`slides.html` exists because PreTeXt gives no way to put a file at the site
+root from source — everything in `assets/` lands under `external/`. `build.sh`
+writes it after the build, which works because `pretext build` never empties
+the output directory (only `pretext clean` does) and `pretext deploy` ships
+that directory verbatim.
+
+**The published deck is a student artifact**, and that is enforced at build
+time, not by the URL. `scripts/filter_student_decks.py` drops instructor-only
+slides and `presenterNote` fields from the deck JSON and stamps `studentBuild`;
+the player reads that stamp and hides the audience switch, the "Instructor
+view" lede and the `(student)` title suffix, and makes `?notes` inert. Run it
+only through `./build.sh` or `./scripts/build-deck.sh` — a bare
+`pretext build web` re-copies `assets/decks/` over the filtered output and puts
+349 presenter notes back. `filter_student_decks.py --check output/web` says
+whether that has happened.
 
 ## Slide PDFs for students to take notes on
 
